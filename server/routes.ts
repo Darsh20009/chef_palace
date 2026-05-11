@@ -42,7 +42,8 @@ import {
   ExpenseErpModel,
   VendorModel,
   TaxInvoiceModel,
-  CashierShiftModel
+  CashierShiftModel,
+  RefundModel
 } from "@shared/schema";
 import { RecipeEngine } from "./recipe-engine";
 import { UnitsEngine } from "./units-engine";
@@ -15350,11 +15351,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ExpenseModel.find(allExpensesQuery),
       ]);
       
+      // Fetch refunds for this period
+      const refundQuery: any = { createdAt: { $gte: startDate, $lte: endDate }, status: 'completed' };
+      if (finalBranchId) refundQuery.branchId = finalBranchId;
+      const refunds = await RefundModel.find(refundQuery);
+      const totalRefunds = refunds.reduce((sum, r) => sum + (r.refundAmount || 0), 0);
+
       const totalRevenue = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
       const totalVat = invoices.reduce((sum, i) => sum + (i.taxAmount || 0), 0);
       const totalExpenses = expenses.reduce((sum, e) => sum + e.totalAmount, 0);
       const totalCogs = orders.reduce((sum, o) => sum + (o.costOfGoods || 0), 0);
-      const grossProfit = totalRevenue - totalVat - totalCogs;
+      const netRevenue = totalRevenue - totalRefunds;
+      const grossProfit = netRevenue - totalVat - totalCogs;
       const netProfit = grossProfit - totalExpenses;
       
       // Group by category
@@ -15463,13 +15471,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         period,
         summary: {
           totalRevenue: Math.round(totalRevenue * 100) / 100,
+          totalRefunds: Math.round(totalRefunds * 100) / 100,
+          netRevenue: Math.round(netRevenue * 100) / 100,
           totalVatCollected: Math.round(totalVat * 100) / 100,
           totalExpenses: Math.round(totalExpenses * 100) / 100,
           totalCogs: Math.round(totalCogs * 100) / 100,
           grossProfit: Math.round(grossProfit * 100) / 100,
           netProfit: Math.round(netProfit * 100) / 100,
-          profitMargin: totalRevenue > 0 ? Math.round((netProfit / totalRevenue * 100) * 100) / 100 : 0,
+          profitMargin: netRevenue > 0 ? Math.round((netProfit / netRevenue * 100) * 100) / 100 : 0,
           orderCount: orders.length,
+          refundCount: refunds.length,
           invoiceCount: invoices.length,
         },
         expensesByCategory,
@@ -15483,6 +15494,141 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // ===================== REFUND / RETURN ROUTES =====================
+
+  // Create a new refund
+  app.post("/api/refunds", requireAuth, requireCashierAccess, async (req: AuthRequest, res) => {
+    try {
+      const { originalOrderId, items, refundMethod, cashAmount, cardAmount, reason, notes } = req.body;
+      if (!originalOrderId || !items?.length || !refundMethod || !reason) {
+        return res.status(400).json({ error: "بيانات الاسترجاع غير مكتملة" });
+      }
+      const order = await OrderModel.findById(originalOrderId);
+      if (!order) return res.status(404).json({ error: "الطلب الأصلي غير موجود" });
+      
+      const refundAmount = items.reduce((sum: number, i: any) => sum + (Number(i.totalPrice) || 0), 0);
+      if (refundAmount <= 0) return res.status(400).json({ error: "مبلغ الاسترجاع غير صحيح" });
+
+      if (refundMethod === 'split') {
+        const totalSplit = (Number(cashAmount) || 0) + (Number(cardAmount) || 0);
+        if (Math.abs(totalSplit - refundAmount) > 0.01) {
+          return res.status(400).json({ error: "مجموع المبالغ المنقسمة لا يساوي مبلغ الاسترجاع" });
+        }
+      }
+
+      // Generate refund number
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
+      const count = await RefundModel.countDocuments({ tenantId: req.employee?.tenantId || 'default' });
+      const refundNumber = `REF-${dateStr}-${String(count + 1).padStart(4, '0')}`;
+
+      const isFullRefund = items.reduce((sum: number, i: any) => sum + (Number(i.quantity) || 0), 0)
+        >= (order.items as any[]).reduce((sum: number, i: any) => sum + (Number(i.quantity) || 1), 0);
+
+      const refund = new RefundModel({
+        tenantId: req.employee?.tenantId || (order as any).tenantId || 'default',
+        branchId: req.employee?.branchId || (order as any).branchId,
+        refundNumber,
+        originalOrderId: originalOrderId,
+        originalOrderNumber: order.orderNumber,
+        items,
+        refundAmount,
+        refundType: isFullRefund ? 'full' : 'partial',
+        refundMethod,
+        cashAmount: refundMethod === 'cash' ? refundAmount : (refundMethod === 'split' ? (Number(cashAmount) || 0) : 0),
+        cardAmount: refundMethod === 'card' ? refundAmount : (refundMethod === 'split' ? (Number(cardAmount) || 0) : 0),
+        reason,
+        notes: notes || '',
+        status: 'completed',
+        processedBy: req.employee?.id || '',
+        processedByName: req.employee?.name || req.employee?.nameAr || '',
+      });
+      await refund.save();
+
+      // Mark order paymentStatus as refunded if full refund
+      if (isFullRefund) {
+        await OrderModel.findByIdAndUpdate(originalOrderId, { paymentStatus: 'refunded' });
+      }
+
+      res.status(201).json({ success: true, refund: refund.toObject(), refundNumber });
+    } catch (error: any) {
+      console.error("Create refund error:", error);
+      res.status(500).json({ error: "فشل في إنشاء الاسترجاع" });
+    }
+  });
+
+  // Get all refunds (manager/admin)
+  app.get("/api/refunds", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { branchId, period, page = '1', limit = '50' } = req.query;
+      const isAdmin = req.employee?.role === 'admin' || req.employee?.role === 'owner';
+      const finalBranchId = (branchId as string) || (isAdmin ? undefined : req.employee?.branchId);
+
+      const query: any = { status: 'completed' };
+      if (finalBranchId) query.branchId = finalBranchId;
+      if (req.employee?.tenantId) query.tenantId = req.employee.tenantId;
+
+      if (period) {
+        const now = new Date();
+        let startDate = new Date();
+        if (period === 'today') { startDate = getSaudiStartOfDay(); }
+        else if (period === 'week') { startDate = new Date(now.getTime() - 7*24*60*60*1000); }
+        else if (period === 'month') { startDate = new Date(now.getFullYear(), now.getMonth(), 1); }
+        query.createdAt = { $gte: startDate };
+      }
+
+      const skip = (Number(page) - 1) * Number(limit);
+      const [refunds, total] = await Promise.all([
+        RefundModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
+        RefundModel.countDocuments(query),
+      ]);
+      res.json({ refunds: refunds.map(r => r.toObject()), total, page: Number(page), limit: Number(limit) });
+    } catch (error) {
+      res.status(500).json({ error: "فشل في جلب قائمة الاسترجاعات" });
+    }
+  });
+
+  // Get refunds for a specific order
+  app.get("/api/orders/:orderId/refunds", requireAuth, requireCashierAccess, async (req: AuthRequest, res) => {
+    try {
+      const refunds = await RefundModel.find({ originalOrderId: req.params.orderId }).sort({ createdAt: -1 });
+      res.json(refunds.map(r => r.toObject()));
+    } catch (error) {
+      res.status(500).json({ error: "فشل في جلب استرجاعات الطلب" });
+    }
+  });
+
+  // Search order by number for refund (POS lookup) — MUST come before /:id
+  app.get("/api/refunds/search-order/:orderNumber", requireAuth, requireCashierAccess, async (req: AuthRequest, res) => {
+    try {
+      const { orderNumber } = req.params;
+      const order = await OrderModel.findOne({ 
+        orderNumber: { $regex: orderNumber, $options: 'i' },
+        status: { $ne: 'cancelled' },
+      }).sort({ createdAt: -1 });
+      if (!order) return res.status(404).json({ error: "الطلب غير موجود" });
+      
+      const existingRefunds = await RefundModel.find({ originalOrderId: order._id.toString() });
+      const totalRefunded = existingRefunds.reduce((s, r) => s + r.refundAmount, 0);
+      const maxRefundable = (order.totalAmount || 0) - totalRefunded;
+
+      res.json({ order: (order as any).toObject(), existingRefunds: existingRefunds.map(r => r.toObject()), totalRefunded, maxRefundable });
+    } catch (error) {
+      res.status(500).json({ error: "خطأ في البحث عن الطلب" });
+    }
+  });
+
+  // Get single refund by id — MUST come after /search-order/:orderNumber
+  app.get("/api/refunds/:id", requireAuth, requireCashierAccess, async (req: AuthRequest, res) => {
+    try {
+      const refund = await RefundModel.findById(req.params.id);
+      if (!refund) return res.status(404).json({ error: "الاسترجاع غير موجود" });
+      res.json(refund.toObject());
+    } catch (error) {
+      res.status(500).json({ error: "فشل في جلب الاسترجاع" });
+    }
+  });
+
   // ===================== KITCHEN DISPLAY ROUTES =====================
   
   // Get kitchen orders

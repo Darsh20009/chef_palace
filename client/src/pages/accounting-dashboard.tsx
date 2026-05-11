@@ -64,6 +64,7 @@ import {
   Printer,
   Filter,
   RefreshCw,
+  RotateCcw,
   PieChart as PieChartIcon,
   LineChart,
   LayoutDashboard,
@@ -171,12 +172,15 @@ type DrilldownType = 'revenue' | 'cogs' | 'expenses' | 'orders' | null;
 
 interface DashboardData {
   totalRevenue: number;
+  totalRefunds: number;
+  netRevenue: number;
   totalVat: number;
   totalExpenses: number;
   totalCogs: number;
   grossProfit: number;
   netProfit: number;
   orderCount: number;
+  refundCount: number;
   invoiceCount: number;
   profitMargin: number;
   expensesByCategory: Record<string, number>;
@@ -221,6 +225,174 @@ const periodLabels: Record<string, string> = {
   year: tc('هذه السنة', 'This Year')
 };
 
+// ── Refunds Tab Component ──────────────────────────────────────────────────
+function RefundsTab({ period, selectedBranch }: { period: string; selectedBranch: string }) {
+  const [searchText, setSearchText] = useState("");
+  const [methodFilter, setMethodFilter] = useState<string>("all");
+
+  const { data: refundsData, isLoading } = useQuery<{ refunds: any[]; total: number }>({
+    queryKey: ["/api/refunds", period, selectedBranch],
+    queryFn: async () => {
+      const params = new URLSearchParams({ period, limit: "200" });
+      if (selectedBranch !== "all") params.append("branchId", selectedBranch);
+      const res = await fetch(`/api/refunds?${params}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    staleTime: 30000,
+  });
+
+  const refunds = refundsData?.refunds || [];
+
+  const filtered = refunds.filter((r: any) => {
+    const matchSearch = !searchText ||
+      r.refundNumber?.toLowerCase().includes(searchText.toLowerCase()) ||
+      r.originalOrderNumber?.toLowerCase().includes(searchText.toLowerCase()) ||
+      r.reason?.toLowerCase().includes(searchText.toLowerCase()) ||
+      r.processedByName?.toLowerCase().includes(searchText.toLowerCase());
+    const matchMethod = methodFilter === "all" || r.refundMethod === methodFilter;
+    return matchSearch && matchMethod;
+  });
+
+  const totalRefundAmount = filtered.reduce((s: number, r: any) => s + (r.refundAmount || 0), 0);
+  const cashRefunds = filtered.filter((r: any) => r.refundMethod === 'cash').reduce((s: number, r: any) => s + (r.refundAmount || 0), 0);
+  const cardRefunds = filtered.filter((r: any) => r.refundMethod === 'card').reduce((s: number, r: any) => s + (r.refundAmount || 0), 0);
+  const splitRefunds = filtered.filter((r: any) => r.refundMethod === 'split').reduce((s: number, r: any) => s + (r.refundAmount || 0), 0);
+
+  const methodLabel: Record<string, string> = { cash: '💵 نقدي', card: '💳 بطاقة', split: '💵+💳 مختلط' };
+
+  return (
+    <div className="space-y-4">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="bg-orange-50 dark:bg-orange-900/20 border-orange-200">
+          <CardContent className="p-4 text-center">
+            <p className="text-xs text-muted-foreground">إجمالي الاسترجاعات</p>
+            <p className="text-2xl font-black text-orange-600 mt-1">{totalRefundAmount.toFixed(2)}</p>
+            <p className="text-xs text-muted-foreground">ريال سعودي ({filtered.length} عملية)</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-green-50 dark:bg-green-900/20">
+          <CardContent className="p-4 text-center">
+            <p className="text-xs text-muted-foreground">💵 نقدي</p>
+            <p className="text-2xl font-black text-green-700 mt-1">{cashRefunds.toFixed(2)}</p>
+            <p className="text-xs text-muted-foreground">ريال</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-blue-50 dark:bg-blue-900/20">
+          <CardContent className="p-4 text-center">
+            <p className="text-xs text-muted-foreground">💳 بطاقة</p>
+            <p className="text-2xl font-black text-blue-700 mt-1">{cardRefunds.toFixed(2)}</p>
+            <p className="text-xs text-muted-foreground">ريال</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-purple-50 dark:bg-purple-900/20">
+          <CardContent className="p-4 text-center">
+            <p className="text-xs text-muted-foreground">💵+💳 مختلط</p>
+            <p className="text-2xl font-black text-purple-700 mt-1">{splitRefunds.toFixed(2)}</p>
+            <p className="text-xs text-muted-foreground">ريال</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filter row */}
+      <div className="flex gap-2 flex-wrap">
+        <Input
+          placeholder="بحث برقم الاسترجاع أو الطلب أو السبب..."
+          value={searchText}
+          onChange={e => setSearchText(e.target.value)}
+          className="max-w-xs"
+        />
+        <Select value={methodFilter} onValueChange={setMethodFilter}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="طريقة الاسترجاع" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">جميع الطرق</SelectItem>
+            <SelectItem value="cash">💵 نقدي</SelectItem>
+            <SelectItem value="card">💳 بطاقة</SelectItem>
+            <SelectItem value="split">💵+💳 مختلط</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <RotateCcw className="w-5 h-5 text-orange-600" />
+            سجل الاسترجاعات
+          </CardTitle>
+          <CardDescription>جميع عمليات الاسترجاع والإرجاع المُسجّلة</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="w-8 h-8 animate-spin text-orange-500" /></div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-12">
+              <RotateCcw className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-30" />
+              <p className="text-muted-foreground">لا توجد استرجاعات في هذه الفترة</p>
+            </div>
+          ) : (
+            <ScrollArea className="h-[500px]">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>رقم الاسترجاع</TableHead>
+                    <TableHead>رقم الطلب الأصلي</TableHead>
+                    <TableHead>المبلغ</TableHead>
+                    <TableHead>طريقة الإرجاع</TableHead>
+                    <TableHead>السبب</TableHead>
+                    <TableHead>النوع</TableHead>
+                    <TableHead>المعالج</TableHead>
+                    <TableHead>التاريخ</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((refund: any) => (
+                    <TableRow key={refund._id || refund.id}>
+                      <TableCell className="font-bold text-orange-600">{refund.refundNumber}</TableCell>
+                      <TableCell className="font-mono text-sm">{refund.originalOrderNumber}</TableCell>
+                      <TableCell>
+                        <span className="font-black text-orange-600">{Number(refund.refundAmount).toFixed(2)}</span>
+                        <span className="text-xs text-muted-foreground mr-1">ر.س</span>
+                        {refund.refundMethod === 'split' && (
+                          <div className="text-xs text-muted-foreground">
+                            💵 {Number(refund.cashAmount||0).toFixed(2)} + 💳 {Number(refund.cardAmount||0).toFixed(2)}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={`text-xs ${
+                          refund.refundMethod === 'cash' ? 'border-green-500 text-green-700' :
+                          refund.refundMethod === 'card' ? 'border-blue-500 text-blue-700' :
+                          'border-purple-500 text-purple-700'
+                        }`}>
+                          {methodLabel[refund.refundMethod] || refund.refundMethod}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="max-w-[160px] truncate text-sm">{refund.reason}</TableCell>
+                      <TableCell>
+                        <Badge variant={refund.refundType === 'full' ? 'default' : 'secondary'} className="text-xs">
+                          {refund.refundType === 'full' ? 'كامل' : 'جزئي'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm">{refund.processedByName || '-'}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {new Date(refund.createdAt).toLocaleDateString('ar-SA', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function AccountingDashboardPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -257,12 +429,15 @@ export default function AccountingDashboardPage() {
       const data = await res.json();
       return {
         totalRevenue: data.summary?.totalRevenue || 0,
+        totalRefunds: data.summary?.totalRefunds || 0,
+        netRevenue: data.summary?.netRevenue || data.summary?.totalRevenue || 0,
         totalVat: data.summary?.totalVatCollected || 0,
         totalExpenses: data.summary?.totalExpenses || 0,
         totalCogs: data.summary?.totalCogs || 0,
         grossProfit: data.summary?.grossProfit || 0,
         netProfit: data.summary?.netProfit || 0,
         orderCount: data.summary?.orderCount || 0,
+        refundCount: data.summary?.refundCount || 0,
         invoiceCount: data.summary?.invoiceCount || 0,
         profitMargin: data.summary?.profitMargin || 0,
         expensesByCategory: data.expensesByCategory || {},
@@ -593,10 +768,11 @@ export default function AccountingDashboardPage() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 bg-primary dark:bg-primary/30">
+          <TabsList className="grid w-full grid-cols-5 bg-primary dark:bg-primary/30">
             <TabsTrigger value="overview" data-testid="tab-overview">نظرة عامة</TabsTrigger>
             <TabsTrigger value="expenses" data-testid="tab-expenses">المصروفات</TabsTrigger>
             <TabsTrigger value="revenues" data-testid="tab-revenues">الإيرادات</TabsTrigger>
+            <TabsTrigger value="refunds" data-testid="tab-refunds" className="text-orange-300 data-[state=active]:text-orange-700">الاسترجاعات</TabsTrigger>
             <TabsTrigger value="reports" data-testid="tab-reports">التقارير</TabsTrigger>
           </TabsList>
 
@@ -622,6 +798,12 @@ export default function AccountingDashboardPage() {
                             <Eye className="w-3 h-3" />
                           </p>
                           <p className="text-3xl font-bold mt-1" data-testid="text-total-revenue">{dashboardData.totalRevenue.toFixed(2)}</p>
+                          {dashboardData.totalRefunds > 0 && (
+                            <p className="text-green-200 text-xs mt-1 flex items-center gap-1">
+                              <span>صافي بعد الاسترجاع:</span>
+                              <span className="font-bold text-white">{dashboardData.netRevenue.toFixed(2)}</span>
+                            </p>
+                          )}
                           <p className="text-green-200 text-xs mt-1">ريال سعودي - انقر للتفاصيل</p>
                         </div>
                         <TrendingUp className="w-12 h-12 text-green-200" />
@@ -722,12 +904,39 @@ export default function AccountingDashboardPage() {
                       </div>
                     </div>
                     
+                    {dashboardData.totalRefunds > 0 && (
+                      <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center">
+                            <RefreshCw className="w-4 h-4 text-orange-600" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm text-orange-700 dark:text-orange-400">إجمالي الاسترجاعات ({dashboardData.refundCount} عملية)</p>
+                            <p className="text-xs text-muted-foreground">مخصومة من الإيرادات</p>
+                          </div>
+                        </div>
+                        <p className="font-black text-xl text-orange-600">-{dashboardData.totalRefunds.toFixed(2)} <SarIcon /></p>
+                      </div>
+                    )}
+
                     <div className="p-4 bg-muted/50 rounded-lg">
                       <div className="flex flex-col gap-2 text-sm">
                         <div className="flex justify-between">
                           <span>{tc("إجمالي الإيرادات", "Total Revenue")}</span>
                           <span className="font-medium text-green-600">+{dashboardData.totalRevenue.toFixed(2)} <SarIcon /></span>
                         </div>
+                        {dashboardData.totalRefunds > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-orange-600">المسترجع / المُرتجع</span>
+                            <span className="font-medium text-orange-600">-{dashboardData.totalRefunds.toFixed(2)} <SarIcon /></span>
+                          </div>
+                        )}
+                        {dashboardData.totalRefunds > 0 && (
+                          <div className="flex justify-between bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">
+                            <span className="font-medium">صافي الإيرادات بعد الاسترجاع</span>
+                            <span className="font-bold text-green-700">={dashboardData.netRevenue.toFixed(2)} <SarIcon /></span>
+                          </div>
+                        )}
                         <div className="flex justify-between">
                           <span>{tc("ضريبة القيمة المضافة", "VAT")}</span>
                           <span className="font-medium text-accent">-{dashboardData.totalVat.toFixed(2)} <SarIcon /></span>
@@ -741,9 +950,9 @@ export default function AccountingDashboardPage() {
                           <span className="font-medium text-red-600">-{dashboardData.totalExpenses.toFixed(2)} <SarIcon /></span>
                         </div>
                         <div className="flex justify-between border-t pt-2 border-primary">
-                          <span className="font-bold">= إجمالي المصروفات (المخزون + التشغيل)</span>
-                          <span className="font-bold text-lg text-red-600">
-                            {(dashboardData.totalCogs + dashboardData.totalExpenses).toFixed(2)} <SarIcon />
+                          <span className="font-bold">= صافي الربح</span>
+                          <span className={`font-bold text-lg ${dashboardData.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {dashboardData.netProfit.toFixed(2)} <SarIcon />
                           </span>
                         </div>
                       </div>
@@ -1133,6 +1342,10 @@ export default function AccountingDashboardPage() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="refunds" className="space-y-4">
+            <RefundsTab period={period} selectedBranch={selectedBranch} />
           </TabsContent>
 
           <TabsContent value="reports" className="space-y-6">

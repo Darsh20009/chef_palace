@@ -15,7 +15,8 @@ import {
   Archive, RefreshCw, Wifi, WifiOff, Loader2,
   Navigation, SplitSquareVertical, Banknote,
   Lock, Bell, BellOff, MonitorSmartphone, ScanLine,
-  PauseCircle, Receipt, Settings, User, Wallet
+  PauseCircle, Receipt, Settings, User, Wallet,
+  RotateCcw, SearchIcon, AlertCircle, CheckSquare, Square
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -144,6 +145,20 @@ export default function PosSystem() {
     const saved = localStorage.getItem("pos-zoom");
     return saved ? Number(saved) : 100;
   });
+
+  // ── Refund dialog state ──
+  const [showRefundDialog, setShowRefundDialog] = useState(false);
+  const [refundOrderSearch, setRefundOrderSearch] = useState("");
+  const [refundOrderData, setRefundOrderData] = useState<any>(null);
+  const [refundOrderLoading, setRefundOrderLoading] = useState(false);
+  const [refundOrderError, setRefundOrderError] = useState("");
+  const [refundSelectedItems, setRefundSelectedItems] = useState<Record<string, number>>({});
+  const [refundMethod, setRefundMethod] = useState<'cash' | 'card' | 'split'>('cash');
+  const [refundSplitCash, setRefundSplitCash] = useState("");
+  const [refundSplitCard, setRefundSplitCard] = useState("");
+  const [refundReason, setRefundReason] = useState("");
+  const [refundNotes, setRefundNotes] = useState("");
+  const [refundStep, setRefundStep] = useState<1 | 2 | 3>(1);
 
   const { isConnected: wsConnected, sendMessage: wsSend } = useOrderWebSocket({
     clientType: "pos",
@@ -508,6 +523,110 @@ export default function PosSystem() {
       toast({ variant: "destructive", title: t('pos.error'), description: t('pos.bill_close_error') });
     }
   });
+
+  // ── Refund helpers ──
+  const refundTotalAmount = useMemo(() => {
+    if (!refundOrderData?.order?.items) return 0;
+    return Object.entries(refundSelectedItems).reduce((sum, [key, qty]) => {
+      const item = (refundOrderData.order.items as any[]).find((_: any, idx: number) => String(idx) === key);
+      if (!item || qty <= 0) return sum;
+      return sum + (Number(item.price || item.unitPrice || 0) * qty);
+    }, 0);
+  }, [refundSelectedItems, refundOrderData]);
+
+  const refundCreateMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      return await apiRequest("POST", "/api/refunds", payload);
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "تم الاسترجاع بنجاح ✓",
+        description: `رقم الاسترجاع: ${data.refundNumber}`,
+        duration: 6000,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/orders/live"] });
+      setShowRefundDialog(false);
+      setRefundOrderData(null);
+      setRefundOrderSearch("");
+      setRefundSelectedItems({});
+      setRefundMethod('cash');
+      setRefundSplitCash("");
+      setRefundSplitCard("");
+      setRefundReason("");
+      setRefundNotes("");
+      setRefundStep(1);
+    },
+    onError: (error: any) => {
+      toast({ variant: "destructive", title: "فشل الاسترجاع", description: error?.message || "حدث خطأ، حاول مرة أخرى" });
+    },
+  });
+
+  const handleRefundSearchOrder = async (searchOverride?: string) => {
+    const q = (searchOverride !== undefined ? searchOverride : refundOrderSearch).trim();
+    if (!q) return;
+    setRefundOrderLoading(true);
+    setRefundOrderError("");
+    setRefundOrderData(null);
+    setRefundSelectedItems({});
+    try {
+      const res = await fetch(`/api/refunds/search-order/${encodeURIComponent(q)}`);
+      if (!res.ok) {
+        const err = await res.json();
+        setRefundOrderError(err.error || "الطلب غير موجود");
+      } else {
+        const data = await res.json();
+        setRefundOrderData(data);
+        // Pre-select all items with max quantity
+        const preSelected: Record<string, number> = {};
+        (data.order.items as any[]).forEach((_: any, idx: number) => {
+          preSelected[String(idx)] = Number(_ .quantity) || 1;
+        });
+        setRefundSelectedItems(preSelected);
+        setRefundStep(2);
+      }
+    } catch {
+      setRefundOrderError("خطأ في الاتصال بالخادم");
+    } finally {
+      setRefundOrderLoading(false);
+    }
+  };
+
+  const handleRefundSubmit = () => {
+    if (!refundOrderData?.order) return;
+    if (!refundReason.trim()) {
+      toast({ variant: "destructive", title: "مطلوب", description: "الرجاء إدخال سبب الاسترجاع" });
+      return;
+    }
+    const items = Object.entries(refundSelectedItems)
+      .filter(([, qty]) => qty > 0)
+      .map(([key, qty]) => {
+        const item = refundOrderData.order.items[Number(key)];
+        return {
+          coffeeItemId: item.coffeeItemId || item.id || '',
+          nameAr: item.nameAr || item.name || item.coffeeItem?.nameAr || '',
+          nameEn: item.nameEn || item.coffeeItem?.nameEn || '',
+          quantity: qty,
+          unitPrice: Number(item.price || item.unitPrice || 0),
+          totalPrice: Number(item.price || item.unitPrice || 0) * qty,
+        };
+      });
+    if (!items.length) {
+      toast({ variant: "destructive", title: "مطلوب", description: "الرجاء اختيار منتج واحد على الأقل" });
+      return;
+    }
+    const payload: any = {
+      originalOrderId: refundOrderData.order._id || refundOrderData.order.id,
+      items,
+      refundMethod,
+      reason: refundReason,
+      notes: refundNotes,
+    };
+    if (refundMethod === 'split') {
+      payload.cashAmount = Number(refundSplitCash) || 0;
+      payload.cardAmount = Number(refundSplitCard) || 0;
+    }
+    refundCreateMutation.mutate(payload);
+  };
 
   const openTableOrders = useMemo(() => {
     if (!liveOrders) return [];
@@ -1199,6 +1318,17 @@ export default function PosSystem() {
                 {newOrdersCount}
               </Badge>
             )}
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { setRefundStep(1); setRefundOrderData(null); setRefundOrderError(""); setRefundOrderSearch(""); setShowRefundDialog(true); }}
+            className="hidden sm:flex border-orange-400 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950"
+            data-testid="button-refund-main"
+          >
+            <RotateCcw className="w-4 h-4 ml-2" />
+            استرجاع
           </Button>
 
           <Button
@@ -2063,6 +2193,26 @@ export default function PosSystem() {
                               {t('pos.cancel')}
                             </Button>
                           )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950"
+                            onClick={() => {
+                              setRefundOrderSearch(order.orderNumber || order.dailyNumber || '');
+                              setRefundStep(1);
+                              setRefundOrderData(null);
+                              setRefundSelectedItems({});
+                              setRefundReason("");
+                              setRefundNotes("");
+                              setShowRefundDialog(true);
+                              const onum = order.orderNumber || String(order.dailyNumber || '');
+                              setTimeout(() => handleRefundSearchOrder(onum), 100);
+                            }}
+                            data-testid={`button-refund-${order.id}`}
+                          >
+                            <RotateCcw className="w-3 h-3 ml-1" />
+                            استرجاع
+                          </Button>
                         </div>
                       </CardContent>
                     </Card>
@@ -2829,19 +2979,19 @@ export default function PosSystem() {
                   variant="outline"
                   size="sm"
                   className="flex-1"
-                  disabled={posZoom <= 60}
-                  onClick={() => setPosZoom(z => Math.max(60, z - 5))}
+                  disabled={posZoom <= 30}
+                  onClick={() => setPosZoom(z => Math.max(30, z - 5))}
                   data-testid="button-zoom-out"
                 >
                   <span className="text-lg font-bold">−</span>
                 </Button>
-                <div className="flex-1 flex justify-center gap-1">
-                  {[70, 80, 90, 100].map(v => (
+                <div className="flex-1 flex justify-center gap-1 flex-wrap">
+                  {[30, 50, 70, 80, 90, 100].map(v => (
                     <Button
                       key={v}
                       variant={posZoom === v ? "default" : "outline"}
                       size="sm"
-                      className="flex-1 text-xs px-1"
+                      className="flex-1 text-xs px-1 min-w-[30px]"
                       onClick={() => setPosZoom(v)}
                       data-testid={`button-zoom-${v}`}
                     >
@@ -2875,6 +3025,235 @@ export default function PosSystem() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* ═══════════════ REFUND DIALOG ═══════════════ */}
+      <Dialog open={showRefundDialog} onOpenChange={(open) => {
+        setShowRefundDialog(open);
+        if (!open) { setRefundStep(1); setRefundOrderData(null); setRefundOrderError(""); }
+      }}>
+        <DialogContent className="max-w-2xl max-h-[92vh] overflow-hidden flex flex-col gap-0 p-0" dir="rtl">
+          {/* Header */}
+          <div className="flex items-center gap-3 px-5 py-4 border-b bg-orange-50 dark:bg-orange-950/20">
+            <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center">
+              <RotateCcw className="w-5 h-5 text-orange-600" />
+            </div>
+            <div>
+              <DialogTitle className="text-lg font-black text-orange-700 dark:text-orange-400">استرجاع / إرجاع طلب</DialogTitle>
+              <p className="text-xs text-orange-500">
+                {refundStep === 1 ? "الخطوة 1: البحث عن الطلب" : refundStep === 2 ? "الخطوة 2: اختيار المنتجات وطريقة الاسترجاع" : "الخطوة 3: تأكيد الاسترجاع"}
+              </p>
+            </div>
+            {/* Step indicator */}
+            <div className="mr-auto flex items-center gap-1">
+              {[1,2,3].map(s => (
+                <div key={s} className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors ${
+                  refundStep >= s ? 'bg-orange-500 border-orange-500 text-white' : 'border-gray-300 text-gray-400'
+                }`}>{s}</div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-5 space-y-4 min-h-0">
+
+            {/* STEP 1: Search Order */}
+            {refundStep === 1 && (
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm font-bold mb-2">ابحث عن الطلب برقم الطلب</p>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="أدخل رقم الطلب (مثال: 2024-001)"
+                      value={refundOrderSearch}
+                      onChange={e => setRefundOrderSearch(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleRefundSearchOrder()}
+                      className="flex-1"
+                      data-testid="input-refund-order-search"
+                    />
+                    <Button onClick={handleRefundSearchOrder} disabled={refundOrderLoading} className="bg-orange-500 hover:bg-orange-600" data-testid="button-refund-search">
+                      {refundOrderLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <SearchIcon className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                  {refundOrderError && (
+                    <div className="flex items-center gap-2 mt-2 text-red-600 text-sm bg-red-50 dark:bg-red-950/20 p-2 rounded">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                      {refundOrderError}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* STEP 2: Select items + method */}
+            {refundStep === 2 && refundOrderData && (
+              <div className="space-y-4">
+                {/* Order summary */}
+                <div className="bg-muted/50 rounded-lg p-3">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <p className="font-black text-base">{fmtOrderNum(refundOrderData.order.orderNumber)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {refundOrderData.order.customerInfo?.customerName || refundOrderData.order.customerName || 'عميل نقدي'} |{' '}
+                        {new Date(refundOrderData.order.createdAt).toLocaleDateString('ar-SA')}
+                      </p>
+                    </div>
+                    <div className="text-left">
+                      <p className="font-black text-lg text-primary">{Number(refundOrderData.order.totalAmount).toFixed(2)} ر.س</p>
+                      {refundOrderData.totalRefunded > 0 && (
+                        <p className="text-xs text-orange-500">مسترجع سابقاً: {Number(refundOrderData.totalRefunded).toFixed(2)} ر.س</p>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    طريقة الدفع الأصلية: {
+                      refundOrderData.order.paymentMethod === 'cash' ? '💵 نقدي' :
+                      refundOrderData.order.paymentMethod === 'card' ? '💳 بطاقة' :
+                      refundOrderData.order.paymentMethod === 'split' ? '💵+💳 نقدي + بطاقة' : 
+                      refundOrderData.order.paymentMethod
+                    }
+                  </p>
+                </div>
+
+                {/* Items */}
+                <div>
+                  <p className="text-sm font-bold mb-2">اختر المنتجات المراد استرجاعها:</p>
+                  <div className="space-y-2">
+                    {(refundOrderData.order.items as any[]).map((item: any, idx: number) => {
+                      const maxQty = Number(item.quantity) || 1;
+                      const selectedQty = refundSelectedItems[String(idx)] || 0;
+                      const isSelected = selectedQty > 0;
+                      return (
+                        <div key={idx} className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-colors ${isSelected ? 'border-orange-300 bg-orange-50 dark:bg-orange-950/10' : 'border-border'}`}>
+                          <button onClick={() => setRefundSelectedItems(prev => ({ ...prev, [String(idx)]: isSelected ? 0 : maxQty }))} className="flex-shrink-0">
+                            {isSelected ? <CheckSquare className="w-5 h-5 text-orange-500" /> : <Square className="w-5 h-5 text-muted-foreground" />}
+                          </button>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-sm truncate">{item.nameAr || item.name || item.coffeeItem?.nameAr || 'منتج'}</p>
+                            <p className="text-xs text-muted-foreground">{Number(item.price || item.unitPrice || 0).toFixed(2)} ر.س × الكمية</p>
+                          </div>
+                          {isSelected && (
+                            <div className="flex items-center gap-1">
+                              <Button size="sm" variant="outline" className="w-7 h-7 p-0" onClick={() => setRefundSelectedItems(prev => ({ ...prev, [String(idx)]: Math.max(0, (prev[String(idx)] || 0) - 1) }))}>
+                                <Minus className="w-3 h-3" />
+                              </Button>
+                              <span className="w-8 text-center font-bold text-sm">{selectedQty}</span>
+                              <Button size="sm" variant="outline" className="w-7 h-7 p-0" onClick={() => setRefundSelectedItems(prev => ({ ...prev, [String(idx)]: Math.min(maxQty, (prev[String(idx)] || 0) + 1) }))}>
+                                <Plus className="w-3 h-3" />
+                              </Button>
+                              <span className="text-xs text-muted-foreground">/ {maxQty}</span>
+                            </div>
+                          )}
+                          <div className="text-left min-w-[70px]">
+                            <p className={`font-bold text-sm ${isSelected ? 'text-orange-600' : 'text-muted-foreground'}`}>
+                              {isSelected ? `${(Number(item.price || item.unitPrice || 0) * selectedQty).toFixed(2)} ر.س` : '—'}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Refund method */}
+                <div>
+                  <p className="text-sm font-bold mb-2">طريقة الاسترجاع:</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {([
+                      { id: 'cash' as const, label: '💵 نقدي', desc: 'إرجاع نقدي للعميل' },
+                      { id: 'card' as const, label: '💳 بطاقة', desc: 'إرجاع للبطاقة' },
+                      { id: 'split' as const, label: '💵+💳 مختلط', desc: 'جزء نقدي وجزء بطاقة' },
+                    ]).map(m => (
+                      <button key={m.id} onClick={() => setRefundMethod(m.id)}
+                        className={`p-3 rounded-lg border-2 text-center transition-colors ${refundMethod === m.id ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/20' : 'border-border hover:border-orange-200'}`}>
+                        <p className="font-bold text-sm">{m.label}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{m.desc}</p>
+                      </button>
+                    ))}
+                  </div>
+
+                  {refundMethod === 'split' && (
+                    <div className="grid grid-cols-2 gap-3 mt-3">
+                      <div>
+                        <label className="text-xs font-bold block mb-1">المبلغ النقدي (ر.س)</label>
+                        <Input type="number" min="0" placeholder="0.00" value={refundSplitCash}
+                          onChange={e => { setRefundSplitCash(e.target.value); setRefundSplitCard(String(Math.max(0, refundTotalAmount - (Number(e.target.value) || 0)).toFixed(2))); }} />
+                      </div>
+                      <div>
+                        <label className="text-xs font-bold block mb-1">المبلغ بالبطاقة (ر.س)</label>
+                        <Input type="number" min="0" placeholder="0.00" value={refundSplitCard}
+                          onChange={e => { setRefundSplitCard(e.target.value); setRefundSplitCash(String(Math.max(0, refundTotalAmount - (Number(e.target.value) || 0)).toFixed(2))); }} />
+                      </div>
+                      <div className="col-span-2 text-xs text-center text-muted-foreground">
+                        المجموع: {((Number(refundSplitCash)||0) + (Number(refundSplitCard)||0)).toFixed(2)} ر.س
+                        {Math.abs(((Number(refundSplitCash)||0) + (Number(refundSplitCard)||0)) - refundTotalAmount) > 0.01 && (
+                          <span className="text-red-500 mr-2">⚠ يجب أن يساوي {refundTotalAmount.toFixed(2)} ر.س</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Reason */}
+                <div>
+                  <p className="text-sm font-bold mb-1">سبب الاسترجاع <span className="text-red-500">*</span></p>
+                  <div className="flex gap-2 flex-wrap mb-2">
+                    {['منتج تالف','طلب خاطئ','تغيير رأي العميل','جودة غير مقبولة','أخرى'].map(r => (
+                      <button key={r} onClick={() => setRefundReason(r)}
+                        className={`px-3 py-1 rounded-full text-xs border transition-colors ${refundReason === r ? 'bg-orange-500 text-white border-orange-500' : 'border-border hover:border-orange-300'}`}>
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                  <Input placeholder="أو أكتب سبباً مخصصاً..." value={refundReason} onChange={e => setRefundReason(e.target.value)} />
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <p className="text-sm font-bold mb-1">ملاحظات (اختياري)</p>
+                  <Input placeholder="أي ملاحظات إضافية..." value={refundNotes} onChange={e => setRefundNotes(e.target.value)} />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer summary & actions */}
+          <div className="border-t px-5 py-4 bg-muted/30 space-y-3">
+            {refundStep === 2 && (
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-sm">إجمالي الاسترجاع:</span>
+                <span className="font-black text-xl text-orange-600">{refundTotalAmount.toFixed(2)} ر.س</span>
+              </div>
+            )}
+            <div className="flex gap-2">
+              {refundStep === 1 && (
+                <>
+                  <Button variant="outline" className="flex-1" onClick={() => setShowRefundDialog(false)}>إلغاء</Button>
+                  <Button className="flex-1 bg-orange-500 hover:bg-orange-600" onClick={handleRefundSearchOrder} disabled={!refundOrderSearch.trim() || refundOrderLoading} data-testid="button-refund-next-1">
+                    {refundOrderLoading ? <Loader2 className="w-4 h-4 animate-spin ml-1" /> : null}
+                    بحث عن الطلب
+                  </Button>
+                </>
+              )}
+              {refundStep === 2 && (
+                <>
+                  <Button variant="outline" className="flex-1" onClick={() => { setRefundStep(1); setRefundOrderData(null); }}>رجوع</Button>
+                  <Button
+                    className="flex-2 bg-orange-500 hover:bg-orange-600 text-white font-bold px-6"
+                    onClick={handleRefundSubmit}
+                    disabled={refundTotalAmount <= 0 || !refundReason.trim() || refundCreateMutation.isPending ||
+                      (refundMethod === 'split' && Math.abs(((Number(refundSplitCash)||0) + (Number(refundSplitCard)||0)) - refundTotalAmount) > 0.01)}
+                    data-testid="button-refund-submit"
+                  >
+                    {refundCreateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin ml-1" /> : <RotateCcw className="w-4 h-4 ml-1" />}
+                    تأكيد الاسترجاع — {refundTotalAmount.toFixed(2)} ر.س
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* ═══════════════ END REFUND DIALOG ═══════════════ */}
+
     </div>
     </div>
   );

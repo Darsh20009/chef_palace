@@ -5654,3 +5654,71 @@ PayrollSnapshotSchema.index({ tenantId: 1, year: 1, month: 1 }, { unique: true }
 PayrollSnapshotSchema.index({ tenantId: 1, status: 1 });
 
 export const PayrollSnapshotModel = mongoose.models['PayrollSnapshot'] || mongoose.model<IPayrollSnapshot>("PayrollSnapshot", PayrollSnapshotSchema);
+
+// ─── Refund / Return Order Model ────────────────────────────────────────────
+export interface IRefundItem {
+  coffeeItemId: string;
+  nameAr: string;
+  nameEn?: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+}
+
+export interface IRefund extends Document {
+  tenantId: string;
+  branchId?: string;
+  refundNumber: string;
+  originalOrderId: string;
+  originalOrderNumber: string;
+  items: IRefundItem[];
+  refundAmount: number;
+  refundType: 'full' | 'partial';
+  refundMethod: 'cash' | 'card' | 'split';
+  cashAmount?: number;
+  cardAmount?: number;
+  reason: string;
+  notes?: string;
+  status: 'completed' | 'cancelled';
+  processedBy: string;
+  processedByName?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const RefundItemSchema = new Schema({
+  coffeeItemId: { type: String, required: true },
+  nameAr: { type: String, required: true },
+  nameEn: { type: String },
+  quantity: { type: Number, required: true, min: 1 },
+  unitPrice: { type: Number, required: true },
+  totalPrice: { type: Number, required: true },
+});
+
+const RefundSchema = new Schema<IRefund>({
+  tenantId: { type: String, required: true },
+  branchId: { type: String },
+  refundNumber: { type: String, required: true, unique: true },
+  originalOrderId: { type: String, required: true },
+  originalOrderNumber: { type: String, required: true },
+  items: [RefundItemSchema],
+  refundAmount: { type: Number, required: true },
+  refundType: { type: String, enum: ['full', 'partial'], required: true },
+  refundMethod: { type: String, enum: ['cash', 'card', 'split'], required: true },
+  cashAmount: { type: Number, default: 0 },
+  cardAmount: { type: Number, default: 0 },
+  reason: { type: String, required: true },
+  notes: { type: String },
+  status: { type: String, enum: ['completed', 'cancelled'], default: 'completed' },
+  processedBy: { type: String, required: true },
+  processedByName: { type: String },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
+});
+
+RefundSchema.index({ tenantId: 1, createdAt: -1 });
+RefundSchema.index({ tenantId: 1, branchId: 1, createdAt: -1 });
+RefundSchema.index({ originalOrderId: 1 });
+RefundSchema.index({ refundNumber: 1, tenantId: 1 });
+
+export const RefundModel = mongoose.models['Refund'] || mongoose.model<IRefund>("Refund", RefundSchema);
