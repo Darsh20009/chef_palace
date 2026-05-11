@@ -88,6 +88,8 @@ export function buildShiftReportHtml(opts: {
   orderTypeBreakdown: Record<string, number>;
   cashMovements?: Array<{ type: string; amount: number; reason?: string; timestamp?: string }>;
   employees?: Array<{ name: string; orders: number; sales: number }>;
+  categories?: Array<{ categoryId: string; nameAr: string; quantity: number; sales: number; itemsCount?: number }>;
+  topProducts?: Array<{ id: string; nameAr: string; categoryNameAr: string; quantity: number; sales: number }>;
   closingNotes?: string;
 }) {
   const cashIn = (opts.cashMovements || []).filter(m => m.type === 'cash_in' || m.type === 'paid_in').reduce((s, m) => s + m.amount, 0);
@@ -161,6 +163,21 @@ ${opts.openingCash !== undefined ? `<div class="section">
     <span>الفرق:</span>
     <span class="${(opts.cashDifference || 0) >= 0 ? 'diff-positive' : 'diff-negative'}">${fmtSAR(opts.cashDifference || 0)}</span>
   </div>
+</div>` : ''}
+
+${(opts.categories && opts.categories.length) ? `<div class="section">
+  <div class="section-title">المنتجات المستهلكة حسب التصنيف</div>
+  <table><tr><th>التصنيف</th><th>الكمية</th><th>المبيعات</th></tr>
+    ${opts.categories.map(c => `<tr><td>${c.nameAr}</td><td>${c.quantity}</td><td>${fmtSAR(c.sales)}</td></tr>`).join('')}
+    <tr style="border-top:2px solid #000;font-weight:bold;"><td>الإجمالي</td><td>${opts.categories.reduce((s, c) => s + c.quantity, 0)}</td><td>${fmtSAR(opts.categories.reduce((s, c) => s + c.sales, 0))}</td></tr>
+  </table>
+</div>` : ''}
+
+${(opts.topProducts && opts.topProducts.length) ? `<div class="section">
+  <div class="section-title">أكثر المنتجات مبيعاً</div>
+  <table><tr><th>المنتج</th><th>التصنيف</th><th>الكمية</th></tr>
+    ${opts.topProducts.slice(0, 15).map(p => `<tr><td>${p.nameAr}</td><td style="font-size:10px;color:#666;">${p.categoryNameAr}</td><td>${p.quantity}</td></tr>`).join('')}
+  </table>
 </div>` : ''}
 
 ${(opts.employees && opts.employees.length) ? `<div class="section">
@@ -261,6 +278,8 @@ export default function ShiftQuickBar() {
           paymentBreakdown: s.paymentBreakdown,
           orderTypeBreakdown: s.orderTypeBreakdown,
           cashMovements: s.cashMovements,
+          categories: s.categories,
+          topProducts: s.topProducts,
           closingNotes: s.closingNotes,
         });
         printShiftReport(html);
@@ -288,12 +307,24 @@ export default function ShiftQuickBar() {
       paymentBreakdown: autoShift.paymentBreakdown,
       orderTypeBreakdown: autoShift.orderTypeBreakdown,
       employees: autoShift.employees,
+      categories: (autoShift as any).categories,
+      topProducts: (autoShift as any).topProducts,
     });
     printShiftReport(html);
   }, [autoShift]);
 
-  const handlePrintActive = useCallback(() => {
+  const handlePrintActive = useCallback(async () => {
     if (!activeShift) return;
+    let categories: any[] = [];
+    let topProducts: any[] = [];
+    try {
+      const r = await fetch(`/api/shifts/${(activeShift as any)._id || (activeShift as any).id}/z-report`, { credentials: 'include' });
+      if (r.ok) {
+        const z = await r.json();
+        categories = z.categories || [];
+        topProducts = z.topProducts || [];
+      }
+    } catch {}
     const html = buildShiftReportHtml({
       title: 'تقرير الوردية الحالية',
       shiftNumber: activeShift.shiftNumber,
@@ -312,6 +343,8 @@ export default function ShiftQuickBar() {
       paymentBreakdown: activeShift.paymentBreakdown,
       orderTypeBreakdown: activeShift.orderTypeBreakdown,
       cashMovements: activeShift.cashMovements,
+      categories,
+      topProducts,
     });
     printShiftReport(html);
   }, [activeShift]);

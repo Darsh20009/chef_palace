@@ -369,6 +369,8 @@ export default function ShiftManagement() {
                       paymentBreakdown: autoCurrent.paymentBreakdown,
                       orderTypeBreakdown: autoCurrent.orderTypeBreakdown,
                       employees: autoCurrent.employees,
+                      categories: autoCurrent.categories,
+                      topProducts: autoCurrent.topProducts,
                     }));
                   }}
                 >
@@ -402,6 +404,8 @@ export default function ShiftManagement() {
                     paymentBreakdown: p.paymentBreakdown,
                     orderTypeBreakdown: p.orderTypeBreakdown,
                     employees: p.employees,
+                    categories: p.categories,
+                    topProducts: p.topProducts,
                   }));
                 }}>
                 <CardContent className="py-3 px-4">

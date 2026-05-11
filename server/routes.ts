@@ -114,7 +114,13 @@ async function getEffectiveNow(tenantId?: string): Promise<Date> {
   }
 }
 
-function aggregateOrdersAsShift(orders: any[], periodStart: Date, periodEnd: Date) {
+function aggregateOrdersAsShift(
+  orders: any[],
+  periodStart: Date,
+  periodEnd: Date,
+  coffeeItemMap?: Map<string, any>,
+  categoryMap?: Map<string, any>,
+) {
   const summary: any = {
     totalSales: 0,
     totalOrders: 0,
@@ -127,9 +133,14 @@ function aggregateOrdersAsShift(orders: any[], periodStart: Date, periodEnd: Dat
     paymentBreakdown: { cash: 0, card: 0, loyalty: 0 },
     orderTypeBreakdown: { dine_in: 0, takeaway: 0, car_pickup: 0, delivery: 0, online: 0 },
     employees: [] as Array<{ name: string; orders: number; sales: number }>,
+    categories: [] as Array<{ categoryId: string; nameAr: string; quantity: number; sales: number; itemsCount: number }>,
+    topProducts: [] as Array<{ id: string; nameAr: string; categoryNameAr: string; quantity: number; sales: number }>,
     orderIds: [] as string[],
   };
   const empMap: Record<string, { name: string; orders: number; sales: number }> = {};
+  const catAgg: Record<string, { categoryId: string; nameAr: string; quantity: number; sales: number; itemsCount: number }> = {};
+  const prodAgg: Record<string, { id: string; nameAr: string; categoryNameAr: string; quantity: number; sales: number }> = {};
+
   for (const o of orders) {
     const amount = Number(o.totalAmount || 0);
     const vat = Number(o.vat || o.taxAmount || 0);
@@ -159,9 +170,47 @@ function aggregateOrdersAsShift(orders: any[], periodStart: Date, periodEnd: Dat
     if (!empMap[empName]) empMap[empName] = { name: empName, orders: 0, sales: 0 };
     empMap[empName].orders += 1;
     empMap[empName].sales += amount;
+
+    // Category + product aggregation
+    if (coffeeItemMap && Array.isArray(o.items)) {
+      for (const it of o.items) {
+        const cid = it.coffeeItemId || it.id;
+        const qty = Number(it.quantity) || 1;
+        const ci = coffeeItemMap.get(String(cid));
+        const itemName = ci?.nameAr || it.coffeeItem?.nameAr || it.nameAr || it.name || 'منتج';
+        const catId = ci?.category || 'uncategorized';
+        const catName = categoryMap?.get(String(catId))?.nameAr || (catId === 'uncategorized' ? 'بدون تصنيف' : catId);
+        const lineTotal = Number(it.totalPrice || it.priceTotal || (it.unitPrice ? it.unitPrice * qty : 0) || (ci?.price ? ci.price * qty : 0));
+        if (!catAgg[catId]) catAgg[catId] = { categoryId: catId, nameAr: catName, quantity: 0, sales: 0, itemsCount: 0 };
+        catAgg[catId].quantity += qty;
+        catAgg[catId].sales += lineTotal;
+        catAgg[catId].itemsCount += 1;
+        const pkey = String(cid || itemName);
+        if (!prodAgg[pkey]) prodAgg[pkey] = { id: pkey, nameAr: itemName, categoryNameAr: catName, quantity: 0, sales: 0 };
+        prodAgg[pkey].quantity += qty;
+        prodAgg[pkey].sales += lineTotal;
+      }
+    }
   }
   summary.employees = Object.values(empMap).sort((a, b) => b.sales - a.sales);
+  summary.categories = Object.values(catAgg).sort((a, b) => b.quantity - a.quantity);
+  summary.topProducts = Object.values(prodAgg).sort((a, b) => b.quantity - a.quantity).slice(0, 20);
   return summary;
+}
+
+async function loadMenuMaps(tenantId: string): Promise<{ coffeeItemMap: Map<string, any>; categoryMap: Map<string, any> }> {
+  try {
+    const [items, cats] = await Promise.all([
+      CoffeeItemModel.find({ tenantId }).select('id nameAr category price').lean(),
+      MenuCategoryModel.find({ tenantId }).select('id nameAr').lean(),
+    ]);
+    return {
+      coffeeItemMap: new Map(items.map((i: any) => [String(i.id), i])),
+      categoryMap: new Map(cats.map((c: any) => [String(c.id), c])),
+    };
+  } catch {
+    return { coffeeItemMap: new Map(), categoryMap: new Map() };
+  }
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -4450,11 +4499,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get Z-Report for a specific shift
   app.get("/api/shifts/:shiftId/z-report", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const shift = await CashierShiftModel.findById(req.params.shiftId).lean();
+      const shift: any = await CashierShiftModel.findById(req.params.shiftId).lean();
       if (!shift) return res.status(404).json({ error: "الوردية غير موجودة" });
 
-      res.json(shift);
+      // Aggregate categories + products from the shift's orders
+      const tenantId = getTenantIdFromRequest(req) || shift.tenantId || "demo-tenant";
+      const orderIds: string[] = Array.isArray(shift.orderIds) ? shift.orderIds.map(String) : [];
+      let categories: any[] = [];
+      let topProducts: any[] = [];
+      if (orderIds.length > 0) {
+        const orders = await OrderModel.find({
+          $or: [{ id: { $in: orderIds } }, { _id: { $in: orderIds.filter((x: string) => /^[0-9a-fA-F]{24}$/.test(x)) } }],
+        }).lean();
+        const { coffeeItemMap, categoryMap } = await loadMenuMaps(tenantId);
+        const agg = aggregateOrdersAsShift(orders, new Date(shift.openedAt), new Date(shift.closedAt || Date.now()), coffeeItemMap, categoryMap);
+        categories = agg.categories;
+        topProducts = agg.topProducts;
+      }
+
+      res.json({ ...shift, categories, topProducts });
     } catch (error) {
+      console.error("[SHIFT] z-report error:", error);
       res.status(500).json({ error: "فشل في جلب التقرير" });
     }
   });
@@ -4609,7 +4674,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }).lean();
       const filtered = orders.filter((o: any) => !coveredIds.has(String(o.id || o._id)));
 
-      const summary = aggregateOrdersAsShift(filtered, period.start, now);
+      const { coffeeItemMap, categoryMap } = await loadMenuMaps(tenantId);
+      const summary = aggregateOrdersAsShift(filtered, period.start, now, coffeeItemMap, categoryMap);
       res.json({
         enabled,
         autoShiftHours: hours,
@@ -4666,11 +4732,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         buckets[key].push(o);
       }
 
+      const { coffeeItemMap, categoryMap } = await loadMenuMaps(tenantId);
       const periods = Object.entries(buckets)
         .map(([key, list]) => {
           const start = new Date(key);
           const end = new Date(start.getTime() + periodMs);
-          return { start, end, ...aggregateOrdersAsShift(list, start, end) };
+          return { start, end, ...aggregateOrdersAsShift(list, start, end, coffeeItemMap, categoryMap) };
         })
         .sort((a, b) => b.start.getTime() - a.start.getTime());
 
