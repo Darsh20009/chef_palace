@@ -159,35 +159,8 @@
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" id="main-manifest">
 
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=20">
-    <link rel="icon" type="image/png" sizes="16x16"  href="/icon-16.png?v=20">
-    <link rel="icon" type="image/png" sizes="32x32"  href="/icon-32.png?v=20" id="main-favicon">
-    <link rel="icon" type="image/png" sizes="96x96"  href="/icon-96.png?v=20">
-    <link rel="icon" type="image/png" sizes="192x192" href="/logo-192.png?v=20">
-    <link rel="icon" type="image/png" sizes="512x512" href="/logo-512.png?v=20">
-
-    <!-- Apple Touch Icons -->
-    <link rel="apple-touch-icon"                      href="/icon-180.png?v=20">
-    <link rel="apple-touch-icon" sizes="57x57"        href="/icon-57.png?v=20">
-    <link rel="apple-touch-icon" sizes="60x60"        href="/icon-60.png?v=20">
-    <link rel="apple-touch-icon" sizes="72x72"        href="/icon-72.png?v=20">
-    <link rel="apple-touch-icon" sizes="76x76"        href="/icon-76.png?v=20">
-    <link rel="apple-touch-icon" sizes="114x114"      href="/icon-114.png?v=20">
-    <link rel="apple-touch-icon" sizes="120x120"      href="/icon-120.png?v=20">
-    <link rel="apple-touch-icon" sizes="144x144"      href="/icon-144.png?v=20">
-    <link rel="apple-touch-icon" sizes="152x152"      href="/icon-152.png?v=20">
-    <link rel="apple-touch-icon" sizes="167x167"      href="/icon-167.png?v=20">
-    <link rel="apple-touch-icon" sizes="180x180"      href="/icon-180.png?v=20">
-
-    <!-- Microsoft -->
-    <meta name="msapplication-TileImage" content="/icon-144.png">
-    <meta name="msapplication-square70x70logo"   content="/icon-72.png">
-    <meta name="msapplication-square150x150logo" content="/icon-152.png">
-    <meta name="msapplication-square310x310logo" content="/logo-512.png">
-
-    <!-- Safari -->
-    <link rel="mask-icon" href="/logo.png" color="#C06520">
+    <!-- Favicon and install icons removed by user request -->
+    <link rel="icon" href="data:,">
 
     <!-- Canonical -->
     <link rel="canonical" href="https://www.chefsplace.online/">
@@ -203,13 +176,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
     <noscript><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
 
-    <!-- Safari Splash Screens -->
-    <link rel="apple-touch-startup-image" href="/logo.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)">
-    <link rel="apple-touch-startup-image" href="/logo.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)">
-    <link rel="apple-touch-startup-image" href="/logo.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3)">
-    <link rel="apple-touch-startup-image" href="/logo.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)">
-    <link rel="apple-touch-startup-image" href="/logo.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)">
-    <link rel="apple-touch-startup-image" href="/logo.png" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3)">
+    <!-- Safari startup splash images removed by user request -->
 
     <!-- ═══════════════════════════════════════════════════════════
          JSON-LD STRUCTURED DATA — RESTAURANT SCHEMA
@@ -405,43 +372,17 @@
     <!-- Dynamic Manifest Switcher for Employee Portal -->
     <script>
       (function() {
+        // Favicon/install icons removed by user request — clear any existing icon links
+        document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"], link[rel="mask-icon"], link[rel="apple-touch-startup-image"]').forEach(el => el.remove());
         const employeePaths = ['/employee', '/manager', '/kitchen', '/pos', '/cashier', '/admin', '/owner', '/executive'];
         const currentPath = window.location.pathname;
         const isEmployeePath = employeePaths.some(path => currentPath === path || currentPath.startsWith(path + '/'));
-
         const manifestLink = document.getElementById('main-manifest');
-        const favicon = document.getElementById('main-favicon');
-        const appleTouchIcons = document.querySelectorAll('link[rel="apple-touch-icon"]');
-
         if (isEmployeePath) {
-          const cbv = 13;
           if (manifestLink) manifestLink.href = '/employee-manifest.json';
-          if (favicon) favicon.href = '/employee-logo-192.png?v=' + cbv;
-          appleTouchIcons.forEach(icon => { icon.href = '/employee-logo-192.png?v=' + cbv; });
-          document.querySelectorAll('link[rel="icon"]').forEach(el => { el.href = '/employee-logo-192.png?v=' + cbv; });
           document.title = "مكان الشيف — نظام الإدارة";
-          if (manifestLink) {
-            const newManifest = manifestLink.cloneNode(true);
-            newManifest.href = '/employee-manifest.json?v=' + Date.now();
-            manifestLink.parentNode.replaceChild(newManifest, manifestLink);
-          }
         } else {
-          const cbv = 13;
           if (manifestLink) manifestLink.href = '/manifest.json';
-          if (favicon) favicon.href = '/logo-192.png?v=' + cbv;
-          appleTouchIcons.forEach(icon => { icon.href = '/apple-touch-icon.png?v=' + cbv; });
-          // Force-update ALL icon links to bypass aggressive favicon caching
-          document.querySelectorAll('link[rel="icon"]').forEach(el => {
-            const sz = el.getAttribute('sizes') || '';
-            if (sz.startsWith('32') || sz === '') el.href = '/logo-32.png?v=' + cbv;
-            else if (sz.startsWith('16')) el.href = '/icon-16.png?v=' + cbv;
-          });
-          // Also inject a fresh favicon link to force Chrome/Safari to reload
-          const freshFav = document.createElement('link');
-          freshFav.rel = 'icon';
-          freshFav.type = 'image/x-icon';
-          freshFav.href = '/favicon.ico?v=' + cbv + '&t=' + Date.now();
-          document.head.appendChild(freshFav);
         }
       })();
     </script>
