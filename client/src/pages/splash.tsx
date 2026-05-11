@@ -46,10 +46,20 @@ export default function SplashScreen() {
         exit={{ opacity: 0 }}
         transition={{ duration: 0.6, ease: "easeInOut" }}
       >
-        {/* Branded gradient background (Chef Bukhari) — replaces old splash video */}
+        {/* Background video (Chef Bukhari) */}
+        <video
+          src="/videos/splash-bg.mp4?v=1"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        {/* Dark overlay for logo readability */}
         <div
           className="absolute inset-0"
-          style={{ background: `radial-gradient(ellipse at center, #1a0e00 0%, #0a0a0a 70%)` }}
+          style={{ background: `radial-gradient(ellipse at center, rgba(26,14,0,0.55) 0%, rgba(0,0,0,0.85) 80%)` }}
         />
 
         {/* Logo overlay on top of video */}
