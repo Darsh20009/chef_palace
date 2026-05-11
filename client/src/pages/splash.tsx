@@ -24,11 +24,11 @@ export default function SplashScreen() {
 
   useEffect(() => {
     if (!visible) return;
-    const t1 = setTimeout(() => setPhase(1), 300);
-    const t2 = setTimeout(() => setPhase(2), 800);
-    const t3 = setTimeout(() => setPhase(3), 1500);
+    const t1 = setTimeout(() => setPhase(1), 150);
+    const t2 = setTimeout(() => setPhase(2), 400);
+    const t3 = setTimeout(() => setPhase(3), 800);
     const isPreview = window.location.pathname === "/splash";
-    const tRedirect = !isPreview ? setTimeout(() => setLocation("/menu"), 2800) : null;
+    const tRedirect = !isPreview ? setTimeout(() => setLocation("/menu"), 1400) : null;
     return () => {
       clearTimeout(t1); clearTimeout(t2); clearTimeout(t3);
       if (tRedirect) clearTimeout(tRedirect);
