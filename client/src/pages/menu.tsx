@@ -34,8 +34,10 @@ import {
   CheckCircle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import banner1 from "@assets/blackrose-banner-1.png";
+const banner1 = "/banners/banner-1.jpg";
+const banner2 = "/banners/banner-2.jpg";
 const chefsplaceLogo = "/logo.png";
+const banners = [banner1, banner2];
 import type { CoffeeItem, IProductAddon, IPromoOffer } from "@shared/schema";
 import { AddToCartModal } from "@/components/add-to-cart-modal";
 import { motion, AnimatePresence } from "framer-motion";
@@ -274,7 +276,7 @@ export default function MenuPage() {
       couponImageUrl: undefined
     });
     slides.push({
-      image: banner1,
+      image: banner2,
       badge: t("menu.banner.default2.badge"),
       title: t("menu.banner.default2.title"),
       subtitle: t("menu.banner.default2.subtitle"),
@@ -295,7 +297,7 @@ export default function MenuPage() {
       const cheapestName = i18n.language === 'ar' ? cheapest?.nameAr : (cheapest?.nameEn || cheapest?.nameAr);
       if (cheapest) {
         slides.push({
-          image: cheapest.imageUrl || banner1,
+          image: cheapest.imageUrl || banner2,
           title: t("menu.banner.smart.cheapest_title", { name: cheapestName }),
           subtitle: t("menu.banner.smart.cheapest_subtitle"),
           badge: t("menu.banner.smart.cheapest_badge"),
@@ -311,7 +313,7 @@ export default function MenuPage() {
       const newestName = i18n.language === 'ar' ? newest?.nameAr : (newest?.nameEn || newest?.nameAr);
       if (newest && (newest as any).id !== (cheapest as any).id) {
         slides.push({
-          image: newest.imageUrl || banner1,
+          image: newest.imageUrl || banner2,
           title: t("menu.banner.smart.newest_title"),
           subtitle: t("menu.banner.smart.newest_subtitle", { name: newestName }),
           badge: t("menu.banner.smart.newest_badge"),
@@ -339,7 +341,7 @@ export default function MenuPage() {
           couponImageUrl: undefined
         },
         {
-          image: banner1,
+          image: banner2,
           title: t("banner.2.title"),
           subtitle: t("banner.2.subtitle"),
           badge: t("banner.2.badge"),
