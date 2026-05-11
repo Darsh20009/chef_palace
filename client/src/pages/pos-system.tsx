@@ -221,6 +221,27 @@ export default function PosSystem() {
     localStorage.setItem("pos-terminal-connected", String(posTerminalConnected));
   }, [posTerminalConnected]);
 
+  // Persist cart to sessionStorage to prevent accidental loss on re-renders
+  useEffect(() => {
+    if (orderItems.length > 0) {
+      try { sessionStorage.setItem("pos-cart-backup", JSON.stringify(orderItems)); } catch {}
+    }
+  }, [orderItems]);
+
+  // Restore cart from sessionStorage on mount (if cart is empty but backup exists)
+  useEffect(() => {
+    try {
+      const backup = sessionStorage.getItem("pos-cart-backup");
+      if (backup) {
+        const parsed = JSON.parse(backup);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setOrderItems(parsed);
+        }
+      }
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Offline queue: load count on mount, sync when back online
   useEffect(() => {
     countPendingOrders().then(setOfflineQueueCount).catch(() => {});
@@ -539,7 +560,8 @@ export default function PosSystem() {
           return arName.includes(q) || enName.includes(q);
         });
       })
-      .map(group => group[0]);
+      .map(group => group[0])
+      .sort((a, b) => ((b as any).salesCount || 0) - ((a as any).salesCount || 0));
   }, [productsData, selectedCategory, searchQuery, groupedItemsMap]);
 
   const visibleCategories = useMemo(() => {
@@ -845,6 +867,7 @@ export default function PosSystem() {
         setCustomerPhone("");
         setOrderNote("");
         setSyncing(false);
+        try { sessionStorage.removeItem("pos-cart-backup"); } catch {}
         return;
       }
 
@@ -959,6 +982,7 @@ export default function PosSystem() {
       setCarPlateInput("");
       setCustomerPoints(0);
       setUsePoints(false);
+      try { sessionStorage.removeItem("pos-cart-backup"); } catch {}
       
       queryClient.invalidateQueries({ queryKey: ["/api/orders/live"] });
     } catch (error) {

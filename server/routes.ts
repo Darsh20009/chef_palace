@@ -1043,6 +1043,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.status(201).json(serializedOrder);
 
+      // Increment salesCount for each ordered item (fire-and-forget, non-blocking)
+      setImmediate(async () => {
+        try {
+          const orderItems: any[] = body.items || [];
+          for (const item of orderItems) {
+            const coffeeItemId = item.coffeeItemId || item.id;
+            const qty = Number(item.quantity) || 1;
+            if (coffeeItemId) {
+              await CoffeeItemModel.updateOne({ id: coffeeItemId }, { $inc: { salesCount: qty } }).catch(() => {});
+            }
+          }
+        } catch (err) {
+          // Non-critical: ignore salesCount increment errors
+        }
+      });
+
       // === 3-Layer Notifications: Customer + Admins ===
       setImmediate(async () => {
         try {
@@ -6957,6 +6973,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create coffee item using MongoDB directly to ensure all fields including imageUrl, availableSizes, and addons are saved
+      const vd = validatedData as any;
       const newCoffeeItem = new CoffeeItemModel({
         id: validatedData.id,
         tenantId: tenantId,
@@ -6966,24 +6983,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         price: validatedData.price,
         oldPrice: validatedData.oldPrice,
         category: validatedData.category,
+        menuType: vd.menuType || 'drinks',
         imageUrl: validatedData.imageUrl,
-        imageUrls: (validatedData as any).imageUrls || (validatedData.imageUrl ? [validatedData.imageUrl] : []),
+        imageUrls: vd.imageUrls || (validatedData.imageUrl ? [validatedData.imageUrl] : []),
         isAvailable: validatedData.isAvailable ?? 1,
         availabilityStatus: validatedData.availabilityStatus || 'available',
         coffeeStrength: validatedData.coffeeStrength,
+        strengthLevel: vd.strengthLevel,
         isNewProduct: validatedData.isNewProduct,
+        sku: vd.sku,
+        sizeML: vd.sizeML,
+        groupId: vd.groupId,
         publishedBranches: validatedData.publishedBranches || [branchId],
         createdByEmployeeId: validatedData.createdByEmployeeId,
         createdByBranchId: validatedData.createdByBranchId,
         availableSizes: validatedData.availableSizes || [],
-        addons: (validatedData as any).addons || [],
-        isGiftable: (validatedData as any).isGiftable || false,
-        branchAvailability: (validatedData.publishedBranches || [branchId]).map(bId => ({
+        addons: vd.addons || [],
+        bundledItems: vd.bundledItems || [],
+        isReservation: vd.isReservation || false,
+        reservationPackages: vd.reservationPackages || [],
+        isGiftable: vd.isGiftable || false,
+        availableFrom: vd.availableFrom,
+        availableTo: vd.availableTo,
+        availableDays: vd.availableDays || [],
+        branchAvailability: vd.branchAvailability || (validatedData.publishedBranches || [branchId]).map((bId: string) => ({
           branchId: bId,
           isAvailable: 1
         })),
-        requiresRecipe: (validatedData as any).requiresRecipe !== undefined ? (validatedData as any).requiresRecipe : 1,
-        hasRecipe: (validatedData as any).hasRecipe !== undefined ? (validatedData as any).hasRecipe : 0,
+        requiresRecipe: vd.requiresRecipe !== undefined ? vd.requiresRecipe : 1,
+        hasRecipe: vd.hasRecipe !== undefined ? vd.hasRecipe : 0,
+        recipeId: vd.recipeId,
+        salesCount: vd.salesCount || 0,
         costOfGoods: 0,
         profitMargin: 0,
         updatedAt: new Date(),

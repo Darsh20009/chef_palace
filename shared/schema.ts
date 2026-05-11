@@ -78,6 +78,7 @@ export interface ICoffeeItem extends Document {
     duration?: string;
     maxGuests?: number;
   }>;
+  salesCount?: number;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -143,6 +144,7 @@ const CoffeeItemSchema = new Schema<ICoffeeItem>({
     duration: { type: String },
     maxGuests: { type: Number },
   }],
+  salesCount: { type: Number, default: 0 },
   recipeId: { type: String },
   costOfGoods: { type: Number, default: 0 },
   profitMargin: { type: Number, default: 0 },
@@ -2398,15 +2400,23 @@ export const insertCoffeeItemSchema = z.object({
   price: z.union([z.string(), z.number()]).transform(val => typeof val === 'string' ? parseFloat(val) : val),
   oldPrice: z.union([z.string(), z.number()]).transform(val => typeof val === 'string' ? parseFloat(val) : val).optional(),
   category: z.string(),
+  menuType: z.enum(['drinks', 'food']).optional(),
   imageUrl: z.string().optional(),
+  imageUrls: z.array(z.string()).optional(),
   isAvailable: z.number().optional(),
   availabilityStatus: z.string().optional(),
   coffeeStrength: z.string().optional(),
   strengthLevel: z.number().optional(),
   isNewProduct: z.number().optional(),
+  sku: z.string().optional(),
+  sizeML: z.number().optional(),
+  groupId: z.string().optional(),
   createdByEmployeeId: z.string().optional(),
   createdByBranchId: z.string().optional(),
   publishedBranches: z.array(z.string()).optional(),
+  availableFrom: z.string().optional(),
+  availableTo: z.string().optional(),
+  availableDays: z.array(z.number()).optional(),
   availableSizes: z.array(z.object({
     nameAr: z.string(),
     nameEn: z.string().optional(),
@@ -2423,9 +2433,41 @@ export const insertCoffeeItemSchema = z.object({
     category: z.string().optional(),
     imageUrl: z.string().optional(),
     section: z.string().optional(),
+    isRequired: z.boolean().optional(),
+    maxSelectable: z.number().optional(),
     selectionType: z.enum(['single', 'multiple']).optional(),
   })).optional(),
+  bundledItems: z.array(z.object({
+    sectionTitle: z.string(),
+    selectionType: z.enum(['single', 'multiple']).optional(),
+    minSelectable: z.number().optional(),
+    maxSelectable: z.number().optional(),
+    items: z.array(z.object({
+      productId: z.string(),
+      nameAr: z.string(),
+      nameEn: z.string().optional(),
+      imageUrl: z.string().optional(),
+      originalPrice: z.number(),
+      customPrice: z.number(),
+    })),
+  })).optional(),
+  isReservation: z.boolean().optional(),
+  reservationPackages: z.array(z.object({
+    packageName: z.string(),
+    description: z.string().optional(),
+    price: z.number(),
+    duration: z.string().optional(),
+    maxGuests: z.number().optional(),
+  })).optional(),
+  branchAvailability: z.array(z.object({
+    branchId: z.string(),
+    isAvailable: z.number(),
+  })).optional(),
   isGiftable: z.boolean().optional(),
+  hasRecipe: z.number().optional(),
+  requiresRecipe: z.number().optional(),
+  recipeId: z.string().optional(),
+  salesCount: z.number().optional(),
 });
 
 export const insertEmployeeSchema = z.object({
