@@ -160,25 +160,25 @@
     <link rel="manifest" href="/manifest.json" id="main-manifest">
 
     <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=12">
-    <link rel="icon" type="image/png" sizes="16x16"  href="/icon-16.png?v=12">
-    <link rel="icon" type="image/png" sizes="32x32"  href="/icon-32.png?v=12" id="main-favicon">
-    <link rel="icon" type="image/png" sizes="96x96"  href="/icon-96.png?v=12">
-    <link rel="icon" type="image/png" sizes="192x192" href="/logo-192.png?v=12">
-    <link rel="icon" type="image/png" sizes="512x512" href="/logo-512.png?v=12">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=13">
+    <link rel="icon" type="image/png" sizes="16x16"  href="/icon-16.png?v=13">
+    <link rel="icon" type="image/png" sizes="32x32"  href="/icon-32.png?v=13" id="main-favicon">
+    <link rel="icon" type="image/png" sizes="96x96"  href="/icon-96.png?v=13">
+    <link rel="icon" type="image/png" sizes="192x192" href="/logo-192.png?v=13">
+    <link rel="icon" type="image/png" sizes="512x512" href="/logo-512.png?v=13">
 
     <!-- Apple Touch Icons -->
-    <link rel="apple-touch-icon"                      href="/icon-180.png?v=12">
-    <link rel="apple-touch-icon" sizes="57x57"        href="/icon-57.png?v=12">
-    <link rel="apple-touch-icon" sizes="60x60"        href="/icon-60.png?v=12">
-    <link rel="apple-touch-icon" sizes="72x72"        href="/icon-72.png?v=12">
-    <link rel="apple-touch-icon" sizes="76x76"        href="/icon-76.png?v=12">
-    <link rel="apple-touch-icon" sizes="114x114"      href="/icon-114.png?v=12">
-    <link rel="apple-touch-icon" sizes="120x120"      href="/icon-120.png?v=12">
-    <link rel="apple-touch-icon" sizes="144x144"      href="/icon-144.png?v=12">
-    <link rel="apple-touch-icon" sizes="152x152"      href="/icon-152.png?v=12">
-    <link rel="apple-touch-icon" sizes="167x167"      href="/icon-167.png?v=12">
-    <link rel="apple-touch-icon" sizes="180x180"      href="/icon-180.png?v=12">
+    <link rel="apple-touch-icon"                      href="/icon-180.png?v=13">
+    <link rel="apple-touch-icon" sizes="57x57"        href="/icon-57.png?v=13">
+    <link rel="apple-touch-icon" sizes="60x60"        href="/icon-60.png?v=13">
+    <link rel="apple-touch-icon" sizes="72x72"        href="/icon-72.png?v=13">
+    <link rel="apple-touch-icon" sizes="76x76"        href="/icon-76.png?v=13">
+    <link rel="apple-touch-icon" sizes="114x114"      href="/icon-114.png?v=13">
+    <link rel="apple-touch-icon" sizes="120x120"      href="/icon-120.png?v=13">
+    <link rel="apple-touch-icon" sizes="144x144"      href="/icon-144.png?v=13">
+    <link rel="apple-touch-icon" sizes="152x152"      href="/icon-152.png?v=13">
+    <link rel="apple-touch-icon" sizes="167x167"      href="/icon-167.png?v=13">
+    <link rel="apple-touch-icon" sizes="180x180"      href="/icon-180.png?v=13">
 
     <!-- Microsoft -->
     <meta name="msapplication-TileImage" content="/icon-144.png">
@@ -414,11 +414,11 @@
         const appleTouchIcons = document.querySelectorAll('link[rel="apple-touch-icon"]');
 
         if (isEmployeePath) {
+          const cbv = 13;
           if (manifestLink) manifestLink.href = '/employee-manifest.json';
-          if (favicon) favicon.href = '/employee-logo-192.png';
-          appleTouchIcons.forEach(icon => { icon.href = '/employee-logo-192.png'; });
-          const existingIcon = document.querySelector('link[rel="icon"]');
-          if (existingIcon) existingIcon.href = '/employee-logo-192.png';
+          if (favicon) favicon.href = '/employee-logo-192.png?v=' + cbv;
+          appleTouchIcons.forEach(icon => { icon.href = '/employee-logo-192.png?v=' + cbv; });
+          document.querySelectorAll('link[rel="icon"]').forEach(el => { el.href = '/employee-logo-192.png?v=' + cbv; });
           document.title = "مكان الشيف — نظام الإدارة";
           if (manifestLink) {
             const newManifest = manifestLink.cloneNode(true);
@@ -426,11 +426,22 @@
             manifestLink.parentNode.replaceChild(newManifest, manifestLink);
           }
         } else {
+          const cbv = 13;
           if (manifestLink) manifestLink.href = '/manifest.json';
-          if (favicon) favicon.href = '/logo-192.png';
-          appleTouchIcons.forEach(icon => { icon.href = '/apple-touch-icon.png'; });
-          const existingIcon = document.querySelector('link[rel="icon"]');
-          if (existingIcon) existingIcon.href = '/logo-32.png';
+          if (favicon) favicon.href = '/logo-192.png?v=' + cbv;
+          appleTouchIcons.forEach(icon => { icon.href = '/apple-touch-icon.png?v=' + cbv; });
+          // Force-update ALL icon links to bypass aggressive favicon caching
+          document.querySelectorAll('link[rel="icon"]').forEach(el => {
+            const sz = el.getAttribute('sizes') || '';
+            if (sz.startsWith('32') || sz === '') el.href = '/logo-32.png?v=' + cbv;
+            else if (sz.startsWith('16')) el.href = '/icon-16.png?v=' + cbv;
+          });
+          // Also inject a fresh favicon link to force Chrome/Safari to reload
+          const freshFav = document.createElement('link');
+          freshFav.rel = 'icon';
+          freshFav.type = 'image/x-icon';
+          freshFav.href = '/favicon.ico?v=' + cbv + '&t=' + Date.now();
+          document.head.appendChild(freshFav);
         }
       })();
     </script>
