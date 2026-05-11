@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v19-chefbukhari-force';
+const CACHE_VERSION = 'v20-newlogo';
 const CACHE_NAME = `chefsplace-cache-${CACHE_VERSION}`;
 
 // Essential shell files to pre-cache during install

@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-const chefsplaceLogo = "/logo.png?v=18";
+const chefsplaceLogo = "/logo.png?v=20";
 
 const GOLD = "#C06520";
 const GOLD2 = "#e8892a";
@@ -24,11 +24,11 @@ export default function SplashScreen() {
 
   useEffect(() => {
     if (!visible) return;
-    const t1 = setTimeout(() => setPhase(1), 150);
-    const t2 = setTimeout(() => setPhase(2), 400);
-    const t3 = setTimeout(() => setPhase(3), 800);
+    const t1 = setTimeout(() => setPhase(1), 400);
+    const t2 = setTimeout(() => setPhase(2), 1100);
+    const t3 = setTimeout(() => setPhase(3), 2200);
     const isPreview = window.location.pathname === "/splash";
-    const tRedirect = !isPreview ? setTimeout(() => setLocation("/menu"), 1400) : null;
+    const tRedirect = !isPreview ? setTimeout(() => setLocation("/menu"), 3800) : null;
     return () => {
       clearTimeout(t1); clearTimeout(t2); clearTimeout(t3);
       if (tRedirect) clearTimeout(tRedirect);
