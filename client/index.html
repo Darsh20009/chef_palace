@@ -159,8 +159,27 @@
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" id="main-manifest">
 
-    <!-- Favicon and install icons removed by user request -->
-    <link rel="icon" href="data:,">
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=22">
+    <link rel="icon" type="image/png" sizes="16x16"  href="/icon-16.png?v=22">
+    <link rel="icon" type="image/png" sizes="32x32"  href="/icon-32.png?v=22" id="main-favicon">
+    <link rel="icon" type="image/png" sizes="96x96"  href="/icon-96.png?v=22">
+    <link rel="icon" type="image/png" sizes="192x192" href="/logo-192.png?v=22">
+    <link rel="icon" type="image/png" sizes="512x512" href="/logo-512.png?v=22">
+
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon"                      href="/icon-180.png?v=22">
+    <link rel="apple-touch-icon" sizes="152x152"      href="/icon-152.png?v=22">
+    <link rel="apple-touch-icon" sizes="167x167"      href="/icon-167.png?v=22">
+    <link rel="apple-touch-icon" sizes="180x180"      href="/icon-180.png?v=22">
+
+    <!-- Microsoft Tiles -->
+    <meta name="msapplication-TileImage" content="/icon-144.png?v=22">
+    <meta name="msapplication-square150x150logo" content="/icon-152.png?v=22">
+    <meta name="msapplication-square310x310logo" content="/logo-512.png?v=22">
+
+    <!-- Safari mask -->
+    <link rel="mask-icon" href="/logo.png?v=22" color="#C06520">
 
     <!-- Canonical -->
     <link rel="canonical" href="https://www.chefsplace.online/">
@@ -372,17 +391,18 @@
     <!-- Dynamic Manifest Switcher for Employee Portal -->
     <script>
       (function() {
-        // Favicon/install icons removed by user request — clear any existing icon links
-        document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"], link[rel="mask-icon"], link[rel="apple-touch-startup-image"]').forEach(el => el.remove());
         const employeePaths = ['/employee', '/manager', '/kitchen', '/pos', '/cashier', '/admin', '/owner', '/executive'];
         const currentPath = window.location.pathname;
         const isEmployeePath = employeePaths.some(path => currentPath === path || currentPath.startsWith(path + '/'));
         const manifestLink = document.getElementById('main-manifest');
+        const cbv = 22;
         if (isEmployeePath) {
-          if (manifestLink) manifestLink.href = '/employee-manifest.json';
+          if (manifestLink) manifestLink.href = '/employee-manifest.json?v=' + cbv;
+          document.querySelectorAll('link[rel="icon"]').forEach(el => { el.href = '/employee-logo-192.png?v=' + cbv; });
+          document.querySelectorAll('link[rel="apple-touch-icon"]').forEach(el => { el.href = '/employee-logo-192.png?v=' + cbv; });
           document.title = "مكان الشيف — نظام الإدارة";
         } else {
-          if (manifestLink) manifestLink.href = '/manifest.json';
+          if (manifestLink) manifestLink.href = '/manifest.json?v=' + cbv;
         }
       })();
     </script>
