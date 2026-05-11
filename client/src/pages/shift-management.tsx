@@ -115,7 +115,16 @@ export default function ShiftManagement() {
   const [movementAmount, setMovementAmount] = useState("");
   const [movementReason, setMovementReason] = useState("");
   const [selectedZReport, setSelectedZReport] = useState<CashierShift | null>(null);
-  const [activeTab, setActiveTab] = useState<'current' | 'history'>('current');
+  const [activeTab, setActiveTab] = useState<'current' | 'history' | 'auto'>('current');
+
+  const { data: autoCurrent } = useQuery<any>({
+    queryKey: ['/api/shifts/auto-current'],
+    refetchInterval: 60000,
+  });
+  const { data: autoPeriodsData } = useQuery<any>({
+    queryKey: ['/api/shifts/auto-periods?days=7'],
+    enabled: activeTab === 'auto',
+  });
 
   const { data: activeShift, isLoading: loadingShift, refetch: refetchShift } = useQuery<CashierShift | null>({
     queryKey: ['/api/shifts/active'],
@@ -299,6 +308,15 @@ export default function ShiftManagement() {
             الوردية الحالية
           </Button>
           <Button
+            variant={activeTab === 'auto' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setActiveTab('auto')}
+            data-testid="tab-auto-shifts"
+          >
+            <Clock className="w-4 h-4 ml-1" />
+            تلقائية
+          </Button>
+          <Button
             variant={activeTab === 'history' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setActiveTab('history')}
@@ -309,7 +327,108 @@ export default function ShiftManagement() {
         </div>
       </div>
 
-      {activeTab === 'current' ? (
+      {activeTab === 'auto' && (
+        <div className="space-y-3">
+          {autoCurrent && autoCurrent.totalOrders > 0 && (
+            <Card className="border-blue-300 bg-blue-50/50">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-blue-600" />
+                  الفترة الحالية: {new Date(autoCurrent.period.start).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })} - الآن
+                  <Badge variant="outline" className="ml-2">كل {autoCurrent.autoShiftHours} ساعة</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="grid grid-cols-4 gap-2 text-center text-sm">
+                  <div className="bg-white rounded p-2"><div className="font-bold text-lg">{autoCurrent.totalOrders}</div><div className="text-xs text-muted-foreground">طلب</div></div>
+                  <div className="bg-white rounded p-2"><div className="font-bold text-lg text-primary">{formatCurrency(autoCurrent.totalSales)}</div><div className="text-xs text-muted-foreground">إجمالي</div></div>
+                  <div className="bg-white rounded p-2"><div className="font-bold text-green-600">{formatCurrency(autoCurrent.paymentBreakdown?.cash || 0)}</div><div className="text-xs text-muted-foreground">نقدي</div></div>
+                  <div className="bg-white rounded p-2"><div className="font-bold text-purple-600">{formatCurrency(autoCurrent.paymentBreakdown?.card || 0)}</div><div className="text-xs text-muted-foreground">شبكة</div></div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full gap-1"
+                  data-testid="button-print-auto-current"
+                  onClick={async () => {
+                    const { buildShiftReportHtml, printShiftReport } = await import("@/components/shift-quick-bar");
+                    printShiftReport(buildShiftReportHtml({
+                      title: 'تقرير وردية تلقائية',
+                      subtitle: `كل ${autoCurrent.autoShiftHours} ساعة`,
+                      employeeName: 'تجميع تلقائي',
+                      openedAt: autoCurrent.period.start,
+                      closedAt: autoCurrent.period.now,
+                      totalSales: autoCurrent.totalSales,
+                      totalOrders: autoCurrent.totalOrders,
+                      totalCashSales: autoCurrent.totalCashSales,
+                      totalCardSales: autoCurrent.totalCardSales,
+                      totalDigitalSales: autoCurrent.totalDigitalSales,
+                      totalDiscounts: autoCurrent.totalDiscounts,
+                      totalVAT: autoCurrent.totalVAT,
+                      netRevenue: autoCurrent.netRevenue,
+                      paymentBreakdown: autoCurrent.paymentBreakdown,
+                      orderTypeBreakdown: autoCurrent.orderTypeBreakdown,
+                      employees: autoCurrent.employees,
+                    }));
+                  }}
+                >
+                  <Printer className="w-3 h-3" />طباعة الفترة الحالية
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+          <h3 className="text-sm font-bold text-muted-foreground">آخر الفترات (7 أيام)</h3>
+          {!autoPeriodsData?.periods?.length ? (
+            <Card><CardContent className="py-8 text-center text-muted-foreground text-sm">لا توجد فترات تلقائية بها طلبات</CardContent></Card>
+          ) : (
+            autoPeriodsData.periods.map((p: any, i: number) => (
+              <Card key={i} className="cursor-pointer hover:border-primary/40" data-testid={`auto-period-${i}`}
+                onClick={async () => {
+                  const { buildShiftReportHtml, printShiftReport } = await import("@/components/shift-quick-bar");
+                  printShiftReport(buildShiftReportHtml({
+                    title: 'تقرير وردية تلقائية',
+                    subtitle: `كل ${autoPeriodsData.autoShiftHours} ساعة`,
+                    employeeName: 'تجميع تلقائي',
+                    openedAt: p.start,
+                    closedAt: p.end,
+                    totalSales: p.totalSales,
+                    totalOrders: p.totalOrders,
+                    totalCashSales: p.totalCashSales,
+                    totalCardSales: p.totalCardSales,
+                    totalDigitalSales: p.totalDigitalSales,
+                    totalDiscounts: p.totalDiscounts,
+                    totalVAT: p.totalVAT,
+                    netRevenue: p.netRevenue,
+                    paymentBreakdown: p.paymentBreakdown,
+                    orderTypeBreakdown: p.orderTypeBreakdown,
+                    employees: p.employees,
+                  }));
+                }}>
+                <CardContent className="py-3 px-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary">تلقائية</Badge>
+                      <span className="text-sm font-medium">
+                        {new Date(p.start).toLocaleDateString('ar-SA', { day: 'numeric', month: 'short' })}
+                        {' '}
+                        {new Date(p.start).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}
+                        {' - '}
+                        {new Date(p.end).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <Printer className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span>{p.totalOrders} طلب</span>
+                    <span className="font-bold text-primary">{formatCurrency(p.totalSales)}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      )}
+      {activeTab !== 'auto' && (activeTab === 'current' ? (
         <>
           {!activeShift ? (
             /* No Active Shift - Show Open Button */
@@ -552,7 +671,7 @@ export default function ShiftManagement() {
             ))
           )}
         </div>
-      )}
+      ))}
 
       {/* Open Shift Dialog */}
       <Dialog open={showOpenDialog} onOpenChange={setShowOpenDialog}>

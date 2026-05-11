@@ -45,6 +45,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import DrinkCustomizationDialog, { type DrinkCustomization } from "@/components/drink-customization-dialog";
 import PrinterSettingsPanel from "@/components/printer-settings-panel";
 import { loadPrinterSettings } from "@/lib/thermal-printer";
+import ShiftQuickBar from "@/components/shift-quick-bar";
 
 type OrderType = "dine_in" | "takeaway" | "delivery" | "car_pickup";
 type PaymentMethod = "cash" | "card" | "qahwa-card" | "split";
@@ -1386,6 +1387,8 @@ export default function PosSystem() {
           </Button>
         </div>
       </header>
+
+      <ShiftQuickBar />
 
       <main className="flex-1 flex overflow-hidden">
 

@@ -886,6 +886,9 @@ export default function AdminSettings() {
                     <MapPin className="w-4 h-4 shrink-0 mt-0.5" />
                     <p>{tc("يحدد هذا الإعداد المنطقة الزمنية المستخدمة في جميع تقارير وإحصاءات النظام. اختر المنطقة الزمنية الخاصة ببلدك لضمان دقة تقارير اليوم والفترات الزمنية.","This setting controls the timezone used across all system reports and statistics. Choose your country's timezone to ensure accurate daily reports and time-based filters.")}</p>
                   </div>
+
+                  {/* Shift Settings + Manual Time Offset */}
+                  <ShiftAndTimeSettings config={config} mutation={mutation} tc={tc} />
                 </div>
               </div>
             </div>
@@ -3131,6 +3134,75 @@ export default function AdminSettings() {
       <div className="text-center pt-10 text-muted-foreground text-xs font-ibm-arabic">
         <p>نظام كلاوني - جميع التغييرات يتم تطبيقها فوراً على واجهة العميل</p>
         {mutation.isPending && <p className="text-accent animate-pulse mt-2">جاري حفظ التعديلات...</p>}
+      </div>
+    </div>
+  );
+}
+
+function ShiftAndTimeSettings({ config, mutation, tc }: { config: any; mutation: any; tc: (ar: string, en: string) => string }) {
+  const [autoShiftEnabled, setAutoShiftEnabled] = useState<boolean>(config?.autoShiftEnabled !== false);
+  const [autoShiftHours, setAutoShiftHours] = useState<number>(config?.autoShiftHours ?? 12);
+  const [manualOffset, setManualOffset] = useState<number>(config?.manualTimeOffsetMinutes ?? 0);
+
+  useEffect(() => {
+    setAutoShiftEnabled(config?.autoShiftEnabled !== false);
+    setAutoShiftHours(config?.autoShiftHours ?? 12);
+    setManualOffset(config?.manualTimeOffsetMinutes ?? 0);
+  }, [config?.autoShiftEnabled, config?.autoShiftHours, config?.manualTimeOffsetMinutes]);
+
+  const save = (patch: any) => mutation.mutate(patch);
+
+  return (
+    <div className="space-y-4 pt-4 mt-4 border-t">
+      <h3 className="font-bold text-sm flex items-center gap-2">
+        <Clock className="w-4 h-4 text-primary" />
+        {tc("إعدادات الورديات والوقت", "Shifts & Time Settings")}
+      </h3>
+
+      <div className="grid md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label className="text-sm">{tc("تفعيل الورديات التلقائية", "Enable Auto Shifts")}</Label>
+          <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+            <Switch
+              checked={autoShiftEnabled}
+              onCheckedChange={(v) => { setAutoShiftEnabled(v); save({ autoShiftEnabled: v }); }}
+              data-testid="switch-auto-shift"
+            />
+            <span className="text-xs text-muted-foreground">
+              {tc("عند عدم فتح وردية يدوية، يتم تجميع الطلبات تلقائياً في فترات", "When no manual shift is open, orders are grouped automatically into periods")}
+            </span>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-sm">{tc("مدة الوردية التلقائية (ساعات)", "Auto-shift duration (hours)")}</Label>
+          <Input
+            type="number"
+            min={1}
+            max={24}
+            value={autoShiftHours}
+            onChange={(e) => setAutoShiftHours(parseInt(e.target.value) || 12)}
+            onBlur={() => save({ autoShiftHours })}
+            disabled={!autoShiftEnabled}
+            data-testid="input-auto-shift-hours"
+          />
+          <p className="text-xs text-muted-foreground">{tc("مثال: 12 = وردية صباحية ومسائية", "e.g. 12 = morning + evening shifts")}</p>
+        </div>
+
+        <div className="space-y-2 md:col-span-2">
+          <Label className="text-sm">{tc("ضبط الوقت اليدوي (دقائق)", "Manual time offset (minutes)")}</Label>
+          <Input
+            type="number"
+            value={manualOffset}
+            onChange={(e) => setManualOffset(parseInt(e.target.value) || 0)}
+            onBlur={() => save({ manualTimeOffsetMinutes: manualOffset })}
+            data-testid="input-manual-time-offset"
+          />
+          <p className="text-xs text-muted-foreground">
+            {tc("لتصحيح فرق التوقيت إذا كان السيرفر متأخر/متقدم. مثال: -60 لتأخير ساعة، +30 لتقديم نصف ساعة.",
+                "Correct server time drift. e.g. -60 to subtract 1h, +30 to add 30min.")}
+          </p>
+        </div>
       </div>
     </div>
   );

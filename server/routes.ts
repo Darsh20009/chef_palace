@@ -92,6 +92,77 @@ function getSaudiEndOfDay(date?: Date): Date {
   const start = getSaudiStartOfDay(date);
   return new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1);
 }
+
+function getAutoShiftPeriod(now: Date, hours: number): { index: number; start: Date; end: Date } {
+  const safeHours = Math.max(1, Math.min(24, Math.floor(hours || 12)));
+  const midnight = getSaudiStartOfDay(now);
+  const elapsedMs = now.getTime() - midnight.getTime();
+  const periodMs = safeHours * 3600000;
+  const index = Math.floor(elapsedMs / periodMs);
+  const start = new Date(midnight.getTime() + index * periodMs);
+  const end = new Date(start.getTime() + periodMs);
+  return { index, start, end };
+}
+
+async function getEffectiveNow(tenantId?: string): Promise<Date> {
+  try {
+    const cfg = await BusinessConfigModel.findOne(tenantId ? { tenantId } : {}).lean();
+    const offset = Number((cfg as any)?.manualTimeOffsetMinutes || 0);
+    return new Date(Date.now() + offset * 60000);
+  } catch {
+    return new Date();
+  }
+}
+
+function aggregateOrdersAsShift(orders: any[], periodStart: Date, periodEnd: Date) {
+  const summary: any = {
+    totalSales: 0,
+    totalOrders: 0,
+    totalCashSales: 0,
+    totalCardSales: 0,
+    totalDigitalSales: 0,
+    totalDiscounts: 0,
+    totalVAT: 0,
+    netRevenue: 0,
+    paymentBreakdown: { cash: 0, card: 0, loyalty: 0 },
+    orderTypeBreakdown: { dine_in: 0, takeaway: 0, car_pickup: 0, delivery: 0, online: 0 },
+    employees: [] as Array<{ name: string; orders: number; sales: number }>,
+    orderIds: [] as string[],
+  };
+  const empMap: Record<string, { name: string; orders: number; sales: number }> = {};
+  for (const o of orders) {
+    const amount = Number(o.totalAmount || 0);
+    const vat = Number(o.vat || o.taxAmount || 0);
+    const discount = Number(o.discount || o.discountAmount || 0);
+    const method = String(o.paymentMethod || 'cash').toLowerCase();
+    const type = String(o.orderType || 'takeaway').toLowerCase();
+    summary.totalSales += amount;
+    summary.totalOrders += 1;
+    summary.totalDiscounts += discount;
+    summary.totalVAT += vat;
+    summary.netRevenue += (amount - vat);
+    summary.orderIds.push(o.id || o._id?.toString());
+    if (method === 'cash') {
+      summary.totalCashSales += amount;
+      summary.paymentBreakdown.cash += amount;
+    } else if (method === 'qahwa-card' || method === 'loyalty-card') {
+      summary.totalDigitalSales += amount;
+      summary.paymentBreakdown.loyalty += amount;
+    } else {
+      summary.totalCardSales += amount;
+      summary.paymentBreakdown.card += amount;
+    }
+    if (summary.orderTypeBreakdown[type] !== undefined) {
+      summary.orderTypeBreakdown[type] += 1;
+    }
+    const empName = o.employeeName || o.cashierName || o.createdByName || 'غير معروف';
+    if (!empMap[empName]) empMap[empName] = { name: empName, orders: 0, sales: 0 };
+    empMap[empName].orders += 1;
+    empMap[empName].sales += amount;
+  }
+  summary.employees = Object.values(empMap).sort((a, b) => b.sales - a.sales);
+  return summary;
+}
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ─── High-Performance Coffee Items Cache ─────────────────────────────────────
@@ -4489,6 +4560,142 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(summary);
     } catch (error) {
       res.status(500).json({ error: "فشل في جلب الملخص اليومي" });
+    }
+  });
+
+  // Auto-shift current period (when no manual shift open)
+  app.get("/api/shifts/auto-current", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = getTenantIdFromRequest(req) || "demo-tenant";
+      const cfg = await BusinessConfigModel.findOne({ tenantId }).lean() as any;
+      const hours = Number(cfg?.autoShiftHours || 12);
+      const enabled = cfg?.autoShiftEnabled !== false;
+      const now = await getEffectiveNow(tenantId);
+      const period = getAutoShiftPeriod(now, hours);
+      const branchId = req.employee?.branchId || 'main';
+
+      if (!enabled) {
+        return res.json({
+          enabled: false,
+          autoShiftHours: hours,
+          period: { index: period.index, start: period.start, end: period.end, now },
+          totalOrders: 0, totalSales: 0, totalCashSales: 0, totalCardSales: 0, totalDigitalSales: 0,
+          totalDiscounts: 0, totalVAT: 0, netRevenue: 0,
+          paymentBreakdown: { cash: 0, card: 0, loyalty: 0 },
+          orderTypeBreakdown: { dine_in: 0, takeaway: 0, car_pickup: 0, delivery: 0, online: 0 },
+          employees: [], orderIds: [], branchId,
+        });
+      }
+
+      // Collect order IDs already covered by manual shifts in this period to avoid double-count
+      const manualShifts = await CashierShiftModel.find({
+        tenantId, branchId,
+        $or: [
+          { openedAt: { $gte: period.start, $lte: now } },
+          { closedAt: { $gte: period.start, $lte: now } },
+          { openedAt: { $lte: period.start }, closedAt: { $gte: now } },
+          { status: 'active', openedAt: { $lte: now } },
+        ],
+      }).lean();
+      const coveredIds = new Set<string>();
+      for (const s of manualShifts as any[]) {
+        for (const oid of (s.orderIds || [])) coveredIds.add(String(oid));
+      }
+
+      const orders = await OrderModel.find({
+        tenantId, branchId,
+        createdAt: { $gte: period.start, $lte: now },
+        status: { $ne: 'cancelled' },
+      }).lean();
+      const filtered = orders.filter((o: any) => !coveredIds.has(String(o.id || o._id)));
+
+      const summary = aggregateOrdersAsShift(filtered, period.start, now);
+      res.json({
+        enabled,
+        autoShiftHours: hours,
+        period: { index: period.index, start: period.start, end: period.end, now },
+        ...summary,
+        branchId,
+        excludedManualOrders: orders.length - filtered.length,
+      });
+    } catch (error: any) {
+      console.error("[SHIFT] auto-current error:", error);
+      res.status(500).json({ error: "فشل في حساب الوردية التلقائية" });
+    }
+  });
+
+  // Auto-shift periods history (past N days)
+  app.get("/api/shifts/auto-periods", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = getTenantIdFromRequest(req) || "demo-tenant";
+      const cfg = await BusinessConfigModel.findOne({ tenantId }).lean() as any;
+      const hours = Number(cfg?.autoShiftHours || 12);
+      const enabled = cfg?.autoShiftEnabled !== false;
+      const branchId = req.employee?.branchId || 'main';
+      if (!enabled) {
+        return res.json({ enabled: false, autoShiftHours: hours, periods: [] });
+      }
+      const days = Math.min(30, Math.max(1, Number(req.query.days) || 7));
+      const now = await getEffectiveNow(tenantId);
+      const periodMs = hours * 3600000;
+      const startBoundary = new Date(getSaudiStartOfDay(new Date(now.getTime() - days * 86400000)).getTime());
+
+      const manualShifts = await CashierShiftModel.find({
+        tenantId, branchId,
+        openedAt: { $gte: startBoundary },
+      }).lean();
+      const coveredIds = new Set<string>();
+      for (const s of manualShifts as any[]) {
+        for (const oid of (s.orderIds || [])) coveredIds.add(String(oid));
+      }
+
+      const ordersAll = await OrderModel.find({
+        tenantId, branchId,
+        createdAt: { $gte: startBoundary, $lte: now },
+        status: { $ne: 'cancelled' },
+      }).lean();
+      const orders = ordersAll.filter((o: any) => !coveredIds.has(String(o.id || o._id)));
+
+      const buckets: Record<string, any[]> = {};
+      for (const o of orders) {
+        const t = new Date((o as any).createdAt).getTime();
+        const idx = Math.floor((t - startBoundary.getTime()) / periodMs);
+        const bStart = new Date(startBoundary.getTime() + idx * periodMs);
+        const key = bStart.toISOString();
+        if (!buckets[key]) buckets[key] = [];
+        buckets[key].push(o);
+      }
+
+      const periods = Object.entries(buckets)
+        .map(([key, list]) => {
+          const start = new Date(key);
+          const end = new Date(start.getTime() + periodMs);
+          return { start, end, ...aggregateOrdersAsShift(list, start, end) };
+        })
+        .sort((a, b) => b.start.getTime() - a.start.getTime());
+
+      res.json({ autoShiftHours: hours, periods });
+    } catch (error: any) {
+      console.error("[SHIFT] auto-periods error:", error);
+      res.status(500).json({ error: "فشل في جلب سجل الورديات التلقائية" });
+    }
+  });
+
+  // Server's effective time (with manualTimeOffsetMinutes applied)
+  app.get("/api/shifts/effective-time", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = getTenantIdFromRequest(req) || "demo-tenant";
+      const cfg = await BusinessConfigModel.findOne({ tenantId }).lean() as any;
+      const offset = Number(cfg?.manualTimeOffsetMinutes || 0);
+      const now = new Date(Date.now() + offset * 60000);
+      res.json({
+        serverNow: new Date().toISOString(),
+        effectiveNow: now.toISOString(),
+        manualTimeOffsetMinutes: offset,
+        timezone: cfg?.timezone || 'Asia/Riyadh',
+      });
+    } catch (error) {
+      res.status(500).json({ error: "فشل" });
     }
   });
 
