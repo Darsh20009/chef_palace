@@ -159,8 +159,10 @@
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" id="main-manifest">
 
-    <!-- Favicon and install icons removed by user request -->
-    <link rel="icon" href="data:,">
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/logo.png">
+    <link rel="shortcut icon" type="image/png" href="/logo.png">
+    <link rel="apple-touch-icon" href="/logo.png">
 
     <!-- Canonical -->
     <link rel="canonical" href="https://www.chefsplace.online/">
@@ -372,7 +374,6 @@
     <!-- Dynamic Manifest Switcher for Employee Portal -->
     <script>
       (function() {
-        document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"], link[rel="apple-touch-icon"], link[rel="mask-icon"], link[rel="apple-touch-startup-image"]').forEach(el => el.remove());
         const employeePaths = ['/employee', '/manager', '/kitchen', '/pos', '/cashier', '/admin', '/owner', '/executive'];
         const currentPath = window.location.pathname;
         const isEmployeePath = employeePaths.some(path => currentPath === path || currentPath.startsWith(path + '/'));
