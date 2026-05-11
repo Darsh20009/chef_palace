@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PhoneInput } from "@/components/phone-input";
 import { Mail, Phone, User, ArrowRight, Eye, EyeOff, ArrowLeft } from "lucide-react";
-import chefsplaceLogoStaff from "@assets/blackrose-logo.png";
+const chefsplaceLogoStaff = "/logo.png";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslate } from "@/lib/useTranslate";

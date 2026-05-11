@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useRoute } from "wouter";
 import { motion } from "framer-motion";
 import { Ticket, LogIn, ShoppingBag, BadgePercent } from "lucide-react";
-import chefsplaceLogo from "@assets/blackrose-logo.png";
+const chefsplaceLogo = "/logo.png";
 import bannerImage1 from "@assets/blackrose-banner-1.png";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";

@@ -1,7 +1,7 @@
 import { forwardRef, useEffect, useState } from "react";
 import QRCode from "qrcode";
 import JsBarcode from "jsbarcode";
-import chefsplaceLogo from "@assets/blackrose-logo.png";
+const chefsplaceLogo = "/logo.png";
 import SarIcon from "@/components/sar-icon";
 import { brand } from "@/lib/brand";
 import { VAT_RATE } from "@/lib/constants";

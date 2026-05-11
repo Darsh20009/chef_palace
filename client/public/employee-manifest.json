@@ -1,14 +1,14 @@
 {
-  "id": "/blackrose-systems-staff",
-  "name": "BLACK ROSE SYSTEMS",
-  "short_name": "BLACK ROSE",
-  "description": "نظام إدارة الموظفين والعمليات والطلبات في BLACK ROSE CAFE",
+  "id": "/makan-alshaif-staff",
+  "name": "مكان الشيف — الإدارة",
+  "short_name": "مكان الشيف",
+  "description": "نظام إدارة موظفين وعمليات مكان الشيف البخاري — نقاط البيع، الطلبات، المطبخ، الحضور",
   "start_url": "/employee/home",
   "scope": "/employee",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
   "background_color": "#0a0a0a",
-  "theme_color": "#BE1845",
+  "theme_color": "#C06520",
   "orientation": "any",
   "lang": "ar",
   "dir": "rtl",
@@ -50,14 +50,14 @@
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "BLACK ROSE SYSTEMS App"
+      "label": "مكان الشيف — إدارة الموظفين"
     },
     {
       "src": "/employee-logo-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "BLACK ROSE SYSTEMS Desktop"
+      "label": "مكان الشيف — لوحة التحكم"
     }
   ]
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Bell, Download, Smartphone, Share2, PlusSquare, X, Loader2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import chefsplaceLogo from "@assets/blackrose-logo.png";
+const chefsplaceLogo = "/logo.png";
 import { brand } from "@/lib/brand";
 
 const NOTIF_DISMISSED_KEY = "chefsplace_notif_prompted";

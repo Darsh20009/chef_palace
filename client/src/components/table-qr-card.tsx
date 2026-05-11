@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import QRCode from "qrcode";
-import chefsplaceLogo from "@assets/blackrose-logo.png";
+const chefsplaceLogo = "/logo.png";
 import { brand as sysBrand } from "@/lib/brand";
 
 interface TableQRCardProps {

@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { useTranslate } from "@/lib/useTranslate";
 import { Coffee, Settings, Wrench, Clock } from "lucide-react";
-import chefsplaceLogo from "@assets/blackrose-logo.png";
+const chefsplaceLogo = "/logo.png";
 
 export default function MaintenancePage({ reason = "maintenance" }: { reason?: string }) {
   const tc = useTranslate();

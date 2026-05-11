@@ -73,7 +73,7 @@ export default function DriverPortal() {
   };
 
   useEffect(() => {
-    document.title = tc("بوابة المندوب - مكان الشيف البخاري SYSTEMS", "Driver Portal - مكان الشيف البخاري SYSTEMS");
+    document.title = tc("بوابة المندوب - مكان الشيف البخاري", "Driver Portal - مكان الشيف البخاري");
     const storedDriver = localStorage.getItem("currentDriver");
     if (storedDriver) {
       const driverData = JSON.parse(storedDriver);

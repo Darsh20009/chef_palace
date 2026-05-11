@@ -3,7 +3,7 @@ import { useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { LayoutDashboard, Users, FileText, Settings, LogOut, Bell, Code2, GitBranch, Mail, Coffee, BookOpen, Star, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import chefsplaceLogoStaff from "@assets/blackrose-logo.png";
+const chefsplaceLogoStaff = "/logo.png";
 import { brand } from "@/lib/brand";
 
 

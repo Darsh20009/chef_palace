@@ -8,7 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { fmtOrderNum } from "@/lib/print-utils";
-import chefsplaceLogo from "@assets/blackrose-logo.png";
+const chefsplaceLogo = "/logo.png";
 
 interface OrderItem {
   coffeeItem?: { nameAr?: string; nameEn?: string; price?: number };

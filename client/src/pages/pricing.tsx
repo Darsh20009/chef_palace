@@ -7,7 +7,7 @@ import {
   Coffee, Users, BarChart3, Globe, Shield, Headphones,
   Smartphone, ChefHat, Star
 } from "lucide-react";
-import chefsplaceLogoStaff from "@assets/blackrose-logo.png";
+const chefsplaceLogoStaff = "/logo.png";
 
 const tc = (ar: string, en: string) => ar;
 
@@ -282,7 +282,7 @@ export default function PricingPage() {
 
       {/* Footer */}
       <footer className="border-t border-border mt-12 py-6 text-center text-sm text-muted-foreground">
-        <p>© 2025 مكان الشيف البخاري SYSTEMS — {tc("جميع الحقوق محفوظة", "All rights reserved")}</p>
+        <p>© 2025 مكان الشيف البخاري — {tc("جميع الحقوق محفوظة", "All rights reserved")}</p>
       </footer>
     </div>
   );

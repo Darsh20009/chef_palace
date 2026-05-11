@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { AtSign, Lock, Loader2, Eye, EyeOff, QrCode, Download } from "lucide-react";
 import type { Employee } from "@shared/schema";
 import { Html5QrcodeScanner } from "html5-qrcode";
-import chefsplaceLogoStaff from "@assets/blackrose-logo.png";
+const chefsplaceLogoStaff = "/logo.png";
 import { useTranslate } from "@/lib/useTranslate";
 
 function useAutoRedirectIfLoggedIn() {
@@ -44,7 +44,7 @@ export default function EmployeeLogin() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   useEffect(() => {
-    document.title = tc("تسجيل دخول الموظفين - مكان الشيف البخاري SYSTEMS", "Employee Login - مكان الشيف البخاري SYSTEMS");
+    document.title = tc("تسجيل دخول الموظفين - مكان الشيف البخاري", "تسجيل دخول الموظفين - مكان الشيف البخاري");
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -141,9 +141,9 @@ export default function EmployeeLogin() {
       <div className="w-full max-w-md">
         <div className="text-center mb-4 sm:mb-6">
           <div className="inline-flex items-center justify-center w-20 h-14 sm:w-32 sm:h-20 mb-2 sm:mb-3">
-            <img src={chefsplaceLogoStaff} alt="مكان الشيف البخاري SYSTEMS" className="w-full h-full object-contain" />
+            <img src={chefsplaceLogoStaff} alt="مكان الشيف البخاري" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-1 font-playfair">مكان الشيف البخاري SYSTEMS</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-1 font-playfair">مكان الشيف البخاري</h1>
           <p className="text-muted-foreground text-sm font-cairo">{tc("تسجيل دخول الموظف", "Employee Login")}</p>
         </div>
 

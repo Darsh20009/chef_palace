@@ -49,7 +49,7 @@ export default function ExternalIntegrationsPage() {
     { id: 'toyou', nameAr: 'تويو', nameEn: 'ToYou' }
   ];
 
-  // مكان الشيف البخاري SYSTEMS queries
+  // مكان الشيف البخاري queries
   const { data: qsMe, isLoading: qsMeLoading, refetch: refetchMe } = useQuery<any>({
     queryKey: ["/api/qirox-studio/me"],
     staleTime: 60000,
@@ -106,7 +106,7 @@ export default function ExternalIntegrationsPage() {
         <Globe className="h-10 w-10 text-primary mr-auto" />
       </div>
 
-      {/* ─── مكان الشيف البخاري SYSTEMS API Section ─── */}
+      {/* ─── مكان الشيف البخاري API Section ─── */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -114,8 +114,8 @@ export default function ExternalIntegrationsPage() {
               <Zap className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-foreground">مكان الشيف البخاري SYSTEMS API</h2>
-              <p className="text-sm text-muted-foreground">{tc("مركز إدارة حساب مكان الشيف البخاري SYSTEMS المتكامل", "Integrated مكان الشيف البخاري SYSTEMS account management hub")}</p>
+              <h2 className="text-xl font-bold text-foreground">مكان الشيف البخاري API</h2>
+              <p className="text-sm text-muted-foreground">{tc("مركز إدارة حساب مكان الشيف البخاري المتكامل", "Integrated مكان الشيف البخاري account management hub")}</p>
             </div>
             {isQSConnected ? (
               <Badge className="bg-green-500/10 text-green-600 border-green-500/30 flex gap-1 items-center">

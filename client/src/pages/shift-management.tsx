@@ -265,7 +265,7 @@ export default function ShiftManagement() {
         ${shift.closingNotes ? `<div class="section"><div class="section-title">ملاحظات</div><p>${shift.closingNotes}</p></div>` : ''}
 
         <div class="footer">
-          <div>مكان الشيف البخاري SYSTEMS v3.0</div>
+          <div>مكان الشيف البخاري v3.0</div>
           <div>${new Date().toLocaleString('ar-SA')}</div>
         </div>
       </body></html>

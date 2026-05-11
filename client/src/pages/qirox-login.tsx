@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import blackRoseLogo from "@assets/blackrose-logo.png";
+const blackRoseLogo = "/logo.png";
 
 export default function QiroxLogin() {
   const [password, setPassword] = useState("");
@@ -95,7 +95,7 @@ export default function QiroxLogin() {
 
           <div className="mt-6 pt-6 border-t border-[#1e1e1e] text-center">
             <p className="text-[#444] text-xs">
-              مكان الشيف البخاري SYSTEMS v3.0 — Restricted Access
+              مكان الشيف البخاري v3.0 — Restricted Access
             </p>
           </div>
         </div>

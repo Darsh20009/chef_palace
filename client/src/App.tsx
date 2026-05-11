@@ -140,8 +140,8 @@ const HardwareManagement = lazy(() => import("@/pages/hardware-management"));
 const B2BMarketplace = lazy(() => import("@/pages/b2b-marketplace"));
 const PartnerProgram = lazy(() => import("@/pages/partner-program"));
 const DriveThroughPage = lazy(() => import("@/pages/drive-through"));
-import chefsplaceLogo from "@assets/blackrose-logo.png";
-import chefsplaceLogoStaff from "@assets/blackrose-logo.png";
+const chefsplaceLogo = "/logo.png";
+const chefsplaceLogoStaff = "/logo.png";
 
 const PageLoader = () => null;
 

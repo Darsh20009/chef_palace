@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Bell, Loader2, Share2, PlusSquare, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import chefsplaceLogo from "@assets/blackrose-logo.png";
+const chefsplaceLogo = "/logo.png";
 
 function isIOS() {
   return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;

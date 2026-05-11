@@ -11,7 +11,7 @@ import { CheckCircle2, AlertCircle, Loader } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import SarIcon from "@/components/sar-icon";
-import chefsplaceLogo from "@assets/blackrose-logo.png";
+const chefsplaceLogo = "/logo.png";
 
 const SUBSCRIPTION_PLANS = [
   {

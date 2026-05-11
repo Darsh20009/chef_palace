@@ -12,7 +12,7 @@ import {
 import { Clock, ChefHat, CheckCircle2, ArrowLeft } from "lucide-react";
 import type { Employee } from "@shared/schema";
 import SarIcon from "@/components/sar-icon";
-import chefsplaceLogoStaff from "@assets/blackrose-logo.png";
+const chefsplaceLogoStaff = "/logo.png";
 import { useTranslate } from "@/lib/useTranslate";
 
 interface Order {

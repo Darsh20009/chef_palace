@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import chefsplaceStaffLogo from "@assets/blackrose-staff-logo.png";
+const chefsplaceStaffLogo = "/employee-logo.png";
 import { useTranslate } from "@/lib/useTranslate";
 
 export default function EmployeeSplash() {
@@ -13,9 +13,9 @@ export default function EmployeeSplash() {
   const tc = useTranslate();
 
   useEffect(() => {
-    document.title = tc("نظام الموظفين - مكان الشيف البخاري SYSTEMS | نظام إدارة متكامل", "Employee System - مكان الشيف البخاري SYSTEMS | Integrated Management");
+    document.title = tc("نظام الموظفين - مكان الشيف البخاري | نظام إدارة متكامل", "Employee System - مكان الشيف البخاري | Integrated Management");
     const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc) metaDesc.setAttribute('content', tc('نظام إدارة الموظفين والعمليات في مكان الشيف البخاري SYSTEMS', 'Employee and operations management system for مكان الشيف البخاري SYSTEMS'));
+    if (metaDesc) metaDesc.setAttribute('content', tc('نظام إدارة الموظفين والعمليات في مكان الشيف البخاري', 'Employee and operations management system for مكان الشيف البخاري'));
 
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
@@ -63,7 +63,7 @@ export default function EmployeeSplash() {
               <div className="w-36 h-36 rounded-2xl overflow-hidden shadow-lg shadow-black/30 ring-1 ring-white/10 bg-black flex items-center justify-center p-3">
                 <img
                   src={chefsplaceStaffLogo}
-                  alt="مكان الشيف البخاري SYSTEMS"
+                  alt="مكان الشيف البخاري"
                   className="w-full h-full object-contain"
                 />
               </div>
@@ -71,7 +71,7 @@ export default function EmployeeSplash() {
 
             <div className="text-center">
               <h1 className="text-white font-bold text-2xl tracking-wide mb-1">
-                مكان الشيف البخاري SYSTEMS
+                مكان الشيف البخاري
               </h1>
               <p className="text-white/50 text-sm font-cairo">
                 {tc("نظام إدارة الموظفين", "Employee Management System")}

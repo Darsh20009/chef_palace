@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useOrderWebSocket } from "@/lib/websocket";
 import type { CoffeeItem } from "@shared/schema";
-import chefsplaceLogo from "@assets/blackrose-logo.png";
+const chefsplaceLogo = "/logo.png";
 import { useTranslate } from "@/lib/useTranslate";
 
 type DisplayMode = "idle" | "order-review" | "payment-processing" | "payment-success";

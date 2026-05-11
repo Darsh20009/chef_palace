@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Separator } from "@/components/ui/separator";
 import { AddToCartModal } from "@/components/add-to-cart-modal";
 import SarIcon from "@/components/sar-icon";
-import chefsplaceLogo from "@assets/blackrose-logo.png";
+const chefsplaceLogo = "/logo.png";
 import type { CoffeeItem } from "@shared/schema";
 import {
   Car, ShoppingCart, X, Plus, Minus, ChevronRight,

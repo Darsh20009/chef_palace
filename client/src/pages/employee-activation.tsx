@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { UserPlus, Eye, EyeOff } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useTranslate } from "@/lib/useTranslate";
-import chefsplaceLogoStaff from "@assets/blackrose-logo.png";
+const chefsplaceLogoStaff = "/logo.png";
 
 export default function EmployeeActivation() {
   const [, setLocation] = useLocation();

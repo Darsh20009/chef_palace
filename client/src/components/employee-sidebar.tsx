@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { LayoutDashboard, ShoppingCart, ClipboardList, Settings, LogOut, User, BarChart3, Warehouse, Wallet, ChefHat, Table, Coffee, Utensils, Languages, Clock, Truck, Building2, Brain, FileSpreadsheet, Tag, Monitor, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Employee } from '@shared/schema';
-import chefsplaceLogoStaff from "@assets/blackrose-logo.png";
+const chefsplaceLogoStaff = "/logo.png";
 import { brand } from "@/lib/brand";
 
 interface EmployeeSidebarProps {

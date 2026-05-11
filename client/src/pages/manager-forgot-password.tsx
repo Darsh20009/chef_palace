@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import chefsplaceLogoStaff from "@assets/blackrose-logo.png";
+const chefsplaceLogoStaff = "/logo.png";
 import { useTranslate } from "@/lib/useTranslate";
 
 export default function ManagerForgotPassword() {
@@ -62,7 +62,7 @@ export default function ManagerForgotPassword() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-3 text-center pb-6">
           <div className="flex justify-center">
-            <img src={chefsplaceLogoStaff} alt="مكان الشيف البخاري SYSTEMS" className="w-16 h-16 object-contain rounded-xl" />
+            <img src={chefsplaceLogoStaff} alt="مكان الشيف البخاري" className="w-16 h-16 object-contain rounded-xl" />
           </div>
           <CardTitle className="text-2xl font-bold">{tc("نسيت كلمة المرور؟", "Forgot Password?")}</CardTitle>
           <CardDescription>

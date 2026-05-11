@@ -328,7 +328,7 @@ export default function PartnerProgramPage() {
                     <div>
                       <h3 className="font-bold text-green-800 dark:text-green-300">{tc('ضمان التوافق 100%', '100% Compatibility Guarantee')}</h3>
                       <p className="text-sm text-green-700 dark:text-green-400 mt-1">
-                        {tc('جميع الشركاء المدرجين تم اختبارهم والتحقق منهم بالكامل. مكان الشيف البخاري SYSTEMS متوافق مع جميع هذه الأنظمة ويضمن تكاملاً سلساً دون أي انقطاع في الخدمة.', 'All listed partners are fully tested and verified. مكان الشيف البخاري SYSTEMS is compatible with all these systems and guarantees seamless integration.')}
+                        {tc('جميع الشركاء المدرجين تم اختبارهم والتحقق منهم بالكامل. مكان الشيف البخاري متوافق مع جميع هذه الأنظمة ويضمن تكاملاً سلساً دون أي انقطاع في الخدمة.', 'All listed partners are fully tested and verified. مكان الشيف البخاري is compatible with all these systems and guarantees seamless integration.')}
                       </p>
                       <div className="flex flex-wrap gap-2 mt-3">
                         {['ZATCA معتمد ✅', 'PCI DSS Compliant', 'SSL 256-bit', 'API RESTful', 'Real-time Sync'].map(tag => (

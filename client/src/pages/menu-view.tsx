@@ -3,7 +3,7 @@ import { useTranslate } from "@/lib/useTranslate";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import QRCodeComponent from "@/components/qr-code";
-import chefsplaceLogo from "@assets/blackrose-logo.png";
+const chefsplaceLogo = "/logo.png";
 import {
   Tv, Grid3X3, Star, ArrowLeft, ChevronLeft, ChevronRight,
   Pause, Play, Layers, Sparkles, Coffee

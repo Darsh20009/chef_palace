@@ -13,7 +13,7 @@ import { useTranslate } from "@/lib/useTranslate";
 import { useTranslation } from "react-i18next";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import chefsplaceLogo from "@assets/blackrose-logo.png";
+const chefsplaceLogo = "/logo.png";
 
 export default function MyCardPage() {
   const { customer } = useCustomer();

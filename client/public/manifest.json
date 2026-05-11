@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "BLACK ROSE CAFE - بلاك روز كافيه",
-  "short_name": "BLACK ROSE",
-  "description": "استمتع بأرقى تجربة قهوة فاخرة محضرة بعناية استثنائية من BLACK ROSE CAFE - اطلب الآن واستمتع بلحظات لا تُنسى",
+  "name": "مكان الشيف البخاري",
+  "short_name": "مكان الشيف",
+  "description": "مكان الشيف البخاري — أشهى وجبات البخاري الأصيلة في الرياض. اطلب الآن وجبتك من أرز بخاري، دجاج بخاري، لحم بخاري، زربيان، ومندي مع توصيل سريع.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -12,7 +12,7 @@
     "minimal-ui"
   ],
   "background_color": "#0a0a0a",
-  "theme_color": "#BE1845",
+  "theme_color": "#C06520",
   "orientation": "portrait",
   "lang": "ar",
   "dir": "rtl",
@@ -76,14 +76,14 @@
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "BLACK ROSE CAFE"
+      "label": "مكان الشيف البخاري"
     },
     {
       "src": "/logo-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "BLACK ROSE CAFE Dashboard"
+      "label": "مكان الشيف البخاري"
     }
   ],
   "shortcuts": [

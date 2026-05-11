@@ -11,7 +11,7 @@ import type { CoffeeItem, IProductAddon } from "@shared/schema";
 import { AddToCartModal } from "@/components/add-to-cart-modal";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import chefsplaceLogo from "@assets/blackrose-logo.png";
+const chefsplaceLogo = "/logo.png";
 import SarIcon from "@/components/sar-icon";
 import type { AddonPreview } from "@/components/menu-layouts";
 import { OptionPills } from "@/components/menu-layouts";

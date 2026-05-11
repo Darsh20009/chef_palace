@@ -10,7 +10,7 @@ import {
 import type { Employee } from "@shared/schema";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { useTranslate } from "@/lib/useTranslate";
-import chefsplaceLogo from "@assets/blackrose-logo.png";
+const chefsplaceLogo = "/logo.png";
 
 export default function EmployeeHome() {
   const [, setLocation] = useLocation();
