@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 const chefsplaceLogo = "/logo.png";
 
@@ -9,10 +9,7 @@ const GOLD2 = "#e8892a";
 export default function SplashScreen() {
   const [, setLocation] = useLocation();
   const [visible, setVisible] = useState<boolean | null>(null);
-  const [videoEnded, setVideoEnded] = useState(false);
-  const [videoError, setVideoError] = useState(false);
   const [phase, setPhase] = useState(0);
-  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     const isPreview = window.location.pathname === "/splash";
@@ -30,28 +27,15 @@ export default function SplashScreen() {
     const t1 = setTimeout(() => setPhase(1), 300);
     const t2 = setTimeout(() => setPhase(2), 800);
     const t3 = setTimeout(() => setPhase(3), 1500);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
-  }, [visible]);
-
-  const handleVideoEnd = () => {
-    setVideoEnded(true);
     const isPreview = window.location.pathname === "/splash";
-    if (!isPreview) {
-      setTimeout(() => setLocation("/menu"), 600);
-    }
-  };
-
-  const handleVideoError = () => {
-    setVideoError(true);
-    const isPreview = window.location.pathname === "/splash";
-    if (!isPreview) {
-      setTimeout(() => setLocation("/menu"), 3500);
-    }
-  };
+    const tRedirect = !isPreview ? setTimeout(() => setLocation("/menu"), 2800) : null;
+    return () => {
+      clearTimeout(t1); clearTimeout(t2); clearTimeout(t3);
+      if (tRedirect) clearTimeout(tRedirect);
+    };
+  }, [visible, setLocation]);
 
   if (visible === null || visible === false) return null;
-
-  const showFallback = videoError;
 
   return (
     <AnimatePresence>
@@ -62,32 +46,11 @@ export default function SplashScreen() {
         exit={{ opacity: 0 }}
         transition={{ duration: 0.6, ease: "easeInOut" }}
       >
-        {/* Video background */}
-        {!showFallback && (
-          <video
-            ref={videoRef}
-            className="absolute inset-0 w-full h-full object-cover"
-            src="/splash-video.mp4"
-            autoPlay
-            muted
-            playsInline
-            onEnded={handleVideoEnd}
-            onError={handleVideoError}
-          />
-        )}
-
-        {/* Dark overlay on video */}
-        {!showFallback && (
-          <div className="absolute inset-0 bg-black/40" />
-        )}
-
-        {/* Fallback background when video fails */}
-        {showFallback && (
-          <div
-            className="absolute inset-0"
-            style={{ background: `radial-gradient(ellipse at center, #1a0e00 0%, #0a0a0a 70%)` }}
-          />
-        )}
+        {/* Branded gradient background (Chef Bukhari) — replaces old splash video */}
+        <div
+          className="absolute inset-0"
+          style={{ background: `radial-gradient(ellipse at center, #1a0e00 0%, #0a0a0a 70%)` }}
+        />
 
         {/* Logo overlay on top of video */}
         <div className="relative z-10 flex flex-col items-center gap-4 px-8 w-full">
