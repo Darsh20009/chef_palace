@@ -1,5 +1,5 @@
-const CACHE_VERSION = 'v16';
-const CACHE_NAME = `blackrose-cache-${CACHE_VERSION}`;
+const CACHE_VERSION = 'v17-chefbukhari-logo';
+const CACHE_NAME = `chefsplace-cache-${CACHE_VERSION}`;
 
 // Essential shell files to pre-cache during install
 // Vite-built assets (JS/CSS bundles) are cached at runtime via the fetch handler

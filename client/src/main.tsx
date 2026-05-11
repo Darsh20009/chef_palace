@@ -8,7 +8,7 @@ import { applyBrandColors } from "./lib/brand";
 // its cookies, localStorage, sessionStorage, IndexedDB, caches and service
 // workers exactly once. The flag itself is preserved so it only runs once
 // per device per version.
-const CLIENT_RESET_VERSION = "2026-04-21-v2-logo";
+const CLIENT_RESET_VERSION = "2026-05-11-v3-chefbukhari-logo";
 (function maybeWipeClientStorage() {
   try {
     const KEY = "__qirox_reset_version";
