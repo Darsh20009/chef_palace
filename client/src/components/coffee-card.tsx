@@ -120,13 +120,18 @@ function CoffeeCard({ item, variants = [] }: CoffeeCardProps) {
           />
 
           <div className="absolute top-2 sm:top-3 left-2 sm:left-3 flex flex-col gap-1.5 sm:gap-2 z-30">
-            {selectedVariant.availabilityStatus === 'new' && (
-              <Badge className="bg-purple-600 text-white border-purple-400 animate-pulse shadow-lg">
-                جديد
+            {selectedVariant.availabilityStatus === 'new' || (selectedVariant as any).isNewProduct === 1 ? (
+              <Badge className="bg-purple-600 text-white border-purple-400 animate-pulse shadow-lg text-[10px] sm:text-xs">
+                جديد ✨
+              </Badge>
+            ) : null}
+            {((selectedVariant as any).isBestSeller === true) && (
+              <Badge className="bg-orange-500 text-white text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full shadow-lg flex items-center gap-1">
+                🔥 الأكثر طلباً
               </Badge>
             )}
             {allVariants.length > 1 && (
-              <Badge variant="secondary" className="bg-primary/20 text-primary border-primary/30">
+              <Badge variant="secondary" className="bg-primary/20 text-primary border-primary/30 text-[10px] sm:text-xs">
                 {allVariants.length} خيارات
               </Badge>
             )}

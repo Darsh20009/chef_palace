@@ -664,6 +664,15 @@ export default function PosSystem() {
     }, {});
   }, [productsData, getGroupingKey]);
 
+  // Dynamic best-seller threshold for POS badges
+  const posItemBestSellerThreshold = useMemo(() => {
+    if (!productsData) return 3;
+    const counts = (productsData as any[]).map((i: any) => i.salesCount || 0).filter((s: number) => s > 0);
+    if (counts.length === 0) return 3;
+    const avg = Math.floor(counts.reduce((a: number, b: number) => a + b, 0) / counts.length);
+    return Math.max(3, avg);
+  }, [productsData]);
+
   const filteredItemsList = useMemo(() => {
     if (!productsData) return [];
     const q = searchQuery.toLowerCase();
@@ -1482,19 +1491,37 @@ export default function PosSystem() {
                         const groupKey = getGroupingKey(item);
                         const groupCount = (groupedItemsMap[groupKey] || [item]).length;
                         const hasAddonsBadge = itemsWithAddonsSet.has(item.id);
+                        const isBestSeller = (item as any).isBestSeller === true || ((item as any).salesCount || 0) >= posItemBestSellerThreshold;
+                        const isNew = (item as any).availabilityStatus === 'new' || (item as any).isNewProduct === 1;
+                        const discount = (item as any).oldPrice && Number((item as any).oldPrice) > Number(item.price)
+                          ? Math.round(((Number((item as any).oldPrice) - Number(item.price)) / Number((item as any).oldPrice)) * 100)
+                          : 0;
                         return (
-                          <div className="absolute top-1.5 right-1.5 flex flex-col gap-1">
-                            {groupCount > 1 && (
-                              <Badge className="text-[9px] sm:text-[10px] px-1.5 py-0.5 bg-primary/90 text-white font-bold">
-                                {groupCount} {i18n.language === 'ar' ? 'خيارات' : 'options'}
-                              </Badge>
-                            )}
-                            {hasAddonsBadge && (
-                              <Badge className="text-[9px] sm:text-[10px] px-1.5 py-0.5 bg-orange-500/90 text-white font-bold">
-                                + {i18n.language === 'ar' ? 'إضافات' : 'Addons'}
-                              </Badge>
-                            )}
-                          </div>
+                          <>
+                            <div className="absolute top-1.5 right-1.5 flex flex-col gap-1 z-10">
+                              {groupCount > 1 && (
+                                <Badge className="text-[9px] sm:text-[10px] px-1.5 py-0.5 bg-primary/90 text-white font-bold">
+                                  {groupCount} {i18n.language === 'ar' ? 'خيارات' : 'options'}
+                                </Badge>
+                              )}
+                              {hasAddonsBadge && (
+                                <Badge className="text-[9px] sm:text-[10px] px-1.5 py-0.5 bg-orange-500/90 text-white font-bold">
+                                  + {i18n.language === 'ar' ? 'إضافات' : 'Addons'}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="absolute top-1.5 left-1.5 flex flex-col gap-1 z-10">
+                              {isBestSeller && item.isAvailable && (
+                                <Badge className="text-[9px] px-1 py-0.5 bg-orange-500 text-white font-bold">🔥</Badge>
+                              )}
+                              {isNew && item.isAvailable && (
+                                <Badge className="text-[9px] px-1 py-0.5 bg-purple-600 text-white font-bold">جديد</Badge>
+                              )}
+                              {discount > 0 && item.isAvailable && (
+                                <Badge className="text-[9px] px-1 py-0.5 bg-green-600 text-white font-bold">-{discount}%</Badge>
+                              )}
+                            </div>
+                          </>
                         );
                       })()}
                     </div>

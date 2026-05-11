@@ -455,6 +455,27 @@ export default function MenuPage() {
     return aPos - bPos;
   });
 
+  // ── Badge computation ────────────────────────────────────────────────────
+  // Compute best-seller threshold dynamically: items with salesCount >= average
+  // of all sold items and at least 3 sales. Falls back to 5 if no sales data.
+  const allSalesCounts = coffeeItems
+    .map(i => (i as any).salesCount || 0)
+    .filter(s => s > 0);
+  const bestSellerThreshold = allSalesCounts.length > 0
+    ? Math.max(3, Math.floor(allSalesCounts.reduce((a, b) => a + b, 0) / allSalesCounts.length))
+    : 3;
+
+  const enhancedSortedItems = sortedFilteredItems.map(item => ({
+    ...item,
+    isBestSeller:
+      (item as any).isBestSeller === true ||
+      ((item as any).salesCount || 0) >= bestSellerThreshold,
+    isNew:
+      (item as any).isNew === true ||
+      (item as any).availabilityStatus === 'new' ||
+      (item as any).isNewProduct === 1,
+  }));
+
   const cartHasReservationItem = cartItems.some(ci => (ci.coffeeItem as any)?.isReservation);
   const cartHasNonReservationItem = cartItems.some(ci => !(ci.coffeeItem as any)?.isReservation);
 
@@ -1047,7 +1068,7 @@ export default function MenuPage() {
             </h2>
             {businessConfig?.menuLayout === 'cards' ? (
               <CardsMenuLayout
-                items={sortedFilteredItems as any}
+                items={enhancedSortedItems as any}
                 onAddItem={handleAddToCartDirect as any}
                 lang={i18n.language}
                 currency=<SarIcon />
@@ -1057,7 +1078,7 @@ export default function MenuPage() {
               />
             ) : businessConfig?.menuLayout === 'list' ? (
               <ListMenuLayout
-                items={sortedFilteredItems as any}
+                items={enhancedSortedItems as any}
                 onAddItem={handleAddToCartDirect as any}
                 lang={i18n.language}
                 currency=<SarIcon />
@@ -1067,7 +1088,7 @@ export default function MenuPage() {
               />
             ) : (
               <ClassicMenuLayout
-                items={sortedFilteredItems as any}
+                items={enhancedSortedItems as any}
                 onAddItem={handleAddToCartDirect as any}
                 lang={i18n.language}
                 currency=<SarIcon />
