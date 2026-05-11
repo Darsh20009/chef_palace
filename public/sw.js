@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v18';
+const CACHE_VERSION = 'v19';
 const CACHE_NAME = `chefsplace-cache-${CACHE_VERSION}`;
 
 // Essential shell files to pre-cache during install
