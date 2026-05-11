@@ -188,6 +188,16 @@ export default function SplashScreen() {
           <div className="h-px w-12" style={{ background: `linear-gradient(to right, transparent, ${GOLD}60, transparent)` }} />
           <span className="text-white text-xs tracking-[0.22em] font-light drop-shadow-lg">chefsplace.online</span>
           <div className="h-px w-12" style={{ background: `linear-gradient(to right, transparent, ${GOLD}60, transparent)` }} />
+          <a
+            href="https://qiroxstudio.online"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 text-[11px] tracking-[0.18em] font-light text-white/70 hover:text-white transition-colors"
+            data-testid="link-qirox-studio"
+            onClick={(e) => e.stopPropagation()}
+          >
+            Made by <span style={{ color: GOLD }} className="font-semibold">QIROX Studio</span>
+          </a>
         </motion.div>
       </motion.div>
     </AnimatePresence>
