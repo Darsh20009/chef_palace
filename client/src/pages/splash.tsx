@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-const chefsplaceLogo = "/logo.png";
+const chefsplaceLogo = "/logo.png?v=18";
 
 const GOLD = "#C06520";
 const GOLD2 = "#e8892a";

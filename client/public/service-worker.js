@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chefsplace-cafe-v3-logo';
+const CACHE_NAME = 'chefsplace-cafe-v5-force';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
