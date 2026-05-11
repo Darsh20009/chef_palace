@@ -1,0 +1,61 @@
+modules = ["nodejs-20", "web"]
+[nix]
+channel = "stable-25_05"
+packages = ["unzip"]
+
+[agent]
+expertMode = true
+integrations = ["javascript_object_storage:2.0.0"]
+stack = "FULLSTACK_JS"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+waitForPort = 5000
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[deployment]
+deploymentTarget = "autoscale"
+run = ["node", "./dist/index.cjs"]
+build = ["npm", "run", "build"]
+
+[userenv]
+
+[userenv.shared]
+SMTP_HOST = "mail.smtp2go.com"
+SMTP_PORT = "587"
+NOTIFICATION_EMAIL = "info@chefsplace.online"
+SMTP_USER = "Qirox"
+SMTP_FROM = "info@chefsplace.online"
+VAPID_PUBLIC_KEY = "BLSPrcCPmuaeZtLfhDof5Lz7CSzLke9R_DcmawCvNzlL4792Bav5wNjIzGQ1DrvprAuE2csWTWbGT_ykTFuq_D0"
+VAPID_SUBJECT = "mailto:cafe@qiroxstudio.online"
+SMTP_PASS = "CLUNY123cafe"
+SMTP2GO_API_KEY = "api-9494CBB84EAC4F5EA0F269C9D1AC9BD2"
+VAPID_PRIVATE_KEY = "o38iz7uEbh_Gq92Dz1RwCXOjQ4t4LRaeIPrD4JSz_JQ"
+SDK = "fhfkriovm9r8894jg4r9j94jgj9jgv94gf9jv9vn94f9gf9v9nnbjnvdn"
+QIROX_STUDIO_API_KEY = "qrx_live_9740fee29f83a2bfb2aed942d6259298edfd2322bd561b5900e4a343"
+MONGODB_URI = "mongodb+srv://chefsplace:chefsplace123@chefsplace.zy8ckot.mongodb.net/?appName=chefsplace"
+APPLE_PASS_TYPE_ID = "pass.blackrose.com.sa"
+APPLE_TEAM_ID = "V4K6RM59LS"

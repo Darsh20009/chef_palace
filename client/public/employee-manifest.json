@@ -1,0 +1,63 @@
+{
+  "id": "/blackrose-systems-staff",
+  "name": "BLACK ROSE SYSTEMS",
+  "short_name": "BLACK ROSE",
+  "description": "نظام إدارة الموظفين والعمليات والطلبات في BLACK ROSE CAFE",
+  "start_url": "/employee/home",
+  "scope": "/employee",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#0a0a0a",
+  "theme_color": "#BE1845",
+  "orientation": "any",
+  "lang": "ar",
+  "dir": "rtl",
+  "categories": ["productivity", "business"],
+  "prefer_related_applications": false,
+  "handle_links": "preferred",
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "icons": [
+    {
+      "src": "/employee-logo-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/employee-logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/employee-logo-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/employee-logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/employee-logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "BLACK ROSE SYSTEMS App"
+    },
+    {
+      "src": "/employee-logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "BLACK ROSE SYSTEMS Desktop"
+    }
+  ]
+}

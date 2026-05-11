@@ -1,0 +1,10 @@
+{
+  "appId": "blackrose.com.sa",
+  "appName": "Black Rose Cafe",
+  "webDir": "dist/public",
+  "bundledWebRuntime": false,
+  "ios": {
+    "contentInset": "always",
+    "minVersion": "16.0"
+  }
+}

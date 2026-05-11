@@ -1,0 +1,208 @@
+workflows:
+
+  # ─────────────────────────────────────────────────────────────
+  # WORKFLOW 1 — Build only (no App Store credentials needed)
+  # Builds for simulator to verify the whole pipeline first.
+  # ─────────────────────────────────────────────────────────────
+  ios-build:
+    name: iOS Build (No Signing)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      xcode: latest
+      node: 20
+      cocoapods: default
+      vars:
+        BUNDLE_ID: "blackrose.com.sa"
+        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
+        XCODE_SCHEME: "App"
+    scripts:
+      - name: Install npm dependencies
+        script: |
+          npm ci || npm install
+
+      - name: Build web assets
+        script: |
+          npm run build
+
+      - name: Add iOS platform if missing
+        script: |
+          if [ ! -d "ios" ]; then
+            npx cap add ios || true
+          fi
+
+      - name: Patch Podfile and project — iOS 16.0 + disable manual signing
+        # Run BEFORE cap sync so pod install uses the correct deployment target.
+        # Also force CODE_SIGN_STYLE=Automatic so the unsigned build never
+        # looks for a provisioning profile.
+        script: |
+          # --- Podfile ---
+          if [ -f "ios/App/Podfile" ]; then
+            sed -i '' "s/platform :ios, .*/platform :ios, '16.0'/" ios/App/Podfile 2>/dev/null || \
+              sed -i    "s/platform :ios, .*/platform :ios, '16.0'/" ios/App/Podfile
+          fi
+
+          # --- project.pbxproj: deployment target + automatic signing ---
+          find ios -name "project.pbxproj" | while read f; do
+            sed -i '' \
+              -e 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = 16.0/g' \
+              -e 's/CODE_SIGN_STYLE = Manual/CODE_SIGN_STYLE = Automatic/g' \
+              "$f" 2>/dev/null || \
+            sed -i \
+              -e 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = 16.0/g' \
+              -e 's/CODE_SIGN_STYLE = Manual/CODE_SIGN_STYLE = Automatic/g' \
+              "$f"
+          done
+
+      - name: Sync Capacitor with iOS
+        script: |
+          npx cap sync ios
+
+      - name: Inject Info.plist permissions & encryption flag
+        script: |
+          PLIST="ios/App/App/Info.plist"
+          /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string 'يستخدم التطبيق الكاميرا لمسح رموز QR'" "$PLIST" 2>/dev/null || \
+            /usr/libexec/PlistBuddy -c "Set :NSCameraUsageDescription 'يستخدم التطبيق الكاميرا لمسح رموز QR'" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :NSLocationWhenInUseUsageDescription string 'يستخدم التطبيق الموقع لإيصال الطلبات وإيجاد الفروع القريبة'" "$PLIST" 2>/dev/null || \
+            /usr/libexec/PlistBuddy -c "Set :NSLocationWhenInUseUsageDescription 'يستخدم التطبيق الموقع لإيصال الطلبات وإيجاد الفروع القريبة'" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string 'يستخدم التطبيق الصور لرفع إيصالات الدفع'" "$PLIST" 2>/dev/null || \
+            /usr/libexec/PlistBuddy -c "Set :NSPhotoLibraryUsageDescription 'يستخدم التطبيق الصور لرفع إيصالات الدفع'" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$PLIST" 2>/dev/null || \
+            /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" "$PLIST"
+
+      - name: Build for simulator (no signing)
+        script: |
+          xcodebuild \
+            -workspace "$XCODE_WORKSPACE" \
+            -scheme "$XCODE_SCHEME" \
+            -sdk iphonesimulator \
+            -configuration Release \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_STYLE=Automatic \
+            clean build \
+            | xcpretty
+
+    artifacts:
+      - /tmp/xcodebuild_logs/*.log
+
+  # ─────────────────────────────────────────────────────────────
+  # WORKFLOW 2 — App Store release (requires Apple credentials)
+  #
+  # Before running this workflow you must:
+  #  1. Codemagic → Teams → Integrations → App Store Connect
+  #     Name the integration exactly: blackrose_appstore
+  #     Key ID:    CSNAT4HD83
+  #     Issuer ID: 1f96495e-ca18-401c-8f57-eedb187ebf64
+  #  2. Codemagic → Teams → Code signing → upload:
+  #     • iOS Distribution certificate (.p12 + password)
+  #     • App Store provisioning profile (.mobileprovision)
+  #       Bundle ID: blackrose.com.sa
+  #  3. Codemagic → Teams → Environment variables
+  #     Create group: apple_credentials
+  #     Add: APPLE_TEAM_ID = V4K6RM59LS
+  # ─────────────────────────────────────────────────────────────
+  ios-release:
+    name: iOS Release (App Store / TestFlight)
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: blackrose_appstore
+    environment:
+      xcode: latest
+      node: 20
+      cocoapods: default
+      groups:
+        - apple_credentials
+      vars:
+        BUNDLE_ID: "blackrose.com.sa"
+        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
+        XCODE_SCHEME: "App"
+    scripts:
+      - name: Install npm dependencies
+        script: |
+          npm ci || npm install
+
+      - name: Build web assets
+        script: |
+          npm run build
+
+      - name: Add iOS platform if missing
+        script: |
+          if [ ! -d "ios" ]; then
+            npx cap add ios || true
+          fi
+
+      - name: Patch Podfile and project — iOS 16.0
+        script: |
+          if [ -f "ios/App/Podfile" ]; then
+            sed -i '' "s/platform :ios, .*/platform :ios, '16.0'/" ios/App/Podfile 2>/dev/null || \
+              sed -i    "s/platform :ios, .*/platform :ios, '16.0'/" ios/App/Podfile
+          fi
+          find ios -name "project.pbxproj" | while read f; do
+            sed -i '' \
+              -e 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = 16.0/g' \
+              "$f" 2>/dev/null || \
+            sed -i \
+              -e 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = 16.0/g' \
+              "$f"
+          done
+
+      - name: Sync Capacitor with iOS
+        script: |
+          npx cap sync ios
+
+      - name: Inject Info.plist permissions & encryption flag
+        script: |
+          PLIST="ios/App/App/Info.plist"
+          /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string 'يستخدم التطبيق الكاميرا لمسح رموز QR'" "$PLIST" 2>/dev/null || \
+            /usr/libexec/PlistBuddy -c "Set :NSCameraUsageDescription 'يستخدم التطبيق الكاميرا لمسح رموز QR'" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :NSLocationWhenInUseUsageDescription string 'يستخدم التطبيق الموقع لإيصال الطلبات وإيجاد الفروع القريبة'" "$PLIST" 2>/dev/null || \
+            /usr/libexec/PlistBuddy -c "Set :NSLocationWhenInUseUsageDescription 'يستخدم التطبيق الموقع لإيصال الطلبات وإيجاد الفروع القريبة'" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :NSPhotoLibraryUsageDescription string 'يستخدم التطبيق الصور لرفع إيصالات الدفع'" "$PLIST" 2>/dev/null || \
+            /usr/libexec/PlistBuddy -c "Set :NSPhotoLibraryUsageDescription 'يستخدم التطبيق الصور لرفع إيصالات الدفع'" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$PLIST" 2>/dev/null || \
+            /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" "$PLIST"
+
+      - name: Sync versioning from package.json
+        script: |
+          MARKETING_VERSION=$(node -p "require('./package.json').version")
+          BUILD_NUMBER=$(($(app-store-connect get-latest-app-store-build-number "$BUNDLE_ID" 2>/dev/null || echo 0) + 1))
+          cd ios/App
+          agvtool new-marketing-version "$MARKETING_VERSION"
+          agvtool new-version -all "$BUILD_NUMBER"
+
+      - name: Fetch signing certificates & profiles (App Store)
+        # Codemagic fetches the Distribution certificate + App Store provisioning
+        # profile for blackrose.com.sa automatically via the integration.
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles
+
+      - name: Build IPA for App Store
+        script: |
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME" \
+            --archive-flags="-destination 'generic/platform=iOS'"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        # submit_to_app_store: true   ← uncomment when ready for public release
+      email:
+        recipients:
+          - cafe@qiroxstudio.online
+        notify:
+          success: true
+          failure: true

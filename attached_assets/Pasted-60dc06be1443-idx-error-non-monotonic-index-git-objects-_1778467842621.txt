@@ -1,0 +1,103 @@
+60dc06be1443.idx
+error: non-monotonic index .git/objects/pack/._pack-1cc4ad93bce1a70a02f661bb70c060dc06be1443.idx
+error: non-monotonic index .git/objects/pack/._pack-1cc4ad93bce1a70a02f661bb70c060dc06be1443.idx
+[main d26f654] first deployment
+ 682 files changed, 0 insertions(+), 0 deletions(-)
+ create mode 100755 ._sedTyfdSk
+ create mode 100755 attached_assets/._Pasted-be1443-idx-error-non-monotonic-index-git-objects-pack-p_1778466743495.txt
+ create mode 100755 attached_assets/._Screen_Recording_2026-05-07_at_11.03.54_PM_1778184714261.mov
+ create mode 100755 attached_assets/._Screenshot_2026-05-07_at_10.10.18_PM_1778182317766.png
+ create mode 100755 attached_assets/._Screenshot_2026-05-07_at_10.14.41_PM_1778182294517.png
+ create mode 100755 attached_assets/._Screenshot_2026-05-07_at_8.42.17_PM_1778181367317.png
+ create mode 100755 attached_assets/._Screenshot_2026-05-10_at_10.11.23_PM_1778440831420.png
+ mode change 100644 => 100755 attached_assets/Pasted-be1443-idx-error-non-monotonic-index-git-objects-pack-p_1778466743495.txt
+ mode change 100644 => 100755 attached_assets/Screen_Recording_2026-05-07_at_11.03.54_PM_1778184714261.mov
+ mode change 100644 => 100755 attached_assets/Screenshot_2026-05-07_at_10.10.18_PM_1778182317766.png
+ mode change 100644 => 100755 attached_assets/Screenshot_2026-05-07_at_10.14.41_PM_1778182294517.png
+ mode change 100644 => 100755 attached_assets/Screenshot_2026-05-07_at_8.42.17_PM_1778181367317.png
+ mode change 100644 => 100755 attached_assets/Screenshot_2026-05-10_at_10.11.23_PM_1778440831420.png
+ create mode 100755 public/._robots.txt
+ create mode 100755 public/._sitemap.xml
+ create mode 100755 public/._splash-video.mov
+ mode change 100644 => 100755 public/robots.txt
+ mode change 100644 => 100755 public/sitemap.xml
+ mode change 100644 => 100755 public/splash-video.mov
+macbook@Darwishs-MacBook-Pro blackrose-cafe 34 % git init 
+Reinitialized existing Git repository in /Volumes/ExternalDis/Downloads/blackrose-cafe 34/.git/
+macbook@Darwishs-MacBook-Pro blackrose-cafe 34 % git remote -v
+gitsafe-backup	git://gitsafe:5418/backup.git (fetch)
+gitsafe-backup	git://gitsafe:5418/backup.git (push)
+origin	https://github.com/Darsh20009/blackrose-cafe (fetch)
+origin	https://github.com/Darsh20009/blackrose-cafe (push)
+macbook@Darwishs-MacBook-Pro blackrose-cafe 34 % git remote remove origin 
+\%                                                                              macbook@Darwishs-MacBook-Pro blackrose-cafe 34 % git remote set-url origin git@github.com/Darsh20009/chefpalace
+error: No such remote 'origin'
+macbook@Darwishs-MacBook-Pro blackrose-cafe 34 % git remote set-url origin git@github.com/Darsh20009/chefpalace
+error: No such remote 'origin'
+macbook@Darwishs-MacBook-Pro blackrose-cafe 34 % git remote set-url origin git@github.com/Darsh20009/chefpalace
+error: No such remote 'origin'
+macbook@Darwishs-MacBook-Pro blackrose-cafe 34 % git remote set-url origin git@github.com:Darsh20009/chefpalace
+error: No such remote 'origin'
+macbook@Darwishs-MacBook-Pro blackrose-cafe 34 % # 1. أضف الـ remote الجديد (HTTPS أسهل بدون SSH key)
+git remote add origin https://github.com/Darsh20009/chefpalace.git
+
+# 2. تأكد أنه أُضيف
+git remote -v
+
+# 3. ارفع الكود
+git push -u origin main
+zsh: unknown file attribute: H
+zsh: command not found: #
+gitsafe-backup	git://gitsafe:5418/backup.git (fetch)
+gitsafe-backup	git://gitsafe:5418/backup.git (push)
+origin	https://github.com/Darsh20009/chefpalace.git (fetch)
+origin	https://github.com/Darsh20009/chefpalace.git (push)
+zsh: command not found: #
+Username for 'https://github.com': 
+Password for 'https://github.com': 
+remote: No anonymous write access.
+fatal: Authentication failed for 'https://github.com/Darsh20009/chefpalace.git/'
+macbook@Darwishs-MacBook-Pro blackrose-cafe 34 % git remote set-url origin https://Darsh20009:git remote set-url origin https://Darsh20009:YOUR_TOKEN@github.com/Darsh20009/chefpalace.git                                        
+git push -u @github.com/Darsh20009/chefpalace.git
+git push -u origin main
+usage: git remote set-url [--push] <name> <newurl> [<oldurl>]
+   or: git remote set-url --add <name> <newurl>
+   or: git remote set-url --delete <name> <url>
+
+    --push                manipulate push URLs
+    --add                 add URL
+    --delete              delete URLs
+
+fatal: '@github.com/Darsh20009/chefpalace.git' does not appear to be a git repository
+fatal: Could not read from remote repository.
+
+Please make sure you have the correct access rights
+and the repository exists.
+Username for 'https://github.com': git remote set-url origin https://Darsh20009:YOUR_TOKEN@github.com/Darsh20009/chefpalace.git
+git push -u origin mainPassword for 'https://git remote set-url origin https://Darsh20009:YOUR_TOKEN@github.com/Darsh20009/chefpalace.git@github.com': 
+remote: Invalid username or token. Password authentication is not supported for Git operations.
+fatal: Authentication failed for 'https://github.com/Darsh20009/chefpalace.git/'
+macbook@Darwishs-MacBook-Pro blackrose-cafe 34 % 
+macbook@Darwishs-MacBook-Pro blackrose-cafe 34 % git remote set-url origin https://Darsh20009:YOUR_TOKEN@github.com/Darsh20009/chefpalace.git
+git push -u origin main
+
+
+
+remote: Invalid username or token. Password authentication is not supported for Git operations.
+fatal: Authentication failed for 'https://github.com/Darsh20009/chefpalace.git/'
+macbook@Darwishs-MacBook-Pro blackrose-cafe 34 % 
+macbook@Darwishs-MacBook-Pro blackrose-cafe 34 % 
+macbook@Darwishs-MacBook-Pro blackrose-cafe 34 % 
+macbook@Darwishs-MacBook-Pro blackrose-cafe 34 % git remote set-url origin https://Darsh20009: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@github.com/Darsh20009/chefpalace.git
+git push -u origin main
+remote: Permission to Darsh20009/chefpalace.git denied to Darsh20009.
+fatal: unable to access 'https://github.com/Darsh20009/chefpalace.git/': The requested URL returned error: 403
+macbook@Darwishs-MacBook-Pro blackrose-cafe 34 % git remote set-url origin https://Darsh20009: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@github.com/Darsh20009/chefpalace.git
+git push -u origin main
+remote: Permission to Darsh20009/chefpalace.git denied to Darsh20009.
+fatal: unable to access 'https://github.com/Darsh20009/chefpalace.git/': The requested URL returned error: 403
+macbook@Darwishs-MacBook-Pro blackrose-cafe 34 % git remote set-url origin https://Darsh20009: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@github.com/Darsh20009/chef_palace.git
+git push -u origin main
+remote: Permission to Darsh20009/chef_palace.git denied to Darsh20009.
+fatal: unable to access 'https://github.com/Darsh20009/chef_palace.git/': The requested URL returned error: 403
+macbook@Darwishs-MacBook-Pro blackrose-cafe 34 % 
