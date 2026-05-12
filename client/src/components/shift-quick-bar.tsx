@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Play, Square, Clock, Printer, Banknote, CreditCard, ShoppingCart, AlertCircle, User, Wallet } from "lucide-react";
+import { Play, Square, Clock, Printer, Banknote, CreditCard, ShoppingCart, AlertCircle, User, Wallet, History, GitMerge, Check } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface ActiveShift {
   _id: string;
@@ -210,10 +211,117 @@ export default function ShiftQuickBar() {
   const [showOpenDialog, setShowOpenDialog] = useState(false);
   const [showCloseDialog, setShowCloseDialog] = useState(false);
   const [showAutoDialog, setShowAutoDialog] = useState(false);
+  const [showHistoryDialog, setShowHistoryDialog] = useState(false);
+  const [historyPeriod, setHistoryPeriod] = useState<'today' | 'week' | 'month' | 'all'>('week');
+  const [selectedShiftIds, setSelectedShiftIds] = useState<string[]>([]);
   const [openingCash, setOpeningCash] = useState("");
   const [openingNotes, setOpeningNotes] = useState("");
   const [closingCash, setClosingCash] = useState("");
   const [closingNotes, setClosingNotes] = useState("");
+
+  const historyDateRange = useMemo(() => {
+    const now = new Date();
+    const end = now.toISOString();
+    if (historyPeriod === 'all') return { start: '', end: '' };
+    const start = new Date(now);
+    if (historyPeriod === 'today') start.setHours(0, 0, 0, 0);
+    else if (historyPeriod === 'week') start.setDate(now.getDate() - 7);
+    else if (historyPeriod === 'month') start.setDate(now.getDate() - 30);
+    return { start: start.toISOString(), end };
+  }, [historyPeriod]);
+
+  const { data: shiftHistory = [], isLoading: loadingHistory } = useQuery<any[]>({
+    queryKey: ['/api/shifts/history', historyDateRange.start, historyDateRange.end],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (historyDateRange.start) params.set('startDate', historyDateRange.start);
+      if (historyDateRange.end) params.set('endDate', historyDateRange.end);
+      params.set('limit', '100');
+      const res = await fetch(`/api/shifts/history?${params}`, { credentials: 'include' });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: showHistoryDialog,
+  });
+
+  const printShiftFromHistory = useCallback(async (s: any) => {
+    let categories: any[] = [];
+    let topProducts: any[] = [];
+    try {
+      const r = await fetch(`/api/shifts/${s._id || s.id}/z-report`, { credentials: 'include' });
+      if (r.ok) {
+        const z = await r.json();
+        categories = z.categories || [];
+        topProducts = z.topProducts || [];
+      }
+    } catch {}
+    const html = buildShiftReportHtml({
+      title: s.status === 'closed' ? 'تقرير Z - وردية مغلقة' : 'تقرير وردية',
+      shiftNumber: s.shiftNumber,
+      employeeName: s.employeeName,
+      branchName: s.branchName,
+      openedAt: s.openedAt,
+      closedAt: s.closedAt,
+      openingCash: s.openingCash,
+      closingCash: s.closingCash,
+      expectedCash: s.expectedCash,
+      cashDifference: s.cashDifference,
+      totalSales: s.totalSales || 0,
+      totalOrders: s.totalOrders || 0,
+      totalCashSales: s.totalCashSales || 0,
+      totalCardSales: s.totalCardSales || 0,
+      totalDigitalSales: s.totalDigitalSales || 0,
+      totalDiscounts: s.totalDiscounts || 0,
+      totalVAT: s.totalVAT || 0,
+      netRevenue: s.netRevenue || 0,
+      paymentBreakdown: s.paymentBreakdown || { cash: 0, card: 0, loyalty: 0 },
+      orderTypeBreakdown: s.orderTypeBreakdown || {},
+      cashMovements: s.cashMovements,
+      categories,
+      topProducts,
+      closingNotes: s.closingNotes,
+    });
+    printShiftReport(html);
+  }, []);
+
+  const mergeMutation = useMutation({
+    mutationFn: async (shiftIds: string[]) => {
+      const res = await apiRequest("POST", "/api/shifts/merge", { shiftIds });
+      return res.json();
+    },
+    onSuccess: (m: any) => {
+      const html = buildShiftReportHtml({
+        title: 'تقرير دمج الورديات',
+        subtitle: `دمج ${(m.sourceShifts || []).length} ورديات`,
+        shiftNumber: m.shiftNumber,
+        employeeName: m.employeeName,
+        branchName: m.branchName,
+        openedAt: m.openedAt,
+        closedAt: m.closedAt,
+        openingCash: m.openingCash,
+        closingCash: m.closingCash,
+        expectedCash: m.expectedCash,
+        cashDifference: m.cashDifference,
+        totalSales: m.totalSales,
+        totalOrders: m.totalOrders,
+        totalCashSales: m.totalCashSales,
+        totalCardSales: m.totalCardSales,
+        totalDigitalSales: m.totalDigitalSales,
+        totalDiscounts: m.totalDiscounts,
+        totalVAT: m.totalVAT,
+        netRevenue: m.netRevenue,
+        paymentBreakdown: m.paymentBreakdown,
+        orderTypeBreakdown: m.orderTypeBreakdown,
+        cashMovements: m.cashMovements,
+        categories: m.categories,
+        topProducts: m.topProducts,
+      });
+      printShiftReport(html);
+      toast({ title: "تم الدمج", description: `تم دمج ${(m.sourceShifts || []).length} ورديات وطباعة التقرير` });
+      setSelectedShiftIds([]);
+    },
+    onError: (e: any) => toast({ title: "خطأ", description: e.message || "فشل دمج الورديات", variant: "destructive" }),
+  });
 
   const { data: activeShift, refetch } = useQuery<ActiveShift | null>({
     queryKey: ['/api/shifts/active'],
@@ -369,6 +477,7 @@ export default function ShiftQuickBar() {
               <div className="flex items-center gap-1 text-xs"><Banknote className="w-3 h-3 text-green-600" /><span className="font-mono font-bold">{fmtSAR(activeShift.totalCashSales)}</span></div>
               <div className="flex items-center gap-1 text-xs"><CreditCard className="w-3 h-3 text-purple-500" /><span className="font-mono font-bold">{fmtSAR(activeShift.totalCardSales + activeShift.totalDigitalSales)}</span></div>
               <Button size="sm" variant="outline" onClick={handlePrintActive} data-testid="button-print-active-shift" className="h-7 px-2"><Printer className="w-3 h-3" /></Button>
+              <Button size="sm" variant="outline" onClick={() => setShowHistoryDialog(true)} data-testid="button-shift-history" className="h-7 px-2 gap-1"><History className="w-3 h-3" />السجل</Button>
               <Button size="sm" variant="destructive" onClick={() => setShowCloseDialog(true)} data-testid="button-close-shift" className="h-7 px-3 gap-1"><Square className="w-3 h-3" />إغلاق الوردية</Button>
             </div>
           </>
@@ -389,6 +498,7 @@ export default function ShiftQuickBar() {
               )}
             </div>
             <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={() => setShowHistoryDialog(true)} data-testid="button-shift-history" className="h-7 px-2 gap-1"><History className="w-3 h-3" />السجل</Button>
               <Button size="sm" onClick={() => setShowOpenDialog(true)} data-testid="button-open-shift" className="h-7 px-3 gap-1 bg-primary"><Play className="w-3 h-3" />فتح وردية</Button>
             </div>
           </>
@@ -520,6 +630,104 @@ export default function ShiftQuickBar() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAutoDialog(false)}>إغلاق</Button>
             <Button onClick={handlePrintAuto} data-testid="button-print-auto" className="gap-1"><Printer className="w-4 h-4" />طباعة التقرير</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Shift History + Merge Dialog */}
+      <Dialog open={showHistoryDialog} onOpenChange={(o) => { setShowHistoryDialog(o); if (!o) setSelectedShiftIds([]); }}>
+        <DialogContent dir="rtl" className="sm:max-w-3xl max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><History className="w-5 h-5 text-primary" />سجل الورديات ودمجها</DialogTitle>
+            <DialogDescription>اختر وردتين أو أكثر للدمج وطباعة تقرير موحد</DialogDescription>
+          </DialogHeader>
+
+          <div className="flex items-center gap-2 flex-wrap pb-2 border-b">
+            {(['today','week','month','all'] as const).map(p => (
+              <Button
+                key={p}
+                size="sm"
+                variant={historyPeriod === p ? 'default' : 'outline'}
+                onClick={() => { setHistoryPeriod(p); setSelectedShiftIds([]); }}
+                data-testid={`button-history-period-${p}`}
+                className="h-7"
+              >
+                {p === 'today' ? 'اليوم' : p === 'week' ? 'الأسبوع' : p === 'month' ? 'الشهر' : 'الكل'}
+              </Button>
+            ))}
+            <span className="text-xs text-muted-foreground ml-auto">
+              {selectedShiftIds.length > 0 ? `${selectedShiftIds.length} مُختارة` : `${shiftHistory.length} وردية`}
+            </span>
+          </div>
+
+          <div className="flex-1 overflow-y-auto py-2 space-y-2 min-h-0">
+            {loadingHistory ? (
+              <div className="text-center py-8 text-sm text-muted-foreground">جاري التحميل...</div>
+            ) : shiftHistory.length === 0 ? (
+              <div className="text-center py-8 text-sm text-muted-foreground">لا توجد ورديات في هذه الفترة</div>
+            ) : (
+              shiftHistory.map((s: any) => {
+                const sid = String(s._id || s.id);
+                const isSelected = selectedShiftIds.includes(sid);
+                const isOpen = s.status === 'open';
+                return (
+                  <div
+                    key={sid}
+                    className={`flex items-center gap-3 p-3 rounded-lg border ${isSelected ? 'border-primary bg-primary/5' : 'bg-card'}`}
+                    data-testid={`shift-history-item-${sid}`}
+                  >
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={(c) => {
+                        setSelectedShiftIds(prev => c ? [...prev, sid] : prev.filter(x => x !== sid));
+                      }}
+                      data-testid={`checkbox-shift-${sid}`}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono font-bold text-xs">{s.shiftNumber}</span>
+                        {isOpen ? (
+                          <Badge className="bg-green-500 text-white text-[10px] h-4">مفتوحة</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[10px] h-4">مغلقة</Badge>
+                        )}
+                        <span className="text-xs flex items-center gap-1"><User className="w-3 h-3" />{s.employeeName}</span>
+                      </div>
+                      <div className="flex items-center gap-3 flex-wrap text-[11px] text-muted-foreground mt-1">
+                        <span>{fmtDate(s.openedAt)} {fmtTime(s.openedAt)}{s.closedAt ? ` → ${fmtTime(s.closedAt)}` : ''}</span>
+                        <span className="flex items-center gap-1"><ShoppingCart className="w-3 h-3" />{s.totalOrders || 0}</span>
+                        <span className="font-mono font-bold text-primary">{fmtSAR(s.totalSales || 0)}</span>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => printShiftFromHistory(s)}
+                      data-testid={`button-print-shift-${sid}`}
+                      className="h-7 px-2 shrink-0"
+                    >
+                      <Printer className="w-3 h-3" />
+                    </Button>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          <DialogFooter className="pt-2 border-t">
+            <Button variant="outline" onClick={() => { setShowHistoryDialog(false); setSelectedShiftIds([]); }}>إغلاق</Button>
+            <Button
+              onClick={() => mergeMutation.mutate(selectedShiftIds)}
+              disabled={selectedShiftIds.length < 2 || mergeMutation.isPending}
+              className="gap-1 bg-primary"
+              data-testid="button-merge-shifts"
+            >
+              {mergeMutation.isPending ? (
+                <>جاري الدمج...</>
+              ) : (
+                <><GitMerge className="w-4 h-4" />دمج وطباعة ({selectedShiftIds.length})</>
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

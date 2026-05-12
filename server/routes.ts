@@ -4496,14 +4496,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Merge multiple shifts into a unified Z-Report (no destructive change to source shifts)
+  app.post("/api/shifts/merge", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const allowedRoles = ['cashier', 'supervisor', 'branch_manager', 'manager', 'admin', 'owner'];
+      if (!req.employee || !allowedRoles.includes(req.employee.role)) {
+        return res.status(403).json({ error: "غير مصرح لك بدمج الورديات" });
+      }
+      const { shiftIds } = req.body as { shiftIds: string[] };
+      if (!Array.isArray(shiftIds) || shiftIds.length < 2) {
+        return res.status(400).json({ error: "اختر وردتين على الأقل للدمج" });
+      }
+      const tenantId = getTenantIdFromRequest(req) || (req.employee as any)?.tenantId || 'demo-tenant';
+      const validIds = shiftIds.filter((x: string) => /^[0-9a-fA-F]{24}$/.test(x));
+
+      // Tenant-scope + closed-only filter for merge eligibility
+      const shiftFilter: any = { _id: { $in: validIds }, tenantId, status: 'closed' };
+      const elevatedRoles = ['owner', 'admin', 'branch_manager', 'manager'];
+      const isElevated = elevatedRoles.includes(req.employee.role);
+      if (!isElevated && req.employee.branchId) {
+        shiftFilter.branchId = req.employee.branchId;
+      }
+
+      const shifts: any[] = await CashierShiftModel.find(shiftFilter).lean();
+      if (shifts.length === 0) return res.status(404).json({ error: "لم يتم العثور على ورديات مغلقة قابلة للدمج" });
+      if (shifts.length < 2) return res.status(400).json({ error: "يجب اختيار وردتين مغلقتين على الأقل للدمج" });
+
+      // Ensure all merged shifts belong to the same branch (data integrity for Z-report)
+      const branches = new Set(shifts.map(s => s.branchId || ''));
+      if (branches.size > 1) {
+        return res.status(400).json({ error: "لا يمكن دمج ورديات من فروع مختلفة" });
+      }
+
+      const merged: any = {
+        shiftNumber: 'MERGED-' + Date.now(),
+        employeeName: shifts.map(s => s.employeeName).filter(Boolean).join(' + '),
+        branchName: shifts[0]?.branchName || 'الرئيسي',
+        openedAt: shifts.reduce((a, s) => !a || new Date(s.openedAt) < new Date(a) ? s.openedAt : a, null as any),
+        closedAt: shifts.reduce((a, s) => !a || (s.closedAt && new Date(s.closedAt) > new Date(a)) ? s.closedAt : a, null as any),
+        openingCash: shifts.reduce((s, x) => s + (x.openingCash || 0), 0),
+        closingCash: shifts.reduce((s, x) => s + (x.closingCash || 0), 0),
+        expectedCash: shifts.reduce((s, x) => s + (x.expectedCash || 0), 0),
+        cashDifference: shifts.reduce((s, x) => s + (x.cashDifference || 0), 0),
+        totalSales: shifts.reduce((s, x) => s + (x.totalSales || 0), 0),
+        totalOrders: shifts.reduce((s, x) => s + (x.totalOrders || 0), 0),
+        totalCashSales: shifts.reduce((s, x) => s + (x.totalCashSales || 0), 0),
+        totalCardSales: shifts.reduce((s, x) => s + (x.totalCardSales || 0), 0),
+        totalDigitalSales: shifts.reduce((s, x) => s + (x.totalDigitalSales || 0), 0),
+        totalDiscounts: shifts.reduce((s, x) => s + (x.totalDiscounts || 0), 0),
+        totalVAT: shifts.reduce((s, x) => s + (x.totalVAT || 0), 0),
+        netRevenue: shifts.reduce((s, x) => s + (x.netRevenue || 0), 0),
+        paymentBreakdown: { cash: 0, card: 0, loyalty: 0 },
+        orderTypeBreakdown: { dine_in: 0, takeaway: 0, car_pickup: 0, delivery: 0, online: 0 },
+        cashMovements: [] as any[],
+        sourceShifts: shifts.map(s => ({ shiftNumber: s.shiftNumber, employeeName: s.employeeName, totalSales: s.totalSales, totalOrders: s.totalOrders })),
+      };
+      for (const s of shifts) {
+        const pb = s.paymentBreakdown || {};
+        for (const k of Object.keys(merged.paymentBreakdown)) merged.paymentBreakdown[k] += (pb as any)[k] || 0;
+        const ob = s.orderTypeBreakdown || {};
+        for (const k of Object.keys(merged.orderTypeBreakdown)) merged.orderTypeBreakdown[k] += (ob as any)[k] || 0;
+        if (Array.isArray(s.cashMovements)) merged.cashMovements.push(...s.cashMovements);
+      }
+
+      // Aggregate categories + topProducts from union of all order IDs
+      const allOrderIds: string[] = Array.from(new Set(
+        shifts.flatMap((s: any) => (Array.isArray(s.orderIds) ? s.orderIds.map(String) : []))
+      ));
+      let categories: any[] = [];
+      let topProducts: any[] = [];
+      if (allOrderIds.length > 0) {
+        const orders = await OrderModel.find({
+          tenantId,
+          $or: [
+            { id: { $in: allOrderIds } },
+            { _id: { $in: allOrderIds.filter((x: string) => /^[0-9a-fA-F]{24}$/.test(x)) } },
+          ],
+        }).lean();
+        const { coffeeItemMap, categoryMap } = await loadMenuMaps(tenantId);
+        const agg = aggregateOrdersAsShift(
+          orders,
+          new Date(merged.openedAt || Date.now()),
+          new Date(merged.closedAt || Date.now()),
+          coffeeItemMap,
+          categoryMap,
+        );
+        categories = agg.categories;
+        topProducts = agg.topProducts;
+      }
+
+      res.json({ ...merged, categories, topProducts });
+    } catch (error: any) {
+      console.error("[SHIFT] merge error:", error);
+      res.status(500).json({ error: "فشل في دمج الورديات" });
+    }
+  });
+
   // Get Z-Report for a specific shift
   app.get("/api/shifts/:shiftId/z-report", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const shift: any = await CashierShiftModel.findById(req.params.shiftId).lean();
+      const tenantId = getTenantIdFromRequest(req) || (req.employee as any)?.tenantId || "demo-tenant";
+      const shift: any = await CashierShiftModel.findOne({ _id: req.params.shiftId, tenantId }).lean();
       if (!shift) return res.status(404).json({ error: "الوردية غير موجودة" });
 
-      // Aggregate categories + products from the shift's orders
-      const tenantId = getTenantIdFromRequest(req) || shift.tenantId || "demo-tenant";
+      // Branch scope: non-elevated employees may only read shifts of their own branch.
+      const elevatedRoles = ['owner', 'admin', 'branch_manager', 'manager'];
+      const isElevated = !!(req.employee && elevatedRoles.includes(req.employee.role));
+      if (!isElevated && req.employee?.branchId && shift.branchId && shift.branchId !== req.employee.branchId) {
+        return res.status(403).json({ error: "غير مصرح لك بعرض هذه الوردية" });
+      }
       const orderIds: string[] = Array.isArray(shift.orderIds) ? shift.orderIds.map(String) : [];
       let categories: any[] = [];
       let topProducts: any[] = [];
@@ -4528,9 +4629,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/shifts/history", requireAuth, async (req: AuthRequest, res) => {
     try {
       const { branchId, employeeId, startDate, endDate, status, limit: limitParam } = req.query;
-      const filter: any = {};
+      const tenantId = getTenantIdFromRequest(req) || (req.employee as any)?.tenantId || "demo-tenant";
+      const filter: any = { tenantId };
 
-      if (branchId) filter.branchId = branchId;
+      const elevatedRoles = ['owner', 'admin', 'branch_manager', 'manager'];
+      const isElevated = !!(req.employee && elevatedRoles.includes(req.employee.role));
+      if (isElevated) {
+        if (branchId) filter.branchId = branchId;
+      } else if (req.employee?.branchId) {
+        // Non-elevated: locked to their own branch regardless of query param
+        filter.branchId = req.employee.branchId;
+      }
       if (employeeId) filter.employeeId = employeeId;
       if (status) filter.status = status;
       if (startDate || endDate) {
@@ -8809,7 +8918,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/orders", async (req: any, res) => {
+  app.get("/api/orders", requireAuth, async (req: any, res) => {
     try {
       const { OrderModel } = await import("@shared/schema");
       const { limit, offset, status, today, fromDate, period, branchId: qBranchId, orderType } = req.query;
@@ -8821,9 +8930,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const offsetNum = offset ? parseInt(offset as string) : 0;
 
       const query: any = { tenantId };
-      // Branch filter: query param takes precedence for admins; session branch for employees
-      const resolvedBranch = (qBranchId && qBranchId !== 'all') ? (qBranchId as string) : (employee?.branchId || null);
-      if (resolvedBranch) query.branchId = resolvedBranch;
+      // Branch filter:
+      // - Elevated roles (owner/admin/branch_manager/manager) may pass any qBranchId or "all".
+      // - Non-elevated employees are LOCKED to their session.branchId; qBranchId is ignored
+      //   to prevent intra-tenant data leakage across branches.
+      // - In all bound cases we ALSO include legacy/customer orders that have no branchId
+      //   so the order history isn't blank for newly-migrated tenants.
+      const elevatedRoles = ['owner', 'admin', 'branch_manager', 'manager'];
+      const isElevated = !!(employee && elevatedRoles.includes(employee.role));
+      let effectiveBranch: string | null = null;
+      if (isElevated) {
+        effectiveBranch = (qBranchId && qBranchId !== 'all') ? (qBranchId as string) : null;
+      } else if (employee?.branchId) {
+        effectiveBranch = employee.branchId;
+      }
+      if (effectiveBranch) {
+        query.$or = [
+          { branchId: effectiveBranch },
+          { branchId: { $in: [null, ''] } },
+          { branchId: { $exists: false } },
+        ];
+      }
 
       // Support orderType filter (dine_in, delivery, pickup, etc.)
       if (orderType && orderType !== 'all') {
