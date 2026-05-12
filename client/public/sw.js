@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'v23-no-favicon-final';
+const CACHE_VERSION = 'v24-bukhari-logo';
 const CACHE_NAME = `chefsplace-cache-${CACHE_VERSION}`;
 
 // Essential shell files to pre-cache during install
