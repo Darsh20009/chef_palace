@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { useToast } from "@/hooks/use-toast";
 import { Play, Square, Clock, Printer, Banknote, CreditCard, ShoppingCart, AlertCircle, User, Wallet, History, GitMerge, Check } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 interface ActiveShift {
   _id: string;
