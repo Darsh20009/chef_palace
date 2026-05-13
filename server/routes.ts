@@ -4242,8 +4242,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "غير مصرح لك بفتح وردية" });
       }
 
-      const { openingCash, notes } = req.body;
+      const { openingCash, notes, continueFromAuto } = req.body;
       const employeeId = (req.employee as any)._id?.toString() || (req.employee as any).id;
+      const tenantId = getTenantIdFromRequest(req) || (req.employee as any).tenantId || "demo-tenant";
+      const branchId = req.employee.branchId || 'main';
 
       // Check if employee already has an open shift
       const existingShift = await CashierShiftModel.findOne({ 
@@ -4258,35 +4260,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const shiftCount = await CashierShiftModel.countDocuments({
-        branchId: req.employee.branchId || 'main'
-      });
+      const shiftCount = await CashierShiftModel.countDocuments({ branchId });
       const shiftNumber = `SH-${Date.now().toString(36).toUpperCase()}-${(shiftCount + 1).toString().padStart(4, '0')}`;
+
+      // Optional: seed the new shift with the current auto-shift period's orders so the
+      // employee's manual shift "continues" from the auto period (no order is lost).
+      let seed = {
+        openedAt: new Date(),
+        orderIds: [] as string[],
+        totalSales: 0, totalOrders: 0,
+        totalCashSales: 0, totalCardSales: 0, totalDigitalSales: 0,
+        totalDiscounts: 0, totalVAT: 0, netRevenue: 0,
+        paymentBreakdown: { cash: 0, card: 0, loyalty: 0 },
+        orderTypeBreakdown: { dine_in: 0, takeaway: 0, car_pickup: 0, delivery: 0, online: 0 },
+      };
+      if (continueFromAuto) {
+        try {
+          const cfg = await BusinessConfigModel.findOne({ tenantId }).lean() as any;
+          const hours = Number(cfg?.autoShiftHours || 12);
+          const now = await getEffectiveNow(tenantId);
+          const period = getAutoShiftPeriod(now, hours);
+          const manualShifts = await CashierShiftModel.find({
+            tenantId, branchId,
+            $or: [
+              { openedAt: { $gte: period.start, $lte: now } },
+              { closedAt: { $gte: period.start, $lte: now } },
+              { status: 'active', openedAt: { $lte: now } },
+            ],
+          }).lean();
+          const coveredIds = new Set<string>();
+          for (const s of manualShifts as any[]) {
+            for (const oid of (s.orderIds || [])) coveredIds.add(String(oid));
+          }
+          const orders = await OrderModel.find({
+            tenantId, branchId,
+            createdAt: { $gte: period.start, $lte: now },
+            status: { $ne: 'cancelled' },
+          }).lean();
+          const filtered = orders.filter((o: any) => !coveredIds.has(String(o.id || o._id)));
+          const { coffeeItemMap, categoryMap } = await loadMenuMaps(tenantId);
+          const summary = aggregateOrdersAsShift(filtered, period.start, now, coffeeItemMap, categoryMap);
+          seed.openedAt = period.start;
+          seed.orderIds = filtered.map((o: any) => String(o.id || o._id));
+          seed.totalSales = summary.totalSales || 0;
+          seed.totalOrders = summary.totalOrders || 0;
+          seed.totalCashSales = summary.totalCashSales || 0;
+          seed.totalCardSales = summary.totalCardSales || 0;
+          seed.totalDigitalSales = summary.totalDigitalSales || 0;
+          seed.totalDiscounts = summary.totalDiscounts || 0;
+          seed.totalVAT = summary.totalVAT || 0;
+          seed.netRevenue = summary.netRevenue || 0;
+          seed.paymentBreakdown = summary.paymentBreakdown || seed.paymentBreakdown;
+          seed.orderTypeBreakdown = summary.orderTypeBreakdown || seed.orderTypeBreakdown;
+        } catch (e) {
+          console.warn("[SHIFT] continueFromAuto seed failed, opening empty shift:", e);
+        }
+      }
 
       const newShift = await CashierShiftModel.create({
         shiftNumber,
         employeeId,
         employeeName: req.employee.fullName || req.employee.username,
-        branchId: req.employee.branchId || 'main',
+        branchId,
         branchName: '',
         status: 'open',
-        openedAt: new Date(),
+        openedAt: seed.openedAt,
         openingCash: Number(openingCash) || 0,
         notes: notes || '',
-        totalSales: 0,
-        totalOrders: 0,
-        totalCashSales: 0,
-        totalCardSales: 0,
-        totalDigitalSales: 0,
+        totalSales: seed.totalSales,
+        totalOrders: seed.totalOrders,
+        totalCashSales: seed.totalCashSales,
+        totalCardSales: seed.totalCardSales,
+        totalDigitalSales: seed.totalDigitalSales,
         totalRefunds: 0,
-        totalDiscounts: 0,
+        totalDiscounts: seed.totalDiscounts,
         totalCancelledOrders: 0,
-        totalVAT: 0,
-        netRevenue: 0,
-        orderIds: [],
+        totalVAT: seed.totalVAT,
+        netRevenue: seed.netRevenue,
+        paymentBreakdown: seed.paymentBreakdown,
+        orderTypeBreakdown: seed.orderTypeBreakdown,
+        orderIds: seed.orderIds,
+        tenantId,
       });
 
-      console.log(`[SHIFT] Opened shift ${shiftNumber} by ${req.employee.username}`);
+      console.log(`[SHIFT] Opened shift ${shiftNumber} by ${req.employee.username}${continueFromAuto ? ' (continued from auto-period, ' + seed.orderIds.length + ' orders)' : ''}`);
       res.status(201).json(newShift);
     } catch (error: any) {
       console.error("[SHIFT] Error opening shift:", error);
@@ -4325,6 +4382,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!activeShift) {
         return res.json({ success: true, message: "لا توجد وردية مفتوحة" });
+      }
+
+      // Idempotency: if this order is already attached to the shift (e.g. it was
+      // seeded from an auto-shift period via continueFromAuto), do not double-count.
+      if (orderId && (activeShift.orderIds || []).map(String).includes(String(orderId))) {
+        return res.json({ success: true, shift: activeShift, alreadyCounted: true });
       }
 
       const amount = Number(totalAmount) || 0;

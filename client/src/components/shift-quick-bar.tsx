@@ -212,6 +212,7 @@ export default function ShiftQuickBar() {
   const [showCloseDialog, setShowCloseDialog] = useState(false);
   const [showAutoDialog, setShowAutoDialog] = useState(false);
   const [showHistoryDialog, setShowHistoryDialog] = useState(false);
+  const [showContinueAutoDialog, setShowContinueAutoDialog] = useState(false);
   const [historyPeriod, setHistoryPeriod] = useState<'today' | 'week' | 'month' | 'all'>('week');
   const [selectedShiftIds, setSelectedShiftIds] = useState<string[]>([]);
   const [openingCash, setOpeningCash] = useState("");
@@ -335,15 +336,20 @@ export default function ShiftQuickBar() {
   });
 
   const openMutation = useMutation({
-    mutationFn: async (data: { openingCash: number; notes: string }) => {
+    mutationFn: async (data: { openingCash: number; notes: string; continueFromAuto?: boolean }) => {
       const res = await apiRequest("POST", "/api/shifts/open", data);
       return res.json();
     },
-    onSuccess: () => {
-      toast({ title: "تم فتح الوردية", description: "يمكنك الآن استقبال الطلبات" });
+    onSuccess: (_data, vars) => {
+      toast({
+        title: "تم فتح الوردية",
+        description: vars.continueFromAuto ? "تم استئناف الوردية التلقائية وضم جميع الطلبات السابقة" : "يمكنك الآن استقبال الطلبات",
+      });
       queryClient.invalidateQueries({ queryKey: ['/api/shifts/active'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts/auto-current'] });
       setShowOpenDialog(false);
       setShowAutoDialog(false);
+      setShowContinueAutoDialog(false);
       setOpeningCash("");
       setOpeningNotes("");
     },
@@ -499,7 +505,13 @@ export default function ShiftQuickBar() {
             </div>
             <div className="flex items-center gap-2">
               <Button size="sm" variant="outline" onClick={() => setShowHistoryDialog(true)} data-testid="button-shift-history" className="h-7 px-2 gap-1"><History className="w-3 h-3" />السجل</Button>
-              <Button size="sm" onClick={() => setShowOpenDialog(true)} data-testid="button-open-shift" className="h-7 px-3 gap-1 bg-primary"><Play className="w-3 h-3" />فتح وردية</Button>
+              <Button size="sm" onClick={() => {
+                if (autoShift && autoShift.enabled !== false && (autoShift.totalOrders || 0) > 0) {
+                  setShowContinueAutoDialog(true);
+                } else {
+                  setShowOpenDialog(true);
+                }
+              }} data-testid="button-open-shift" className="h-7 px-3 gap-1 bg-primary"><Play className="w-3 h-3" />فتح وردية</Button>
             </div>
           </>
         )}
@@ -630,6 +642,72 @@ export default function ShiftQuickBar() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAutoDialog(false)}>إغلاق</Button>
             <Button onClick={handlePrintAuto} data-testid="button-print-auto" className="gap-1"><Printer className="w-4 h-4" />طباعة التقرير</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Continue from Auto-Shift Dialog */}
+      <Dialog open={showContinueAutoDialog} onOpenChange={setShowContinueAutoDialog}>
+        <DialogContent dir="rtl" className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Clock className="w-5 h-5 text-primary" />وردية تلقائية نشطة</DialogTitle>
+            <DialogDescription>
+              يوجد وردية تلقائية بدأت مسبقاً في هذه الفترة وتحتوي على طلبات. كيف تريد المتابعة؟
+            </DialogDescription>
+          </DialogHeader>
+          {autoShift && (
+            <div className="space-y-3 py-2">
+              <div className="rounded-lg border bg-muted/30 p-3 space-y-1.5 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">بدأت من:</span>
+                  <span className="font-bold">{fmtTime(autoShift.period.start)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">عدد الطلبات:</span>
+                  <span className="font-bold">{autoShift.totalOrders}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">إجمالي المبيعات:</span>
+                  <span className="font-bold font-mono text-primary">{fmtSAR(autoShift.totalSales || 0)}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">نقدي / شبكة:</span>
+                  <span className="font-mono">{fmtSAR(autoShift.totalCashSales || 0)} / {fmtSAR((autoShift.totalCardSales || 0) + (autoShift.totalDigitalSales || 0))}</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="continue-cash" className="text-sm">رصيد افتتاح الصندوق (ر.س)</Label>
+                <Input
+                  id="continue-cash"
+                  type="number"
+                  inputMode="decimal"
+                  value={openingCash}
+                  onChange={(e) => setOpeningCash(e.target.value)}
+                  placeholder="0.00"
+                  data-testid="input-continue-opening-cash"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter className="flex-col sm:flex-col gap-2">
+            <Button
+              onClick={() => openMutation.mutate({ openingCash: Number(openingCash) || 0, notes: openingNotes || '', continueFromAuto: true })}
+              disabled={openMutation.isPending}
+              className="w-full bg-primary gap-2"
+              data-testid="button-continue-auto-shift"
+            >
+              <Play className="w-4 h-4" />استئناف الوردية التلقائية (ضم جميع الطلبات السابقة)
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => openMutation.mutate({ openingCash: Number(openingCash) || 0, notes: openingNotes || '', continueFromAuto: false })}
+              disabled={openMutation.isPending}
+              className="w-full"
+              data-testid="button-fresh-shift"
+            >
+              بدء وردية جديدة فارغة (تجاهل الطلبات السابقة)
+            </Button>
+            <Button variant="ghost" onClick={() => setShowContinueAutoDialog(false)} className="w-full">إلغاء</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
