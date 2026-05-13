@@ -5,6 +5,7 @@ import { Download, Printer } from "lucide-react";
 import type { Order } from "@shared/schema";
 import { brand } from "@/lib/brand";
 import { useRef, useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import QRCode from "qrcode";
 import SarIcon from "@/components/sar-icon";
 import { fmtOrderNum } from "@/lib/print-utils";
@@ -17,6 +18,9 @@ interface ReceiptInvoiceProps {
 export function ReceiptInvoice({ order, variant = "button" }: ReceiptInvoiceProps) {
   const invoiceRef = useRef<HTMLDivElement>(null);
   const [trackingQrUrl, setTrackingQrUrl] = useState<string>("");
+  const { data: bizConfig } = useQuery<any>({ queryKey: ["/api/business-config"] });
+  const taxNumber = bizConfig?.vatNumber || brand.taxNumber;
+  const commercialRegister = bizConfig?.commercialRegister || brand.commercialRegister;
 
   const getItemsArray = (): any[] => {
     try {
@@ -261,8 +265,8 @@ export function ReceiptInvoice({ order, variant = "button" }: ReceiptInvoiceProp
         {/* Footer */}
         <div className="text-center mt-4 text-[20px] space-y-1">
           <p className="font-bold text-[22px]">شكراً لزيارتكم</p>
-          <p>الرقم الضريبي: {brand.taxNumber}</p>
-          <p>السجل التجاري: {brand.commercialRegister}</p>
+          <p>الرقم الضريبي: {taxNumber}</p>
+          <p>السجل التجاري: {commercialRegister}</p>
           <p className="font-bold mt-2 tracking-tight">{brand.website}</p>
         </div>
       </div>

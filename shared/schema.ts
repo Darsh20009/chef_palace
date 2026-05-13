@@ -806,6 +806,7 @@ const BusinessConfigSchema = new Schema<IBusinessConfig>({
   isFoodEnabled: { type: Boolean, default: false },
   isDrinksEnabled: { type: Boolean, default: true },
   vatNumber: { type: String },
+  commercialRegister: { type: String },
   vatPercentage: { type: Number, default: 15 },
   currency: { type: String, default: 'SAR' },
   timezone: { type: String, default: 'Asia/Riyadh' },

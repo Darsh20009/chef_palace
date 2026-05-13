@@ -1,4 +1,5 @@
 import { forwardRef, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import QRCode from "qrcode";
 import JsBarcode from "jsbarcode";
 const chefsplaceLogo = "/logo.png";
@@ -38,10 +39,10 @@ interface TaxInvoiceProps {
   branchAddress?: string;
 }
 
-const VAT_NUMBER = brand.taxNumber;
-const COMPANY_NAME = brand.shortNameAr;
-const COMPANY_NAME_EN = brand.nameEn;
-const COMPANY_CR = brand.commercialRegister;
+const FALLBACK_VAT = brand.taxNumber;
+const FALLBACK_COMPANY_NAME = brand.shortNameAr;
+const FALLBACK_COMPANY_NAME_EN = brand.nameEn;
+const FALLBACK_CR = brand.commercialRegister;
 const COMPANY_VAT_NAME = "شركة مكان الشيف للخدمات الغذائية"; // Added for ZATCA compliance
 const DEFAULT_BRANCH = "الفرع الرئيسي - الرياض"; // Default branch
 const DEFAULT_ADDRESS = "الرياض، المملكة العربية السعودية"; // Default address
@@ -115,6 +116,11 @@ export const TaxInvoicePrint = forwardRef<HTMLDivElement, TaxInvoiceProps>(
     const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
     const [barcodeUrl, setBarcodeUrl] = useState<string>("");
     const [trackingQrUrl, setTrackingQrUrl] = useState<string>("");
+    const { data: bizConfig } = useQuery<any>({ queryKey: ["/api/business-config"] });
+    const VAT_NUMBER = bizConfig?.vatNumber || FALLBACK_VAT;
+    const COMPANY_CR = bizConfig?.commercialRegister || FALLBACK_CR;
+    const COMPANY_NAME = bizConfig?.tradeNameAr || FALLBACK_COMPANY_NAME;
+    const COMPANY_NAME_EN = bizConfig?.tradeNameEn || FALLBACK_COMPANY_NAME_EN;
 
     const totalAmount = parseNumber(total);
     

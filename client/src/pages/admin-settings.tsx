@@ -2267,6 +2267,24 @@ export default function AdminSettings() {
           </CardContent>
         </Card>
 
+        {/* Business Tax / Legal Identity — controls VAT + CR shown on all invoices */}
+        <Card className="hover-elevate border-blue-100 dark:border-blue-900/30 md:col-span-2 shadow-lg" data-testid="card-tax-identity">
+          <CardHeader className="bg-blue-50/50 dark:bg-blue-900/10 border-b">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                <Shield className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <CardTitle className="text-lg font-bold">بيانات المنشأة الضريبية</CardTitle>
+                <CardDescription>الاسم التجاري، الرقم الضريبي، والسجل التجاري — تظهر في كل الفواتير وصفحة الويب</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <BusinessIdentityForm config={config} mutation={mutation} />
+          </CardContent>
+        </Card>
+
         {/* Branding & Visual Identity */}
         <Card className="hover-elevate border-purple-100 dark:border-purple-900/30">
           <CardHeader>
@@ -3203,6 +3221,98 @@ function ShiftAndTimeSettings({ config, mutation, tc }: { config: any; mutation:
                 "Correct server time drift. e.g. -60 to subtract 1h, +30 to add 30min.")}
           </p>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function BusinessIdentityForm({ config, mutation }: { config: any; mutation: any }) {
+  const [tradeNameAr, setTradeNameAr] = useState('');
+  const [tradeNameEn, setTradeNameEn] = useState('');
+  const [vatNumber, setVatNumber] = useState('');
+  const [commercialRegister, setCommercialRegister] = useState('');
+
+  useEffect(() => {
+    if (config) {
+      setTradeNameAr(config.tradeNameAr || '');
+      setTradeNameEn(config.tradeNameEn || '');
+      setVatNumber(config.vatNumber || '');
+      setCommercialRegister(config.commercialRegister || '');
+    }
+  }, [config]);
+
+  const save = () => {
+    mutation.mutate({
+      tradeNameAr: tradeNameAr.trim(),
+      tradeNameEn: tradeNameEn.trim(),
+      vatNumber: vatNumber.trim(),
+      commercialRegister: commercialRegister.trim(),
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label className="text-sm font-semibold">الاسم التجاري (عربي)</Label>
+          <Input
+            value={tradeNameAr}
+            onChange={(e) => setTradeNameAr(e.target.value)}
+            placeholder="مثال: مكان الشيف البخاري"
+            className="font-ibm-arabic"
+            dir="rtl"
+            data-testid="input-trade-name-ar"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label className="text-sm font-semibold">Trade Name (English)</Label>
+          <Input
+            value={tradeNameEn}
+            onChange={(e) => setTradeNameEn(e.target.value)}
+            placeholder="e.g. Chef's Place"
+            dir="ltr"
+            data-testid="input-trade-name-en"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label className="text-sm font-semibold">الرقم الضريبي (15 رقم)</Label>
+          <Input
+            value={vatNumber}
+            onChange={(e) => setVatNumber(e.target.value.replace(/\D/g, '').slice(0, 15))}
+            placeholder="3xxxxxxxxxxxxx3"
+            className="font-mono"
+            dir="ltr"
+            maxLength={15}
+            data-testid="input-vat-number"
+          />
+          <p className="text-[11px] text-muted-foreground">يظهر في كل الفواتير الضريبية ورمز الـ ZATCA</p>
+        </div>
+        <div className="space-y-2">
+          <Label className="text-sm font-semibold">السجل التجاري</Label>
+          <Input
+            value={commercialRegister}
+            onChange={(e) => setCommercialRegister(e.target.value.replace(/\D/g, '').slice(0, 15))}
+            placeholder="1xxxxxxxxx"
+            className="font-mono"
+            dir="ltr"
+            maxLength={15}
+            data-testid="input-commercial-register"
+          />
+          <p className="text-[11px] text-muted-foreground">يظهر في تذييل الفاتورة وفي صفحة تذييل الموقع</p>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between gap-3 pt-2 border-t">
+        <p className="text-xs text-muted-foreground">⚠️ التغييرات تظهر فوراً في كل الفواتير الجديدة</p>
+        <Button
+          onClick={save}
+          disabled={mutation.isPending}
+          className="gap-2"
+          data-testid="button-save-tax-identity"
+        >
+          {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          حفظ بيانات المنشأة
+        </Button>
       </div>
     </div>
   );
