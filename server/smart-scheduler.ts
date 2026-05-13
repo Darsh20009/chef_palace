@@ -7,8 +7,10 @@
  */
 
 import mongoose from "mongoose";
-import { PushSubscriptionModel, sendPushBySubscriptions, PushPayload } from "./push-service";
+import { PushSubscriptionModel, sendPushBySubscriptions, PushPayload, sendPushToEmployee } from "./push-service";
 import { fireNotifyAdmins } from "./notification-engine";
+import { OrderModel } from "@shared/schema";
+import { wsManager } from "./websocket";
 
 // ───────────────────────────────────────────────
 // Helpers: Saudi time & Hijri calendar
@@ -465,8 +467,99 @@ export function startSmartScheduler() {
         await checkAndAlertLowStock();
       }
 
+      // ─── DINE-IN APPOINTMENT PRE-PREP ALERT (every minute) ───
+      // Alert kitchen + POS 10 minutes before customer's appointment time.
+      await checkDineInAppointments();
+
     } catch (err) {
       console.error("[SCHEDULER] Tick error:", err);
     }
   }, 60_000); // every minute
+}
+
+// ───────────────────────────────────────────────
+// Dine-in appointment pre-prep alert
+// Fires once per order ~10 min before arrivalTime
+// ───────────────────────────────────────────────
+
+async function checkDineInAppointments() {
+  try {
+    if (mongoose.connection.readyState !== 1) return;
+
+    const now = new Date();
+    const saudi = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Riyadh" }));
+
+    const orders = await OrderModel.find({
+      orderType: { $in: ["dine-in", "dine_in"] },
+      arrivalTime: { $exists: true, $ne: "" },
+      status: { $in: ["pending", "payment_confirmed", "confirmed"] },
+      prepAlertSentAt: { $exists: false },
+    }).limit(100).lean();
+
+    for (const order of orders as any[]) {
+      const arrival = String(order.arrivalTime || "");
+      const m = arrival.match(/^(\d{1,2}):(\d{2})/);
+      if (!m) continue;
+      const arrH = parseInt(m[1], 10);
+      const arrMin = parseInt(m[2], 10);
+
+      // Try same-day arrival; if it's already in the past by >2h, assume next day (handles midnight rollover)
+      let arrivalDate = new Date(saudi);
+      arrivalDate.setHours(arrH, arrMin, 0, 0);
+      let diffMin = Math.round((arrivalDate.getTime() - saudi.getTime()) / 60000);
+      if (diffMin < -120) {
+        arrivalDate = new Date(arrivalDate.getTime() + 24 * 60 * 60 * 1000);
+        diffMin = Math.round((arrivalDate.getTime() - saudi.getTime()) / 60000);
+      }
+      if (diffMin < 9 || diffMin > 11) continue;
+
+      // Persistent idempotency — atomic flag write so restarts/parallel ticks won't double-fire
+      const claimed = await OrderModel.updateOne(
+        { _id: order._id, prepAlertSentAt: { $exists: false } },
+        { $set: { prepAlertSentAt: new Date() } }
+      );
+      if (!claimed.modifiedCount) continue;
+
+      const branchId = order.branchId || "all";
+      const orderNumber = order.orderNumber || `#${order.dailyNumber || ""}`;
+      const title = "🔔 ابدأ التحضير الآن";
+      const body = `الطلب ${orderNumber} موعد العميل بعد 10 دقائق (${arrival}) — ابدأ التحضير`;
+
+      // Push to employees on this branch (kitchen + POS share employee subs)
+      try {
+        await sendPushToEmployee(branchId, {
+          title,
+          body,
+          tag: `prep-alert-${order._id}`,
+          type: "order",
+          url: "/employee/kitchen",
+          data: { orderId: String(order._id), orderNumber, arrivalTime: arrival },
+        } as PushPayload);
+      } catch (e) {
+        console.error("[SCHEDULER] prep-alert push failed:", e);
+      }
+
+      // Real-time toast to kitchen + POS via WebSocket
+      // Broadcast to branch AND to "all" so kitchen displays without branchId still receive it
+      try {
+        const payload = {
+          type: "prep_alert",
+          orderId: String(order._id),
+          orderNumber,
+          arrivalTime: arrival,
+          branchId,
+          title,
+          body,
+        };
+        wsManager.broadcastToBranch(branchId, payload);
+        if (branchId !== "all") wsManager.broadcastToBranch("all", payload);
+      } catch (e) {
+        console.error("[SCHEDULER] prep-alert broadcast failed:", e);
+      }
+
+      console.log(`[SCHEDULER] 🔔 Prep alert sent for order ${orderNumber} (arrival ${arrival})`);
+    }
+  } catch (err) {
+    console.error("[SCHEDULER] checkDineInAppointments error:", err);
+  }
 }

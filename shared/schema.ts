@@ -1198,6 +1198,7 @@ export interface IOrder extends Document {
   tableStatus?: 'pending' | 'payment_confirmed' | 'preparing' | 'delivering_to_table' | 'delivered' | 'cancelled' | 'open';
   orderType?: 'dine-in' | 'pickup' | 'delivery' | 'car-pickup' | 'table' | 'car_pickup' | 'dine_in' | 'regular' | 'curbside' | 'takeaway';
   arrivalTime?: string;
+  prepAlertSentAt?: Date;
   scheduledPickupTime?: string;
   preparationHoldUntil?: string;
   pickupType?: 'inside' | 'table' | 'car';
@@ -1308,6 +1309,7 @@ const OrderSchema = new Schema<IOrder>({
   pickupType: { type: String, enum: ['inside', 'table', 'car'] },
   tableNumber: { type: String },
   arrivalTime: { type: String },
+  prepAlertSentAt: { type: Date },
   scheduledPickupTime: { type: String },
   preparationHoldUntil: { type: String },
   dineIn: { type: Boolean, default: false },

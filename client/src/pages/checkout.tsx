@@ -790,11 +790,13 @@ export default function CheckoutPage() {
       paymentMethod: selectedPaymentMethod as PaymentMethod,
       status: "pending",
       branchId: deliveryInfo?.branchId || "default",
-      orderType: deliveryInfo?.type === 'car-pickup' ? 'car_pickup'
+      orderType: (deliveryInfo?.type === 'dine-in' || deliveryInfo?.dineIn) ? 'dine-in'
+              : deliveryInfo?.type === 'car-pickup' ? 'car_pickup'
               : deliveryInfo?.type === 'scheduled-pickup' ? 'pickup'
               : deliveryInfo?.type === 'delivery' ? 'delivery'
-              : (deliveryInfo?.type === 'pickup' && deliveryInfo?.dineIn ? 'dine-in' : 'regular'),
-      deliveryType: deliveryInfo?.type === 'car-pickup' ? 'car_pickup'
+              : 'regular',
+      deliveryType: (deliveryInfo?.type === 'dine-in' || deliveryInfo?.dineIn) ? 'dine-in'
+               : deliveryInfo?.type === 'car-pickup' ? 'car_pickup'
                : deliveryInfo?.type === 'scheduled-pickup' ? 'pickup'
                : deliveryInfo?.type || 'pickup',
       customerNotes,
@@ -927,11 +929,13 @@ export default function CheckoutPage() {
       paymentMethod: selectedPaymentMethod as PaymentMethod,
       status: "pending",
       branchId: deliveryInfo?.branchId || "default",
-      orderType: deliveryInfo?.type === 'car-pickup' ? 'car_pickup'
+      orderType: (deliveryInfo?.type === 'dine-in' || deliveryInfo?.dineIn) ? 'dine-in'
+              : deliveryInfo?.type === 'car-pickup' ? 'car_pickup'
               : deliveryInfo?.type === 'scheduled-pickup' ? 'pickup'
               : deliveryInfo?.type === 'delivery' ? 'delivery'
-              : (deliveryInfo?.type === 'pickup' && deliveryInfo?.dineIn ? 'dine-in' : 'regular'),
-      deliveryType: deliveryInfo?.type === 'car-pickup' ? 'car_pickup'
+              : 'regular',
+      deliveryType: (deliveryInfo?.type === 'dine-in' || deliveryInfo?.dineIn) ? 'dine-in'
+               : deliveryInfo?.type === 'car-pickup' ? 'car_pickup'
                : deliveryInfo?.type === 'scheduled-pickup' ? 'pickup'
                : deliveryInfo?.type || 'pickup',
       customerNotes: customerNotes,

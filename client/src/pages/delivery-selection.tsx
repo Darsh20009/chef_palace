@@ -440,25 +440,16 @@ export default function DeliverySelectionPage() {
     const branch = branches.find(b => b.id === selectedBranchId);
     if (!branch) return;
 
-    if (selectedMethod === 'car-pickup') {
-      if (!carInfo.model || !carInfo.color || !carInfo.plateNumber) {
-        toast({ title: t("product.error"), description: "يرجى إدخال جميع بيانات السيارة", variant: 'destructive' });
-        return;
-      }
-      if (saveCarInfo) {
-        try { localStorage.setItem('qirox_saved_car', JSON.stringify(carInfo)); } catch {}
-      } else {
-        try { localStorage.removeItem('qirox_saved_car'); } catch {}
-      }
-    }
-
     if (selectedMethod === 'dine-in') {
-      if (!selectedTableId && !bookedTable) {
-        toast({ title: t("product.error"), description: 'يرجى اختيار طاولة', variant: 'destructive' });
+      if (!arrivalTime) {
+        toast({ title: t("product.error"), description: 'يرجى تحديد موعد حضورك', variant: 'destructive' });
         return;
       }
-      if (!arrivalTime) {
-        toast({ title: t("product.error"), description: 'يرجى تحديد وقت الوصول', variant: 'destructive' });
+      const [hh, mm] = arrivalTime.split(':').map(Number);
+      const target = new Date(); target.setHours(hh, mm, 0, 0);
+      const minAhead = new Date(Date.now() + 15 * 60 * 1000);
+      if (target < minAhead) {
+        toast({ title: t("product.error"), description: 'الموعد يجب أن يكون بعد 15 دقيقة على الأقل من الآن', variant: 'destructive' });
         return;
       }
     }
@@ -498,24 +489,19 @@ export default function DeliverySelectionPage() {
     }
 
     setDeliveryInfo({
-      type: selectedMethod === 'car-pickup' ? 'car-pickup'
-          : selectedMethod === 'dine-in' ? 'dine-in'
+      type: selectedMethod === 'dine-in' ? 'dine-in'
           : selectedMethod === 'delivery' ? 'delivery'
           : 'pickup',
       branchId: branch.id,
       branchName: branch.nameAr,
       branchAddress: branch.address,
       dineIn: selectedMethod === 'dine-in',
-      carPickup: selectedMethod === 'car-pickup',
-      carInfo: selectedMethod === 'car-pickup' ? {
-        carType: carInfo.model,
-        carColor: carInfo.color,
-        plateNumber: carInfo.plateNumber,
-        parkingSlot: carInfo.parkingSlot
-      } : undefined,
-      tableId: selectedTableId || undefined,
-      tableNumber: bookedTable?.tableNumber || undefined,
+      carPickup: false,
+      carInfo: undefined,
+      tableId: undefined,
+      tableNumber: undefined,
       arrivalTime: arrivalTime || undefined,
+      scheduledPickupTime: selectedMethod === 'dine-in' ? (arrivalTime || undefined) : undefined,
       deliveryAddress: selectedMethod === 'delivery'
         ? [DELIVERY_COUNTRIES.find(c => c.value === selectedCountry)?.label, selectedGovernorate, detailedAddress.trim()].filter(Boolean).join(' - ')
         : undefined,
@@ -554,21 +540,11 @@ export default function DeliverySelectionPage() {
       ring: 'ring-blue-500',
       bg: 'bg-blue-50 dark:bg-blue-950/20',
     },
-    enableCarPickup && {
-      id: 'car-pickup' as OrderMethod,
-      icon: Car,
-      label: 'استلام من السيارة',
-      desc: 'لا تنزل من سيارتك',
-      color: 'from-purple-500 to-purple-600',
-      ring: 'ring-purple-500',
-      bg: 'bg-purple-50 dark:bg-purple-950/20',
-      badge: 'VIP',
-    },
     enableDineIn && {
       id: 'dine-in' as OrderMethod,
       icon: Utensils,
       label: 'داخل المطعم',
-      desc: 'اجلس واطلب من طاولتك',
+      desc: 'احجز موعد حضورك للمطعم',
       color: 'from-orange-500 to-orange-600',
       ring: 'ring-orange-500',
       bg: 'bg-orange-50 dark:bg-orange-950/20',
@@ -997,83 +973,44 @@ export default function DeliverySelectionPage() {
               </Card>
             )}
 
-            {/* Dine-In Details */}
+            {/* Dine-In Details — Appointment Only */}
             {selectedMethod === 'dine-in' && (
               <Card className="border-orange-200 dark:border-orange-800">
                 <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-4">
-                  <p className="text-white font-bold text-sm mb-1">حجز طاولة</p>
-                  <p className="text-orange-100 text-xs">اختر طاولتك المفضلة وسيكون طلبك جاهزاً عند وصولك</p>
+                  <p className="text-white font-bold text-sm mb-1">موعد حضورك للمطعم</p>
+                  <p className="text-orange-100 text-xs">حدد موعد وصولك وسنبدأ تجهيز طلبك قبله بـ 10 دقائق ليكون جاهزاً</p>
                 </div>
                 <CardContent className="p-4 space-y-4">
-                  {loadingTables ? (
-                    <div className="flex items-center gap-2 py-4 text-muted-foreground">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span className="text-sm">جاري تحميل الطاولات...</span>
-                    </div>
-                  ) : availableTables.length === 0 ? (
-                    <Alert className="border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20">
-                      <AlertCircle className="w-4 h-4 text-yellow-600" />
-                      <AlertDescription className="text-yellow-800 dark:text-yellow-200">
-                        لا توجد طاولات متاحة حالياً
+                  <div>
+                    <Label htmlFor="arrival-time" className="text-sm font-bold mb-2 flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-orange-500" />
+                      موعد الحضور
+                    </Label>
+                    <Input
+                      id="arrival-time"
+                      type="time"
+                      value={arrivalTime}
+                      onChange={(e) => setArrivalTime(e.target.value)}
+                      data-testid="input-arrival-time"
+                      className="h-12 text-lg font-bold text-center"
+                    />
+                    <p className="text-[11px] text-muted-foreground mt-1.5">يجب أن يكون الموعد بعد 15 دقيقة على الأقل من الآن</p>
+                  </div>
+
+                  {arrivalTime && (
+                    <Alert className="border-orange-200 bg-orange-50 dark:bg-orange-950/20">
+                      <Clock className="w-4 h-4 text-orange-600" />
+                      <AlertDescription className="text-orange-800 dark:text-orange-200">
+                        موعدك الساعة <span className="font-bold">{arrivalTime}</span> — سنبدأ التحضير الساعة{' '}
+                        <span className="font-bold" dir="ltr">
+                          {(() => {
+                            const [h, m] = arrivalTime.split(':').map(Number);
+                            const d = new Date(); d.setHours(h, m - 10, 0, 0);
+                            return d.toTimeString().slice(0, 5);
+                          })()}
+                        </span>
                       </AlertDescription>
                     </Alert>
-                  ) : (
-                    <>
-                      <div>
-                        <Label className="text-sm font-bold mb-2 block">اختر الطاولة</Label>
-                        <div className="grid grid-cols-3 gap-2">
-                          {availableTables.map((table) => {
-                            const tableId = table.id;
-                            if (!tableId) return null;
-                            const isAvailable = !!table.isAvailable;
-                            const isChosen = selectedTableId === tableId;
-                            return (
-                              <button
-                                key={tableId}
-                                onClick={() => isAvailable && setSelectedTableId(tableId)}
-                                disabled={!isAvailable}
-                                data-testid={`table-option-${table.tableNumber}`}
-                                className={`p-3 rounded-xl border-2 text-center transition-all ${
-                                  isChosen
-                                    ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/20'
-                                    : isAvailable
-                                    ? 'border-border hover:border-orange-300 bg-card cursor-pointer'
-                                    : 'border-border bg-muted opacity-50 cursor-not-allowed'
-                                }`}
-                              >
-                                <div className="text-2xl mb-1">{isAvailable ? '🪑' : '🚫'}</div>
-                                <p className="text-xs font-bold">طاولة {table.tableNumber}</p>
-                                <p className="text-[10px] text-muted-foreground">{isAvailable ? 'متاحة' : 'مشغولة'}</p>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      <div>
-                        <Label htmlFor="arrival-time" className="text-sm font-bold mb-2 flex items-center gap-1.5">
-                          <Clock className="w-3.5 h-3.5 text-orange-500" />
-                          وقت وصولك
-                        </Label>
-                        <Input
-                          id="arrival-time"
-                          type="time"
-                          value={arrivalTime}
-                          onChange={(e) => setArrivalTime(e.target.value)}
-                          data-testid="input-arrival-time"
-                          className="h-12"
-                        />
-                      </div>
-
-                      {bookedTable && (
-                        <Alert className="border-green-200 bg-green-50 dark:bg-green-950/20">
-                          <Check className="w-4 h-4 text-green-600" />
-                          <AlertDescription className="text-green-800 dark:text-green-200">
-                            تم حجز الطاولة رقم {bookedTable.tableNumber} بنجاح!
-                          </AlertDescription>
-                        </Alert>
-                      )}
-                    </>
                   )}
                 </CardContent>
               </Card>
