@@ -278,9 +278,9 @@ export default function ProductDetails() {
 
             {/* Category Badge */}
             <Badge variant="outline" className="w-fit" data-testid="badge-category">
-              {item.category === 'basic' && (i18n.language === 'ar' ? 'قهوة أساسية' : 'Basic Coffee')}
-              {item.category === 'hot' && (i18n.language === 'ar' ? 'قهوة ساخنة' : 'Hot Coffee')}
-              {item.category === 'cold' && (i18n.language === 'ar' ? 'قهوة باردة' : 'Cold Coffee')}
+              {item.category === 'basic' && (i18n.language === 'ar' ? 'صنف رئيسي' : 'Main Dish')}
+              {item.category === 'hot' && (i18n.language === 'ar' ? 'صنف ساخن' : 'Hot Dish')}
+              {item.category === 'cold' && (i18n.language === 'ar' ? 'صنف بارد' : 'Cold Dish')}
             </Badge>
 
             {/* Ingredients Section */}

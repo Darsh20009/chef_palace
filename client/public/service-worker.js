@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chefsplace-cafe-v5-force';
+const CACHE_NAME = 'chefsplace-restaurant-v6-force';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

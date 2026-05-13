@@ -284,7 +284,7 @@ export default function DriveThroughPage() {
         <div className="relative">
           <Badge className="bg-amber-500 text-black font-bold mb-3 text-xs">🚘 اطلب من سيارتك</Badge>
           <h1 className="text-3xl font-black text-white mb-2 leading-tight">
-            اطلب قهوتك<br />
+            اطلب طلبك<br />
             <span className="text-amber-400">بدون ما تنزل!</span>
           </h1>
           <p className="text-gray-400 text-sm">اختر طلبك وسنوصله لسيارتك مباشرةً</p>

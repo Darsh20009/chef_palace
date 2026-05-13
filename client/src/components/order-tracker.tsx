@@ -34,7 +34,7 @@ const orderSteps = [
  icon: Coffee, 
  color: "text-blue-400", 
  bgColor: "bg-blue-900/30",
- description: "نحن نحضر قهوتك الآن"
+ description: "نحن نحضر طلبك الآن"
  },
  { 
  id: "ready", 
