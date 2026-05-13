@@ -1,5 +1,6 @@
 import QRCode from "qrcode";
 import { VAT_RATE } from "@/lib/constants";
+import { brand } from "@/lib/brand";
 
 // ── Logo cache ────────────────────────────────────────────────────────────────
 // Embed the logo as a Base64 data URL so it renders immediately in the print
@@ -558,13 +559,13 @@ export async function printKitchenOrder(data: KitchenOrderData): Promise<void> {
   openPrintWindow(html, `طلب المطبخ - ${data.orderNumber}`, { paperWidth: '80mm', autoPrint: true, autoClose: true, showPrintButton: false });
 }
 
-const VAT_NUMBER = "312718675800003";
-const COMPANY_NAME = "مكان الشيف البخاري";
-const COMPANY_NAME_EN = "مكان الشيف البخاري";
-const COMPANY_CR = "7025559423";
-const COMPANY_WEBSITE = "chefsplace.online";
+const VAT_NUMBER = brand.taxNumber;
+const COMPANY_NAME = brand.nameAr;
+const COMPANY_NAME_EN = brand.nameEn;
+const COMPANY_CR = brand.commercialRegister;
+const COMPANY_WEBSITE = brand.website?.replace(/^https?:\/\//, '').replace(/^www\./, '') || '';
 const DEFAULT_BRANCH = "الفرع الرئيسي - الرياض";
-const DEFAULT_ADDRESS = "الرياض، المملكة العربية السعودية";
+const DEFAULT_ADDRESS = brand.locationDisplay || "الرياض، المملكة العربية السعودية";
 
 function generateZATCAQRCode(data: {
   sellerName: string;
@@ -702,11 +703,11 @@ export async function buildReceiptPreviewHtml(data: TaxInvoiceData): Promise<str
   const disc = data.invoiceDiscount ? parseNumber(data.invoiceDiscount) : 0;
   const { date: fmtDate, time: fmtTime } = formatDate(data.date);
   const orderNumDisplay = String(data.orderNumber).replace(/\D/g, '').padStart(4, '0') || data.orderNumber;
-  const TAGLINE = 'قَهْوَةٌ تُقَالُ وَوَرْدٌ يُهْدَى';
+  const TAGLINE = brand.taglineAr;
 
   const orderTypeStr = (data.orderTypeName || (data.orderType as string) || '');
   const orderTypeLabel =
-    orderTypeStr === 'dine_in' || orderTypeStr === 'dine-in' ? 'طاولة' :
+    orderTypeStr === 'dine_in' || orderTypeStr === 'dine-in' ? 'محلي' :
     orderTypeStr === 'takeaway' || orderTypeStr === 'pickup' ? 'سفري' :
     orderTypeStr === 'delivery' ? 'توصيل' :
     orderTypeStr === 'car_pickup' || orderTypeStr === 'car-pickup' ? 'سيارة' :
@@ -884,7 +885,7 @@ export function buildEmployeeReceiptPreviewHtml(data: TaxInvoiceData): string {
 
   const orderTypeStr = (data.orderTypeName || (data.orderType as string) || '');
   const orderTypeLabel =
-    orderTypeStr === 'dine_in' || orderTypeStr === 'dine-in' ? 'طاولة' :
+    orderTypeStr === 'dine_in' || orderTypeStr === 'dine-in' ? 'محلي' :
     orderTypeStr === 'takeaway' || orderTypeStr === 'pickup' ? 'سفري' :
     orderTypeStr === 'delivery' ? 'توصيل' :
     orderTypeStr === 'car_pickup' || orderTypeStr === 'car-pickup' ? 'سيارة' :
@@ -953,7 +954,7 @@ export async function printTaxInvoice(data: TaxInvoiceData, config: PrintConfig 
         const { date: fmtDate, time: fmtTime } = formatDate(data.date);
         const orderTypeStr = (data.orderTypeName || (data.orderType as string) || '');
         const orderTypeThermal =
-          orderTypeStr === 'dine_in' || orderTypeStr === 'dine-in' ? 'طاولة' :
+          orderTypeStr === 'dine_in' || orderTypeStr === 'dine-in' ? 'محلي' :
           orderTypeStr === 'takeaway' || orderTypeStr === 'pickup' ? 'سفري' :
           orderTypeStr === 'delivery' ? 'توصيل' :
           orderTypeStr === 'car_pickup' || orderTypeStr === 'car-pickup' ? 'سيارة' :
@@ -989,7 +990,7 @@ export async function printTaxInvoice(data: TaxInvoiceData, config: PrintConfig 
           shopName: COMPANY_NAME,
           vatNumber: data.vatNumber || VAT_NUMBER,
           branchName: data.branchName,
-          tagline: 'قَهْوَةٌ تُقَالُ وَوَرْدٌ يُهْدَى',
+          tagline: brand.taglineAr,
           orderNumber: data.orderNumber,
           orderDate: `${fmtDate} ${fmtTime}`,
           cashierName: data.employeeName || '—',
@@ -1065,7 +1066,7 @@ export async function printTaxInvoice(data: TaxInvoiceData, config: PrintConfig 
   const totalAmount = parseNumber(data.total);
   const displayInvoiceNumber = fmtOrderNum(data.orderNumber);
   const orderTypeLabel = data.orderTypeName || (
-    (data.orderType as string) === 'dine_in' || (data.orderType as string) === 'dine-in' ? 'طاولة' :
+    (data.orderType as string) === 'dine_in' || (data.orderType as string) === 'dine-in' ? 'محلي' :
     (data.orderType as string) === 'takeaway' || (data.orderType as string) === 'pickup' ? 'سفري' :
     (data.orderType as string) === 'delivery' ? 'توصيل' :
     (data.orderType as string) === 'car_pickup' || (data.orderType as string) === 'car-pickup' ? 'سيارة' :

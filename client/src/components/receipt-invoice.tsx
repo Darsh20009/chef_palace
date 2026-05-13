@@ -261,9 +261,9 @@ export function ReceiptInvoice({ order, variant = "button" }: ReceiptInvoiceProp
         {/* Footer */}
         <div className="text-center mt-4 text-[20px] space-y-1">
           <p className="font-bold text-[22px]">شكراً لزيارتكم</p>
-          <p>الرقم الضريبي: 312718675800003</p>
-          <p>السجل التجاري: 1163184110</p>
-          <p className="font-bold mt-2 tracking-tight">www.chefsplace.online</p>
+          <p>الرقم الضريبي: {brand.taxNumber}</p>
+          <p>السجل التجاري: {brand.commercialRegister}</p>
+          <p className="font-bold mt-2 tracking-tight">{brand.website}</p>
         </div>
       </div>
 

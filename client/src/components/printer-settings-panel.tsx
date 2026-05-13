@@ -318,7 +318,7 @@ export default function PrinterSettingsPanel() {
 
       const escData = buildEscPosReceipt({
         shopName: "مكان الشيف البخاري",
-        vatNumber: '312718675800003',
+        vatNumber: brand.taxNumber,
         branchName: 'اختبار الطابعة',
         orderNumber: 'TEST-001',
         date: dateStr,

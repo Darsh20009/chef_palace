@@ -39,10 +39,10 @@ interface ReceiptProps {
   isKitchenCopy?: boolean;
 }
 
-const VAT_NUMBER = "312718675800003";
+const VAT_NUMBER = brand.taxNumber;
 const COMPANY_NAME = brand.shortNameAr;
 const COMPANY_NAME_EN = brand.nameEn;
-const COMPANY_CR = "1163184110";
+const COMPANY_CR = brand.commercialRegister;
 const COMPANY_VAT_NAME = "شركة مكان الشيف للخدمات الغذائية"; // Added for ZATCA compliance
 const DEFAULT_BRANCH = "الفرع الرئيسي - الرياض";
 const DEFAULT_ADDRESS = "الرياض، المملكة العربية السعودية";

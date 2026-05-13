@@ -88,7 +88,7 @@ export function CustomerFooter() {
               <div className="text-xs font-bold text-primary font-ibm-arabic">{t("legal.vat")}</div>
             </div>
             <div className="text-[10px] text-muted-foreground/60 text-center font-ibm-arabic leading-relaxed">
-              جميع الأسعار تشمل ضريبة القيمة المضافة<br/>رقم التسجيل: 312718675800003
+              جميع الأسعار تشمل ضريبة القيمة المضافة<br/>رقم التسجيل: {brand.taxNumber}
             </div>
           </div>
         </div>
