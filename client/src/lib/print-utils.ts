@@ -124,6 +124,77 @@ interface KitchenOrderData {
   timestamp: string;
 }
 
+// ── Unified item-display extractor ───────────────────────────────────────────
+// Pulls size + addons + notes out of any cart/order item shape so receipts
+// always render the same regardless of source (live cart, saved order, etc).
+function _extractItemDisplay(item: any): { size: string; addons: Array<{ nameAr: string; price?: number }>; notes: string } {
+  const cz = item?.customization || {};
+  // ── size ────────────────────────────────────────────────────────────────
+  let size = '';
+  const rawSize = item?.selectedSize || cz.selectedSize || cz.size;
+  if (rawSize && rawSize !== 'default' && String(rawSize).trim()) {
+    size = String(rawSize).trim();
+  } else if (item?.coffeeItem?.availableSizes && item?.selectedSize) {
+    const found = item.coffeeItem.availableSizes.find((s: any) => s.nameAr === item.selectedSize || s.id === item.selectedSize);
+    if (found) size = found.nameAr;
+  }
+
+  // ── addons (try every known shape, dedupe by name) ──────────────────────
+  const addonMap = new Map<string, { nameAr: string; price?: number }>();
+  const sources: any[] = [
+    cz.selectedAddons,        // saved-order shape: [{addonId,nameAr,price,...}]
+    cz.selectedItemAddons,    // legacy
+    item?.selectedItemAddons, // live cart inline addons
+  ];
+  for (const src of sources) {
+    if (!Array.isArray(src)) continue;
+    for (const a of src) {
+      if (!a) continue;
+      const nameAr = a.nameAr || a.name || a.nameEn;
+      if (!nameAr) continue;
+      const key = String(nameAr).trim();
+      if (!addonMap.has(key)) {
+        addonMap.set(key, { nameAr: key, price: typeof a.price === 'number' ? a.price : (a.price ? Number(a.price) : undefined) });
+      }
+    }
+  }
+  // string-id addons enriched via item.enrichedAddons
+  if (Array.isArray(item?.selectedAddons) && Array.isArray(item?.enrichedAddons)) {
+    for (const id of item.selectedAddons) {
+      const a = item.enrichedAddons.find((x: any) => x?.id === id || x?._id === id);
+      if (a?.nameAr && !addonMap.has(a.nameAr)) {
+        addonMap.set(a.nameAr, { nameAr: a.nameAr, price: typeof a.price === 'number' ? a.price : undefined });
+      }
+    }
+  }
+  const addons = Array.from(addonMap.values());
+
+  const notes = (cz.notes || item?.notes || '').toString().trim();
+  return { size, addons, notes };
+}
+
+function _renderItemExtras(item: any, opts: { fontSize?: number; color?: string; showPrices?: boolean } = {}): string {
+  const { size, addons, notes } = _extractItemDisplay(item);
+  if (!size && addons.length === 0 && !notes) return '';
+  const fs = opts.fontSize ?? 14;
+  const color = opts.color ?? '#444';
+  const lines: string[] = [];
+  if (size) {
+    lines.push(`<div style="font-size:${fs}px;color:${color};margin-top:5px;">📏 الحجم: <strong>${size}</strong></div>`);
+  }
+  if (addons.length > 0) {
+    const addonLines = addons.map(a => {
+      const priceStr = (opts.showPrices && a.price && a.price > 0) ? ` <span style="color:#888;">(+${a.price.toFixed(2)})</span>` : '';
+      return `<div style="font-size:${fs}px;color:${color};margin-top:3px;padding-right:10px;">+ ${a.nameAr}${priceStr}</div>`;
+    }).join('');
+    lines.push(`<div style="margin-top:5px;">${addonLines}</div>`);
+  }
+  if (notes) {
+    lines.push(`<div style="font-size:${fs}px;color:#666;margin-top:5px;font-style:italic;">📝 ${notes}</div>`);
+  }
+  return lines.join('');
+}
+
 // ── iframe-based print queue (never touches the main page DOM during print) ──
 let _printQueue: Array<{ html: string; paperWidth: string; isFullDoc: boolean }> = [];
 let _isPrinting = false;
@@ -662,16 +733,17 @@ export async function buildReceiptPreviewHtml(data: TaxInvoiceData): Promise<str
   const logoB64 = await fetchLogoBase64().catch(() => '');
   const logoSrc = logoB64 || '/logo.png';
 
-  const itemsHtml = data.items.map(item => {
+  const itemsHtml = data.items.map((item, idx) => {
     const up = parseNumber(item.coffeeItem.price);
     const itemDisc = parseNumber(item.itemDiscount);
     const lineTotal = item.quantity * up - itemDisc;
-    const addons = (item.customization?.selectedItemAddons || []).map((a: any) => a.nameAr).join('، ');
+    const extras = _renderItemExtras(item, { fontSize: 15, color: '#444', showPrices: true });
+    const sep = idx > 0 ? 'border-top:1px dashed #ccc;' : '';
     return `
-      <div style="padding:8px 0;">
-        <div style="font-weight:700;font-size:19px;">${item.coffeeItem.nameAr}${itemDisc > 0 ? ` <span style="font-size:14px;color:#16a34a;">(-${itemDisc.toFixed(2)})</span>` : ''}</div>
-        ${addons ? `<div style="font-size:15px;color:#444;margin-top:3px;">+ ${addons}</div>` : ''}
-        <table style="width:100%;margin-top:5px;border-collapse:collapse;border:0;"><tr>
+      <div style="padding:14px 0;${sep}">
+        <div style="font-weight:700;font-size:19px;line-height:1.5;">${item.coffeeItem.nameAr}${itemDisc > 0 ? ` <span style="font-size:14px;color:#16a34a;">(-${itemDisc.toFixed(2)})</span>` : ''}</div>
+        ${extras}
+        <table style="width:100%;margin-top:8px;border-collapse:collapse;border:0;"><tr>
           <td style="font-size:17px;color:#222;border:0;">${item.quantity} × ${up.toFixed(2)} ر.س</td>
           <td style="text-align:left;font-size:17px;font-weight:700;border:0;">${lineTotal.toFixed(2)} ر.س</td>
         </tr></table>
@@ -818,14 +890,19 @@ export function buildEmployeeReceiptPreviewHtml(data: TaxInvoiceData): string {
     orderTypeStr === 'car_pickup' || orderTypeStr === 'car-pickup' ? 'سيارة' :
     orderTypeStr;
 
-  const itemsHtml = data.items.map(item => {
-    const addons = (item.customization?.selectedItemAddons || []).map((a: any) => a.nameAr).join('، ');
+  const itemsHtml = data.items.map((item, idx) => {
+    const extras = _renderItemExtras(item, { fontSize: 16, color: '#333', showPrices: false });
+    const sep = idx > 0 ? 'border-top:1px dashed #ccc;' : '';
     return `
-      <div style="padding:8px 0;">
-        <div style="font-size:22px;font-weight:800;line-height:1.4;">${item.quantity} × ${item.coffeeItem.nameAr}</div>
-        ${addons ? `<div style="font-size:16px;color:#333;margin-top:3px;">+ ${addons}</div>` : ''}
+      <div style="padding:14px 0;${sep}">
+        <div style="font-size:22px;font-weight:800;line-height:1.5;">${item.quantity} × ${item.coffeeItem.nameAr}</div>
+        ${extras}
       </div>`;
   }).join('');
+
+  const orderTypeRow = orderTypeLabel
+    ? `<div class="c" style="font-size:18px;font-weight:700;background:#f3f4f6;padding:6px 0;margin:6px 0 10px;">نوع الطلب: ${orderTypeLabel}</div>`
+    : '';
 
   return `<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
 <style>
@@ -852,6 +929,7 @@ body{font-family:'Cairo',Tahoma,Arial,sans-serif;direction:rtl;background:#e8e6e
   <div class="c" style="font-size:24px;font-weight:900;">نسخة الموظف</div>
   <div class="gap"></div>
   <div class="c" style="font-size:48px;font-weight:900;letter-spacing:4px;">#${orderNumDisplay}</div>
+  ${orderTypeRow}
   <div class="gap"></div>
   ${itemsHtml}
 </div>
@@ -1248,13 +1326,14 @@ export async function printCustomerPickupReceipt(data: TaxInvoiceData & { delive
     </div>
 
     <div class="items-section">
-      ${data.items.map(item => {
-        const addons = (item.customization?.selectedItemAddons || []).map((a: any) => a.nameAr).join('، ');
+      ${data.items.map((item, idx) => {
+        const extras = _renderItemExtras(item, { fontSize: 12, color: '#92400e', showPrices: false });
+        const sep = idx > 0 ? 'border-top:1px dashed #ddd;padding-top:10px;' : '';
         return `
-        <div class="item-row" style="align-items:flex-start;">
+        <div class="item-row" style="align-items:flex-start;padding:10px 0;${sep}">
           <div class="item-name" style="flex:1;">
             ${renderItemName(item.coffeeItem.nameAr, item.coffeeItem.nameEn)}
-            ${addons ? `<div style="font-size:11px;color:#92400e;margin-top:2px;">+ ${addons}</div>` : ''}
+            ${extras}
           </div>
           <span class="item-qty">x${item.quantity}</span>
         </div>`;
@@ -1337,14 +1416,15 @@ export async function printCashierReceipt(data: TaxInvoiceData & { deliveryType?
     </div>
 
     <div class="items">
-      ${data.items.map(item => {
+      ${data.items.map((item, idx) => {
         const price = parseNumber(item.coffeeItem.price);
-        const addons = (item.customization?.selectedItemAddons || []).map((a: any) => a.nameAr).join('، ');
+        const extras = _renderItemExtras(item, { fontSize: 11, color: '#555', showPrices: true });
+        const sep = idx > 0 ? 'border-top:1px dashed #ddd;' : '';
         return `
-        <div class="item-row" style="align-items:flex-start;">
+        <div class="item-row" style="align-items:flex-start;padding:10px 0;${sep}">
           <div style="flex:1;">
             ${renderItemName(item.coffeeItem.nameAr, item.coffeeItem.nameEn)}<span style="font-size:11px;color:#555;"> x${item.quantity}</span>
-            ${addons ? `<div style="font-size:10px;color:#777;margin-top:2px;">+ ${addons}</div>` : ''}
+            ${extras}
           </div>
           <span style="flex-shrink:0;">${(price * item.quantity).toFixed(2)}</span>
         </div>
@@ -1392,6 +1472,8 @@ export async function printAllReceipts(data: TaxInvoiceData & { deliveryType?: s
       const vatAmount = totalAmount - subtotalBeforeTax;
 
       const orderTypeLabel = data.orderTypeName || (data.orderType === 'dine_in' ? 'محلي' : data.orderType === 'takeaway' ? 'سفري' : data.orderType === 'delivery' ? 'توصيل' : data.deliveryTypeAr || '');
+      // Ensure browser fallback (printUnifiedReceipt) also sees the label
+      if (!data.orderTypeName && orderTypeLabel) (data as any).orderTypeName = orderTypeLabel;
 
       // Build ESC/POS receipt
       const escData = buildEscPosReceipt({
@@ -1460,12 +1542,12 @@ export async function printSimpleReceipt(data: TaxInvoiceData): Promise<void> {
   const itemsHtml = data.items.map(item => {
     const unitPrice = parseNumber(item.coffeeItem.price);
     const lineTotal = unitPrice * item.quantity;
-    const addons = (item.customization?.selectedItemAddons || []).map((a: any) => a.nameAr).join('، ');
+    const extras = _renderItemExtras(item, { fontSize: 11, color: '#666', showPrices: true });
     return `
       <tr style="border-bottom: 1px solid #e5e5e5;">
-        <td style="padding: 8px 4px;">
+        <td style="padding: 12px 4px;">
           ${renderItemName(item.coffeeItem.nameAr, item.coffeeItem.nameEn)}
-          ${addons ? `<div style="font-size:11px;color:#666;margin-top:2px;">+ ${addons}</div>` : ''}
+          ${extras}
         </td>
         <td style="padding: 8px 4px; text-align: center;">${item.quantity}</td>
         <td style="padding: 8px 4px; text-align: left;">${lineTotal.toFixed(2)}</td>
