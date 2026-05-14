@@ -44,5 +44,3 @@ build = ["npm", "run", "build"]
 [userenv]
 
 [userenv.shared]
-MONGODB_URI = "mongodb+srv://chefsplace:chefsplace123@chefsplace.zy8ckot.mongodb.net/"
-GROQ_API_KEY = "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"
