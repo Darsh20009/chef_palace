@@ -38,6 +38,8 @@ interface ReceiptProps {
   branchName?: string;
   branchAddress?: string;
   isKitchenCopy?: boolean;
+  orderType?: string;
+  deliveryType?: string;
 }
 
 const FALLBACK_VAT = brand.taxNumber;
@@ -113,7 +115,7 @@ function parseNumber(value: number | string | undefined): number {
 }
 
 export const ReceiptPrint = forwardRef<HTMLDivElement, ReceiptProps>(
-  ({ orderNumber, invoiceNumber, customerName, customerPhone, items, subtotal, discount, invoiceDiscount, total, paymentMethod, employeeName, tableNumber, date, branchName, branchAddress, isKitchenCopy }, ref) => {
+  ({ orderNumber, invoiceNumber, customerName, customerPhone, items, subtotal, discount, invoiceDiscount, total, paymentMethod, employeeName, tableNumber, date, branchName, branchAddress, isKitchenCopy, orderType, deliveryType }, ref) => {
     const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
     const [barcodeUrl, setBarcodeUrl] = useState<string>("");
     const { data: bizConfig } = useQuery<any>({ queryKey: ["/api/business-config"] });
@@ -311,6 +313,21 @@ export const ReceiptPrint = forwardRef<HTMLDivElement, ReceiptProps>(
                   <span className="font-medium">{tableNumber}</span>
                 </div>
               )}
+              {(orderType || deliveryType) && (() => {
+                const ot = String(orderType || deliveryType || '');
+                const label = ot === 'dine-in' || ot === 'dine_in' ? 'محلي'
+                  : ot === 'pickup' || ot === 'takeaway' || ot === 'scheduled-pickup' ? 'سفري'
+                  : ot === 'delivery' ? 'توصيل'
+                  : ot === 'car-pickup' || ot === 'car_pickup' || ot === 'curbside' ? 'استلام بالسيارة'
+                  : ot === 'table' ? 'طاولة'
+                  : '';
+                return label ? (
+                  <div className="flex justify-between col-span-2">
+                    <span className="text-gray-600">نوع الطلب:</span>
+                    <span className="font-medium">{label}</span>
+                  </div>
+                ) : null;
+              })()}
             </div>
           </div>
 
@@ -330,20 +347,37 @@ export const ReceiptPrint = forwardRef<HTMLDivElement, ReceiptProps>(
                   const lineTotal = unitPrice * item.quantity;
                   const itemDiscount = parseNumber(item.itemDiscount);
                   const lineAfterDiscount = lineTotal - itemDiscount;
+                  const cz: any = (item as any).customization || {};
+                  const sz = (item as any).selectedSize || cz.selectedSize || cz.size || '';
+                  const addons = (cz.selectedItemAddons || cz.selectedAddons || (item as any).selectedItemAddons || []) as any[];
+                  const noteText = (cz.notes || (item as any).notes || '').toString().trim();
                   return (
-                    <tr key={index} className="border-b border-gray-200">
-                      <td className="py-2">
-                        <div className="font-medium text-gray-900">{item.coffeeItem.nameAr}</div>
+                    <tr key={index} className="border-b-2 border-dashed border-gray-300">
+                      <td className="py-3">
+                        <div className="font-bold text-gray-900 text-[12px]">{item.coffeeItem.nameAr}</div>
                         {item.coffeeItem.nameEn && (
                           <div className="text-[10px] text-gray-500">{item.coffeeItem.nameEn}</div>
                         )}
+                        {sz && (
+                          <div className="text-[10px] text-gray-700 mt-1">📏 الحجم: <span className="font-semibold">{sz}</span></div>
+                        )}
+                        {addons.length > 0 && (
+                          <div className="text-[10px] text-gray-700 mt-1 pr-2">
+                            {addons.map((a, i) => (
+                              <div key={i}>+ {a.nameAr || a.name || ''}</div>
+                            ))}
+                          </div>
+                        )}
+                        {noteText && (
+                          <div className="text-[10px] text-gray-600 mt-1 italic">📝 {noteText}</div>
+                        )}
                         {itemDiscount > 0 && (
-                          <div className="text-[10px] text-green-600">خصم: {itemDiscount.toFixed(2)}-</div>
+                          <div className="text-[10px] text-green-600 mt-1">خصم: {itemDiscount.toFixed(2)}-</div>
                         )}
                       </td>
-                      <td className="text-center py-2">{item.quantity}</td>
-                      <td className="text-center py-2">{unitPrice.toFixed(2)}</td>
-                      <td className="text-left py-2 font-medium">{lineAfterDiscount.toFixed(2)}</td>
+                      <td className="text-center py-3 align-top">{item.quantity}</td>
+                      <td className="text-center py-3 align-top">{unitPrice.toFixed(2)}</td>
+                      <td className="text-left py-3 align-top font-medium">{lineAfterDiscount.toFixed(2)}</td>
                     </tr>
                   );
                 })}

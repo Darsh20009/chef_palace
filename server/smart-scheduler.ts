@@ -489,11 +489,22 @@ async function checkDineInAppointments() {
     const now = new Date();
     const saudi = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Riyadh" }));
 
+    // Dine-in (any status) + car-pickup/table (only if pre-paid)
     const orders = await OrderModel.find({
-      orderType: { $in: ["dine-in", "dine_in"] },
-      arrivalTime: { $exists: true, $ne: "" },
-      status: { $in: ["pending", "payment_confirmed", "confirmed"] },
-      prepAlertSentAt: { $exists: false },
+      $and: [
+        { arrivalTime: { $exists: true, $ne: "" } },
+        { status: { $in: ["pending", "payment_confirmed", "confirmed"] } },
+        { prepAlertSentAt: { $exists: false } },
+        {
+          $or: [
+            { orderType: { $in: ["dine-in", "dine_in"] } },
+            {
+              orderType: { $in: ["car-pickup", "car_pickup", "curbside", "table"] },
+              paymentStatus: "paid",
+            },
+          ],
+        },
+      ],
     }).limit(100).lean();
 
     for (const order of orders as any[]) {
@@ -522,8 +533,14 @@ async function checkDineInAppointments() {
 
       const branchId = order.branchId || "all";
       const orderNumber = order.orderNumber || `#${order.dailyNumber || ""}`;
+      const ot = String(order.orderType || "");
+      const typeLabel =
+        ot === "dine-in" || ot === "dine_in" ? "محلي"
+        : ot === "car-pickup" || ot === "car_pickup" || ot === "curbside" ? "استلام بالسيارة"
+        : ot === "table" ? `طاولة${order.tableNumber ? ` ${order.tableNumber}` : ""}`
+        : "";
       const title = "🔔 ابدأ التحضير الآن";
-      const body = `الطلب ${orderNumber} موعد العميل بعد 10 دقائق (${arrival}) — ابدأ التحضير`;
+      const body = `الطلب ${orderNumber}${typeLabel ? ` (${typeLabel})` : ""} — موعد العميل بعد 10 دقائق (${arrival})`;
 
       // Push to employees on this branch (kitchen + POS share employee subs)
       try {

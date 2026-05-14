@@ -204,7 +204,22 @@ export function ReceiptInvoice({ order, variant = "button" }: ReceiptInvoiceProp
               <span>:الوقت</span>
               <span>{new Date(order.createdAt).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}</span>
             </div>
-            {order.tableNumber && (
+            {(() => {
+              const ot = String(order.orderType || order.deliveryType || '');
+              const label = ot === 'dine-in' || ot === 'dine_in' ? 'محلي'
+                : ot === 'pickup' || ot === 'takeaway' || ot === 'scheduled-pickup' ? 'سفري'
+                : ot === 'delivery' ? 'توصيل'
+                : ot === 'car-pickup' || ot === 'car_pickup' || ot === 'curbside' ? 'استلام بالسيارة'
+                : ot === 'table' ? 'طاولة'
+                : '';
+              return label ? (
+                <div className="flex justify-between flex-row-reverse gap-2" data-testid="text-order-type">
+                  <span>:نوع الطلب</span>
+                  <span className="font-bold">{label}</span>
+                </div>
+              ) : null;
+            })()}
+            {order.tableNumber && (String(order.orderType) === 'table' || String(order.deliveryType) === 'table') && (
               <div className="flex justify-between flex-row-reverse gap-2">
                 <span>:الطاولة</span>
                 <span className="font-bold">#{order.tableNumber}</span>
@@ -213,27 +228,42 @@ export function ReceiptInvoice({ order, variant = "button" }: ReceiptInvoiceProp
           </div>
         </div>
 
-        {/* Items List (no table — no lines) */}
-        <div className="mb-3 space-y-3 text-[21px]">
-          <div className="flex font-bold">
+        {/* Items List — neat with separators between items */}
+        <div className="mb-3 text-[21px]">
+          <div className="flex font-bold border-b-2 border-black pb-2 mb-2">
             <div className="flex-1 text-right">المنتج</div>
             <div className="w-12 text-center">كمية</div>
             <div className="w-20 text-left">المجموع</div>
           </div>
           {items.map((item: any, index: number) => {
-            const inlineAddons = item.customization?.selectedItemAddons || [];
+            const cz = item.customization || {};
+            const inlineAddons = cz.selectedItemAddons || cz.selectedAddons || [];
             const itemNameAr = item.nameAr || item.coffeeItem?.nameAr || item.name || '';
             const itemNameEn = item.nameEn || item.coffeeItem?.nameEn || '';
+            const sz = item.selectedSize || cz.selectedSize || cz.size || '';
+            const noteText = (cz.notes || item.notes || '').toString().trim();
+            const hasExtras = sz || inlineAddons.length > 0 || noteText;
             return (
-              <div key={index} className="flex items-start">
-                <div className="flex-1 text-right">
+              <div
+                key={index}
+                className={`flex items-start py-3 ${index < items.length - 1 ? 'border-b border-dashed border-gray-400' : ''}`}
+              >
+                <div className="flex-1 text-right pr-1">
                   <div className="font-bold leading-relaxed">{itemNameAr}</div>
                   {itemNameEn && itemNameEn !== itemNameAr && (
-                    <div className="text-[16px] mt-1 ltr text-right">{itemNameEn}</div>
+                    <div className="text-[15px] mt-0.5 ltr text-right text-gray-600">{itemNameEn}</div>
                   )}
-                  {inlineAddons.length > 0 && (
-                    <div className="text-[16px] mt-1 leading-relaxed">
-                      + {inlineAddons.map((a: any) => a.nameAr).join('، ')}
+                  {hasExtras && (
+                    <div className="mt-1.5 space-y-1 text-[16px] text-gray-700">
+                      {sz && <div>📏 الحجم: <span className="font-semibold">{sz}</span></div>}
+                      {inlineAddons.length > 0 && (
+                        <div className="pr-2">
+                          {inlineAddons.map((a: any, i: number) => (
+                            <div key={i}>+ {a.nameAr || a.name || ''}</div>
+                          ))}
+                        </div>
+                      )}
+                      {noteText && <div className="italic">📝 {noteText}</div>}
                     </div>
                   )}
                 </div>

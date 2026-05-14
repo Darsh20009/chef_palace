@@ -777,13 +777,23 @@ export default function CheckoutPage() {
       items: cartItems.map(i => {
         const inlineAddons = (i as any).selectedItemAddons || [];
         const addonsExtra = inlineAddons.reduce((s: number, a: any) => s + (Number(a.price) || 0), 0);
+        const sel = (i as any).selectedSize || (i as any).customization?.selectedSize;
+        const selAddons = (i as any).selectedAddons || [];
+        const customization: any = {};
+        if (inlineAddons.length > 0) customization.selectedItemAddons = inlineAddons;
+        if (selAddons.length > 0) customization.selectedAddons = selAddons;
+        if (sel) customization.selectedSize = sel;
+        if ((i as any).notes) customization.notes = (i as any).notes;
         return {
           coffeeItemId: i.coffeeItemId,
           quantity: i.quantity,
           price: (i.coffeeItem?.price || 0) + addonsExtra,
           nameAr: i.coffeeItem?.nameAr || "",
           nameEn: i.coffeeItem?.nameEn || "",
-          customization: inlineAddons.length > 0 ? { selectedItemAddons: inlineAddons } : undefined,
+          selectedSize: sel,
+          selectedAddons: selAddons,
+          selectedItemAddons: inlineAddons,
+          customization: Object.keys(customization).length > 0 ? customization : undefined,
         };
       }),
       totalAmount: finalTotal,
@@ -916,13 +926,23 @@ export default function CheckoutPage() {
       items: cartItems.map(i => {
         const inlineAddons = (i as any).selectedItemAddons || [];
         const addonsExtra = inlineAddons.reduce((s: number, a: any) => s + (Number(a.price) || 0), 0);
+        const sel = (i as any).selectedSize || (i as any).customization?.selectedSize;
+        const selAddons = (i as any).selectedAddons || [];
+        const customization: any = {};
+        if (inlineAddons.length > 0) customization.selectedItemAddons = inlineAddons;
+        if (selAddons.length > 0) customization.selectedAddons = selAddons;
+        if (sel) customization.selectedSize = sel;
+        if ((i as any).notes) customization.notes = (i as any).notes;
         return {
           coffeeItemId: i.coffeeItemId,
           quantity: i.quantity,
           price: (i.coffeeItem?.price || 0) + addonsExtra,
           nameAr: i.coffeeItem?.nameAr || "",
           nameEn: i.coffeeItem?.nameEn || "",
-          customization: inlineAddons.length > 0 ? { selectedItemAddons: inlineAddons } : undefined,
+          selectedSize: sel,
+          selectedAddons: selAddons,
+          selectedItemAddons: inlineAddons,
+          customization: Object.keys(customization).length > 0 ? customization : undefined,
         };
       }),
       totalAmount: finalTotal,
