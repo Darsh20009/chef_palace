@@ -19,7 +19,7 @@ import hpp from "hpp";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_URI = process.env.MONGODB_URI?.trim();
 
 if (!MONGODB_URI) {
   console.error("❌ ERROR: MONGODB_URI environment variable is not set");
