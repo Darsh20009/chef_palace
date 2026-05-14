@@ -74,7 +74,7 @@ export interface PrinterSettings {
 
 const DEFAULT_SETTINGS: PrinterSettings = {
   enabled: true,
-  mode: 'network',           // ← Direct network printing — no dialogs
+  mode: 'relay',             // ← Local relay agent — required for LAN printers on cloud-hosted app
   paperWidth: '80mm',
   autoPrint: true,
   autoKitchenCopy: true,
@@ -83,8 +83,9 @@ const DEFAULT_SETTINGS: PrinterSettings = {
   fontSize: 'normal',
   cuttingMode: 'auto',
   feedLines: 3,
-  networkIp: '192.168.8.77',  // ← Default printer IP
-  networkPort: 9100,           // ← Default printer port
+  networkIp: '192.168.1.114', // ← ProPos PP9000E Ethernet printer IP
+  networkPort: 9100,           // ← RAW TCP port (ESC/POS standard)
+  relayAgentUrl: '',           // ← User must set relay agent URL after installing print-relay.js
 };
 
 const SETTINGS_KEY = 'qirox-printer-settings';

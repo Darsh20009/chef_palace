@@ -789,59 +789,91 @@ export default function PrinterSettingsPanel() {
               <div className="space-y-3 bg-violet-50 border border-violet-200 rounded-lg p-3">
                 <div className="flex items-center gap-2 text-sm font-semibold text-violet-800">
                   <Network className="w-4 h-4" />
-                  {tc("وكيل الطباعة المحلي — لأجهزة تاب سينس وأندرويد", "Local Print Relay — For Tab Sense & Android Devices")}
+                  {tc("وكيل الطباعة المحلي — ProPos PP9000E إيثرنت", "Local Print Relay — ProPos PP9000E Ethernet")}
                 </div>
 
-                {/* Super simple 2-step setup */}
-                <div className="space-y-3">
+                {/* ProPos PP9000E Quick-Setup Card */}
+                <div className="bg-gradient-to-br from-violet-100 to-blue-50 border-2 border-violet-400 rounded-xl p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Printer className="w-5 h-5 text-violet-700" />
+                    <div>
+                      <p className="text-sm font-bold text-violet-900">ProPos PP9000E — إعداد تلقائي سريع</p>
+                      <p className="text-[11px] text-violet-600">Model: PP9000E  |  Version: N-931 1.00  |  80mm</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5 text-[11px] font-mono bg-white/70 rounded-lg p-2">
+                    <span className="text-gray-500">IP الطابعة:</span>
+                    <span className="font-bold text-violet-800">192.168.1.114</span>
+                    <span className="text-gray-500">المنفذ:</span>
+                    <span className="font-bold text-violet-800">9100 (RAW)</span>
+                    <span className="text-gray-500">MAC:</span>
+                    <span className="font-bold text-violet-700">46-28-0E-8B-C9-66-B2</span>
+                    <span className="text-gray-500">الشبكة:</span>
+                    <span className="font-bold text-violet-700">192.168.1.0/24</span>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="w-full bg-violet-700 hover:bg-violet-800 text-white font-bold"
+                    data-testid="button-propos-quicksetup"
+                    onClick={() => {
+                      const updated = {
+                        networkIp: '192.168.1.114',
+                        networkPort: 9100,
+                        paperWidth: '80mm' as const,
+                        mode: 'relay' as const,
+                        autoPrint: true,
+                        autoKitchenCopy: true,
+                      };
+                      Object.entries(updated).forEach(([k, v]) => updateSetting(k as any, v as any));
+                    }}
+                  >
+                    ⚡ {tc("تطبيق إعدادات ProPos PP9000E تلقائياً", "Apply ProPos PP9000E Settings Automatically")}
+                  </Button>
+                </div>
 
-                  {/* Step 1 — Windows one-click */}
-                  <div className="bg-white border-2 border-violet-300 rounded-xl p-3 space-y-2">
-                    <p className="text-sm font-bold text-violet-900">
-                      {tc("الخطوة 1 — على أي كمبيوتر ويندوز في المطعم:", "Step 1 — On any Windows PC in the cafe:")}
-                    </p>
-                    <p className="text-xs text-violet-700">
-                      {tc("حمّل الملف التالي وشغّله بدبل كليك — سيعمل تلقائياً ويبدأ مع الويندوز كل مرة", "Download this file and double-click it — it runs automatically and starts with Windows every time")}
+                {/* 2-step setup */}
+                <div className="space-y-2">
+                  <div className="bg-white border border-violet-200 rounded-lg p-2.5 space-y-1.5">
+                    <p className="text-xs font-bold text-violet-900">
+                      {tc("الخطوة 1 — على أي جهاز ويندوز في نفس الشبكة:", "Step 1 — On any Windows PC on the same network:")}
                     </p>
                     <a
-                      href="/relay-setup.bat"
-                      download="relay-setup.bat"
-                      className="flex items-center justify-center gap-2 w-full py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-sm font-bold transition-colors"
-                      data-testid="link-download-relay-bat"
+                      href="/print-relay.js"
+                      download="print-relay.js"
+                      className="flex items-center justify-center gap-2 w-full py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-xs font-bold transition-colors"
+                      data-testid="link-download-print-relay"
                     >
-                      ⬇ {tc("تحميل relay-setup.bat (دبل كليك وخلاص)", "Download relay-setup.bat (just double-click)")}
+                      ⬇ {tc("تحميل print-relay.js (وكيل الطباعة)", "Download print-relay.js (print relay)")}
                     </a>
-                    <p className="text-[11px] text-violet-500 text-center">
-                      {tc("بعد التشغيل ستظهر نافذة سوداء فيها رابط مثل: http://192.168.8.10:8089", "After running, a black window shows a URL like: http://192.168.8.10:8089")}
+                    <p className="text-[11px] text-violet-600">
+                      {tc("ثبّت Node.js (nodejs.org) ثم شغّل:  node print-relay.js", "Install Node.js (nodejs.org) then run:  node print-relay.js")}
+                    </p>
+                    <p className="text-[11px] text-violet-500">
+                      {tc("ستظهر نافذة سوداء تعرض رابط مثل: http://192.168.1.5:8089 — انسخه", "A black window shows a URL like: http://192.168.1.5:8089 — copy it")}
                     </p>
                   </div>
 
-                  {/* Step 2 — Enter URL */}
-                  <div className="bg-white border-2 border-violet-300 rounded-xl p-3 space-y-2">
-                    <p className="text-sm font-bold text-violet-900">
-                      {tc("الخطوة 2 — أدخل الرابط هنا:", "Step 2 — Enter the URL here:")}
-                    </p>
-                    <p className="text-xs text-violet-700">
-                      {tc("انسخ الرابط الظاهر في النافذة السوداء والصقه أدناه", "Copy the URL shown in the black window and paste it below")}
+                  <div className="bg-white border border-violet-200 rounded-lg p-2.5 space-y-1.5">
+                    <p className="text-xs font-bold text-violet-900">
+                      {tc("الخطوة 2 — الصق رابط الوكيل هنا:", "Step 2 — Paste the relay URL here:")}
                     </p>
                   </div>
-
                 </div>
 
                 <Separator className="border-violet-200" />
 
                 {/* Relay Agent URL */}
                 <div className="space-y-1">
-                  <Label className="text-xs text-violet-700">{tc("رابط وكيل الطباعة (IP الجهاز الذي يشغّل الوكيل)", "Relay Agent URL (IP of the device running the relay)")}</Label>
+                  <Label className="text-xs text-violet-700 font-semibold">{tc("رابط وكيل الطباعة", "Print Relay URL")}</Label>
                   <Input
-                    placeholder="http://192.168.8.10:8089"
+                    placeholder="http://192.168.1.5:8089"
                     value={settings.relayAgentUrl || ''}
                     onChange={(e) => updateSetting('relayAgentUrl', e.target.value.trim())}
                     className="font-mono text-sm border-violet-300 focus:border-violet-500"
                     data-testid="input-relay-agent-url"
                     dir="ltr"
                   />
-                  <p className="text-xs text-violet-500">{tc("مثال: http://192.168.8.10:8089 (IP الجهاز الذي يشغّل الوكيل + المنفذ 8089)", "Example: http://192.168.8.10:8089 (IP of relay device + port 8089)")}</p>
+                  <p className="text-[11px] text-violet-500">{tc("IP الجهاز الذي يشغّل وكيل الطباعة + المنفذ 8089", "IP of the device running the print relay + port 8089")}</p>
                 </div>
 
                 {/* Printer IP and Port */}
@@ -849,7 +881,7 @@ export default function PrinterSettingsPanel() {
                   <div className="col-span-2 space-y-1">
                     <Label className="text-xs text-violet-700">{tc("IP الطابعة", "Printer IP")}</Label>
                     <Input
-                      placeholder="192.168.8.77"
+                      placeholder="192.168.1.114"
                       value={settings.networkIp || ''}
                       onChange={(e) => updateSetting('networkIp', e.target.value)}
                       className="font-mono text-sm border-violet-300"
@@ -871,6 +903,16 @@ export default function PrinterSettingsPanel() {
                   </div>
                 </div>
 
+                {/* Relay status indicator */}
+                {relayStatus && (
+                  <div className={`flex items-start gap-2 text-xs rounded-lg px-3 py-2 border ${relayStatus.connected ? 'bg-green-50 border-green-300 text-green-800' : 'bg-red-50 border-red-300 text-red-800'}`}>
+                    {relayStatus.connected
+                      ? <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                      : <XCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />}
+                    <span className="whitespace-pre-line">{relayStatus.message}</span>
+                  </div>
+                )}
+
                 {/* Test button */}
                 <Button
                   onClick={handleTestRelayAgent}
@@ -881,14 +923,14 @@ export default function PrinterSettingsPanel() {
                   {relayTesting ? (
                     <><RefreshCw className="w-4 h-4 ml-2 animate-spin" />{tc("جارٍ الفحص...", "Testing...")}</>
                   ) : (
-                    <><CheckCircle2 className="w-4 h-4 ml-2" />{tc("اختبار الاتصال بالوكيل والطابعة", "Test Relay & Printer Connection")}</>
+                    <><CheckCircle2 className="w-4 h-4 ml-2" />{tc("اختبار الاتصال (الوكيل + الطابعة)", "Test Connection (Relay + Printer)")}</>
                   )}
                 </Button>
 
-                <p className="text-xs text-violet-500 text-center">
+                <p className="text-[11px] text-violet-500 text-center">
                   {tc(
-                    "💡 الوكيل والطابعة يجب أن يكونا على نفس الشبكة. الكاشير (تاب سينس) يتصل بالوكيل، والوكيل يتصل بالطابعة.",
-                    "💡 The relay and printer must be on the same network. The cashier (Tab Sense) connects to the relay, which connects to the printer."
+                    "💡 الجهاز الذي يشغّل الوكيل والطابعة يجب أن يكونا على نفس الشبكة (192.168.1.x)",
+                    "💡 The relay device and printer must be on the same network (192.168.1.x)"
                   )}
                 </p>
               </div>
