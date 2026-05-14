@@ -1,0 +1,887 @@
+
+
+الان انا لدي نظام pos و نقاط بيع ولاكن النظام غير ممع الطابعات الايثر نت كيف اعمل برمجه لنظام الايثر نت بحيث اقدر اشبك كل هذه الطباعات بدون مشاكل فهمتني و ايضا النظام حقي معمول بيي فل استاك توافق 
+
+نعم، فهمتك.
+أنت عندك نظام POS ونقاط بيع Full Stack، لكن الطابعات الحالية تعمل غالبًا USB أو Bluetooth، وتريد تضيف دعم طابعات الشبكة Ethernet / LAN بحيث أي فرع أو كاشير يقدر يطبع مباشرة عبر الشبكة بدون مشاكل.
+
+الفكرة الأساسية:
+طابعات الإيثرنت غالبًا تستقبل أوامر طباعة عبر:
+
+IP Address + Port
+
+بروتوكول RAW Socket (غالبًا Port 9100)
+
+أو ESC/POS Commands
+
+وأغلب طابعات الكاشير مثل:
+
+Epson
+
+Xprinter
+
+Sunmi
+
+Bixolon
+
+تدعم ESC/POS عبر الشبكة.
+
+كيف تبني النظام صح
+الهيكل الصحيح
+بدل ما الـ Frontend يطبع مباشرة:
+
+POS Frontend
+    ↓
+Backend API
+    ↓
+Print Service
+    ↓
+Network Printer (Ethernet)
+الطريقة الاحترافية
+1. إنشاء Print Service
+اعمل Service خاصة بالطباعة داخل السيرفر أو جهاز الكاشير.
+
+مثلاً:
+
+Printer Manager
+وظيفته:
+
+اكتشاف الطابعات
+
+حفظ IP لكل طابعة
+
+إرسال أوامر ESC/POS
+
+إدارة Queue
+
+إعادة المحاولة عند فشل الطباعة
+
+2. قاعدة البيانات
+اعمل جدول للطابعات:
+
+printers
+---------
+id
+name
+ip_address
+port
+branch_id
+printer_type
+paper_size
+is_kitchen
+is_cashier
+status
+3. إرسال أمر الطباعة
+لما يجي طلب:
+
+POST /print
+{
+  "printerId": 1,
+  "receipt": {...}
+}
+السيرفر يحول الفاتورة إلى ESC/POS ويرسلها للطابعة.
+
+أهم نقطة: بروتوكول الطباعة
+أغلب طابعات الإيثرنت تستخدم:
+
+TCP Socket
+Port: 9100
+يعني أنت ترسل bytes مباشرة.
+
+مثال Node.js
+إذا نظامك Full Stack JavaScript:
+
+npm install net
+مثال:
+
+const net = require('net');
+
+const client = new net.Socket();
+
+client.connect(9100, '192.168.1.50', () => {
+
+  const text = '\x1B\x40';
+  
+  client.write(text);
+  client.write('Hello POS\n');
+  client.write('\n\n\n');
+
+  client.end();
+});
+الأفضل تستخدم مكتبات جاهزة
+لو Node.js استخدم:
+
+node-escpos GitHub
+
+escpos npm package
+
+مثال احترافي
+npm install escpos
+const escpos = require('escpos');
+
+escpos.Network = require('escpos-network');
+
+const device = new escpos.Network('192.168.1.50');
+
+const printer = new escpos.Printer(device);
+
+device.open(() => {
+
+  printer
+    .align('CT')
+    .text('Nawa POS')
+    .text('فاتورة')
+    .drawLine()
+    .text('Burger x1')
+    .text('20 SAR')
+    .cut()
+    .close();
+});
+نقطة مهمة جدًا
+لا تعتمد على Browser Printing
+لا تستخدم:
+
+window.print()
+هذا سيء جدًا للـ POS.
+
+الاحترافي:
+
+Direct Socket Printing
+
+ESC/POS Commands
+
+Print Server
+
+كيف تجعل النظام متوافق مع كل الطابعات
+اعمل abstraction layer.
+
+مثلاً:
+
+interface PrinterDriver {
+   connect()
+   printReceipt()
+   cut()
+   openDrawer()
+}
+ثم:
+
+EpsonDriver
+XPrinterDriver
+SunmiDriver
+دعم فتح درج الكاشير
+معظم الأدراج تفتح بأمر ESC/POS:
+
+ESC p
+مثال:
+
+printer.cashdraw(2);
+أفضل Architecture لنظامك
+إذا عندك فروع كثيرة
+اعمل:
+
+Cloud POS
+   ↓
+Local Print Agent
+   ↓
+Printers
+لماذا Local Agent مهم؟
+لأن المتصفح لا يستطيع دائمًا الوصول للشبكة المحلية بأمان.
+
+مثل:
+
+Electron App
+Node Service
+Windows Service
+Mac Agent
+السيناريو الاحترافي الحقيقي
+الكاشير:
+
+Frontend React/Vue
+يرسل:
+
+Backend API
+ثم:
+
+Local Print Service
+ثم:
+
+LAN Printer
+أشياء لازم تدعمها
+Queue System
+حتى لو 10 فواتير بنفس الثانية.
+
+Retry System
+إذا الطابعة فصلت.
+
+Printer Status
+Online / Offline
+
+Auto Discovery
+البحث عن الطابعات داخل الشبكة:
+
+192.168.1.xxx
+أنواع الطباعة التي تحتاجها
+Kitchen Printer
+
+Receipt Printer
+
+Invoice Printer
+
+Label Printer
+
+QR Printing
+
+Barcode Printing
+
+أفضل خيار لك تقنيًا
+إذا نظامك:
+
+React
+
+Next.js
+
+Node.js
+
+NestJS
+
+فأفضل شيء:
+
+Node Print Service + ESC/POS
+إذا تريد دعم قوي جدًا
+استخدم:
+
+QZ Tray
+برنامج وسيط احترافي للطباعة.
+
+QZ Tray Official Website
+
+يدعم:
+
+Ethernet
+
+USB
+
+Bluetooth
+
+Silent Printing
+
+Cross Platform
+
+ويعتبر من أقوى الحلول لأنظمة POS.
+
+نصيحتي المعمارية
+لا تجعل الـ frontend يتعامل مع الطابعة مباشرة.
+
+اعمل:
+
+Frontend
+   ↓
+API
+   ↓
+Print Queue
+   ↓
+Printer Driver
+هذا يجعلك لاحقًا تدعم:
+
+1000+ طابعة
+
+فروع
+
+مطابخ
+
+Multi Cashier
+
+Cloud Printing
+
+بدون انهيار النظام.
+
+
+انا مشكلتي ديما في التوصيل بيهم من نظامي عايز احل هذه المششكله 
+
+المشكلة الحقيقية غالبًا ليست “الطباعة” نفسها، بل:
+
+اكتشاف الطابعة
+
+الاتصال عبر الشبكة
+
+اختلاف أنواع الطابعات
+
+المتصفح يمنع الوصول المباشر
+
+الـ IP يتغير
+
+بعض الطابعات تعلق أو لا تستجيب
+
+لهذا أغلب أنظمة POS الاحترافية لا توصل الطابعة مباشرة من الموقع.
+
+الحل الصحيح الذي ينهي المشكلة نهائيًا
+اعمل برنامج صغير اسمه:
+
+Local Print Agent
+يشتغل على جهاز الكاشير نفسه.
+
+لماذا هذا يحل المشكلة؟
+بدل:
+
+Website → Printer
+تجعلها:
+
+Website → Local Agent → Printer
+وهذا أفضل بمراحل.
+
+كيف يعمل؟
+1. العميل يثبت برنامج صغير
+مثلاً:
+
+Nawa Printer Service
+يعمل بالخلفية.
+
+2. البرنامج يكتشف الطابعات تلقائيًا
+يفحص الشبكة:
+
+192.168.1.*
+ويجد:
+
+IP
+
+Port
+
+Type
+
+3. موقعك يتصل بالبرنامج المحلي
+مثلاً:
+
+http://localhost:5151/print
+مثال
+الواجهة:
+
+await fetch("http://localhost:5151/print", {
+  method: "POST",
+  body: JSON.stringify({
+    printerIp: "192.168.1.50",
+    receipt: data
+  })
+})
+البرنامج المحلي
+هو الذي:
+
+يتصل بالطابعة
+
+يرسل ESC/POS
+
+يعالج الأخطاء
+
+يعيد المحاولة
+
+لماذا هذا أقوى؟
+لأن المتصفح أصلًا سيء جدًا مع الطابعات.
+
+المتصفح:
+
+يمنع sockets أحيانًا
+
+يمنع LAN access
+
+يحتاج HTTPS
+
+يتأثر بـ CORS
+
+لا يتعامل جيدًا مع raw TCP
+
+الحلول الاحترافية المستخدمة عالميًا
+الخيار 1 (الأفضل)
+QZ Tray
+QZ Tray Official Website
+
+هذا برنامج جاهز يحل كل مشاكل:
+
+Ethernet
+
+USB
+
+Bluetooth
+
+Silent Printing
+
+ويعمل مع:
+
+React
+
+Vue
+
+Angular
+
+Next.js
+
+كيف تستخدمه؟
+Frontend:
+
+<script src="qz-tray.js"></script>
+ثم:
+
+qz.websocket.connect()
+ثم:
+
+qz.printers.find()
+ثم:
+
+qz.print(config, data)
+لماذا الناس تحبه؟
+لأنه:
+
+Stable جدًا
+
+يتحمل آلاف الطابعات
+
+لا يعتمد على browser print
+
+يدعم كل أنواع POS تقريبًا
+
+الخيار 2 (احترافي جدًا)
+تبني Agent بنفسك.
+
+مثلاً:
+
+Electron + Node.js
+أو:
+
+Go Service
+أو:
+
+Rust Background Service
+Architecture احترافية
+POS Website
+     ↓
+WebSocket
+     ↓
+Local Print Agent
+     ↓
+Printer Queue
+     ↓
+Ethernet Printer
+أهم نقطة عندك الآن
+أنت لا تحتاج “حل طباعة”.
+
+أنت تحتاج:
+
+Print Infrastructure
+المشاكل التي يجب حلها
+1. IP متغير
+الحل:
+
+DHCP Reservation
+
+أو Auto Discovery
+
+2. الطابعة Offline
+الحل:
+
+Ping Monitor
+
+Health Check
+
+3. أكثر من كاشير
+الحل:
+
+Print Queue
+
+Lock System
+
+4. انقطاع الشبكة
+الحل:
+
+Retry Queue
+
+5. أنواع مختلفة
+الحل:
+
+Drivers Layer
+
+شيء مهم جدًا
+لا تعتمد على:
+
+window.print()
+ولا:
+
+browser printing
+
+PDF printing
+
+في POS الحقيقي.
+
+الحل الذي أنصحك به بقوة
+إذا تريد سرعة وإنهاء المشكلة:
+
+استخدم QZ Tray
+أما إذا تريد نظام Enterprise مثل:
+
+Foodics
+
+Square
+
+Toast POS
+
+فابنِ:
+
+Local Agent
+أفضل Stack للـ Agent
+إذا نظامك JavaScript:
+
+Electron + Node.js
+لأنه:
+
+سهل
+
+يدعم sockets
+
+يدعم الشبكة
+
+يدعم ESC/POS
+
+Cross Platform
+
+مكتبات ممتازة
+escpos npm package
+
+node-escpos GitHub
+
+الشكل النهائي الصح
+Frontend POS
+   ↓
+Cloud API
+   ↓
+Local Agent
+   ↓
+Ethernet Printer
+هذا يزيل:
+
+مشاكل الاتصال
+
+مشاكل المتصفح
+
+مشاكل CORS
+
+مشاكل الشبكة
+
+مشاكل التوافق
+
+ويخلي نظامك احترافي فعليًا مثل الأنظمة الكبيرة.
+
+
+لا اريد اي مواقع خارجيه واريد النظام بتاعي لا يكون مدبوط بنوع اجهزه واحده فاهمني انا عايز احتراف
+
+فهمتك، وأنت تفكر بالطريقة الصحيحة فعلًا.
+إذا تريد نظام POS احترافي حقيقي، فلا تربطه بـ:
+
+برنامج خارجي
+
+شركة خارجية
+
+نوع طابعات محدد
+
+جهاز محدد
+
+بل تبني:
+
+Universal Printing Layer
+يعني طبقة طباعة عامة داخل نظامك نفسه.
+
+المعمارية الاحترافية الحقيقية
+اعمل داخل نظامك:
+
+Printer Core Engine
+هذا المحرك يكون مسؤول عن:
+
+اكتشاف الطابعات
+
+الاتصال
+
+التحويل لـ ESC/POS
+
+إدارة Queue
+
+مراقبة الحالة
+
+إعادة المحاولة
+
+دعم أنواع متعددة
+
+أهم قرار معماري
+لا تجعل الـ Frontend يطبع.
+
+أبدًا.
+
+بل:
+
+Frontend
+   ↓
+Backend
+   ↓
+Local Printing Service
+   ↓
+Printer Drivers
+كيف تبنيها صح؟
+1. Local Agent خاص بك
+أنت تبني برنامج صغير بنفسك.
+
+مثلاً:
+
+Nawa Print Engine
+يعمل:
+
+Windows
+
+macOS
+
+Linux
+
+لماذا تحتاجه؟
+لأن:
+
+المتصفح لا يستطيع التحكم الكامل بالشبكة
+
+لا يستطيع فتح TCP raw بسهولة
+
+لا يستطيع التعامل مع الطابعات باحتراف
+
+ماذا يفعل الـ Agent؟
+وظائفه
+1. Auto Discovery
+يبحث داخل الشبكة:
+
+192.168.x.x
+ويكتشف:
+
+الطابعات
+
+المنافذ
+
+نوع البروتوكول
+
+2. Driver Layer
+تدعم:
+
+Epson
+
+XPrinter
+
+Bixolon
+
+Sunmi
+
+Generic ESC/POS
+
+بدون ربط النظام بطابعة واحدة.
+
+3. Queue System
+حتى لو:
+
+50 فاتورة
+
+5 مطابخ
+
+4 كاشيرات
+
+لا يحدث Crash.
+
+4. Retry Logic
+إذا الطابعة فصلت:
+
+يعيد المحاولة
+
+يخزن المهمة
+
+5. Health Monitor
+يراقب:
+
+Online
+
+Offline
+
+Paper Out
+
+Cover Open
+
+أهم نقطة تقنية
+لا تتعامل مع الطابعة كنص
+بل كـ:
+
+ESC/POS Byte Stream
+لماذا؟
+لأن كل الطابعات تقريبًا تفهم:
+
+ESC/POS
+حتى الرخيصة.
+
+Architecture الصح
+POS Frontend
+      ↓
+Backend API
+      ↓
+Print Queue
+      ↓
+Local Agent
+      ↓
+Driver Manager
+      ↓
+TCP/USB/Bluetooth
+      ↓
+Printer
+كيف تجعلها Universal؟
+اعمل:
+
+interface PrinterAdapter {
+   connect()
+   print(data)
+   cut()
+   openDrawer()
+   status()
+}
+ثم:
+
+EpsonAdapter
+XPrinterAdapter
+GenericEscPosAdapter
+أهم نقطة احترافية
+Generic ESC/POS Driver
+هذا أهم Driver.
+
+لأن 80% من السوق يعتمد ESC/POS.
+
+دعم Ethernet
+أغلب الطابعات:
+
+TCP Socket
+IP + Port 9100
+مثال Node.js خام
+const net = require("net");
+
+const socket = new net.Socket();
+
+socket.connect(9100, "192.168.1.50", () => {
+
+   const init = Buffer.from([0x1B, 0x40]);
+
+   socket.write(init);
+
+   socket.write("Hello\n");
+
+   socket.end();
+});
+كيف تكتشف الطابعات؟
+Port Scan
+تفحص:
+
+9100
+515
+631
+ثم ترسل Probe
+مثل:
+
+DLE EOT
+أو عبر mDNS / Bonjour
+بعض الطابعات تعلن نفسها تلقائيًا.
+
+التقنية التي أنصحك بها
+إذا نظامك Full Stack JS:
+
+Backend
+Node.js
+
+NestJS
+
+Local Agent
+Electron
+
+أو Go
+
+Communication
+استخدم:
+
+WebSocket
+بين الموقع والـ Agent.
+
+لماذا WebSocket؟
+لأنه:
+
+Real-time
+
+سريع
+
+Stable
+
+يدعم Queue
+
+شيء مهم جدًا
+لا تجعل الـ Agent Cloud-based
+بل:
+
+Local Network First
+كيف الأنظمة الكبيرة تعمل؟
+مثل:
+
+Square
+
+Toast
+
+Lightspeed
+
+كلهم عندهم:
+
+Local Services
+
+Driver Abstraction
+
+Queue Systems
+
+وليس مجرد:
+
+window.print()
+نصيحة Enterprise حقيقية
+اعمل داخل مشروعك:
+
+packages/printing-core
+وفيه:
+
+drivers/
+queue/
+network/
+usb/
+bluetooth/
+escpos/
+renderer/
+أهم شيء لتنجح
+افصل:
+Receipt Rendering
+عن:
+
+Transport Layer
+يعني:
+
+أولًا
+تحول الفاتورة إلى:
+
+ESC/POS Commands
+ثم
+ترسلها بأي وسيلة:
+
+Ethernet
+
+USB
+
+Bluetooth
+
+بهذه الطريقة
+نفس الفاتورة تعمل على:
+
+أي طابعة
+
+أي فرع
+
+أي جهاز
+
+أي نظام تشغيل
+
+وهذا هو الاحتراف الحقيقي في أنظمة POS.
+
+

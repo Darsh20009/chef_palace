@@ -12,7 +12,7 @@ import {
   Coffee, Database, Trash2, RefreshCw, AlertTriangle, 
   ShoppingCart, Users, Package, GitBranch, Settings,
   Calendar, CreditCard, Table, Clock, ChevronLeft, ChevronRight,
-  Eye, BarChart3, Shield, ArrowRight, Utensils
+  Eye, BarChart3, Shield, ArrowRight, Utensils, Printer
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import type { Employee } from "@shared/schema";
@@ -268,6 +268,15 @@ export default function OwnerDashboard() {
             >
               <Utensils className="w-4 h-4 ml-2" />
               إدارة المأكولات
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setLocation("/manager/printer-setup")}
+              className="border-cyan-500/50 text-cyan-300 hover:bg-cyan-500/10"
+              data-testid="button-printer-setup"
+            >
+              <Printer className="w-4 h-4 ml-2" />
+              إعداد الطابعات
             </Button>
             <Button
               variant="outline"

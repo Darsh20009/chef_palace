@@ -137,6 +137,7 @@ const EmployeeHome = lazy(() => import("@/pages/employee-home"));
 const QiroxLogin = lazy(() => import("@/pages/qirox-login"));
 const QiroxDashboard = lazy(() => import("@/pages/qirox-dashboard"));
 const HardwareManagement = lazy(() => import("@/pages/hardware-management"));
+const EthernetPrinterSetup = lazy(() => import("@/pages/ethernet-printer-setup"));
 const B2BMarketplace = lazy(() => import("@/pages/b2b-marketplace"));
 const PartnerProgram = lazy(() => import("@/pages/partner-program"));
 const DriveThroughPage = lazy(() => import("@/pages/drive-through"));
@@ -340,6 +341,7 @@ function AppRouter() {
 
       {/* Hardware, B2B & Partner routes */}
       <Route path="/manager/hardware"><AuthGuard userType="manager"><HardwareManagement /></AuthGuard></Route>
+      <Route path="/manager/printer-setup"><AuthGuard userType="manager"><EthernetPrinterSetup /></AuthGuard></Route>
       <Route path="/manager/b2b"><AuthGuard userType="manager"><B2BMarketplace /></AuthGuard></Route>
       <Route path="/manager/partners"><AuthGuard userType="manager"><PartnerProgram /></AuthGuard></Route>
 
