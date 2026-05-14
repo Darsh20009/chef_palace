@@ -119,27 +119,36 @@ function markPlayed(type: NotificationSoundType): void {
 }
 
 // ─── TING TING Bell Sound via Web Audio API ────────────────────────────────
-// Classic metallic bell: high fundamental + stretched overtones + long decay
+// Kitchen-optimized bell: mid-range frequencies that cut through kitchen noise
 
 function playTingWebAudio(volume: number): boolean {
   try {
     const ctx = getCtx();
     if (!ctx || ctx.state !== 'running') return false;
 
-    // Bell overtone series (slightly stretched for metallic quality)
+    // Kitchen-optimized partials: mid-range freqs carry better through noise
     const partials = [
-      { freq: 1760, amp: 1.0 },     // A6 — fundamental
-      { freq: 3136, amp: 0.55 },    // G7 — 2nd partial
-      { freq: 4400, amp: 0.30 },    // ~A7+
-      { freq: 6000, amp: 0.15 },    // high shimmer
+      { freq: 880,  amp: 1.0  },   // A5 — punchy mid fundamental
+      { freq: 1320, amp: 0.70 },   // E6 — strong 2nd partial
+      { freq: 1760, amp: 0.45 },   // A6 — shimmer
+      { freq: 2640, amp: 0.20 },   // high ring
     ];
 
+    // Compressor to maximize loudness
+    const compressor = ctx.createDynamicsCompressor();
+    compressor.threshold.value = -6;
+    compressor.knee.value = 3;
+    compressor.ratio.value = 4;
+    compressor.attack.value = 0.001;
+    compressor.release.value = 0.1;
+    compressor.connect(ctx.destination);
+
     const master = ctx.createGain();
-    master.gain.value = Math.min(1.0, volume * 1.4); // loud!
-    master.connect(ctx.destination);
+    master.gain.value = Math.min(1.5, volume * 1.8); // boosted for kitchen
+    master.connect(compressor);
 
     const now = ctx.currentTime;
-    const decayTime = 0.55; // seconds — bell ring length
+    const decayTime = 0.9; // longer ring = more noticeable
 
     partials.forEach(({ freq, amp }) => {
       const osc = ctx.createOscillator();
@@ -148,9 +157,9 @@ function playTingWebAudio(volume: number): boolean {
       osc.type = 'sine';
       osc.frequency.value = freq;
 
-      // Sharp attack (2ms), then exponential decay
+      // Sharp attack (1ms), then exponential decay
       gain.gain.setValueAtTime(0, now);
-      gain.gain.linearRampToValueAtTime(amp, now + 0.002);
+      gain.gain.linearRampToValueAtTime(amp, now + 0.001);
       gain.gain.exponentialRampToValueAtTime(0.001, now + decayTime);
 
       osc.connect(gain);
@@ -384,24 +393,31 @@ export async function testSound(type: NotificationSoundType = 'success', volume 
 
 export async function playNotificationSound(
   type: NotificationSoundType = 'newOrder',
-  volume: number = 0.95
+  volume: number = 1.0
 ): Promise<void> {
   if (isDuplicate(type)) return;
   markPlayed(type);
 
+  // Always use max volume
+  const vol = Math.max(volume, 0.9);
+
   if (type === 'newOrder' || type === 'onlineOrderVoice') {
-    // TING ... TING — loud bell sound, plays through media channel
-    await playTingAudio(volume);
-    await new Promise(r => setTimeout(r, 320));
-    await playTingAudio(volume);
-    await new Promise(r => setTimeout(r, 320));
-    await playTingAudio(volume * 0.85);
+    // TING TING TING — 3 loud bells for kitchen environment
+    await playTingAudio(vol);
+    await new Promise(r => setTimeout(r, 280));
+    await playTingAudio(vol);
+    await new Promise(r => setTimeout(r, 280));
+    await playTingAudio(vol);
   } else if (type === 'cashierOrder') {
-    await playBeep('cashierOrder', volume);
-    await new Promise(r => setTimeout(r, 200));
-    await playBeep('cashierOrder', volume * 0.8);
+    await playBeep('cashierOrder', vol);
+    await new Promise(r => setTimeout(r, 160));
+    await playBeep('cashierOrder', vol);
+    await new Promise(r => setTimeout(r, 160));
+    await playBeep('cashierOrder', vol);
   } else {
-    await playBeep(type, volume);
+    await playBeep(type, vol);
+    await new Promise(r => setTimeout(r, 200));
+    await playBeep(type, vol * 0.9);
   }
 }
 
