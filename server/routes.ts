@@ -19328,326 +19328,174 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ─── AI Chat with Business Context ──────────────────────────────────────
+  // ─── AI Chat with Business Context (Internal Engine — no external AI) ───────
   app.post("/api/ai/chat", requireAuth, requireManager, async (req: AuthRequest, res) => {
     try {
       const { message, history } = req.body;
       if (!message) return res.status(400).json({ error: "الرسالة مطلوبة" });
 
-      // Gather business context
+      const { generateChatReply, generateInsights } = await import("./internal-ai");
       const todayStart = getSaudiStartOfDay();
-      const weekStart = new Date(todayStart.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const weekStart  = new Date(todayStart.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const prevWeekStart = new Date(weekStart.getTime() - 7 * 24 * 60 * 60 * 1000);
 
       const aiTenantId = req.employee?.tenantId || 'demo-tenant';
-      let businessContext = "";
-      try {
-        const { OrderModel: AiOrderModel } = await import("@shared/schema");
-        const allOrders = await AiOrderModel.find({ tenantId: aiTenantId }).sort({ createdAt: -1 }).limit(500).lean();
-        const todayOrders = allOrders.filter((o: any) => new Date(o.createdAt) >= todayStart);
-        const weekOrders = allOrders.filter((o: any) => new Date(o.createdAt) >= weekStart);
 
-        const todayRevenue = todayOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
-        const weekRevenue = weekOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
+      // Collect live stats
+      const { OrderModel: AiOrderModel } = await import("@shared/schema");
+      const allOrders = await AiOrderModel.find({ tenantId: aiTenantId }).sort({ createdAt: -1 }).limit(500).lean();
+      const todayOrders    = allOrders.filter((o: any) => new Date(o.createdAt) >= todayStart);
+      const weekOrders     = allOrders.filter((o: any) => new Date(o.createdAt) >= weekStart);
+      const prevWeekOrders = allOrders.filter((o: any) => new Date(o.createdAt) >= prevWeekStart && new Date(o.createdAt) < weekStart);
 
-        // Top selling items
-        const itemCounts: Record<string, { count: number; revenue: number }> = {};
-        weekOrders.forEach((o: any) => {
-          (o.items || []).forEach((item: any) => {
-            const name = item.nameAr || item.name || "بدون اسم";
-            if (!itemCounts[name]) itemCounts[name] = { count: 0, revenue: 0 };
-            itemCounts[name].count += item.quantity || 1;
-            itemCounts[name].revenue += (item.price || 0) * (item.quantity || 1);
-          });
+      const todayRevenue    = todayOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
+      const weekRevenue     = weekOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
+      const prevWeekRevenue = prevWeekOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
+      const growthPct       = prevWeekRevenue > 0 ? ((weekRevenue - prevWeekRevenue) / prevWeekRevenue * 100) : null;
+
+      const itemCounts: Record<string, { count: number; revenue: number }> = {};
+      weekOrders.forEach((o: any) => {
+        (o.items || []).forEach((item: any) => {
+          const name = item.nameAr || item.name || "بدون اسم";
+          if (!itemCounts[name]) itemCounts[name] = { count: 0, revenue: 0 };
+          itemCounts[name].count   += item.quantity || 1;
+          itemCounts[name].revenue += (item.price || 0) * (item.quantity || 1);
         });
-        const topItems = Object.entries(itemCounts).sort((a, b) => b[1].count - a[1].count).slice(0, 5);
-
-        // Day performance
-        const dayRevenue: Record<string, number> = {};
-        weekOrders.forEach((o: any) => {
-          const day = new Date(o.createdAt).toLocaleDateString("ar-SA", { weekday: "long" });
-          dayRevenue[day] = (dayRevenue[day] || 0) + (o.totalAmount || 0);
-        });
-        const bestDay = Object.entries(dayRevenue).sort((a, b) => b[1] - a[1])[0];
-
-        const allEmployees = await storage.getEmployees();
-        const products = await getCachedCoffeeItems(aiTenantId);
-
-        businessContext = `
-معلومات الكافيه (محدثة الآن):
-- إجمالي مبيعات اليوم: ${todayRevenue.toFixed(2)} ريال (${todayOrders.length} طلب)
-- إجمالي مبيعات الأسبوع: ${weekRevenue.toFixed(2)} ريال (${weekOrders.length} طلب)
-- عدد الموظفين: ${allEmployees.length}
-- عدد المنتجات في المنيو: ${products.length}
-- متوسط قيمة الطلب (هذا الأسبوع): ${weekOrders.length > 0 ? (weekRevenue / weekOrders.length).toFixed(2) : 0} ريال
-- أفضل يوم هذا الأسبوع: ${bestDay ? `${bestDay[0]} (${bestDay[1].toFixed(2)} ريال)` : "غير متاح"}
-- أكثر 5 منتجات مبيعاً هذا الأسبوع:
-${topItems.map((item, i) => `  ${i + 1}. ${item[0]}: ${item[1].count} طلب (${item[1].revenue.toFixed(2)} ريال)`).join("\n") || "  لا بيانات"}
-`;
-      } catch {
-        businessContext = "لم تتوفر بيانات المبيعات الآن.";
-      }
-
-      const systemPrompt = `أنت مساعد ذكاء اصطناعي متخصص لإدارة المقاهي والمطاعم، تعمل لصالح نظام مكان الشيف البخاري.
-أنت خبير في:
-- تحليل المبيعات والأرباح
-- تحسين قائمة الطعام والتسعير
-- إدارة الموظفين وجدولة الوردايات
-- استراتيجيات التسويق والعروض الترويجية
-- تحسين تجربة العملاء
-- إدارة المخزون والتكاليف
-
-${businessContext}
-
-قواعد الإجابة:
-- أجب دائماً بالعربية ما لم يسألك المستخدم بالإنجليزية
-- كن موجزاً ومفيداً وعملياً
-- استخدم الأرقام والبيانات المتاحة في إجاباتك
-- قدم توصيات قابلة للتنفيذ
-- استخدم الإيموجي لتحسين القراءة`;
-
-      const messages = [
-        { role: "system", content: systemPrompt },
-        ...(Array.isArray(history) ? history.slice(-10) : []),
-        { role: "user", content: message },
-      ];
-
-      const groqKey = process.env.GROQ_API_KEY;
-      if (!groqKey) return res.status(500).json({ error: "مفتاح Groq غير مضبوط" });
-
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${groqKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages, max_tokens: 1000, temperature: 0.7 }),
       });
+      const topItems = Object.entries(itemCounts)
+        .sort((a, b) => b[1].count - a[1].count)
+        .slice(0, 5)
+        .map(([name, d]) => ({ name, count: d.count, revenue: d.revenue }));
 
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error("Groq chat error:", response.status, errText);
-        if (response.status === 429) {
-          return res.status(429).json({ error: "⏳ وصلت للحد اليومي، جرب بكره!", dailyLimit: true });
-        }
-        return res.status(500).json({ error: "فشل الاتصال بـ Groq" });
-      }
+      const dayRevMap: Record<string, number> = {};
+      weekOrders.forEach((o: any) => {
+        const day = new Date(o.createdAt).toLocaleDateString("ar-SA", { weekday: "long" });
+        dayRevMap[day] = (dayRevMap[day] || 0) + (o.totalAmount || 0);
+      });
+      const bestDayEntry = Object.entries(dayRevMap).sort((a, b) => b[1] - a[1])[0];
 
-      const data = await response.json() as any;
-      const reply = data.choices?.[0]?.message?.content || "";
-      res.json({ reply, model: "groq/llama-3.3-70b-versatile" });
+      const hourMap: Record<number, number> = {};
+      weekOrders.forEach((o: any) => {
+        const h = new Date(o.createdAt).getHours();
+        hourMap[h] = (hourMap[h] || 0) + 1;
+      });
+      const peakHourEntry = Object.entries(hourMap).sort((a, b) => Number(b[1]) - Number(a[1]))[0];
+
+      const allEmployees = await storage.getEmployees();
+      const products     = await getCachedCoffeeItems(aiTenantId);
+      const pendingOrders = await AiOrderModel.countDocuments({ tenantId: aiTenantId, status: { $in: ['pending', 'preparing'] } });
+
+      const stats = {
+        todayRevenue,
+        todayOrders:    todayOrders.length,
+        weekRevenue,
+        weekOrders:     weekOrders.length,
+        prevWeekRevenue,
+        prevWeekOrders: prevWeekOrders.length,
+        topItems,
+        bestDay:        bestDayEntry ? { day: bestDayEntry[0], revenue: bestDayEntry[1] } : null,
+        peakHour:       peakHourEntry ? { hour: Number(peakHourEntry[0]), count: Number(peakHourEntry[1]) } : null,
+        employeeCount:  allEmployees.length,
+        productCount:   products.length,
+        avgOrderValue:  weekOrders.length > 0 ? weekRevenue / weekOrders.length : 0,
+        growthPct,
+        pendingOrders,
+      };
+
+      const reply = generateChatReply({ message, history: history || [], stats });
+      res.json({ reply, model: "qirox-internal-v1" });
     } catch (error: any) {
       console.error("AI chat error:", error);
-      res.status(500).json({ error: error.message || "خطأ في الذكاء الاصطناعي" });
+      res.status(500).json({ error: error.message || "خطأ في محرك المساعد" });
     }
   });
 
-  // ─── AI Quick Insights (auto-generated) ──────────────────────────────────
+  // ─── AI Quick Insights (Internal Engine — no external AI) ───────────────
   app.get("/api/ai/insights", requireAuth, requireManager, async (req: AuthRequest, res) => {
     try {
-
+      const { generateInsights } = await import("./internal-ai");
       const insightsTenantId = req.employee?.tenantId || 'demo-tenant';
-      const todayStart = getSaudiStartOfDay();
-      const weekStart = new Date(todayStart.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const todayStart    = getSaudiStartOfDay();
+      const weekStart     = new Date(todayStart.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const prevWeekStart = new Date(weekStart.getTime() - 7 * 24 * 60 * 60 * 1000);
 
       const { OrderModel: InsightsOrderModel } = await import("@shared/schema");
-      const allOrders = await InsightsOrderModel.find({ tenantId: insightsTenantId }).sort({ createdAt: -1 }).limit(500).lean();
-      const todayOrders = allOrders.filter((o: any) => new Date(o.createdAt) >= todayStart);
-      const weekOrders = allOrders.filter((o: any) => new Date(o.createdAt) >= weekStart);
-      const prevWeekStart = new Date(weekStart.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const allOrders      = await InsightsOrderModel.find({ tenantId: insightsTenantId }).sort({ createdAt: -1 }).limit(500).lean();
+      const todayOrders    = allOrders.filter((o: any) => new Date(o.createdAt) >= todayStart);
+      const weekOrders     = allOrders.filter((o: any) => new Date(o.createdAt) >= weekStart);
       const prevWeekOrders = allOrders.filter((o: any) => new Date(o.createdAt) >= prevWeekStart && new Date(o.createdAt) < weekStart);
 
-      const todayRevenue = todayOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
-      const weekRevenue = weekOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
+      const todayRevenue    = todayOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
+      const weekRevenue     = weekOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
       const prevWeekRevenue = prevWeekOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
-      const growthPct = prevWeekRevenue > 0 ? ((weekRevenue - prevWeekRevenue) / prevWeekRevenue * 100).toFixed(1) : null;
+      const growthPct       = prevWeekRevenue > 0 ? ((weekRevenue - prevWeekRevenue) / prevWeekRevenue * 100) : null;
 
-      const itemCounts: Record<string, number> = {};
+      const itemMap: Record<string, { count: number; revenue: number }> = {};
       weekOrders.forEach((o: any) => {
         (o.items || []).forEach((item: any) => {
           const name = item.nameAr || item.name || "؟";
-          itemCounts[name] = (itemCounts[name] || 0) + (item.quantity || 1);
+          if (!itemMap[name]) itemMap[name] = { count: 0, revenue: 0 };
+          itemMap[name].count   += item.quantity || 1;
+          itemMap[name].revenue += (item.price || 0) * (item.quantity || 1);
         });
       });
-      const topItems = Object.entries(itemCounts).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([n, c]) => `${n} (${c}x)`).join("، ");
+      const topItems = Object.entries(itemMap)
+        .sort((a, b) => b[1].count - a[1].count)
+        .slice(0, 5)
+        .map(([name, d]) => ({ name, count: d.count, revenue: d.revenue }));
 
-      const hourCounts: Record<number, number> = {};
+      const dayRevMap: Record<string, number> = {};
+      weekOrders.forEach((o: any) => {
+        const day = new Date(o.createdAt).toLocaleDateString("ar-SA", { weekday: "long" });
+        dayRevMap[day] = (dayRevMap[day] || 0) + (o.totalAmount || 0);
+      });
+      const bestDayEntry = Object.entries(dayRevMap).sort((a, b) => b[1] - a[1])[0];
+
+      const hourMap: Record<number, number> = {};
       weekOrders.forEach((o: any) => {
         const h = new Date(o.createdAt).getHours();
-        hourCounts[h] = (hourCounts[h] || 0) + 1;
+        hourMap[h] = (hourMap[h] || 0) + 1;
       });
-      const peakHour = Object.entries(hourCounts).sort((a, b) => Number(b[1]) - Number(a[1]))[0];
+      const peakHourEntry = Object.entries(hourMap).sort((a, b) => Number(b[1]) - Number(a[1]))[0];
 
-      const prompt = `أنت مستشار أعمال لمقهى. حلل هذه البيانات وأعطني 4 رؤى استراتيجية قصيرة ومفيدة:
+      const stats = {
+        todayRevenue,
+        todayOrders:    todayOrders.length,
+        weekRevenue,
+        weekOrders:     weekOrders.length,
+        prevWeekRevenue,
+        prevWeekOrders: prevWeekOrders.length,
+        topItems,
+        bestDay:   bestDayEntry  ? { day: bestDayEntry[0],              revenue: bestDayEntry[1] }                          : null,
+        peakHour:  peakHourEntry ? { hour: Number(peakHourEntry[0]),    count: Number(peakHourEntry[1]) }                   : null,
+        employeeCount: 0,
+        productCount:  0,
+        avgOrderValue: weekOrders.length > 0 ? weekRevenue / weekOrders.length : 0,
+        growthPct,
+      };
 
-بيانات هذا الأسبوع:
-- المبيعات: ${weekRevenue.toFixed(0)} ريال (${weekOrders.length} طلب)
-${growthPct ? `- النمو مقارنة بالأسبوع الماضي: ${growthPct}%` : ""}
-- مبيعات اليوم: ${todayRevenue.toFixed(0)} ريال (${todayOrders.length} طلب)
-- أكثر المنتجات طلباً: ${topItems || "لا بيانات"}
-- وقت الذروة: ${peakHour ? `الساعة ${peakHour[0]}:00 (${peakHour[1]} طلب)` : "غير محدد"}
-
-أعطني 4 رؤى مختلفة بهذا الشكل (JSON array فقط):
-[
-  {"icon": "📈", "title": "عنوان قصير", "insight": "جملة واحدة مفيدة"},
-  ...
-]
-لا تضف أي نص خارج الـ JSON.`;
-
-      const insightsMsgs = [{ role: "user", content: prompt }];
-      const groqKey = process.env.GROQ_API_KEY;
-      if (!groqKey) return res.status(500).json({ error: "مفتاح Groq غير مضبوط" });
-
-      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${groqKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages: insightsMsgs, max_tokens: 500, temperature: 0.6 }),
-      });
-
-      if (!response.ok) {
-        if (response.status === 429) {
-          return res.status(429).json({ error: "⏳ وصلت للحد اليومي، جرب بكره!", dailyLimit: true });
-        }
-        return res.status(500).json({ error: "فشل الاتصال بـ Groq" });
-      }
-
-      const data = await response.json() as any;
-      const content = (data.choices?.[0]?.message?.content || "").trim();
-
-      try {
-        const jsonMatch = content.match(/\[[\s\S]*\]/);
-        const insights = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
-        res.json({ insights, stats: { todayRevenue, todayOrders: todayOrders.length, weekRevenue, weekOrders: weekOrders.length, growthPct } });
-      } catch {
-        res.json({ insights: [], stats: { todayRevenue, todayOrders: todayOrders.length, weekRevenue, weekOrders: weekOrders.length, growthPct } });
-      }
+      const insights = generateInsights(stats);
+      res.json({ insights, stats: { todayRevenue, todayOrders: todayOrders.length, weekRevenue, weekOrders: weekOrders.length, growthPct } });
     } catch (error: any) {
-      res.status(500).json({ error: error.message || "خطأ في الذكاء الاصطناعي" });
+      res.status(500).json({ error: error.message || "خطأ في محرك الرؤى" });
     }
   });
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─── AI Menu Assist (Internal Engine — no external AI) ──────────────────
   app.post("/api/ai/menu-assist", async (req, res) => {
     try {
       const { nameAr, nameEn, category, task, existingDescription, existingIngredients } = req.body;
-
       if (!nameAr && !nameEn) {
         return res.status(400).json({ error: "يرجى إدخال اسم المنتج أولاً" });
       }
-
-      const categoryLabels: Record<string, string> = {
-        hot: "مشروب ساخن / hot beverage",
-        cold: "مشروب بارد / cold beverage",
-        desserts: "حلويات وكيك / desserts & cakes",
-        bakery: "مخبوزات / bakery",
-        sandwiches: "ساندوتشات / sandwiches",
-        specialty: "مشروب متخصص / specialty drink",
-      };
-      const catLabel = categoryLabels[category] || category || "منتج كافيه";
-
-      const systemPrompt = `أنت خبير تسويق إبداعي متخصص في صناعة القهوة والمقاهي العالمية من مستوى Starbucks وBlue Bottle وPeet's Coffee.
-مهمتك توليد محتوى تسويقي إبداعي، شهي، وجذاب لمنيو المقاهي.
-يجب أن يكون المحتوى:
-- شاعرياً وجذاباً يستفز حواس القارئ
-- يستخدم مصطلحات قهوة عالمية دقيقة
-- مثالي للعرض في قائمة طعام راقية
-- يذكر النكهات، الأحاسيس، الرائحة عند الاقتضاء
-- باللغتين العربية والإنجليزية حسب المطلوب`;
-
-      const tasks: Record<string, string> = {
-        description_ar: `اكتب وصفاً إبداعياً وشهياً باللغة العربية الفصيحة للمنتج التالي:
-الاسم: ${nameAr}${nameEn ? ` / ${nameEn}` : ""}
-النوع: ${catLabel}
-${existingDescription ? `الوصف الحالي: ${existingDescription}` : ""}
-
-الوصف يجب أن يكون من 2-3 جمل، يصف النكهة والمكونات الرئيسية والإحساس عند تناوله. استخدم لغة راقية وشاعرية.
-أعطني الوصف مباشرة بدون مقدمات أو شرح.`,
-
-        description_en: `Write a creative, appetizing description in English for:
-Name: ${nameEn || nameAr}
-Type: ${catLabel}
-${existingDescription ? `Current description: ${existingDescription}` : ""}
-
-Write 2-3 poetic, sensory sentences describing the flavor, texture, aroma, and experience. Use premium café language like Starbucks/Blue Bottle.
-Return only the description, no intro or explanation.`,
-
-        description_both: `اكتب وصفاً مزدوجاً إبداعياً (عربي وإنجليزي) للمنتج التالي:
-الاسم: ${nameAr}${nameEn ? ` / ${nameEn}` : ""}
-النوع: ${catLabel}
-
-أعطني:
-🇸🇦 الوصف العربي: [وصف شاعري راقي 2-3 جمل]
-🇬🇧 English: [creative 2-3 sentences poetic description]
-
-لا تضف مقدمات أو شرح إضافي.`,
-
-        name_en: `Suggest 3 creative English names for this Arabic café item:
-Arabic name: ${nameAr}
-Type: ${catLabel}
-
-Requirements: Premium café naming style, memorable, brandable, can include poetic adjectives.
-Format: numbered list 1, 2, 3 — names only, no explanation.`,
-
-        ingredients: `أنت طاهٍ متخصص في صناعة القهوة والمشروبات. اقترح قائمة المكونات المفصلة لتحضير هذا المنتج:
-المنتج: ${nameAr}${nameEn ? ` / ${nameEn}` : ""}
-النوع: ${catLabel}
-${existingIngredients ? `المكونات الحالية: ${existingIngredients}` : ""}
-
-قدم القائمة بهذا الشكل:
-• [اسم المكون] — [الكمية المقترحة] [الوحدة]
-
-اذكر كل المكونات الأساسية مع الكميات النموذجية لكوب واحد. كن دقيقاً ومفصلاً.`,
-
-        addons: `اقترح إضافات وخيارات تخصيص احترافية لهذا المنتج في مقهى راقٍ:
-المنتج: ${nameAr}${nameEn ? ` / ${nameEn}` : ""}
-النوع: ${catLabel}
-
-قدم 5-8 إضافات متنوعة بهذا الشكل:
-• [اسم الإضافة] — [السعر المقترح بالريال]
-
-تشمل: الأحجام المختلفة، نوع الحليب، النكهات الإضافية، الإضافات الخاصة.`,
-
-        flavor_profile: `صِف ملف النكهة والحواس الكامل لهذا المنتج بأسلوب التقييم المهني:
-المنتج: ${nameAr}${nameEn ? ` / ${nameEn}` : ""}
-النوع: ${catLabel}
-
-اكتب بهذا الشكل:
-☕ النكهة الرئيسية: ...
-🌸 الرائحة: ...  
-🎨 اللون والمظهر: ...
-✨ الإحساس في الفم: ...
-💡 مقترح التقديم: ...
-
-استخدم لغة تذوق احترافية.`,
-      };
-
-      const userPrompt = tasks[task] || tasks.description_ar;
-
-      const menuMsgs = [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ];
-
-      const menuGroqKey = process.env.GROQ_API_KEY;
-      if (!menuGroqKey) return res.status(500).json({ error: "مفتاح Groq غير مضبوط" });
-
-      const menuResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${menuGroqKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages: menuMsgs, max_tokens: 600, temperature: 0.85 }),
-      });
-
-      if (!menuResponse.ok) {
-        const errText = await menuResponse.text();
-        console.error("Groq menu error:", menuResponse.status, errText);
-        if (menuResponse.status === 429) {
-          return res.status(429).json({ error: "⏳ وصلت للحد اليومي، جرب بكره!", dailyLimit: true });
-        }
-        return res.status(500).json({ error: "فشل في الاتصال بـ Groq" });
-      }
-
-      const data = await menuResponse.json() as any;
-      const content = data.choices?.[0]?.message?.content || "";
-      res.json({ result: content, task, model: "groq/llama-3.3-70b-versatile" });
+      const { generateMenuContent, generateStructuredAddons } = await import("./internal-ai");
+      const result = generateMenuContent({ nameAr, nameEn, category, task, existingDescription, existingIngredients });
+      // For addons task, also return structured data for direct form insertion
+      const structured = task === "addons" ? generateStructuredAddons(category || "default") : undefined;
+      res.json({ result, task, model: "qirox-internal-v1", ...(structured ? { structuredAddons: structured } : {}) });
     } catch (error: any) {
       console.error("AI Menu Assist error:", error);
-      res.status(500).json({ error: error.message || "حدث خطأ في الذكاء الاصطناعي" });
+      res.status(500).json({ error: error.message || "حدث خطأ في محرك المنيو" });
     }
   });
 
