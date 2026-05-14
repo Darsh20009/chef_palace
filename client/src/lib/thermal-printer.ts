@@ -57,15 +57,26 @@ export interface PrinterSettings {
   cuttingMode: 'auto' | 'manual';
   feedLines: number;
   // Network printer (LAN/TCP) — ProPos, Epson TM-T88 LAN, Xprinter NW, etc.
+  // (legacy single-printer — used as fallback if multi-printer IPs not set)
   networkIp?: string;
   networkPort?: number;
+  // ── Multi-Printer Support (3 ProPos PP9000E printers) ──────────────────────
+  // طابعة العميل — Customer receipt printer
+  customerPrinterIp?: string;   // e.g. 192.168.3.22
+  customerPrinterPort?: number; // default 9100
+  // طابعة المطبخ 1 — Kitchen printer 1
+  kitchen1PrinterIp?: string;   // e.g. 192.168.1.114
+  kitchen1PrinterPort?: number; // default 9100
+  // طابعة المطبخ 2 — Kitchen printer 2 (3rd printer)
+  kitchen2PrinterIp?: string;   // e.g. 192.168.1.xxx
+  kitchen2PrinterPort?: number; // default 9100
   // Bluetooth printer
   bluetoothDeviceName?: string;
   bluetoothDeviceId?: string;
   // Local Relay Agent — for Android/TabSense devices that can't use QZ Tray
   // The relay agent is a small Node.js server running on the local network.
   // Download: /print-relay.js  — run with: node print-relay.js
-  relayAgentUrl?: string; // e.g. "http://192.168.8.10:8089"
+  relayAgentUrl?: string; // e.g. "http://192.168.1.5:8089"
   /** الرابط العام للمتجر (يُستخدم لباركود تتبع الطلب)
    *  مثال: https://chefsplace.online
    *  إذا تُرك فارغاً يستخدم window.location.origin */
@@ -83,8 +94,16 @@ const DEFAULT_SETTINGS: PrinterSettings = {
   fontSize: 'normal',
   cuttingMode: 'auto',
   feedLines: 3,
-  networkIp: '192.168.1.114', // ← ProPos PP9000E Ethernet printer IP
-  networkPort: 9100,           // ← RAW TCP port (ESC/POS standard)
+  // Legacy single-printer (kept for backward compatibility)
+  networkIp: '192.168.3.22',
+  networkPort: 9100,
+  // ── 3 ProPos PP9000E printers ──────────────────────────────────────────────
+  customerPrinterIp:   '192.168.3.22',   // طابعة العميل (Customer Receipt)
+  customerPrinterPort: 9100,
+  kitchen1PrinterIp:   '192.168.1.114',  // طابعة المطبخ 1 (Kitchen 1)
+  kitchen1PrinterPort: 9100,
+  kitchen2PrinterIp:   '',               // طابعة المطبخ 2 — أضف IP الطابعة الثالثة
+  kitchen2PrinterPort: 9100,
   relayAgentUrl: '',           // ← User must set relay agent URL after installing print-relay.js
 };
 
@@ -1812,26 +1831,96 @@ export async function thermalPrint(escData: Uint8Array, fallbackHtml: string, fa
 
 /**
  * Auto-print receipt + kitchen ticket after a completed order.
- * Call this from checkout success handlers.
+ * Multi-printer routing:
+ *   - Customer receipt  → customerPrinterIp  (relay role: "customer")
+ *   - Kitchen copy      → kitchen1 + kitchen2 in parallel (relay role: "kitchen1" / "kitchen2")
+ * Falls back to single-printer mode if multi-printer IPs not configured.
  */
 export async function autoPrintOrder(receiptEsc: Uint8Array, kitchenEsc: Uint8Array | null, receiptHtml: string, paperWidth: '58mm' | '80mm'): Promise<void> {
   const settings = loadPrinterSettings();
   if (!settings.autoPrint) return;
 
-  // Print customer receipt — ESC/POS direct, no PDF fallback
-  const receiptResult = await thermalPrint(receiptEsc, '', paperWidth);
-  if (!receiptResult.success) {
-    console.error('[AutoPrint] Receipt failed:', receiptResult.error);
-  }
+  const isRelay = settings.mode === 'relay' && !!settings.relayAgentUrl;
+  const hasMultiPrinter = isRelay && !!(settings.customerPrinterIp || settings.kitchen1PrinterIp);
 
-  // Print kitchen copy — delay 1.5s to avoid overwhelming the printer buffer
-  if (kitchenEsc && settings.autoKitchenCopy) {
-    await new Promise(r => setTimeout(r, 1500));
-    const kitchenResult = await thermalPrint(kitchenEsc, '', paperWidth);
-    if (!kitchenResult.success) {
-      console.error('[AutoPrint] Kitchen copy failed:', kitchenResult.error);
+  if (hasMultiPrinter) {
+    // ── Multi-printer path: route each job to the right printer ───────────
+    const relayUrl = settings.relayAgentUrl!;
+
+    // 1. Customer receipt → customerPrinterIp
+    const custIp   = settings.customerPrinterIp || settings.networkIp || '';
+    const custPort = settings.customerPrinterPort || 9100;
+    if (custIp) {
+      const r = await relayAgentPrint(receiptEsc, relayUrl, custIp, custPort);
+      if (r.success) {
+        console.info('[AutoPrint] ✅ Customer receipt printed to', custIp);
+      } else {
+        console.error('[AutoPrint] ❌ Customer receipt failed:', r.error);
+      }
+    }
+
+    // 2. Kitchen copies → kitchen1 + kitchen2 in PARALLEL (fast, no delay between them)
+    if (kitchenEsc && settings.autoKitchenCopy) {
+      const kitchenJobs: Promise<PrintResult>[] = [];
+
+      const k1Ip   = settings.kitchen1PrinterIp || '';
+      const k1Port = settings.kitchen1PrinterPort || 9100;
+      if (k1Ip) {
+        kitchenJobs.push(relayAgentPrint(kitchenEsc, relayUrl, k1Ip, k1Port));
+      }
+
+      const k2Ip   = settings.kitchen2PrinterIp || '';
+      const k2Port = settings.kitchen2PrinterPort || 9100;
+      if (k2Ip) {
+        kitchenJobs.push(relayAgentPrint(kitchenEsc, relayUrl, k2Ip, k2Port));
+      }
+
+      if (kitchenJobs.length > 0) {
+        const kitchenResults = await Promise.allSettled(kitchenJobs);
+        kitchenResults.forEach((r, i) => {
+          if (r.status === 'fulfilled' && r.value.success) {
+            console.info(`[AutoPrint] ✅ Kitchen${i + 1} printed`);
+          } else {
+            const err = r.status === 'rejected' ? r.reason : (r.value as any).error;
+            console.error(`[AutoPrint] ❌ Kitchen${i + 1} failed:`, err);
+          }
+        });
+      }
+    }
+  } else {
+    // ── Legacy single-printer path ─────────────────────────────────────────
+    const receiptResult = await thermalPrint(receiptEsc, '', paperWidth);
+    if (!receiptResult.success) {
+      console.error('[AutoPrint] Receipt failed:', receiptResult.error);
+    }
+
+    if (kitchenEsc && settings.autoKitchenCopy) {
+      await new Promise(r => setTimeout(r, 1500));
+      const kitchenResult = await thermalPrint(kitchenEsc, '', paperWidth);
+      if (!kitchenResult.success) {
+        console.error('[AutoPrint] Kitchen copy failed:', kitchenResult.error);
+      }
     }
   }
+}
+
+/**
+ * Test a specific named printer role through the relay agent.
+ * Returns { connected, message } suitable for showing in the UI.
+ */
+export async function testRelayPrinterRole(
+  relayUrl: string,
+  role: 'customer' | 'kitchen1' | 'kitchen2',
+  printerIp: string,
+  printerPort: number = 9100,
+): Promise<{ connected: boolean; message: string }> {
+  if (!relayUrl) {
+    return { connected: false, message: '❌ أدخل رابط وكيل الطباعة أولاً' };
+  }
+  if (!printerIp) {
+    return { connected: false, message: `❌ أدخل IP طابعة ${role === 'customer' ? 'العميل' : role === 'kitchen1' ? 'المطبخ 1' : 'المطبخ 2'} أولاً` };
+  }
+  return testRelayAgent(relayUrl, printerIp, printerPort);
 }
 
 // ─── Printer status ───────────────────────────────────────────────────────────

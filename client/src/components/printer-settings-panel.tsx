@@ -33,6 +33,7 @@ import {
   getBluetoothState,
   isQZTrayAvailable,
   testRelayAgent,
+  testRelayPrinterRole,
   type PrinterSettings,
   type PrinterStatus,
 } from "@/lib/thermal-printer";
@@ -62,9 +63,20 @@ export default function PrinterSettingsPanel() {
   // QZ Tray state
   const [qzStatus, setQzStatus] = useState<'checking' | 'available' | 'unavailable' | null>(null);
 
-  // Relay Agent state
+  // Relay Agent state — overall relay ping
   const [relayTesting, setRelayTesting] = useState(false);
   const [relayStatus, setRelayStatus] = useState<{ connected: boolean; message: string } | null>(null);
+
+  // Per-printer test state (customer, kitchen1, kitchen2)
+  const [printerTestState, setPrinterTestState] = useState<{
+    customer:  { testing: boolean; result: { connected: boolean; message: string } | null };
+    kitchen1:  { testing: boolean; result: { connected: boolean; message: string } | null };
+    kitchen2:  { testing: boolean; result: { connected: boolean; message: string } | null };
+  }>({
+    customer:  { testing: false, result: null },
+    kitchen1:  { testing: false, result: null },
+    kitchen2:  { testing: false, result: null },
+  });
 
   // Bluetooth state
   const [btConnecting, setBtConnecting] = useState(false);
@@ -273,10 +285,10 @@ export default function PrinterSettingsPanel() {
     setRelayTesting(true);
     setRelayStatus(null);
     try {
-      const result = await testRelayAgent(relayUrl, settings.networkIp?.trim(), settings.networkPort || 9100);
+      const result = await testRelayAgent(relayUrl);
       setRelayStatus(result);
       toast({
-        title: result.connected ? tc("✅ الوكيل جاهز", "✅ Relay Ready") : tc("❌ فشل الاتصال", "❌ Connection Failed"),
+        title: result.connected ? tc("✅ الوكيل يعمل", "✅ Relay Running") : tc("❌ فشل الاتصال", "❌ Connection Failed"),
         description: result.message.split('\n')[0],
         variant: result.connected ? "default" : "destructive",
       });
@@ -284,6 +296,43 @@ export default function PrinterSettingsPanel() {
       toast({ title: tc("خطأ", "Error"), description: e?.message, variant: "destructive" });
     } finally {
       setRelayTesting(false);
+    }
+  }
+
+  async function handleTestPrinter(role: 'customer' | 'kitchen1' | 'kitchen2') {
+    const relayUrl = settings.relayAgentUrl?.trim();
+    const ipMap = {
+      customer: settings.customerPrinterIp?.trim() || '',
+      kitchen1: settings.kitchen1PrinterIp?.trim() || '',
+      kitchen2: settings.kitchen2PrinterIp?.trim() || '',
+    };
+    const portMap = {
+      customer: settings.customerPrinterPort || 9100,
+      kitchen1: settings.kitchen1PrinterPort || 9100,
+      kitchen2: settings.kitchen2PrinterPort || 9100,
+    };
+    const labelMap = { customer: 'طابعة العميل', kitchen1: 'طابعة المطبخ 1', kitchen2: 'طابعة المطبخ 2' };
+
+    if (!relayUrl) {
+      toast({ title: "خطأ", description: "أدخل رابط وكيل الطباعة أولاً", variant: "destructive" });
+      return;
+    }
+    if (!ipMap[role]) {
+      toast({ title: "خطأ", description: `أدخل IP ${labelMap[role]} أولاً`, variant: "destructive" });
+      return;
+    }
+
+    setPrinterTestState(prev => ({ ...prev, [role]: { testing: true, result: null } }));
+    try {
+      const result = await testRelayPrinterRole(relayUrl, role, ipMap[role], portMap[role]);
+      setPrinterTestState(prev => ({ ...prev, [role]: { testing: false, result } }));
+      toast({
+        title: result.connected ? `✅ ${labelMap[role]} جاهزة` : `❌ ${labelMap[role]} لا تستجيب`,
+        description: result.message.split('\n').pop() || result.message,
+        variant: result.connected ? "default" : "destructive",
+      });
+    } catch (e: any) {
+      setPrinterTestState(prev => ({ ...prev, [role]: { testing: false, result: { connected: false, message: e?.message || 'خطأ' } } }));
     }
   }
 
@@ -792,147 +841,247 @@ export default function PrinterSettingsPanel() {
                   {tc("وكيل الطباعة المحلي — ProPos PP9000E إيثرنت", "Local Print Relay — ProPos PP9000E Ethernet")}
                 </div>
 
-                {/* ProPos PP9000E Quick-Setup Card */}
+                {/* Quick Setup — 3 ProPos PP9000E */}
                 <div className="bg-gradient-to-br from-violet-100 to-blue-50 border-2 border-violet-400 rounded-xl p-3 space-y-2">
                   <div className="flex items-center gap-2">
                     <Printer className="w-5 h-5 text-violet-700" />
                     <div>
-                      <p className="text-sm font-bold text-violet-900">ProPos PP9000E — إعداد تلقائي سريع</p>
-                      <p className="text-[11px] text-violet-600">Model: PP9000E  |  Version: N-931 1.00  |  80mm</p>
+                      <p className="text-sm font-bold text-violet-900">3x ProPos PP9000E — إعداد تلقائي</p>
+                      <p className="text-[11px] text-violet-600">طابعة عميل + طابعتا مطبخ  |  80mm  |  RAW 9100</p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-1.5 text-[11px] font-mono bg-white/70 rounded-lg p-2">
-                    <span className="text-gray-500">IP الطابعة:</span>
-                    <span className="font-bold text-violet-800">192.168.1.114</span>
-                    <span className="text-gray-500">المنفذ:</span>
-                    <span className="font-bold text-violet-800">9100 (RAW)</span>
-                    <span className="text-gray-500">MAC:</span>
-                    <span className="font-bold text-violet-700">46-28-0E-8B-C9-66-B2</span>
-                    <span className="text-gray-500">الشبكة:</span>
-                    <span className="font-bold text-violet-700">192.168.1.0/24</span>
+                  <div className="grid grid-cols-2 gap-1 text-[10px] font-mono bg-white/70 rounded-lg p-2">
+                    <span className="text-gray-500">طابعة العميل :</span>
+                    <span className="font-bold text-violet-800">192.168.3.22 — MAC: 28-0e-8b-36-55-0a</span>
+                    <span className="text-gray-500">مطبخ 1 :</span>
+                    <span className="font-bold text-violet-700">192.168.1.114 — MAC: 28-0e-8b-c9-66-d2</span>
+                    <span className="text-gray-500">مطبخ 2 :</span>
+                    <span className="font-bold text-gray-400">أضف IP الطابعة الثالثة أدناه</span>
                   </div>
                   <Button
                     size="sm"
                     className="w-full bg-violet-700 hover:bg-violet-800 text-white font-bold"
                     data-testid="button-propos-quicksetup"
                     onClick={() => {
-                      const updated = {
-                        networkIp: '192.168.1.114',
+                      const updated: Partial<typeof settings> = {
+                        customerPrinterIp:   '192.168.3.22',
+                        customerPrinterPort: 9100,
+                        kitchen1PrinterIp:   '192.168.1.114',
+                        kitchen1PrinterPort: 9100,
+                        kitchen2PrinterIp:   '',
+                        kitchen2PrinterPort: 9100,
+                        networkIp:   '192.168.3.22',
                         networkPort: 9100,
-                        paperWidth: '80mm' as const,
-                        mode: 'relay' as const,
-                        autoPrint: true,
+                        paperWidth:  '80mm',
+                        mode:        'relay',
+                        autoPrint:   true,
                         autoKitchenCopy: true,
                       };
                       Object.entries(updated).forEach(([k, v]) => updateSetting(k as any, v as any));
+                      toast({ title: '✅ تم تطبيق الإعدادات', description: 'أدخل رابط وكيل الطباعة ثم اختبر كل طابعة' });
                     }}
                   >
-                    ⚡ {tc("تطبيق إعدادات ProPos PP9000E تلقائياً", "Apply ProPos PP9000E Settings Automatically")}
+                    ⚡ تطبيق إعدادات 3 طابعات PP9000E تلقائياً
                   </Button>
                 </div>
 
-                {/* 2-step setup */}
-                <div className="space-y-2">
-                  <div className="bg-white border border-violet-200 rounded-lg p-2.5 space-y-1.5">
-                    <p className="text-xs font-bold text-violet-900">
-                      {tc("الخطوة 1 — على أي جهاز ويندوز في نفس الشبكة:", "Step 1 — On any Windows PC on the same network:")}
-                    </p>
-                    <a
-                      href="/print-relay.js"
-                      download="print-relay.js"
-                      className="flex items-center justify-center gap-2 w-full py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-xs font-bold transition-colors"
-                      data-testid="link-download-print-relay"
-                    >
-                      ⬇ {tc("تحميل print-relay.js (وكيل الطباعة)", "Download print-relay.js (print relay)")}
-                    </a>
-                    <p className="text-[11px] text-violet-600">
-                      {tc("ثبّت Node.js (nodejs.org) ثم شغّل:  node print-relay.js", "Install Node.js (nodejs.org) then run:  node print-relay.js")}
-                    </p>
-                    <p className="text-[11px] text-violet-500">
-                      {tc("ستظهر نافذة سوداء تعرض رابط مثل: http://192.168.1.5:8089 — انسخه", "A black window shows a URL like: http://192.168.1.5:8089 — copy it")}
-                    </p>
-                  </div>
-
-                  <div className="bg-white border border-violet-200 rounded-lg p-2.5 space-y-1.5">
-                    <p className="text-xs font-bold text-violet-900">
-                      {tc("الخطوة 2 — الصق رابط الوكيل هنا:", "Step 2 — Paste the relay URL here:")}
-                    </p>
-                  </div>
+                {/* Download + setup guide */}
+                <div className="bg-white border border-violet-200 rounded-lg p-3 space-y-2">
+                  <p className="text-xs font-bold text-violet-900">الخطوات — على أي جهاز ويندوز في نفس الشبكة:</p>
+                  <ol className="text-[11px] text-violet-700 space-y-1 list-decimal list-inside">
+                    <li>ثبّت <a href="https://nodejs.org" target="_blank" rel="noreferrer" className="underline">Node.js</a> (nodejs.org)</li>
+                    <li>حمّل وكيل الطباعة وشغّله:</li>
+                  </ol>
+                  <a
+                    href="/print-relay.js"
+                    download="print-relay.js"
+                    className="flex items-center justify-center gap-2 w-full py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-xs font-bold transition-colors"
+                    data-testid="link-download-print-relay"
+                  >
+                    ⬇ تحميل print-relay.js (وكيل الطباعة)
+                  </a>
+                  <p className="text-[11px] text-violet-600 bg-violet-50 rounded p-2 font-mono">node print-relay.js</p>
+                  <p className="text-[11px] text-violet-500">ستظهر نافذة سوداء بعنوان URL مثل: http://192.168.1.5:8089 — انسخه والصقه أدناه</p>
+                  <p className="text-[10px] text-green-700 bg-green-50 rounded p-2">
+                    💡 الوكيل يختبر الطابعات تلقائياً عند التشغيل ويعرض صفحة HTML على http://IP:8089 يمكنك فتحها في المتصفح
+                  </p>
                 </div>
 
                 <Separator className="border-violet-200" />
 
                 {/* Relay Agent URL */}
                 <div className="space-y-1">
-                  <Label className="text-xs text-violet-700 font-semibold">{tc("رابط وكيل الطباعة", "Print Relay URL")}</Label>
-                  <Input
-                    placeholder="http://192.168.1.5:8089"
-                    value={settings.relayAgentUrl || ''}
-                    onChange={(e) => updateSetting('relayAgentUrl', e.target.value.trim())}
-                    className="font-mono text-sm border-violet-300 focus:border-violet-500"
-                    data-testid="input-relay-agent-url"
-                    dir="ltr"
-                  />
-                  <p className="text-[11px] text-violet-500">{tc("IP الجهاز الذي يشغّل وكيل الطباعة + المنفذ 8089", "IP of the device running the print relay + port 8089")}</p>
-                </div>
-
-                {/* Printer IP and Port */}
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="col-span-2 space-y-1">
-                    <Label className="text-xs text-violet-700">{tc("IP الطابعة", "Printer IP")}</Label>
+                  <Label className="text-xs text-violet-700 font-semibold">رابط وكيل الطباعة (Print Relay URL)</Label>
+                  <div className="flex gap-2">
                     <Input
-                      placeholder="192.168.1.114"
-                      value={settings.networkIp || ''}
-                      onChange={(e) => updateSetting('networkIp', e.target.value)}
-                      className="font-mono text-sm border-violet-300"
-                      data-testid="input-relay-printer-ip"
+                      placeholder="http://192.168.1.5:8089"
+                      value={settings.relayAgentUrl || ''}
+                      onChange={(e) => updateSetting('relayAgentUrl', e.target.value.trim())}
+                      className="font-mono text-sm border-violet-300 focus:border-violet-500 flex-1"
+                      data-testid="input-relay-agent-url"
                       dir="ltr"
                     />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleTestRelayAgent}
+                      disabled={relayTesting || !settings.relayAgentUrl?.trim()}
+                      className="border-violet-400 text-violet-700 hover:bg-violet-50 shrink-0"
+                      data-testid="button-test-relay-agent"
+                    >
+                      {relayTesting ? <RefreshCw className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+                    </Button>
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-violet-700">{tc("البورت", "Port")}</Label>
+                  {relayStatus && (
+                    <div className={`flex items-center gap-2 text-xs rounded px-2 py-1.5 ${relayStatus.connected ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                      {relayStatus.connected ? <CheckCircle2 className="w-3 h-3 shrink-0" /> : <XCircle className="w-3 h-3 shrink-0" />}
+                      <span>{relayStatus.message}</span>
+                    </div>
+                  )}
+                  <p className="text-[11px] text-violet-500">IP الجهاز الذي يشغّل الوكيل + المنفذ 8089</p>
+                </div>
+
+                <Separator className="border-violet-200" />
+
+                {/* ── طابعة العميل ── */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-blue-500" />
+                    <Label className="text-sm font-bold text-blue-800">طابعة العميل (Customer Receipt)</Label>
+                    <Badge variant="outline" className="text-[10px] text-blue-600 border-blue-300">192.168.3.22</Badge>
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="192.168.3.22"
+                      value={settings.customerPrinterIp || ''}
+                      onChange={(e) => updateSetting('customerPrinterIp', e.target.value.trim())}
+                      className="font-mono text-sm border-blue-300 focus:border-blue-500 flex-1"
+                      data-testid="input-customer-printer-ip"
+                      dir="ltr"
+                    />
                     <Input
                       placeholder="9100"
-                      value={String(settings.networkPort || 9100)}
-                      onChange={(e) => updateSetting('networkPort', Number(e.target.value) || 9100)}
-                      className="font-mono text-sm border-violet-300"
-                      data-testid="input-relay-printer-port"
+                      value={String(settings.customerPrinterPort || 9100)}
+                      onChange={(e) => updateSetting('customerPrinterPort', Number(e.target.value) || 9100)}
+                      className="font-mono text-sm border-blue-300 w-20"
+                      data-testid="input-customer-printer-port"
                       type="number"
                       dir="ltr"
                     />
+                    <Button
+                      size="sm"
+                      onClick={() => handleTestPrinter('customer')}
+                      disabled={printerTestState.customer.testing}
+                      className="bg-blue-600 hover:bg-blue-700 text-white shrink-0"
+                      data-testid="button-test-customer-printer"
+                    >
+                      {printerTestState.customer.testing
+                        ? <RefreshCw className="w-3 h-3 animate-spin" />
+                        : <TestTube2 className="w-3 h-3" />}
+                    </Button>
                   </div>
+                  {printerTestState.customer.result && (
+                    <div className={`flex items-center gap-2 text-xs rounded px-2 py-1 ${printerTestState.customer.result.connected ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                      {printerTestState.customer.result.connected ? <CheckCircle2 className="w-3 h-3 shrink-0" /> : <XCircle className="w-3 h-3 shrink-0" />}
+                      <span>{printerTestState.customer.result.message.split('\n').slice(-1)[0]}</span>
+                    </div>
+                  )}
                 </div>
 
-                {/* Relay status indicator */}
-                {relayStatus && (
-                  <div className={`flex items-start gap-2 text-xs rounded-lg px-3 py-2 border ${relayStatus.connected ? 'bg-green-50 border-green-300 text-green-800' : 'bg-red-50 border-red-300 text-red-800'}`}>
-                    {relayStatus.connected
-                      ? <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                      : <XCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />}
-                    <span className="whitespace-pre-line">{relayStatus.message}</span>
+                {/* ── طابعة المطبخ 1 ── */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-orange-500" />
+                    <Label className="text-sm font-bold text-orange-800">طابعة المطبخ 1 (Kitchen 1)</Label>
+                    <Badge variant="outline" className="text-[10px] text-orange-600 border-orange-300">192.168.1.114</Badge>
                   </div>
-                )}
-
-                {/* Test button */}
-                <Button
-                  onClick={handleTestRelayAgent}
-                  disabled={relayTesting || !settings.relayAgentUrl?.trim()}
-                  className="w-full bg-violet-600 hover:bg-violet-700 text-white"
-                  data-testid="button-test-relay-full"
-                >
-                  {relayTesting ? (
-                    <><RefreshCw className="w-4 h-4 ml-2 animate-spin" />{tc("جارٍ الفحص...", "Testing...")}</>
-                  ) : (
-                    <><CheckCircle2 className="w-4 h-4 ml-2" />{tc("اختبار الاتصال (الوكيل + الطابعة)", "Test Connection (Relay + Printer)")}</>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="192.168.1.114"
+                      value={settings.kitchen1PrinterIp || ''}
+                      onChange={(e) => updateSetting('kitchen1PrinterIp', e.target.value.trim())}
+                      className="font-mono text-sm border-orange-300 focus:border-orange-500 flex-1"
+                      data-testid="input-kitchen1-printer-ip"
+                      dir="ltr"
+                    />
+                    <Input
+                      placeholder="9100"
+                      value={String(settings.kitchen1PrinterPort || 9100)}
+                      onChange={(e) => updateSetting('kitchen1PrinterPort', Number(e.target.value) || 9100)}
+                      className="font-mono text-sm border-orange-300 w-20"
+                      data-testid="input-kitchen1-printer-port"
+                      type="number"
+                      dir="ltr"
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => handleTestPrinter('kitchen1')}
+                      disabled={printerTestState.kitchen1.testing}
+                      className="bg-orange-500 hover:bg-orange-600 text-white shrink-0"
+                      data-testid="button-test-kitchen1-printer"
+                    >
+                      {printerTestState.kitchen1.testing
+                        ? <RefreshCw className="w-3 h-3 animate-spin" />
+                        : <TestTube2 className="w-3 h-3" />}
+                    </Button>
+                  </div>
+                  {printerTestState.kitchen1.result && (
+                    <div className={`flex items-center gap-2 text-xs rounded px-2 py-1 ${printerTestState.kitchen1.result.connected ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                      {printerTestState.kitchen1.result.connected ? <CheckCircle2 className="w-3 h-3 shrink-0" /> : <XCircle className="w-3 h-3 shrink-0" />}
+                      <span>{printerTestState.kitchen1.result.message.split('\n').slice(-1)[0]}</span>
+                    </div>
                   )}
-                </Button>
+                </div>
 
-                <p className="text-[11px] text-violet-500 text-center">
-                  {tc(
-                    "💡 الجهاز الذي يشغّل الوكيل والطابعة يجب أن يكونا على نفس الشبكة (192.168.1.x)",
-                    "💡 The relay device and printer must be on the same network (192.168.1.x)"
+                {/* ── طابعة المطبخ 2 ── */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-green-500" />
+                    <Label className="text-sm font-bold text-green-800">طابعة المطبخ 2 (Kitchen 2)</Label>
+                    <Badge variant="outline" className="text-[10px] text-green-600 border-green-300">
+                      {settings.kitchen2PrinterIp || 'غير محدد'}
+                    </Badge>
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="192.168.1.xxx — IP الطابعة الثالثة"
+                      value={settings.kitchen2PrinterIp || ''}
+                      onChange={(e) => updateSetting('kitchen2PrinterIp', e.target.value.trim())}
+                      className="font-mono text-sm border-green-300 focus:border-green-500 flex-1"
+                      data-testid="input-kitchen2-printer-ip"
+                      dir="ltr"
+                    />
+                    <Input
+                      placeholder="9100"
+                      value={String(settings.kitchen2PrinterPort || 9100)}
+                      onChange={(e) => updateSetting('kitchen2PrinterPort', Number(e.target.value) || 9100)}
+                      className="font-mono text-sm border-green-300 w-20"
+                      data-testid="input-kitchen2-printer-port"
+                      type="number"
+                      dir="ltr"
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => handleTestPrinter('kitchen2')}
+                      disabled={printerTestState.kitchen2.testing || !settings.kitchen2PrinterIp?.trim()}
+                      className="bg-green-600 hover:bg-green-700 text-white shrink-0"
+                      data-testid="button-test-kitchen2-printer"
+                    >
+                      {printerTestState.kitchen2.testing
+                        ? <RefreshCw className="w-3 h-3 animate-spin" />
+                        : <TestTube2 className="w-3 h-3" />}
+                    </Button>
+                  </div>
+                  {printerTestState.kitchen2.result && (
+                    <div className={`flex items-center gap-2 text-xs rounded px-2 py-1 ${printerTestState.kitchen2.result.connected ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                      {printerTestState.kitchen2.result.connected ? <CheckCircle2 className="w-3 h-3 shrink-0" /> : <XCircle className="w-3 h-3 shrink-0" />}
+                      <span>{printerTestState.kitchen2.result.message.split('\n').slice(-1)[0]}</span>
+                    </div>
                   )}
-                </p>
+                  <p className="text-[11px] text-green-600">
+                    💡 اترك فارغاً إذا كان لديك طابعتان مطبخ فقط (ستُطبع نسخة المطبخ على الطابعتين في نفس الوقت)
+                  </p>
+                </div>
               </div>
             </>
           )}
