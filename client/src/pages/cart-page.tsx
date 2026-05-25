@@ -11,6 +11,7 @@ import SarIcon from "@/components/sar-icon";
 import { useCustomer } from "@/contexts/CustomerContext";
 import { useAuthModal } from "@/contexts/AuthModalContext";
 import { customerStorage } from "@/lib/customer-storage";
+import { brand } from "@/lib/brand";
 
 export default function CartPage() {
   const translation = useTranslation();
@@ -128,7 +129,7 @@ export default function CartPage() {
                             className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-xl shadow-lg"
                             loading="lazy"
                             onError={(e) => {
-                              e.currentTarget.src = "/images/default-coffee.png"; e.currentTarget.style.objectFit = "contain"; e.currentTarget.style.padding = "8px"; if (e.currentTarget.parentElement) e.currentTarget.parentElement.style.background = "#1a1a1a";
+                              e.currentTarget.src = brand.logoCustomer; e.currentTarget.style.objectFit = "contain"; e.currentTarget.style.padding = "8px";
                             }}
                           />
                           <div className={`absolute -top-1 sm:-top-2 w-5 h-5 sm:w-6 sm:h-6 bg-primary rounded-full flex items-center justify-center shadow-md ${isAr ? '-right-1 sm:-right-2' : '-left-1 sm:-left-2'}`}>
