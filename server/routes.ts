@@ -3067,12 +3067,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ? pg.paymob.integrationIds.map(Number).filter(Boolean)
             : [];
 
+          // Determine site URL from request or env
+          const siteOrigin = process.env.SITE_URL
+            || (req.headers.origin as string)
+            || `${req.protocol}://${req.headers.host}`
+            || 'https://www.chefsplace.online';
+
           try {
             const amountHalalas = Math.round(Number(amount) * 100);
             const intentBody: any = {
               amount: amountHalalas,
               currency: currency || 'SAR',
-              payment_methods: integrationIds,
+              // Only include payment_methods if we have IDs — omitting lets PayMob show all methods
+              ...(integrationIds.length > 0 ? { payment_methods: integrationIds } : {}),
               items: [],
               billing_data: {
                 first_name: (customerName || 'Guest').split(' ')[0] || 'Guest',
@@ -3091,10 +3098,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               },
               extras: { order_ref: orderId || internalSessionId },
               special_reference: orderId || internalSessionId,
-              notification_url: `${process.env.SITE_URL || 'https://www.chefsplace.online'}/api/payments/paymob/webhook`,
+              notification_url: `${siteOrigin}/api/payments/paymob/webhook`,
               redirection_url: returnUrl
                 ? `${returnUrl}${returnUrl.includes('?') ? '&' : '?'}session=${internalSessionId}`
-                : `${process.env.SITE_URL || 'https://www.chefsplace.online'}/payment-return-iframe?session=${internalSessionId}&orderRef=${encodeURIComponent(orderId || internalSessionId)}`,
+                : `${siteOrigin}/payment-return-iframe?session=${internalSessionId}&orderRef=${encodeURIComponent(orderId || internalSessionId)}`,
             };
 
             const intentRes = await fetch(`${baseUrl}/v1/intention/`, {
@@ -3966,9 +3973,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       if (pg.provider === 'paymob') {
+        const secretKey = pg.paymob?.secretKey || process.env.PAYMOB_SECRET_KEY;
+        const publicKey = pg.paymob?.publicKey || process.env.PAYMOB_PUBLIC_KEY;
         const apiKey = pg.paymob?.apiKey;
+
+        // ── PayMob Saudi Arabia test (Secret Key / Intention API) ──
+        if (secretKey && publicKey) {
+          try {
+            const baseUrl = pg.paymob?.baseUrl || 'https://ksa.paymob.com';
+            const testRes = await fetch(`${baseUrl}/v1/intention/`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${secretKey}` },
+              body: JSON.stringify({
+                amount: 100,
+                currency: 'SAR',
+                payment_methods: [],
+                items: [],
+                billing_data: {
+                  first_name: 'Test', last_name: 'Test', email: 'test@test.com',
+                  phone_number: '0500000000', street: 'N/A', building: 'N/A',
+                  floor: 'N/A', apartment: 'N/A', city: 'Riyadh', country: 'SAU',
+                  state: 'N/A', postal_code: 'N/A',
+                },
+                special_reference: `test-${Date.now()}`,
+              }),
+            });
+            const testData = await testRes.json() as any;
+            if (testData.client_secret) {
+              return res.json({ success: true, message: "اتصال Paymob السعودية ناجح ✓", provider: 'paymob', flow: 'sa' });
+            } else {
+              return res.json({ success: false, message: "فشل اتصال Paymob — تحقق من Secret Key و Public Key", details: testData?.detail || testData?.message || JSON.stringify(testData).slice(0, 150) });
+            }
+          } catch (err: any) {
+            return res.json({ success: false, message: `خطأ في الاتصال بـ Paymob: ${err.message}` });
+          }
+        }
+
+        // ── PayMob Legacy test (Egypt / API Key) ──
         if (!apiKey) {
-          return res.json({ success: false, message: "مفتاح API لـ Paymob غير مكوّن" });
+          return res.json({ success: false, message: "مفاتيح Paymob غير مكوّنة — أدخل Secret Key و Public Key" });
         }
         try {
           const authRes = await fetch('https://accept.paymob.com/api/auth/tokens', {
