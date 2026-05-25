@@ -1738,3 +1738,70 @@ export async function printSimpleReceipt(data: TaxInvoiceData): Promise<void> {
     showPrintButton: true 
   });
 }
+
+export async function printRefundThermal(opts: {
+  shopName?: string;
+  refundId: string;
+  originalOrderNumber: string | number;
+  items: Array<{ nameAr: string; nameEn?: string; quantity: number; unitPrice: number; subtotal: number }>;
+  refundAmount: number;
+  paymentMethod: 'cash' | 'card' | 'split';
+  cashAmount?: number;
+  cardAmount?: number;
+  reason: string;
+  employeeName?: string;
+  date: string;
+  originalPaymentMethod?: string;
+}): Promise<void> {
+  const shopName = opts.shopName || COMPANY_NAME;
+  const payMethodLabel =
+    opts.paymentMethod === 'cash' ? 'نقدي' :
+    opts.paymentMethod === 'card' ? 'بطاقة' : 'مقسّم';
+
+  const itemsRows = opts.items.map(it =>
+    `<tr>
+      <td style="padding:2px 4px;text-align:right;">${it.nameAr}</td>
+      <td style="padding:2px 4px;text-align:center;">${it.quantity}</td>
+      <td style="padding:2px 4px;text-align:left;">${it.subtotal.toFixed(2)}</td>
+    </tr>`
+  ).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: Tahoma, Arial, sans-serif; font-size:12px; color:#000; width:80mm; }
+    .center { text-align:center; }
+    .bold { font-weight:bold; }
+    .line { border-top:1px dashed #000; margin:4px 0; }
+    table { width:100%; border-collapse:collapse; font-size:11px; }
+    th { background:#eee; padding:2px 4px; }
+  </style>
+</head>
+<body>
+  <div class="center bold" style="font-size:16px;margin-bottom:4px;">${shopName}</div>
+  <div class="center" style="font-size:13px;font-weight:bold;color:#c00;">استرجاع / مرتجع</div>
+  <div class="line"></div>
+  <div>رقم الاسترجاع: <b>${opts.refundId}</b></div>
+  <div>الطلب الأصلي: <b>#${opts.originalOrderNumber}</b></div>
+  <div>التاريخ: ${opts.date}</div>
+  ${opts.employeeName ? `<div>الموظف: ${opts.employeeName}</div>` : ''}
+  <div class="line"></div>
+  <table>
+    <thead><tr><th>الصنف</th><th>الكمية</th><th>الإجمالي</th></tr></thead>
+    <tbody>${itemsRows}</tbody>
+  </table>
+  <div class="line"></div>
+  <div class="bold" style="font-size:14px;">إجمالي الاسترجاع: ${opts.refundAmount.toFixed(2)} ر.س</div>
+  <div>طريقة الاسترداد: ${payMethodLabel}</div>
+  ${opts.paymentMethod === 'split' ? `<div>نقدي: ${(opts.cashAmount||0).toFixed(2)} | بطاقة: ${(opts.cardAmount||0).toFixed(2)}</div>` : ''}
+  <div>السبب: ${opts.reason}</div>
+  <div class="line"></div>
+  <div class="center" style="margin-top:6px;">شكراً لتعاملكم معنا</div>
+</body>
+</html>`;
+
+  openPrintWindow(html, `استرجاع - ${opts.refundId}`, { paperWidth: '80mm', autoPrint: true, showPrintButton: false });
+}
