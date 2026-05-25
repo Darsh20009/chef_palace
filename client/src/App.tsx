@@ -141,6 +141,21 @@ const EthernetPrinterSetup = lazy(() => import("@/pages/ethernet-printer-setup")
 const B2BMarketplace = lazy(() => import("@/pages/b2b-marketplace"));
 const PartnerProgram = lazy(() => import("@/pages/partner-program"));
 const DriveThroughPage = lazy(() => import("@/pages/drive-through"));
+const PayPage = lazy(() => import("@/pages/pay"));
+const InventoryHub = lazy(() => import("@/pages/inventory-hub"));
+const EmployeesHub = lazy(() => import("@/pages/employees-hub"));
+const ReliabilityHub = lazy(() => import("@/pages/reliability-hub"));
+const EcosystemHub = lazy(() => import("@/pages/ecosystem-hub"));
+const PerformanceDashboard = lazy(() => import("@/pages/performance-dashboard"));
+const CodeQualityDashboard = lazy(() => import("@/pages/code-quality-dashboard"));
+const ManagerAuditLogs = lazy(() => import("@/pages/manager-audit-logs"));
+const ManagerSmartReports = lazy(() => import("@/pages/manager-smart-reports"));
+const OrderReceipt = lazy(() => import("@/pages/order-receipt"));
+const GeneralCheckin = lazy(() => import("@/pages/general-checkin"));
+const SystemGuide = lazy(() => import("@/pages/system-guide"));
+const AIAutomation = lazy(() => import("@/pages/ai-automation"));
+const CurbsidePage = lazy(() => import("@/pages/curbside"));
+const TahalyliPage = lazy(() => import("@/pages/tahalyli"));
 const chefsplaceLogo = "/logo.png";
 const chefsplaceLogoStaff = "/logo.png";
 
@@ -345,8 +360,34 @@ function AppRouter() {
       <Route path="/manager/b2b"><AuthGuard userType="manager"><B2BMarketplace /></AuthGuard></Route>
       <Route path="/manager/partners"><AuthGuard userType="manager"><PartnerProgram /></AuthGuard></Route>
 
-      {/* Drive-Through Menu */}
+      {/* Drive-Through & Curbside */}
       <Route path="/drive-through"><DriveThroughPage /></Route>
+      <Route path="/curbside"><CurbsidePage /></Route>
+
+      {/* Pay page (public - for QR table/order payment) */}
+      <Route path="/pay/order/:id"><PayPage /></Route>
+      <Route path="/pay/table/:qrToken"><PayPage /></Route>
+
+      {/* Order Receipt (public) */}
+      <Route path="/order-receipt/:id"><OrderReceipt /></Route>
+
+      {/* General Check-in */}
+      <Route path="/checkin"><GeneralCheckin /></Route>
+
+      {/* Tahalyli (loyalty landing) */}
+      <Route path="/tahalyli"><TahalyliPage /></Route>
+
+      {/* Manager extended routes */}
+      <Route path="/manager/audit-logs"><AuthGuard userType="manager" allowedRoles={["owner", "admin", "manager"]}><ManagerAuditLogs /></AuthGuard></Route>
+      <Route path="/manager/smart-reports"><AuthGuard userType="manager" allowedRoles={["owner", "admin", "manager"]}><ManagerSmartReports /></AuthGuard></Route>
+      <Route path="/manager/inventory/hub"><AuthGuard userType="manager"><InventoryHub /></AuthGuard></Route>
+      <Route path="/manager/employees-hub"><AuthGuard userType="manager" allowedRoles={["owner", "admin", "manager"]}><EmployeesHub /></AuthGuard></Route>
+      <Route path="/manager/reliability"><AuthGuard userType="manager" allowedRoles={["owner", "admin"]}><ReliabilityHub /></AuthGuard></Route>
+      <Route path="/manager/ecosystem"><AuthGuard userType="manager" allowedRoles={["owner", "admin"]}><EcosystemHub /></AuthGuard></Route>
+      <Route path="/manager/performance"><AuthGuard userType="manager" allowedRoles={["owner", "admin"]}><PerformanceDashboard /></AuthGuard></Route>
+      <Route path="/manager/code-quality"><AuthGuard userType="manager" allowedRoles={["owner", "admin"]}><CodeQualityDashboard /></AuthGuard></Route>
+      <Route path="/manager/ai-automation"><AuthGuard userType="manager" allowedRoles={["owner", "admin"]}><AIAutomation /></AuthGuard></Route>
+      <Route path="/system-guide"><SystemGuide /></Route>
 
       {/* Driver Portal routes */}
       <Route path="/driver/login"><DriverLogin /></Route>
