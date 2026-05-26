@@ -1805,3 +1805,83 @@ export async function printRefundThermal(opts: {
 
   openPrintWindow(html, `استرجاع - ${opts.refundId}`, { paperWidth: '80mm', autoPrint: true, showPrintButton: false });
 }
+
+// ── Shift/Z-Report thermal print ─────────────────────────────────────────────
+export function printShiftThermal(shift: {
+  shiftNumber?: number | string;
+  employeeName?: string;
+  openedAt?: string | Date;
+  totalOrders?: number;
+  totalSales?: number;
+  totalCash?: number;
+  totalCard?: number;
+  paymentBreakdown?: Record<string, number>;
+}): void {
+  const { date: fmtD, time: fmtT } = formatDate(shift.openedAt ? new Date(shift.openedAt).toISOString() : new Date().toISOString());
+  const pb = shift.paymentBreakdown || {};
+  const pbRows = Object.entries(pb)
+    .filter(([, v]) => (v as number) > 0)
+    .map(([k, v]) => `<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;"><span>${k}</span><span>${(v as number).toFixed(2)} ر.س</span></div>`)
+    .join('');
+
+  const html = `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: Tahoma, Arial, sans-serif; font-size:13px; color:#000; width:80mm; padding:8px; }
+    .center { text-align:center; }
+    .bold { font-weight:bold; }
+    .line { border-top:1px dashed #000; margin:6px 0; }
+    .row { display:flex; justify-content:space-between; padding:3px 0; }
+    .big { font-size:18px; font-weight:bold; }
+    @media print { body { margin:0; } }
+  </style></head><body>
+    <div class="center bold" style="font-size:18px;margin-bottom:4px;">${COMPANY_NAME}</div>
+    <div class="center" style="font-size:13px;font-weight:bold;">تقرير الوردية (Z-Report)</div>
+    <div class="line"></div>
+    <div class="row"><span>رقم الوردية:</span><span class="bold">${shift.shiftNumber || '—'}</span></div>
+    <div class="row"><span>الموظف:</span><span>${shift.employeeName || '—'}</span></div>
+    <div class="row"><span>تاريخ الفتح:</span><span>${fmtD}</span></div>
+    <div class="row"><span>وقت الفتح:</span><span>${fmtT}</span></div>
+    <div class="line"></div>
+    <div class="row"><span>عدد الطلبات:</span><span class="bold">${shift.totalOrders ?? 0}</span></div>
+    <div class="row"><span>إجمالي المبيعات:</span><span class="bold big">${(shift.totalSales ?? 0).toFixed(2)} ر.س</span></div>
+    <div class="line"></div>
+    <div class="row"><span>نقدي:</span><span>${(shift.totalCash ?? 0).toFixed(2)} ر.س</span></div>
+    <div class="row"><span>بطاقة:</span><span>${(shift.totalCard ?? 0).toFixed(2)} ر.س</span></div>
+    ${pbRows ? `<div class="line"></div>${pbRows}` : ''}
+    <div class="line"></div>
+    <div class="center" style="margin-top:8px;font-size:11px;">نهاية التقرير</div>
+  </body></html>`;
+
+  openPrintWindow(html, `تقرير الوردية - ${shift.shiftNumber || ''}`, { paperWidth: '80mm', autoPrint: true, showPrintButton: false });
+}
+
+// ── Receipt section printer (customer / kitchen / both) ───────────────────────
+export async function printReceiptSection(data: TaxInvoiceData, section: 'customer' | 'kitchen' | 'both'): Promise<void> {
+  if (section === 'customer' || section === 'both') {
+    await printTaxInvoice(data, { autoPrint: true });
+  }
+  if (section === 'kitchen' || section === 'both') {
+    const kitchenData: KitchenOrderData = {
+      orderNumber: data.orderNumber,
+      tableNumber: data.tableNumber,
+      items: data.items,
+      timestamp: data.date,
+    };
+    await printKitchenOrder(kitchenData);
+  }
+}
+
+// ── Preview window showing customer + employee receipt side-by-side ───────────
+export async function openReceiptPreviewWindow(data: TaxInvoiceData): Promise<void> {
+  await printTaxInvoice(data, { autoPrint: false });
+}
+
+// ── Pre-warm ZATCA QR code cache (no-op stub, warming happens inside printTaxInvoice) ──
+export function prewarmZatcaQr(_opts: {
+  orderNumber: string | number;
+  total: string | number;
+  date: string;
+  vatNumber?: string;
+}): void {
+  // QR generation is fast and happens inline during printing; this is intentionally a no-op.
+}
