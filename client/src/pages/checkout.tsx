@@ -180,6 +180,23 @@ function LoyaltyCheckoutCard({
   );
 }
 
+function getCartItemUnitPrice(i: any): number {
+  let base = Number(i.coffeeItem?.price) || 0;
+  if (i.selectedSize && i.coffeeItem?.availableSizes) {
+    const size = i.coffeeItem.availableSizes.find((s: any) => s.nameAr === i.selectedSize);
+    if (size) base = Number(size.price) || 0;
+  }
+  const enrichedAddonsPrice = (i.selectedAddons || []).reduce((sum: number, addonId: string) => {
+    if (i.enrichedAddons) {
+      const addon = i.enrichedAddons.find((a: any) => a.id === addonId || a._id === addonId);
+      return sum + (Number(addon?.price) || 0);
+    }
+    return sum;
+  }, 0);
+  const inlineAddonsPrice = ((i as any).selectedItemAddons || []).reduce((s: number, a: any) => s + (Number(a.price) || 0), 0);
+  return base + enrichedAddonsPrice + inlineAddonsPrice;
+}
+
 export default function CheckoutPage() {
   const tc = useTranslate();
   const { t, i18n } = useTranslation();
@@ -617,6 +634,19 @@ export default function CheckoutPage() {
     );
   }, [selectedPaymentMethod, cashMethod]);
 
+  const paymobAutoTriggeredRef = useRef<string | null>(null);
+  useEffect(() => {
+    const isPaymob = selectedPaymentMethod === 'paymob-card' || selectedPaymentMethod === 'paymob-apple-pay';
+    if (!isPaymob) {
+      paymobAutoTriggeredRef.current = null;
+      return;
+    }
+    if (paymobAutoTriggeredRef.current === selectedPaymentMethod) return;
+    if (showPaymobCheckout) return;
+    paymobAutoTriggeredRef.current = selectedPaymentMethod;
+    initiatePaymobDirect();
+  }, [selectedPaymentMethod, showPaymobCheckout]);
+
   const createOrderMutation = useMutation({
     mutationFn: async (orderData: any) => {
       const response = await apiRequest("POST", "/api/orders", orderData);
@@ -776,7 +806,6 @@ export default function CheckoutPage() {
       customerEmail,
       items: cartItems.map(i => {
         const inlineAddons = (i as any).selectedItemAddons || [];
-        const addonsExtra = inlineAddons.reduce((s: number, a: any) => s + (Number(a.price) || 0), 0);
         const sel = (i as any).selectedSize || (i as any).customization?.selectedSize;
         const selAddons = (i as any).selectedAddons || [];
         const customization: any = {};
@@ -787,7 +816,7 @@ export default function CheckoutPage() {
         return {
           coffeeItemId: i.coffeeItemId,
           quantity: i.quantity,
-          price: (i.coffeeItem?.price || 0) + addonsExtra,
+          price: getCartItemUnitPrice(i),
           nameAr: i.coffeeItem?.nameAr || "",
           nameEn: i.coffeeItem?.nameEn || "",
           selectedSize: sel,
@@ -925,7 +954,6 @@ export default function CheckoutPage() {
       customerEmail: customerEmail,
       items: cartItems.map(i => {
         const inlineAddons = (i as any).selectedItemAddons || [];
-        const addonsExtra = inlineAddons.reduce((s: number, a: any) => s + (Number(a.price) || 0), 0);
         const sel = (i as any).selectedSize || (i as any).customization?.selectedSize;
         const selAddons = (i as any).selectedAddons || [];
         const customization: any = {};
@@ -936,7 +964,7 @@ export default function CheckoutPage() {
         return {
           coffeeItemId: i.coffeeItemId,
           quantity: i.quantity,
-          price: (i.coffeeItem?.price || 0) + addonsExtra,
+          price: getCartItemUnitPrice(i),
           nameAr: i.coffeeItem?.nameAr || "",
           nameEn: i.coffeeItem?.nameEn || "",
           selectedSize: sel,
