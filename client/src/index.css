@@ -242,7 +242,7 @@ a, button, input, select, textarea, label, [role="button"] {
   --elevate-2: rgba(255,255,255, .09);
 
   /* ═══════════════════════════════════════════════════════════════
-     🌙 BLACK ROSE DARK MODE - Modern Night Theme
+     🌙 DARK MODE - Modern Night Theme
      ═══════════════════════════════════════════════════════════════ */
   
   --background: 220 25% 10%; /* Deep navy */
@@ -252,20 +252,20 @@ a, button, input, select, textarea, label, [role="button"] {
   --card-foreground: 0 0% 92%; /* Light text */
   --card-border: 220 18% 20%; /* Card border */
 
-  --sidebar: 20 30% 10%; /* Deep brown sidebar */
+  --sidebar: 180 40% 12%; /* Deep teal sidebar */
   --sidebar-foreground: 0 0% 92%; /* Light text */
-  --sidebar-border: 20 25% 14%; /* Dark brown border */
-  --sidebar-primary: 25 72% 47%; /* Warm copper orange */
+  --sidebar-border: 180 35% 16%; /* Dark teal border */
+  --sidebar-primary: 160 55% 50%; /* Bright green */
   --sidebar-primary-foreground: 0 0% 100%; /* White text */
-  --sidebar-accent: 20 25% 18%; /* Elevated brown accent */
+  --sidebar-accent: 180 30% 20%; /* Elevated teal accent */
   --sidebar-accent-foreground: 0 0% 90%; /* Light text */
-  --sidebar-ring: 25 72% 47%; /* Copper ring */
+  --sidebar-ring: 160 55% 50%; /* Green ring */
 
   --popover: 220 22% 14%; /* Card surface */
   --popover-foreground: 0 0% 92%; /* Light text */
   --popover-border: 220 18% 20%; /* Border */
 
-  --primary: 25 72% 47%; /* Warm copper orange */
+  --primary: 160 55% 48%; /* Bright teal green */
   --primary-foreground: 0 0% 100%; /* White text */
 
   --secondary: 220 18% 20%; /* Dark secondary */
@@ -274,24 +274,24 @@ a, button, input, select, textarea, label, [role="button"] {
   --muted: 220 12% 35%; /* Muted gray */
   --muted-foreground: 220 10% 60%; /* Gray text */
 
-  --accent: 35 80% 55%; /* Warm golden accent */
+  --accent: 200 70% 55%; /* Bright blue accent */
   --accent-foreground: 0 0% 100%; /* Light text */
 
   --destructive: 0 70% 55%;
   --destructive-foreground: 0 0% 100%;
 
-  --success: 120 55% 42%;
+  --success: 160 70% 45%;
   --success-foreground: 0 0% 100%;
 
   --warning: 38 95% 55%;
   --warning-foreground: 38 100% 12%;
 
   --input: 220 20% 16%;
-  --ring: 25 72% 47%;
+  --ring: 160 55% 48%;
 
-  --chart-1: 25 72% 47%;
+  --chart-1: 160 55% 48%;
   --chart-2: 200 70% 55%;
-  --chart-3: 35 85% 55%;
+  --chart-3: 160 70% 45%;
   --chart-4: 0 70% 55%;
   --chart-5: 270 60% 60%;
 
