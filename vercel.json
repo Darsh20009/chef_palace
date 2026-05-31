@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "buildCommand": "npm run build",
+  "buildCommand": "npm run build && node_modules/.bin/esbuild server/vercel-entry.ts --bundle --packages=external --platform=node --format=esm --outfile=api/index.js --tsconfig=tsconfig.json --external:bufferutil --external:utf-8-validate --external:fsevents",
   "outputDirectory": "dist/public",
   "functions": {
-    "api/index.ts": {
+    "api/index.js": {
       "maxDuration": 30,
       "memory": 1024
     }
