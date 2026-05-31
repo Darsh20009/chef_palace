@@ -1,0 +1,368 @@
+Logs
+
+
+Search logs...
+18:57:00
+19:04:50
+19:12:20
+19:27:00
+Time
+Status
+Host
+Request
+Messages
+May 31 19:26:29.76
+POST
+500
+chef-palace-five.vercel.app
+/api/employees/login
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:26:18.12
+POST
+500
+chef-palace-five.vercel.app
+/api/employees/login
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:26:11.80
+GET
+500
+chef-palace-five.vercel.app
+/api/customer/proximity-notify
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:26:10.34
+GET
+500
+chef-palace-five.vercel.app
+/api/public/loyalty-settings
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:26:10.33
+GET
+500
+chef-palace-five.vercel.app
+/api/cart/session-1780244469840-r92ww25hg
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:26:10.33
+GET
+500
+chef-palace-five.vercel.app
+/api/coffee-items
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:26:10.30
+GET
+500
+chef-palace-five.vercel.app
+/api/product-addons
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:26:10.30
+GET
+500
+chef-palace-five.vercel.app
+/api/custom-banners
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:26:10.30
+GET
+500
+chef-palace-five.vercel.app
+/api/payment-methods
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:26:10.29
+GET
+500
+chef-palace-five.vercel.app
+/api/menu-categories
+Node.js process exited with exit status: 1. The logs above can help with debugging the issue. Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' }
+May 31 19:26:10.27
+GET
+500
+chef-palace-five.vercel.app
+/api/business-config
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:26:08.85
+GET
+500
+chef-palace-five.vercel.app
+/api/public/loyalty-settings
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:26:08.85
+GET
+500
+chef-palace-five.vercel.app
+/api/payment-methods
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:26:08.85
+GET
+500
+chef-palace-five.vercel.app
+/api/product-addons
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:26:08.85
+GET
+500
+chef-palace-five.vercel.app
+/api/custom-banners
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:26:08.84
+GET
+500
+chef-palace-five.vercel.app
+/api/menu-categories
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:26:08.82
+GET
+500
+chef-palace-five.vercel.app
+/api/coffee-items
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:26:08.81
+GET
+500
+chef-palace-five.vercel.app
+/api/business-config
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:26:08.81
+GET
+500
+chef-palace-five.vercel.app
+/api/cart/session-1780244469840-r92ww25hg
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:26:08.46
+GET
+500
+chef-palace-five.vercel.app
+/api/public/loyalty-settings
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:26:08.46
+GET
+500
+chef-palace-five.vercel.app
+/api/custom-banners
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:26:08.46
+GET
+500
+chef-palace-five.vercel.app
+/api/payment-methods
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:26:08.44
+GET
+500
+chef-palace-five.vercel.app
+/api/product-addons
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:26:08.44
+GET
+500
+chef-palace-five.vercel.app
+/api/menu-categories
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:26:08.44
+GET
+500
+chef-palace-five.vercel.app
+/api/coffee-items
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:26:08.44
+GET
+500
+chef-palace-five.vercel.app
+/api/business-config
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:26:08.44
+GET
+500
+chef-palace-five.vercel.app
+/api/cart/session-1780244469840-r92ww25hg
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:21:18.39
+POST
+500
+chef-palace-five.vercel.app
+/api/customer/proximity-notify
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:21:17.65
+GET
+500
+chef-palace-five.vercel.app
+/api/coffee-items/with-addons
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:21:17.65
+GET
+500
+chef-palace-five.vercel.app
+/api/coffee-items/addons-preview
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:21:17.65
+GET
+500
+chef-palace-five.vercel.app
+/api/promo-offers
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:21:17.64
+GET
+500
+chef-palace-five.vercel.app
+/api/coffee-items
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:21:17.62
+GET
+500
+chef-palace-five.vercel.app
+/api/menu-categories
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:21:17.61
+GET
+500
+chef-palace-five.vercel.app
+/api/custom-banners
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:21:17.61
+GET
+500
+chef-palace-five.vercel.app
+/api/business-config
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:21:17.60
+GET
+500
+chef-palace-five.vercel.app
+/api/product-addons
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:21:16.25
+GET
+500
+chef-palace-five.vercel.app
+/api/coffee-items/with-addons
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:21:16.25
+GET
+500
+chef-palace-five.vercel.app
+/api/coffee-items/addons-preview
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:21:16.25
+GET
+500
+chef-palace-five.vercel.app
+/api/product-addons
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:21:16.25
+GET
+500
+chef-palace-five.vercel.app
+/api/business-config
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:21:16.25
+GET
+500
+chef-palace-five.vercel.app
+/api/menu-categories
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:21:16.25
+GET
+500
+chef-palace-five.vercel.app
+/api/promo-offers
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:21:16.24
+GET
+500
+chef-palace-five.vercel.app
+/api/coffee-items
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:21:16.24
+GET
+500
+chef-palace-five.vercel.app
+/api/custom-banners
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:21:14.10
+GET
+500
+chef-palace-five.vercel.app
+/api/product-addons
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:21:14.09
+GET
+500
+chef-palace-five.vercel.app
+/api/payment-methods
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:21:14.09
+GET
+500
+chef-palace-five.vercel.app
+/api/coffee-items
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:21:14.09
+GET
+500
+chef-palace-five.vercel.app
+/api/cart/session-1780244469840-r92ww25hg
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:21:14.08
+GET
+500
+chef-palace-five.vercel.app
+/api/menu-categories
+Node.js process exited with exit status: 1. The logs above can help with debugging the issue. Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' }
+May 31 19:21:14.07
+GET
+500
+chef-palace-five.vercel.app
+/api/public/loyalty-settings
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:21:13.45
+GET
+500
+chef-palace-five.vercel.app
+/api/business-config
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:21:11.61
+GET
+500
+chef-palace-five.vercel.app
+/api/menu-categories
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue. Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:21:11.61
+GET
+500
+chef-palace-five.vercel.app
+/api/payment-methods
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue. Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:21:11.61
+GET
+500
+chef-palace-five.vercel.app
+/api/coffee-items
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue. Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:21:11.61
+GET
+500
+chef-palace-five.vercel.app
+/api/product-addons
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue. Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:21:11.61
+GET
+500
+chef-palace-five.vercel.app
+/api/cart/session-1780244469840-r92ww25hg
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue. Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:21:11.61
+GET
+500
+chef-palace-five.vercel.app
+/api/public/loyalty-settings
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue. Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:21:11.61
+GET
+500
+chef-palace-five.vercel.app
+/api/custom-banners
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue. Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+May 31 19:21:11.61
+GET
+500
+chef-palace-five.vercel.app
+/api/business-config
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/var/task/server/routes' imported from /var/task/api/index.js at finalizeResolution (node:internal/modules/esm/resolve:281:11) at moduleResolve (node:internal/modules/esm/resolve:871:10) at moduleResolveWithNodePath (node:internal/modules/esm/resolve:997:14) at defaultResolve (node:internal/modules/esm/resolve:1040:79) at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20) at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38) at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52) at #resolve (node:internal/modules/esm/loader:701:17) at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35) at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33) { code: 'ERR_MODULE_NOT_FOUND', url: 'file:///var/task/server/routes' } Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+No more logs to show within selected timeline
