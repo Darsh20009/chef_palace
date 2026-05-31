@@ -64,6 +64,15 @@ import { Types } from "mongoose";
 import { nanoid } from "nanoid";
 const isValidObjectId = (id: string) => Types.ObjectId.isValid(id);
 
+// Upload directory helper — uses /tmp on Vercel (read-only FS), local attached_assets otherwise
+const IS_VERCEL = !!process.env.VERCEL;
+function getUploadsDir(subDir: string): string {
+  const base = IS_VERCEL ? '/tmp/uploads' : path.resolve(__dirname, '..', 'attached_assets');
+  const dir = path.join(base, subDir);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
 // ─── Centralized VAT Rate ────────────────────────────────────────────────────
 // Saudi Arabia standard VAT rate (15%). Change here to update all calculations.
 // The value in BusinessConfigModel.taxRate is authoritative; this constant is
@@ -706,7 +715,7 @@ async function sendInvoiceEmail(to: string, invoiceNumber: string, invoiceData: 
 }
 
 // Configure multer for file uploads
-const uploadsDir = path.join(__dirname, '..', 'attached_assets', 'receipts');
+const uploadsDir = getUploadsDir('receipts');
 const storage_multer = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, uploadsDir);
@@ -863,7 +872,7 @@ async function calcFreeDrinkThreshold(tenantId: string, pointsPerSar = 20, fallb
   }
 }
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express, options: { skipWebSocket?: boolean } = {}): Promise<Server> {
   registerObjectStorageRoutes(app);
 
   // Send manual email to customer
@@ -12505,7 +12514,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     };
 
   // Configure multer for employee image uploads
-  const employeeUploadsDir = path.join(__dirname, '..', 'attached_assets', 'employees');
+  const employeeUploadsDir = getUploadsDir('employees');
   const employeeStorage = multer.diskStorage({
     destination: function (req, file, cb) {
       cb(null, employeeUploadsDir);
@@ -12573,7 +12582,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Configure multer for drink image uploads
-  const drinksUploadsDir = path.resolve(__dirname, '..', 'attached_assets', 'drinks');
+  const drinksUploadsDir = getUploadsDir('drinks');
   const drinksStorage = multer.diskStorage({
     destination: function (req, file, cb) {
       if (!fs.existsSync(drinksUploadsDir)) {
@@ -12669,7 +12678,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Configure multer for size image uploads
-  const sizesUploadsDir = path.resolve(__dirname, '..', 'attached_assets', 'sizes');
+  const sizesUploadsDir = getUploadsDir('sizes');
   const sizesStorage = multer.diskStorage({
     destination: function (req, file, cb) {
       if (!fs.existsSync(sizesUploadsDir)) {
@@ -12711,7 +12720,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Configure multer for addon image uploads
-  const addonsUploadsDir = path.resolve(__dirname, '..', 'attached_assets', 'addons');
+  const addonsUploadsDir = getUploadsDir('addons');
   const addonsStorage = multer.diskStorage({
     destination: function (req, file, cb) {
       if (!fs.existsSync(addonsUploadsDir)) {
@@ -12765,7 +12774,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Configure multer for attendance photo uploads
-  const attendanceUploadsDir = path.join(__dirname, '..', 'attached_assets', 'attendance');
+  const attendanceUploadsDir = getUploadsDir('attendance');
   const attendanceStorage = multer.diskStorage({
     destination: function (req, file, cb) {
       cb(null, attendanceUploadsDir);
@@ -19641,8 +19650,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const httpServer = createServer(app);
   
-  // Setup WebSocket for real-time order updates
-  wsManager.setup(httpServer);
+  // Setup WebSocket for real-time order updates (not supported on Vercel serverless)
+  if (!options.skipWebSocket) {
+    wsManager.setup(httpServer);
+  }
   
   return httpServer;
 }
