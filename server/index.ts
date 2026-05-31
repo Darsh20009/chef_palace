@@ -38,15 +38,16 @@ async function connectDatabase() {
   isInitializing = true;
   
   const options = {
-    serverSelectionTimeoutMS: 5000,
+    serverSelectionTimeoutMS: 10000,
     socketTimeoutMS: 45000,
     heartbeatFrequencyMS: 10000,
-    maxPoolSize: 200,
-    minPoolSize: 20,
-    waitQueueTimeoutMS: 10000,
-    connectTimeoutMS: 10000,
+    maxPoolSize: 10,
+    minPoolSize: 2,
+    waitQueueTimeoutMS: 15000,
+    connectTimeoutMS: 15000,
     maxIdleTimeMS: 60000,
-    compressors: ['zlib'] as any,
+    retryWrites: true,
+    retryReads: true,
   };
 
   try {
