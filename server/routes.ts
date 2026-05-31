@@ -2583,7 +2583,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
 
       const tenantId = getTenantIdFromRequest(req) || 'demo-tenant';
       invalidateCoffeeItemsCache(tenantId);
-      cache.del(cacheKey('with-addons', 'global'));
+      cache.invalidateKey(cacheKey('with-addons', 'global'));
       res.json(serializeDoc(updated));
     } catch (error) {
       console.error("[PUT /api/coffee-items/:id] Error:", error);
@@ -16057,7 +16057,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         notes: notes || '',
         status: 'completed',
         processedBy: req.employee?.id || '',
-        processedByName: req.employee?.name || req.employee?.nameAr || '',
+        processedByName: req.employee?.fullName || '',
       });
       await refund.save();
 
@@ -16124,7 +16124,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       }).sort({ createdAt: -1 });
       if (!order) return res.status(404).json({ error: "الطلب غير موجود" });
       
-      const existingRefunds = await RefundModel.find({ originalOrderId: order._id.toString() });
+      const existingRefunds = await RefundModel.find({ originalOrderId: (order._id as any).toString() });
       const totalRefunded = existingRefunds.reduce((s, r) => s + r.refundAmount, 0);
       const maxRefundable = (order.totalAmount || 0) - totalRefunded;
 

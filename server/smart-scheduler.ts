@@ -548,7 +548,7 @@ async function checkDineInAppointments() {
           title,
           body,
           tag: `prep-alert-${order._id}`,
-          type: "order",
+          type: "new_order",
           url: "/employee/kitchen",
           data: { orderId: String(order._id), orderNumber, arrivalTime: arrival },
         } as PushPayload);
