@@ -7,10 +7,12 @@ node_modules/.bin/esbuild server/vercel-entry.ts \
   --bundle \
   --packages=external \
   --platform=node \
-  --format=esm \
-  --outfile=api/handler.js \
+  --format=cjs \
+  --outfile=api/index.js \
   --tsconfig=tsconfig.json \
   --external:bufferutil \
   --external:utf-8-validate \
   --external:fsevents \
-  --external:@google-cloud/storage
+  --external:@google-cloud/storage \
+  --alias:@shared=./shared \
+  --alias:@=./client/src

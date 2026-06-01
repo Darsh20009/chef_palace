@@ -1,11 +1,10 @@
+"use strict";
+var __create = Object.create;
 var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
-var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
-  get: (a, b) => (typeof require !== "undefined" ? require : a)[b]
-}) : x)(function(x) {
-  if (typeof require !== "undefined") return require.apply(this, arguments);
-  throw Error('Dynamic require of "' + x + '" is not supported');
-});
+var __getProtoOf = Object.getPrototypeOf;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __esm = (fn, res) => function __init() {
   return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
 };
@@ -13,6 +12,23 @@ var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
 };
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 // shared/schema.ts
 var schema_exports = {};
@@ -145,13 +161,13 @@ __export(schema_exports, {
   insertUserSchema: () => insertUserSchema,
   insertVendorSchema: () => insertVendorSchema
 });
-import mongoose, { Schema } from "mongoose";
-import { z } from "zod";
-var CoffeeItemSchema, CoffeeItemModel, ProductAddonSchema, ProductAddonModel, WarehouseTransferSchema, WarehouseTransferModel, CoffeeItemAddonSchema, CoffeeItemAddonModel, PromoOfferSchema, PromoOfferModel, MenuCategorySchema, MenuCategoryModel, CustomBannerSchema, CustomBannerModel, CustomerSchema, CustomerModel, AppointmentSchema, AppointmentModel, PointTransferSchema, PointTransferModel, PasswordResetTokenSchema, PasswordResetTokenModel, PasswordSetupOTPSchema, PasswordSetupOTPModel, CafeSchema, CafeModel, PaymentGatewayConfigSchema, BusinessConfigSchema, BusinessConfigModel, IngredientItemSchema, IngredientItemModel, RecipeDefinitionSchema, RecipeHistorySchema, RecipeDefinitionModel, RecipeHistoryModel, WarehouseSchema, WarehouseModel, WarehouseStockSchema, WarehouseStockModel, BranchSchema, BranchModel, DiscountCodeSchema, DiscountCodeModel, OrderSchema, OrderModel, OrderItemSchema, OrderItemModel, CartItemSchema, CartItemModel, LoyaltyCardSchema, LoyaltyCardModel, StatusHistorySchema, StatusHistoryModel, CardCodeSchema, CardCodeModel, LoyaltyTransactionSchema, LoyaltyTransactionModel, LoyaltyRewardSchema, LoyaltyRewardModel, IngredientSchema, IngredientModel, CoffeeItemIngredientSchema, CoffeeItemIngredientModel, CategorySchema, CategoryModel, UserSchema, UserModel, TableSchema, TableModel, TaxInvoiceSchema, TaxInvoiceModel, RevenueSchema, RevenueModel, ExpenseSchema, ExpenseModel, CashRegisterSchema, CashRegisterModel, DailySummarySchema, DailySummaryModel, KitchenOrderSchema, KitchenOrderModel, AttendanceSchema, AttendanceModel, LocationTrackSchema, LocationTrackModel, insertCoffeeItemSchema, insertEmployeeSchema, EmployeeSchema, EmployeeModel, ManagerNotificationSchema, ManagerNotificationModel, ShiftSchema, ShiftModel, EmployeeShiftAssignmentSchema, EmployeeShiftAssignmentModel, insertOrderSchema, insertOrderItemSchema, insertCartItemSchema, insertCustomerSchema, insertPasswordResetTokenSchema, insertDiscountCodeSchema, insertLoyaltyCardSchema, insertCardCodeSchema, insertLoyaltyTransactionSchema, insertLoyaltyRewardSchema, insertIngredientSchema, insertCoffeeItemIngredientSchema, insertUserSchema, insertBranchSchema, insertCategorySchema, insertTableSchema, insertAttendanceSchema, RawItemSchema, RawItemModel, SupplierSchema, SupplierModel, BranchStockSchema, BranchStockModel, StockTransferSchema, StockTransferModel, PurchaseInvoiceSchema, PurchaseInvoiceModel, RecipeItemSchema, RecipeItemModel, RecipeSchema, RecipeModel, StockAlertSchema, StockAlertModel, StockMovementSchema, StockMovementModel, UnitConversionSchema, UnitConversionModel, insertRawItemSchema, insertSupplierSchema, insertBranchStockSchema, insertStockTransferSchema, insertPurchaseInvoiceSchema, insertRecipeItemSchema, insertStockMovementSchema, insertTaxInvoiceSchema, insertExpenseSchema, insertRevenueSchema, insertCashRegisterSchema, insertKitchenOrderSchema, insertProductAddonSchema, insertCoffeeItemAddonSchema, ProductReviewSchema, ProductReviewModel, ReferralSchema, ReferralModel, NotificationSchema, NotificationModel, insertProductReviewSchema, insertReferralSchema, insertNotificationSchema, AccountingSnapshotSchema, AccountingSnapshotModel, insertAccountingSnapshotSchema, AccountTypes, FiscalPeriodSchema, FiscalPeriodModel, CostCenterSchema, CostCenterModel, AccountSchema, AccountModel, JournalEntrySchema, JournalEntryModel, TaxRateSchema, TaxRateModel, InvoiceSchema, InvoiceModel, ExpenseErpSchema, ExpenseErpModel, VendorSchema, VendorModel, PaymentRecordSchema, PaymentRecordModel, BankStatementSchema, BankStatementModel, BankTransactionSchema, BankTransactionModel, insertAccountSchema, insertJournalEntrySchema, insertInvoiceSchema, insertExpenseErpSchema, insertVendorSchema, insertPaymentRecordSchema, DeliveryIntegrationSchema, DeliveryIntegrationModel, DeliveryZoneSchema, DeliveryZoneModel, DeliveryDriverSchema, DeliveryDriverModel, DeliveryOrderSchema, DeliveryOrderModel, insertDeliveryIntegrationSchema, insertDeliveryZoneSchema, insertDeliveryDriverSchema, insertDeliveryOrderSchema, GiftCardSchema, GiftCardModel, CashierShiftSchema, CashierShiftModel, PayrollSnapshotSchema, PayrollSnapshotModel, RefundItemSchema, RefundSchema, RefundModel;
+var import_mongoose, import_zod, CoffeeItemSchema, CoffeeItemModel, ProductAddonSchema, ProductAddonModel, WarehouseTransferSchema, WarehouseTransferModel, CoffeeItemAddonSchema, CoffeeItemAddonModel, PromoOfferSchema, PromoOfferModel, MenuCategorySchema, MenuCategoryModel, CustomBannerSchema, CustomBannerModel, CustomerSchema, CustomerModel, AppointmentSchema, AppointmentModel, PointTransferSchema, PointTransferModel, PasswordResetTokenSchema, PasswordResetTokenModel, PasswordSetupOTPSchema, PasswordSetupOTPModel, CafeSchema, CafeModel, PaymentGatewayConfigSchema, BusinessConfigSchema, BusinessConfigModel, IngredientItemSchema, IngredientItemModel, RecipeDefinitionSchema, RecipeHistorySchema, RecipeDefinitionModel, RecipeHistoryModel, WarehouseSchema, WarehouseModel, WarehouseStockSchema, WarehouseStockModel, BranchSchema, BranchModel, DiscountCodeSchema, DiscountCodeModel, OrderSchema, OrderModel, OrderItemSchema, OrderItemModel, CartItemSchema, CartItemModel, LoyaltyCardSchema, LoyaltyCardModel, StatusHistorySchema, StatusHistoryModel, CardCodeSchema, CardCodeModel, LoyaltyTransactionSchema, LoyaltyTransactionModel, LoyaltyRewardSchema, LoyaltyRewardModel, IngredientSchema, IngredientModel, CoffeeItemIngredientSchema, CoffeeItemIngredientModel, CategorySchema, CategoryModel, UserSchema, UserModel, TableSchema, TableModel, TaxInvoiceSchema, TaxInvoiceModel, RevenueSchema, RevenueModel, ExpenseSchema, ExpenseModel, CashRegisterSchema, CashRegisterModel, DailySummarySchema, DailySummaryModel, KitchenOrderSchema, KitchenOrderModel, AttendanceSchema, AttendanceModel, LocationTrackSchema, LocationTrackModel, insertCoffeeItemSchema, insertEmployeeSchema, EmployeeSchema, EmployeeModel, ManagerNotificationSchema, ManagerNotificationModel, ShiftSchema, ShiftModel, EmployeeShiftAssignmentSchema, EmployeeShiftAssignmentModel, insertOrderSchema, insertOrderItemSchema, insertCartItemSchema, insertCustomerSchema, insertPasswordResetTokenSchema, insertDiscountCodeSchema, insertLoyaltyCardSchema, insertCardCodeSchema, insertLoyaltyTransactionSchema, insertLoyaltyRewardSchema, insertIngredientSchema, insertCoffeeItemIngredientSchema, insertUserSchema, insertBranchSchema, insertCategorySchema, insertTableSchema, insertAttendanceSchema, RawItemSchema, RawItemModel, SupplierSchema, SupplierModel, BranchStockSchema, BranchStockModel, StockTransferSchema, StockTransferModel, PurchaseInvoiceSchema, PurchaseInvoiceModel, RecipeItemSchema, RecipeItemModel, RecipeSchema, RecipeModel, StockAlertSchema, StockAlertModel, StockMovementSchema, StockMovementModel, UnitConversionSchema, UnitConversionModel, insertRawItemSchema, insertSupplierSchema, insertBranchStockSchema, insertStockTransferSchema, insertPurchaseInvoiceSchema, insertRecipeItemSchema, insertStockMovementSchema, insertTaxInvoiceSchema, insertExpenseSchema, insertRevenueSchema, insertCashRegisterSchema, insertKitchenOrderSchema, insertProductAddonSchema, insertCoffeeItemAddonSchema, ProductReviewSchema, ProductReviewModel, ReferralSchema, ReferralModel, NotificationSchema, NotificationModel, insertProductReviewSchema, insertReferralSchema, insertNotificationSchema, AccountingSnapshotSchema, AccountingSnapshotModel, insertAccountingSnapshotSchema, AccountTypes, FiscalPeriodSchema, FiscalPeriodModel, CostCenterSchema, CostCenterModel, AccountSchema, AccountModel, JournalEntrySchema, JournalEntryModel, TaxRateSchema, TaxRateModel, InvoiceSchema, InvoiceModel, ExpenseErpSchema, ExpenseErpModel, VendorSchema, VendorModel, PaymentRecordSchema, PaymentRecordModel, BankStatementSchema, BankStatementModel, BankTransactionSchema, BankTransactionModel, insertAccountSchema, insertJournalEntrySchema, insertInvoiceSchema, insertExpenseErpSchema, insertVendorSchema, insertPaymentRecordSchema, DeliveryIntegrationSchema, DeliveryIntegrationModel, DeliveryZoneSchema, DeliveryZoneModel, DeliveryDriverSchema, DeliveryDriverModel, DeliveryOrderSchema, DeliveryOrderModel, insertDeliveryIntegrationSchema, insertDeliveryZoneSchema, insertDeliveryDriverSchema, insertDeliveryOrderSchema, GiftCardSchema, GiftCardModel, CashierShiftSchema, CashierShiftModel, PayrollSnapshotSchema, PayrollSnapshotModel, RefundItemSchema, RefundSchema, RefundModel;
 var init_schema = __esm({
   "shared/schema.ts"() {
     "use strict";
-    CoffeeItemSchema = new Schema({
+    import_mongoose = __toESM(require("mongoose"), 1);
+    import_zod = require("zod");
+    CoffeeItemSchema = new import_mongoose.Schema({
       id: { type: String, required: true },
       // Changed unique: false to just required
       tenantId: { type: String, required: true },
@@ -244,8 +260,8 @@ var init_schema = __esm({
     CoffeeItemSchema.index({ isAvailable: 1 });
     CoffeeItemSchema.index({ createdByBranchId: 1 });
     CoffeeItemSchema.index({ id: 1 }, { unique: true });
-    CoffeeItemModel = mongoose.model("CoffeeItem", CoffeeItemSchema);
-    ProductAddonSchema = new Schema({
+    CoffeeItemModel = import_mongoose.default.model("CoffeeItem", CoffeeItemSchema);
+    ProductAddonSchema = new import_mongoose.Schema({
       id: { type: String, required: true, unique: true },
       nameAr: { type: String, required: true },
       nameEn: { type: String },
@@ -270,8 +286,8 @@ var init_schema = __esm({
       selectionType: { type: String, enum: ["single", "multiple"], default: "multiple" },
       createdAt: { type: Date, default: Date.now }
     }, { timestamps: false });
-    ProductAddonModel = mongoose.model("ProductAddon", ProductAddonSchema);
-    WarehouseTransferSchema = new Schema({
+    ProductAddonModel = import_mongoose.default.model("ProductAddon", ProductAddonSchema);
+    WarehouseTransferSchema = new import_mongoose.Schema({
       tenantId: { type: String, required: true },
       fromWarehouseId: { type: String, required: true },
       toWarehouseId: { type: String, required: true },
@@ -286,8 +302,8 @@ var init_schema = __esm({
       createdAt: { type: Date, default: Date.now },
       updatedAt: { type: Date, default: Date.now }
     });
-    WarehouseTransferModel = mongoose.model("WarehouseTransfer", WarehouseTransferSchema);
-    CoffeeItemAddonSchema = new Schema({
+    WarehouseTransferModel = import_mongoose.default.model("WarehouseTransfer", WarehouseTransferSchema);
+    CoffeeItemAddonSchema = new import_mongoose.Schema({
       coffeeItemId: { type: String, required: true },
       addonId: { type: String, required: true },
       isDefault: { type: Number, default: 0 },
@@ -297,8 +313,8 @@ var init_schema = __esm({
       createdAt: { type: Date, default: Date.now }
     });
     CoffeeItemAddonSchema.index({ coffeeItemId: 1, addonId: 1 }, { unique: true });
-    CoffeeItemAddonModel = mongoose.model("CoffeeItemAddon", CoffeeItemAddonSchema);
-    PromoOfferSchema = new Schema({
+    CoffeeItemAddonModel = import_mongoose.default.model("CoffeeItemAddon", CoffeeItemAddonSchema);
+    PromoOfferSchema = new import_mongoose.Schema({
       id: { type: String, required: true },
       tenantId: { type: String, required: true },
       nameAr: { type: String, required: true },
@@ -322,8 +338,8 @@ var init_schema = __esm({
     });
     PromoOfferSchema.index({ tenantId: 1, isActive: 1 });
     PromoOfferSchema.index({ id: 1 }, { unique: true });
-    PromoOfferModel = mongoose.model("PromoOffer", PromoOfferSchema);
-    MenuCategorySchema = new Schema({
+    PromoOfferModel = import_mongoose.default.model("PromoOffer", PromoOfferSchema);
+    MenuCategorySchema = new import_mongoose.Schema({
       id: { type: String, required: true },
       tenantId: { type: String, required: true },
       nameAr: { type: String, required: true },
@@ -338,8 +354,8 @@ var init_schema = __esm({
     });
     MenuCategorySchema.index({ tenantId: 1, isActive: 1 });
     MenuCategorySchema.index({ id: 1 }, { unique: true });
-    MenuCategoryModel = mongoose.model("MenuCategory", MenuCategorySchema);
-    CustomBannerSchema = new Schema({
+    MenuCategoryModel = import_mongoose.default.model("MenuCategory", MenuCategorySchema);
+    CustomBannerSchema = new import_mongoose.Schema({
       id: { type: String, required: true, unique: true },
       tenantId: { type: String, required: true },
       titleAr: { type: String, required: true },
@@ -360,8 +376,8 @@ var init_schema = __esm({
       updatedAt: { type: Date, default: Date.now }
     });
     CustomBannerSchema.index({ tenantId: 1, isActive: 1, orderIndex: 1 });
-    CustomBannerModel = mongoose.model("CustomBanner", CustomBannerSchema);
-    CustomerSchema = new Schema({
+    CustomBannerModel = import_mongoose.default.model("CustomBanner", CustomBannerSchema);
+    CustomerSchema = new import_mongoose.Schema({
       phone: { type: String, required: true, unique: true },
       email: { type: String, unique: true, sparse: true },
       name: { type: String, required: true },
@@ -379,8 +395,8 @@ var init_schema = __esm({
       favorites: [{ type: String }],
       createdAt: { type: Date, default: Date.now }
     });
-    CustomerModel = mongoose.model("Customer", CustomerSchema);
-    AppointmentSchema = new Schema({
+    CustomerModel = import_mongoose.default.model("Customer", CustomerSchema);
+    AppointmentSchema = new import_mongoose.Schema({
       id: { type: String, required: true, unique: true },
       tenantId: { type: String, required: true },
       branchId: { type: String, required: true },
@@ -398,8 +414,8 @@ var init_schema = __esm({
     AppointmentSchema.index({ tenantId: 1, branchId: 1 });
     AppointmentSchema.index({ appointmentDate: 1 });
     AppointmentSchema.index({ customerPhone: 1 });
-    AppointmentModel = mongoose.model("Appointment", AppointmentSchema);
-    PointTransferSchema = new Schema({
+    AppointmentModel = import_mongoose.default.model("Appointment", AppointmentSchema);
+    PointTransferSchema = new import_mongoose.Schema({
       tenantId: { type: String, required: true },
       fromCustomerId: { type: String, required: true },
       toCustomerId: { type: String, required: true },
@@ -407,16 +423,16 @@ var init_schema = __esm({
       status: { type: String, enum: ["completed", "failed"], default: "completed" },
       createdAt: { type: Date, default: Date.now }
     });
-    PointTransferModel = mongoose.model("PointTransfer", PointTransferSchema);
-    PasswordResetTokenSchema = new Schema({
+    PointTransferModel = import_mongoose.default.model("PointTransfer", PointTransferSchema);
+    PasswordResetTokenSchema = new import_mongoose.Schema({
       email: { type: String, required: true },
       token: { type: String, required: true, unique: true },
       expiresAt: { type: Date, required: true },
       used: { type: Number, default: 0, required: true },
       createdAt: { type: Date, default: Date.now }
     });
-    PasswordResetTokenModel = mongoose.model("PasswordResetToken", PasswordResetTokenSchema);
-    PasswordSetupOTPSchema = new Schema({
+    PasswordResetTokenModel = import_mongoose.default.model("PasswordResetToken", PasswordResetTokenSchema);
+    PasswordSetupOTPSchema = new import_mongoose.Schema({
       phone: { type: String, required: true },
       otp: { type: String, required: true },
       expiresAt: { type: Date, required: true },
@@ -426,8 +442,8 @@ var init_schema = __esm({
     });
     PasswordSetupOTPSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
     PasswordSetupOTPSchema.index({ phone: 1 });
-    PasswordSetupOTPModel = mongoose.model("PasswordSetupOTP", PasswordSetupOTPSchema);
-    CafeSchema = new Schema({
+    PasswordSetupOTPModel = import_mongoose.default.model("PasswordSetupOTP", PasswordSetupOTPSchema);
+    CafeSchema = new import_mongoose.Schema({
       id: { type: String, required: true, unique: true },
       nameAr: { type: String, required: true },
       nameEn: { type: String, required: true },
@@ -456,8 +472,8 @@ var init_schema = __esm({
       createdAt: { type: Date, default: Date.now },
       updatedAt: { type: Date, default: Date.now }
     });
-    CafeModel = mongoose.model("Cafe", CafeSchema);
-    PaymentGatewayConfigSchema = new Schema({
+    CafeModel = import_mongoose.default.model("Cafe", CafeSchema);
+    PaymentGatewayConfigSchema = new import_mongoose.Schema({
       provider: { type: String, enum: ["none", "neoleap", "geidea"], default: "none" },
       enabledMethods: [{ type: String }],
       neoleap: {
@@ -485,7 +501,7 @@ var init_schema = __esm({
       bankTransferEnabled: { type: Boolean, default: false },
       stcPayEnabled: { type: Boolean, default: false }
     }, { _id: false });
-    BusinessConfigSchema = new Schema({
+    BusinessConfigSchema = new import_mongoose.Schema({
       tenantId: { type: String, required: true, unique: true },
       tradeNameAr: { type: String, required: true },
       tradeNameEn: { type: String },
@@ -502,7 +518,7 @@ var init_schema = __esm({
       maintenanceReason: { type: String, default: "maintenance" },
       isEmergencyClosed: { type: Boolean, default: false },
       storeHours: {
-        type: Schema.Types.Mixed,
+        type: import_mongoose.Schema.Types.Mixed,
         default: () => ({
           monday: { open: "06:00", close: "03:00", isOpen: true, isAlwaysOpen: false },
           tuesday: { open: "06:00", close: "03:00", isOpen: true, isAlwaysOpen: false },
@@ -532,7 +548,7 @@ var init_schema = __esm({
       }) },
       employeeInvoiceEnabled: { type: Boolean, default: false },
       loyaltyConfig: {
-        type: Schema.Types.Mixed,
+        type: import_mongoose.Schema.Types.Mixed,
         default: () => ({
           enabled: true,
           pointsPerDrink: 10,
@@ -543,11 +559,11 @@ var init_schema = __esm({
           redemptionRate: 100
         })
       },
-      offersConfig: { type: Schema.Types.Mixed, default: () => ({}) },
+      offersConfig: { type: import_mongoose.Schema.Types.Mixed, default: () => ({}) },
       menuLayout: { type: String, enum: ["classic", "cards", "list"], default: "classic" },
       cashierLayout: { type: String, enum: ["classic", "pos", "split"], default: "classic" },
       orderMethodsConfig: {
-        type: Schema.Types.Mixed,
+        type: import_mongoose.Schema.Types.Mixed,
         default: () => ({
           enableDineIn: true,
           enableCarPickup: true,
@@ -569,8 +585,8 @@ var init_schema = __esm({
       createdAt: { type: Date, default: Date.now },
       updatedAt: { type: Date, default: Date.now }
     });
-    BusinessConfigModel = mongoose.model("BusinessConfig", BusinessConfigSchema);
-    IngredientItemSchema = new Schema({
+    BusinessConfigModel = import_mongoose.default.model("BusinessConfig", BusinessConfigSchema);
+    IngredientItemSchema = new import_mongoose.Schema({
       tenantId: { type: String, required: true },
       nameAr: { type: String, required: true },
       nameEn: { type: String },
@@ -593,8 +609,8 @@ var init_schema = __esm({
       updatedAt: { type: Date, default: Date.now }
     });
     IngredientItemSchema.index({ tenantId: 1, sku: 1 });
-    IngredientItemModel = mongoose.model("IngredientItem", IngredientItemSchema);
-    RecipeDefinitionSchema = new Schema({
+    IngredientItemModel = import_mongoose.default.model("IngredientItem", IngredientItemSchema);
+    RecipeDefinitionSchema = new import_mongoose.Schema({
       tenantId: { type: String, required: true },
       productId: { type: String, required: true },
       ingredients: [{
@@ -611,7 +627,7 @@ var init_schema = __esm({
       createdAt: { type: Date, default: Date.now },
       updatedAt: { type: Date, default: Date.now }
     });
-    RecipeHistorySchema = new Schema({
+    RecipeHistorySchema = new import_mongoose.Schema({
       tenantId: { type: String, required: true },
       productId: { type: String, required: true },
       recipeId: { type: String, required: true },
@@ -627,9 +643,9 @@ var init_schema = __esm({
     });
     RecipeDefinitionSchema.index({ tenantId: 1, productId: 1, isActive: 1 });
     RecipeHistorySchema.index({ tenantId: 1, productId: 1, version: 1 });
-    RecipeDefinitionModel = mongoose.model("RecipeDefinition", RecipeDefinitionSchema);
-    RecipeHistoryModel = mongoose.model("RecipeHistory", RecipeHistorySchema);
-    WarehouseSchema = new Schema({
+    RecipeDefinitionModel = import_mongoose.default.model("RecipeDefinition", RecipeDefinitionSchema);
+    RecipeHistoryModel = import_mongoose.default.model("RecipeHistory", RecipeHistorySchema);
+    WarehouseSchema = new import_mongoose.Schema({
       id: { type: String, required: true, unique: true },
       tenantId: { type: String, required: true },
       nameAr: { type: String, required: true },
@@ -643,8 +659,8 @@ var init_schema = __esm({
       createdAt: { type: Date, default: Date.now },
       updatedAt: { type: Date, default: Date.now }
     });
-    WarehouseModel = mongoose.model("Warehouse", WarehouseSchema);
-    WarehouseStockSchema = new Schema({
+    WarehouseModel = import_mongoose.default.model("Warehouse", WarehouseSchema);
+    WarehouseStockSchema = new import_mongoose.Schema({
       tenantId: { type: String, required: true },
       warehouseId: { type: String, required: true },
       ingredientId: { type: String, required: true },
@@ -654,8 +670,8 @@ var init_schema = __esm({
       updatedAt: { type: Date, default: Date.now }
     });
     WarehouseStockSchema.index({ tenantId: 1, warehouseId: 1, ingredientId: 1 }, { unique: true });
-    WarehouseStockModel = mongoose.model("WarehouseStock", WarehouseStockSchema);
-    BranchSchema = new Schema({
+    WarehouseStockModel = import_mongoose.default.model("WarehouseStock", WarehouseStockSchema);
+    BranchSchema = new import_mongoose.Schema({
       id: { type: String, required: true, unique: true },
       tenantId: { type: String, required: true },
       cafeId: { type: String, required: true },
@@ -675,7 +691,7 @@ var init_schema = __esm({
       // الافتراضي 200 متر
       geofenceBoundary: [{ lat: { type: Number }, lng: { type: Number } }],
       // حدود متعددة النقاط
-      isActive: { type: Schema.Types.Mixed, default: true },
+      isActive: { type: import_mongoose.Schema.Types.Mixed, default: true },
       managerName: { type: String },
       managerId: { type: String },
       isMaintenanceMode: { type: Boolean, default: false },
@@ -683,8 +699,8 @@ var init_schema = __esm({
       // الافتراضي 15 دقيقة
       createdAt: { type: Date, default: Date.now }
     }, { timestamps: false });
-    BranchModel = mongoose.model("Branch", BranchSchema);
-    DiscountCodeSchema = new Schema({
+    BranchModel = import_mongoose.default.model("Branch", BranchSchema);
+    DiscountCodeSchema = new import_mongoose.Schema({
       code: { type: String, required: true, unique: true },
       discountPercentage: { type: Number, required: true },
       reason: { type: String, required: true },
@@ -694,15 +710,15 @@ var init_schema = __esm({
       visibleToCustomers: { type: Boolean, default: false },
       createdAt: { type: Date, default: Date.now }
     });
-    DiscountCodeModel = mongoose.model("DiscountCode", DiscountCodeSchema);
-    OrderSchema = new Schema({
+    DiscountCodeModel = import_mongoose.default.model("DiscountCode", DiscountCodeSchema);
+    OrderSchema = new import_mongoose.Schema({
       tenantId: { type: String, required: true },
       branchId: { type: String, required: true },
       customerId: { type: String },
       customerName: { type: String },
       customerPhone: { type: String },
       customerEmail: { type: String },
-      customerInfo: { type: Schema.Types.Mixed },
+      customerInfo: { type: import_mongoose.Schema.Types.Mixed },
       employeeId: { type: String },
       subtotal: { type: Number },
       tax: { type: Number },
@@ -727,7 +743,7 @@ var init_schema = __esm({
       carColor: { type: String },
       carPlate: { type: String },
       plateNumber: { type: String },
-      items: { type: Schema.Types.Mixed, required: true },
+      items: { type: import_mongoose.Schema.Types.Mixed, required: true },
       totalAmount: { type: Number, required: true },
       dailyNumber: { type: Number },
       paymentMethod: { type: String, enum: ["cash", "pos", "apple_pay", "pos-network", "alinma", "rajhi", "ur", "barq", "qahwa-card", "stc-pay", "mada", "geidea", "neoleap", "neoleap-apple-pay", "bank_card", "paymob-card", "paymob-wallet", "loyalty-card"], required: true },
@@ -771,8 +787,8 @@ var init_schema = __esm({
     OrderSchema.index({ tenantId: 1, branchId: 1, createdAt: -1 });
     OrderSchema.index({ tenantId: 1, paymentStatus: 1, createdAt: -1 });
     OrderSchema.index({ tableId: 1, status: 1 });
-    OrderModel = mongoose.model("Order", OrderSchema);
-    OrderItemSchema = new Schema({
+    OrderModel = import_mongoose.default.model("Order", OrderSchema);
+    OrderItemSchema = new import_mongoose.Schema({
       orderId: { type: String, required: true },
       coffeeItemId: { type: String, required: true },
       quantity: { type: Number, required: true },
@@ -802,21 +818,21 @@ var init_schema = __esm({
       },
       lineItemId: { type: String }
     });
-    OrderItemModel = mongoose.model("OrderItem", OrderItemSchema);
-    CartItemSchema = new Schema({
+    OrderItemModel = import_mongoose.default.model("OrderItem", OrderItemSchema);
+    CartItemSchema = new import_mongoose.Schema({
       id: { type: String, required: true },
       sessionId: { type: String, required: true },
       coffeeItemId: { type: String, required: true },
       quantity: { type: Number, required: true },
       selectedSize: { type: String },
       selectedAddons: [{ type: String }],
-      selectedItemAddons: [{ type: mongoose.Schema.Types.Mixed }],
-      selectedReservationPackage: { type: mongoose.Schema.Types.Mixed, default: null },
+      selectedItemAddons: [{ type: import_mongoose.default.Schema.Types.Mixed }],
+      selectedReservationPackage: { type: import_mongoose.default.Schema.Types.Mixed, default: null },
       createdAt: { type: Date, default: Date.now }
     });
     CartItemSchema.index({ sessionId: 1, id: 1 });
-    CartItemModel = mongoose.model("CartItem", CartItemSchema);
-    LoyaltyCardSchema = new Schema({
+    CartItemModel = import_mongoose.default.model("CartItem", CartItemSchema);
+    LoyaltyCardSchema = new import_mongoose.Schema({
       customerId: { type: String, required: true },
       customerName: { type: String },
       phoneNumber: { type: String, required: true },
@@ -842,8 +858,8 @@ var init_schema = __esm({
     LoyaltyCardSchema.index({ customerId: 1 });
     LoyaltyCardSchema.index({ phoneNumber: 1 });
     LoyaltyCardSchema.index({ isActive: 1, tier: 1 });
-    LoyaltyCardModel = mongoose.model("LoyaltyCard", LoyaltyCardSchema);
-    StatusHistorySchema = new Schema({
+    LoyaltyCardModel = import_mongoose.default.model("LoyaltyCard", LoyaltyCardSchema);
+    StatusHistorySchema = new import_mongoose.Schema({
       tenantId: { type: String, required: true },
       referenceId: { type: String, required: true },
       referenceType: { type: String, enum: ["order", "stock_transfer", "purchase_invoice"], required: true },
@@ -853,8 +869,8 @@ var init_schema = __esm({
       notes: { type: String },
       createdAt: { type: Date, default: Date.now }
     });
-    StatusHistoryModel = mongoose.model("StatusHistory", StatusHistorySchema);
-    CardCodeSchema = new Schema({
+    StatusHistoryModel = import_mongoose.default.model("StatusHistory", StatusHistorySchema);
+    CardCodeSchema = new import_mongoose.Schema({
       code: { type: String, required: true, unique: true },
       issuedForOrderId: { type: String, required: true },
       drinkName: { type: String, required: true },
@@ -863,8 +879,8 @@ var init_schema = __esm({
       redeemedByCardId: { type: String },
       createdAt: { type: Date, default: Date.now }
     });
-    CardCodeModel = mongoose.model("CardCode", CardCodeSchema);
-    LoyaltyTransactionSchema = new Schema({
+    CardCodeModel = import_mongoose.default.model("CardCode", CardCodeSchema);
+    LoyaltyTransactionSchema = new import_mongoose.Schema({
       cardId: { type: String, required: true },
       orderId: { type: String },
       type: { type: String, required: true },
@@ -877,8 +893,8 @@ var init_schema = __esm({
     });
     LoyaltyTransactionSchema.index({ cardId: 1, createdAt: -1 });
     LoyaltyTransactionSchema.index({ type: 1 });
-    LoyaltyTransactionModel = mongoose.model("LoyaltyTransaction", LoyaltyTransactionSchema);
-    LoyaltyRewardSchema = new Schema({
+    LoyaltyTransactionModel = import_mongoose.default.model("LoyaltyTransaction", LoyaltyTransactionSchema);
+    LoyaltyRewardSchema = new import_mongoose.Schema({
       nameAr: { type: String, required: true },
       nameEn: { type: String },
       description: { type: String, required: true },
@@ -889,8 +905,8 @@ var init_schema = __esm({
       isActive: { type: Number, default: 1, required: true },
       createdAt: { type: Date, default: Date.now }
     });
-    LoyaltyRewardModel = mongoose.model("LoyaltyReward", LoyaltyRewardSchema);
-    IngredientSchema = new Schema({
+    LoyaltyRewardModel = import_mongoose.default.model("LoyaltyReward", LoyaltyRewardSchema);
+    IngredientSchema = new import_mongoose.Schema({
       nameAr: { type: String, required: true },
       nameEn: { type: String },
       isAvailable: { type: Number, default: 1, required: true },
@@ -898,8 +914,8 @@ var init_schema = __esm({
       createdAt: { type: Date, default: Date.now },
       updatedAt: { type: Date, default: Date.now }
     });
-    IngredientModel = mongoose.model("Ingredient", IngredientSchema);
-    CoffeeItemIngredientSchema = new Schema({
+    IngredientModel = import_mongoose.default.model("Ingredient", IngredientSchema);
+    CoffeeItemIngredientSchema = new import_mongoose.Schema({
       coffeeItemId: { type: String, required: true },
       ingredientId: { type: String, required: true },
       quantity: { type: Number, required: true, default: 0 },
@@ -907,8 +923,8 @@ var init_schema = __esm({
       createdAt: { type: Date, default: Date.now }
     });
     CoffeeItemIngredientSchema.index({ coffeeItemId: 1, ingredientId: 1 }, { unique: true });
-    CoffeeItemIngredientModel = mongoose.model("CoffeeItemIngredient", CoffeeItemIngredientSchema);
-    CategorySchema = new Schema({
+    CoffeeItemIngredientModel = import_mongoose.default.model("CoffeeItemIngredient", CoffeeItemIngredientSchema);
+    CategorySchema = new import_mongoose.Schema({
       nameAr: { type: String, required: true, unique: true },
       nameEn: { type: String },
       description: { type: String },
@@ -918,21 +934,21 @@ var init_schema = __esm({
       createdAt: { type: Date, default: Date.now },
       updatedAt: { type: Date, default: Date.now }
     });
-    CategoryModel = mongoose.model("Category", CategorySchema);
-    UserSchema = new Schema({
+    CategoryModel = import_mongoose.default.model("Category", CategorySchema);
+    UserSchema = new import_mongoose.Schema({
       username: { type: String, required: true, unique: true },
       password: { type: String, required: true }
     });
-    UserModel = mongoose.model("User", UserSchema);
-    TableSchema = new Schema({
+    UserModel = import_mongoose.default.model("User", UserSchema);
+    TableSchema = new import_mongoose.Schema({
       tableNumber: { type: String, required: true },
       qrToken: { type: String, required: true, unique: true },
       branchId: { type: String, required: true },
       capacity: { type: Number, default: 4 },
       location: { type: String },
       tenantId: { type: String, required: true },
-      isActive: { type: Schema.Types.Mixed, default: 1, required: true },
-      isOccupied: { type: Schema.Types.Mixed, default: 0, required: true },
+      isActive: { type: import_mongoose.Schema.Types.Mixed, default: 1, required: true },
+      isOccupied: { type: import_mongoose.Schema.Types.Mixed, default: 0, required: true },
       currentOrderId: { type: String },
       reservedFor: {
         customerName: { type: String },
@@ -959,8 +975,8 @@ var init_schema = __esm({
       updatedAt: { type: Date, default: Date.now }
     });
     TableSchema.index({ tableNumber: 1, branchId: 1 }, { unique: true });
-    TableModel = mongoose.model("Table", TableSchema);
-    TaxInvoiceSchema = new Schema({
+    TableModel = import_mongoose.default.model("Table", TableSchema);
+    TaxInvoiceSchema = new import_mongoose.Schema({
       invoiceNumber: { type: String, required: true, unique: true },
       uuid: { type: String, required: true, unique: true },
       orderId: { type: String, required: true },
@@ -983,7 +999,7 @@ var init_schema = __esm({
       invoiceType: { type: String, enum: ["standard", "simplified", "debit_note", "credit_note"], default: "simplified" },
       invoiceTypeCode: { type: String, default: "388" },
       transactionType: { type: String, enum: ["B2B", "B2C"], default: "B2C" },
-      items: { type: Schema.Types.Mixed, required: true },
+      items: { type: import_mongoose.Schema.Types.Mixed, required: true },
       subtotal: { type: Number, required: true },
       totalDiscountAmount: { type: Number, default: 0 },
       taxableAmount: { type: Number, required: true },
@@ -1009,8 +1025,8 @@ var init_schema = __esm({
     TaxInvoiceSchema.index({ invoiceDate: -1 });
     TaxInvoiceSchema.index({ branchId: 1, invoiceDate: -1 });
     TaxInvoiceSchema.index({ zatcaStatus: 1 });
-    TaxInvoiceModel = mongoose.model("TaxInvoice", TaxInvoiceSchema);
-    RevenueSchema = new Schema({
+    TaxInvoiceModel = import_mongoose.default.model("TaxInvoice", TaxInvoiceSchema);
+    RevenueSchema = new import_mongoose.Schema({
       branchId: { type: String, required: true },
       date: { type: Date, required: true },
       orderId: { type: String },
@@ -1027,8 +1043,8 @@ var init_schema = __esm({
     });
     RevenueSchema.index({ branchId: 1, date: -1 });
     RevenueSchema.index({ category: 1 });
-    RevenueModel = mongoose.model("Revenue", RevenueSchema);
-    ExpenseSchema = new Schema({
+    RevenueModel = import_mongoose.default.model("Revenue", RevenueSchema);
+    ExpenseSchema = new import_mongoose.Schema({
       branchId: { type: String, required: true },
       date: { type: Date, required: true },
       category: { type: String, enum: ["inventory", "salaries", "rent", "utilities", "marketing", "maintenance", "supplies", "other"], required: true },
@@ -1052,8 +1068,8 @@ var init_schema = __esm({
     ExpenseSchema.index({ branchId: 1, date: -1 });
     ExpenseSchema.index({ category: 1 });
     ExpenseSchema.index({ status: 1 });
-    ExpenseModel = mongoose.model("Expense", ExpenseSchema);
-    CashRegisterSchema = new Schema({
+    ExpenseModel = import_mongoose.default.model("Expense", ExpenseSchema);
+    CashRegisterSchema = new import_mongoose.Schema({
       branchId: { type: String, required: true },
       date: { type: Date, required: true },
       employeeId: { type: String, required: true },
@@ -1077,8 +1093,8 @@ var init_schema = __esm({
     });
     CashRegisterSchema.index({ branchId: 1, date: -1 });
     CashRegisterSchema.index({ employeeId: 1, date: -1 });
-    CashRegisterModel = mongoose.model("CashRegister", CashRegisterSchema);
-    DailySummarySchema = new Schema({
+    CashRegisterModel = import_mongoose.default.model("CashRegister", CashRegisterSchema);
+    DailySummarySchema = new import_mongoose.Schema({
       branchId: { type: String, required: true },
       date: { type: Date, required: true },
       totalOrders: { type: Number, default: 0 },
@@ -1103,8 +1119,8 @@ var init_schema = __esm({
       updatedAt: { type: Date, default: Date.now }
     });
     DailySummarySchema.index({ branchId: 1, date: -1 }, { unique: true });
-    DailySummaryModel = mongoose.model("DailySummary", DailySummarySchema);
-    KitchenOrderSchema = new Schema({
+    DailySummaryModel = import_mongoose.default.model("DailySummary", DailySummarySchema);
+    KitchenOrderSchema = new import_mongoose.Schema({
       orderId: { type: String, required: true },
       orderNumber: { type: String, required: true },
       branchId: { type: String, required: true },
@@ -1133,8 +1149,8 @@ var init_schema = __esm({
     KitchenOrderSchema.index({ branchId: 1, status: 1 });
     KitchenOrderSchema.index({ assignedTo: 1, status: 1 });
     KitchenOrderSchema.index({ createdAt: -1 });
-    KitchenOrderModel = mongoose.model("KitchenOrder", KitchenOrderSchema);
-    AttendanceSchema = new Schema({
+    KitchenOrderModel = import_mongoose.default.model("KitchenOrder", KitchenOrderSchema);
+    AttendanceSchema = new import_mongoose.Schema({
       employeeId: { type: String, required: true },
       branchId: { type: String },
       checkInTime: { type: Date, required: true },
@@ -1163,8 +1179,8 @@ var init_schema = __esm({
     });
     AttendanceSchema.index({ employeeId: 1, shiftDate: 1 });
     AttendanceSchema.index({ branchId: 1, shiftDate: 1 });
-    AttendanceModel = mongoose.model("Attendance", AttendanceSchema);
-    LocationTrackSchema = new Schema({
+    AttendanceModel = import_mongoose.default.model("Attendance", AttendanceSchema);
+    LocationTrackSchema = new import_mongoose.Schema({
       attendanceId: { type: String, required: true },
       employeeId: { type: String, required: true },
       branchId: { type: String, required: true },
@@ -1178,116 +1194,116 @@ var init_schema = __esm({
     LocationTrackSchema.index({ attendanceId: 1, timestamp: 1 });
     LocationTrackSchema.index({ employeeId: 1, timestamp: -1 });
     LocationTrackSchema.index({ branchId: 1, timestamp: -1 });
-    LocationTrackModel = mongoose.model("LocationTrack", LocationTrackSchema);
-    insertCoffeeItemSchema = z.object({
-      id: z.string(),
-      tenantId: z.string().optional(),
-      nameAr: z.string(),
-      nameEn: z.string().optional(),
-      description: z.string(),
-      price: z.union([z.string(), z.number()]).transform((val) => typeof val === "string" ? parseFloat(val) : val),
-      oldPrice: z.union([z.string(), z.number()]).transform((val) => typeof val === "string" ? parseFloat(val) : val).optional(),
-      category: z.string(),
-      menuType: z.enum(["drinks", "food"]).optional(),
-      imageUrl: z.string().optional(),
-      imageUrls: z.array(z.string()).optional(),
-      isAvailable: z.number().optional(),
-      availabilityStatus: z.string().optional(),
-      coffeeStrength: z.string().optional(),
-      strengthLevel: z.number().optional(),
-      isNewProduct: z.number().optional(),
-      sku: z.string().optional(),
-      sizeML: z.number().optional(),
-      groupId: z.string().optional(),
-      createdByEmployeeId: z.string().optional(),
-      createdByBranchId: z.string().optional(),
-      publishedBranches: z.array(z.string()).optional(),
-      availableFrom: z.string().optional(),
-      availableTo: z.string().optional(),
-      availableDays: z.array(z.number()).optional(),
-      availableSizes: z.array(z.object({
-        nameAr: z.string(),
-        nameEn: z.string().optional(),
-        price: z.number(),
-        sizeML: z.number().optional(),
-        sku: z.string().optional(),
-        imageUrl: z.string().optional()
+    LocationTrackModel = import_mongoose.default.model("LocationTrack", LocationTrackSchema);
+    insertCoffeeItemSchema = import_zod.z.object({
+      id: import_zod.z.string(),
+      tenantId: import_zod.z.string().optional(),
+      nameAr: import_zod.z.string(),
+      nameEn: import_zod.z.string().optional(),
+      description: import_zod.z.string(),
+      price: import_zod.z.union([import_zod.z.string(), import_zod.z.number()]).transform((val) => typeof val === "string" ? parseFloat(val) : val),
+      oldPrice: import_zod.z.union([import_zod.z.string(), import_zod.z.number()]).transform((val) => typeof val === "string" ? parseFloat(val) : val).optional(),
+      category: import_zod.z.string(),
+      menuType: import_zod.z.enum(["drinks", "food"]).optional(),
+      imageUrl: import_zod.z.string().optional(),
+      imageUrls: import_zod.z.array(import_zod.z.string()).optional(),
+      isAvailable: import_zod.z.number().optional(),
+      availabilityStatus: import_zod.z.string().optional(),
+      coffeeStrength: import_zod.z.string().optional(),
+      strengthLevel: import_zod.z.number().optional(),
+      isNewProduct: import_zod.z.number().optional(),
+      sku: import_zod.z.string().optional(),
+      sizeML: import_zod.z.number().optional(),
+      groupId: import_zod.z.string().optional(),
+      createdByEmployeeId: import_zod.z.string().optional(),
+      createdByBranchId: import_zod.z.string().optional(),
+      publishedBranches: import_zod.z.array(import_zod.z.string()).optional(),
+      availableFrom: import_zod.z.string().optional(),
+      availableTo: import_zod.z.string().optional(),
+      availableDays: import_zod.z.array(import_zod.z.number()).optional(),
+      availableSizes: import_zod.z.array(import_zod.z.object({
+        nameAr: import_zod.z.string(),
+        nameEn: import_zod.z.string().optional(),
+        price: import_zod.z.number(),
+        sizeML: import_zod.z.number().optional(),
+        sku: import_zod.z.string().optional(),
+        imageUrl: import_zod.z.string().optional()
       })).optional(),
-      addons: z.array(z.object({
-        id: z.string().optional(),
-        nameAr: z.string(),
-        nameEn: z.string().optional(),
-        price: z.number(),
-        category: z.string().optional(),
-        imageUrl: z.string().optional(),
-        section: z.string().optional(),
-        isRequired: z.boolean().optional(),
-        maxSelectable: z.number().optional(),
-        selectionType: z.enum(["single", "multiple"]).optional()
+      addons: import_zod.z.array(import_zod.z.object({
+        id: import_zod.z.string().optional(),
+        nameAr: import_zod.z.string(),
+        nameEn: import_zod.z.string().optional(),
+        price: import_zod.z.number(),
+        category: import_zod.z.string().optional(),
+        imageUrl: import_zod.z.string().optional(),
+        section: import_zod.z.string().optional(),
+        isRequired: import_zod.z.boolean().optional(),
+        maxSelectable: import_zod.z.number().optional(),
+        selectionType: import_zod.z.enum(["single", "multiple"]).optional()
       })).optional(),
-      bundledItems: z.array(z.object({
-        sectionTitle: z.string(),
-        selectionType: z.enum(["single", "multiple"]).optional(),
-        minSelectable: z.number().optional(),
-        maxSelectable: z.number().optional(),
-        items: z.array(z.object({
-          productId: z.string(),
-          nameAr: z.string(),
-          nameEn: z.string().optional(),
-          imageUrl: z.string().optional(),
-          originalPrice: z.number(),
-          customPrice: z.number()
+      bundledItems: import_zod.z.array(import_zod.z.object({
+        sectionTitle: import_zod.z.string(),
+        selectionType: import_zod.z.enum(["single", "multiple"]).optional(),
+        minSelectable: import_zod.z.number().optional(),
+        maxSelectable: import_zod.z.number().optional(),
+        items: import_zod.z.array(import_zod.z.object({
+          productId: import_zod.z.string(),
+          nameAr: import_zod.z.string(),
+          nameEn: import_zod.z.string().optional(),
+          imageUrl: import_zod.z.string().optional(),
+          originalPrice: import_zod.z.number(),
+          customPrice: import_zod.z.number()
         }))
       })).optional(),
-      isReservation: z.boolean().optional(),
-      reservationPackages: z.array(z.object({
-        packageName: z.string(),
-        description: z.string().optional(),
-        price: z.number(),
-        duration: z.string().optional(),
-        maxGuests: z.number().optional()
+      isReservation: import_zod.z.boolean().optional(),
+      reservationPackages: import_zod.z.array(import_zod.z.object({
+        packageName: import_zod.z.string(),
+        description: import_zod.z.string().optional(),
+        price: import_zod.z.number(),
+        duration: import_zod.z.string().optional(),
+        maxGuests: import_zod.z.number().optional()
       })).optional(),
-      branchAvailability: z.array(z.object({
-        branchId: z.string(),
-        isAvailable: z.number()
+      branchAvailability: import_zod.z.array(import_zod.z.object({
+        branchId: import_zod.z.string(),
+        isAvailable: import_zod.z.number()
       })).optional(),
-      isGiftable: z.boolean().optional(),
-      hasRecipe: z.number().optional(),
-      requiresRecipe: z.number().optional(),
-      recipeId: z.string().optional(),
-      salesCount: z.number().optional()
+      isGiftable: import_zod.z.boolean().optional(),
+      hasRecipe: import_zod.z.number().optional(),
+      requiresRecipe: import_zod.z.number().optional(),
+      recipeId: import_zod.z.string().optional(),
+      salesCount: import_zod.z.number().optional()
     });
-    insertEmployeeSchema = z.object({
-      username: z.string(),
-      password: z.string().optional(),
-      fullName: z.string(),
-      role: z.string(),
-      title: z.string().optional(),
-      phone: z.string(),
-      jobTitle: z.string(),
-      imageUrl: z.string().optional(),
-      shiftTime: z.string().optional().nullable(),
-      shiftStartTime: z.string().optional(),
-      shiftEndTime: z.string().optional(),
-      commissionPercentage: z.number().optional(),
-      deviceBalance: z.union([z.string(), z.number()]).transform((val) => typeof val === "string" ? parseInt(val) : val).optional(),
-      isActivated: z.number().optional(),
-      branchId: z.string().optional(),
-      employmentNumber: z.string().optional(),
-      vehicleType: z.string().optional(),
-      vehiclePlateNumber: z.string().optional(),
-      vehicleColor: z.string().optional(),
-      licenseNumber: z.string().optional(),
-      isAvailableForDelivery: z.number().optional(),
-      permissions: z.array(z.string()).optional(),
-      allowedPages: z.array(z.string()).optional(),
-      currentLocation: z.object({
-        lat: z.number(),
-        lng: z.number(),
-        updatedAt: z.date().optional()
+    insertEmployeeSchema = import_zod.z.object({
+      username: import_zod.z.string(),
+      password: import_zod.z.string().optional(),
+      fullName: import_zod.z.string(),
+      role: import_zod.z.string(),
+      title: import_zod.z.string().optional(),
+      phone: import_zod.z.string(),
+      jobTitle: import_zod.z.string(),
+      imageUrl: import_zod.z.string().optional(),
+      shiftTime: import_zod.z.string().optional().nullable(),
+      shiftStartTime: import_zod.z.string().optional(),
+      shiftEndTime: import_zod.z.string().optional(),
+      commissionPercentage: import_zod.z.number().optional(),
+      deviceBalance: import_zod.z.union([import_zod.z.string(), import_zod.z.number()]).transform((val) => typeof val === "string" ? parseInt(val) : val).optional(),
+      isActivated: import_zod.z.number().optional(),
+      branchId: import_zod.z.string().optional(),
+      employmentNumber: import_zod.z.string().optional(),
+      vehicleType: import_zod.z.string().optional(),
+      vehiclePlateNumber: import_zod.z.string().optional(),
+      vehicleColor: import_zod.z.string().optional(),
+      licenseNumber: import_zod.z.string().optional(),
+      isAvailableForDelivery: import_zod.z.number().optional(),
+      permissions: import_zod.z.array(import_zod.z.string()).optional(),
+      allowedPages: import_zod.z.array(import_zod.z.string()).optional(),
+      currentLocation: import_zod.z.object({
+        lat: import_zod.z.number(),
+        lng: import_zod.z.number(),
+        updatedAt: import_zod.z.date().optional()
       }).optional()
     });
-    EmployeeSchema = new Schema({
+    EmployeeSchema = new import_mongoose.Schema({
       id: { type: String, required: true, unique: true },
       tenantId: { type: String },
       username: { type: String, required: true, unique: true },
@@ -1328,8 +1344,8 @@ var init_schema = __esm({
     EmployeeSchema.index({ tenantId: 1, role: 1 });
     EmployeeSchema.index({ tenantId: 1, branchId: 1, isActive: 1 });
     EmployeeSchema.index({ tenantId: 1, isActive: 1 });
-    EmployeeModel = mongoose.model("Employee", EmployeeSchema);
-    ManagerNotificationSchema = new Schema({
+    EmployeeModel = import_mongoose.default.model("Employee", EmployeeSchema);
+    ManagerNotificationSchema = new import_mongoose.Schema({
       id: { type: String, required: true, unique: true },
       tenantId: { type: String, required: true },
       branchId: { type: String, required: true },
@@ -1361,8 +1377,8 @@ var init_schema = __esm({
     ManagerNotificationSchema.index({ branchId: 1, isRead: 1 });
     ManagerNotificationSchema.index({ managerId: 1, isRead: 1 });
     ManagerNotificationSchema.index({ employeeId: 1, createdAt: -1 });
-    ManagerNotificationModel = mongoose.model("ManagerNotification", ManagerNotificationSchema);
-    ShiftSchema = new Schema({
+    ManagerNotificationModel = import_mongoose.default.model("ManagerNotification", ManagerNotificationSchema);
+    ShiftSchema = new import_mongoose.Schema({
       id: { type: String, required: true, unique: true },
       tenantId: { type: String, required: true },
       branchId: { type: String, required: true },
@@ -1377,8 +1393,8 @@ var init_schema = __esm({
       createdAt: { type: Date, default: Date.now }
     });
     ShiftSchema.index({ branchId: 1, isActive: 1 });
-    ShiftModel = mongoose.model("Shift", ShiftSchema);
-    EmployeeShiftAssignmentSchema = new Schema({
+    ShiftModel = import_mongoose.default.model("Shift", ShiftSchema);
+    EmployeeShiftAssignmentSchema = new import_mongoose.Schema({
       id: { type: String, required: true, unique: true },
       tenantId: { type: String, required: true },
       branchId: { type: String, required: true },
@@ -1392,59 +1408,59 @@ var init_schema = __esm({
     });
     EmployeeShiftAssignmentSchema.index({ employeeId: 1, dayOfWeek: 1, isActive: 1 });
     EmployeeShiftAssignmentSchema.index({ branchId: 1, shiftId: 1 });
-    EmployeeShiftAssignmentModel = mongoose.model("EmployeeShiftAssignment", EmployeeShiftAssignmentSchema);
-    insertOrderSchema = z.object({
-      items: z.any(),
-      totalAmount: z.union([z.string(), z.number()]).transform((val) => typeof val === "string" ? parseFloat(val) : val),
-      paymentMethod: z.string(),
-      paymentDetails: z.string().optional(),
-      paymentReceiptUrl: z.string().optional(),
-      status: z.string().optional(),
-      tableStatus: z.enum(["pending", "payment_confirmed", "preparing", "ready", "delivered", "cancelled"]).optional(),
-      orderType: z.enum(["regular", "table", "dine_in", "dine-in"]).optional(),
-      customerInfo: z.any().optional(),
-      customerId: z.string().optional(),
-      employeeId: z.string().optional(),
-      assignedCashierId: z.string().optional(),
-      branchId: z.string().optional(),
-      tableNumber: z.string().optional(),
-      tableId: z.string().optional(),
-      customerNotes: z.string().optional(),
-      cancellationReason: z.string().optional(),
-      cancelledBy: z.enum(["customer", "cashier"]).optional(),
-      carPickup: z.any().optional(),
-      carType: z.string().optional(),
-      carColor: z.string().optional(),
-      carPlate: z.string().optional(),
-      deliveryType: z.enum(["pickup", "delivery", "dine-in", "curbside", "car_pickup", "car-pickup"]).optional(),
-      deliveryAddress: z.object({
-        fullAddress: z.string().optional(),
-        lat: z.number(),
-        lng: z.number(),
-        zone: z.string().optional(),
-        isInDeliveryZone: z.boolean().optional()
+    EmployeeShiftAssignmentModel = import_mongoose.default.model("EmployeeShiftAssignment", EmployeeShiftAssignmentSchema);
+    insertOrderSchema = import_zod.z.object({
+      items: import_zod.z.any(),
+      totalAmount: import_zod.z.union([import_zod.z.string(), import_zod.z.number()]).transform((val) => typeof val === "string" ? parseFloat(val) : val),
+      paymentMethod: import_zod.z.string(),
+      paymentDetails: import_zod.z.string().optional(),
+      paymentReceiptUrl: import_zod.z.string().optional(),
+      status: import_zod.z.string().optional(),
+      tableStatus: import_zod.z.enum(["pending", "payment_confirmed", "preparing", "ready", "delivered", "cancelled"]).optional(),
+      orderType: import_zod.z.enum(["regular", "table", "dine_in", "dine-in"]).optional(),
+      customerInfo: import_zod.z.any().optional(),
+      customerId: import_zod.z.string().optional(),
+      employeeId: import_zod.z.string().optional(),
+      assignedCashierId: import_zod.z.string().optional(),
+      branchId: import_zod.z.string().optional(),
+      tableNumber: import_zod.z.string().optional(),
+      tableId: import_zod.z.string().optional(),
+      customerNotes: import_zod.z.string().optional(),
+      cancellationReason: import_zod.z.string().optional(),
+      cancelledBy: import_zod.z.enum(["customer", "cashier"]).optional(),
+      carPickup: import_zod.z.any().optional(),
+      carType: import_zod.z.string().optional(),
+      carColor: import_zod.z.string().optional(),
+      carPlate: import_zod.z.string().optional(),
+      deliveryType: import_zod.z.enum(["pickup", "delivery", "dine-in", "curbside", "car_pickup", "car-pickup"]).optional(),
+      deliveryAddress: import_zod.z.object({
+        fullAddress: import_zod.z.string().optional(),
+        lat: import_zod.z.number(),
+        lng: import_zod.z.number(),
+        zone: import_zod.z.string().optional(),
+        isInDeliveryZone: import_zod.z.boolean().optional()
       }).optional(),
-      deliveryFee: z.number().optional(),
-      driverId: z.string().optional(),
-      driverLocation: z.object({
-        lat: z.number(),
-        lng: z.number(),
-        updatedAt: z.date().optional()
+      deliveryFee: import_zod.z.number().optional(),
+      driverId: import_zod.z.string().optional(),
+      driverLocation: import_zod.z.object({
+        lat: import_zod.z.number(),
+        lng: import_zod.z.number(),
+        updatedAt: import_zod.z.date().optional()
       }).optional(),
-      deliveryStatus: z.string().optional(),
-      deliveryStartedAt: z.date().optional(),
-      estimatedDeliveryTime: z.date().optional(),
-      deliveredAt: z.date().optional(),
-      costOfGoods: z.number().optional(),
-      grossProfit: z.number().optional(),
-      inventoryDeducted: z.number().optional(),
-      inventoryDeductionDetails: z.array(z.object({
-        rawItemId: z.string(),
-        rawItemName: z.string(),
-        quantity: z.number(),
-        unit: z.string(),
-        unitCost: z.number(),
-        totalCost: z.number()
+      deliveryStatus: import_zod.z.string().optional(),
+      deliveryStartedAt: import_zod.z.date().optional(),
+      estimatedDeliveryTime: import_zod.z.date().optional(),
+      deliveredAt: import_zod.z.date().optional(),
+      costOfGoods: import_zod.z.number().optional(),
+      grossProfit: import_zod.z.number().optional(),
+      inventoryDeducted: import_zod.z.number().optional(),
+      inventoryDeductionDetails: import_zod.z.array(import_zod.z.object({
+        rawItemId: import_zod.z.string(),
+        rawItemName: import_zod.z.string(),
+        quantity: import_zod.z.number(),
+        unit: import_zod.z.string(),
+        unitCost: import_zod.z.number(),
+        totalCost: import_zod.z.number()
       })).optional()
     }).refine((data) => {
       const requiresReceipt = ["alinma", "ur", "barq", "rajhi"].includes(data.paymentMethod);
@@ -1464,153 +1480,153 @@ var init_schema = __esm({
       message: "\u0639\u0646\u0648\u0627\u0646 \u0627\u0644\u062A\u0648\u0635\u064A\u0644 \u0645\u0637\u0644\u0648\u0628 \u0644\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u062A\u0648\u0635\u064A\u0644",
       path: ["deliveryAddress"]
     });
-    insertOrderItemSchema = z.object({
-      orderId: z.string(),
-      coffeeItemId: z.string(),
-      quantity: z.number(),
-      unitPrice: z.union([z.string(), z.number()]).transform((val) => typeof val === "string" ? parseFloat(val) : val),
-      totalPrice: z.union([z.string(), z.number()]).transform((val) => typeof val === "string" ? parseFloat(val) : val)
+    insertOrderItemSchema = import_zod.z.object({
+      orderId: import_zod.z.string(),
+      coffeeItemId: import_zod.z.string(),
+      quantity: import_zod.z.number(),
+      unitPrice: import_zod.z.union([import_zod.z.string(), import_zod.z.number()]).transform((val) => typeof val === "string" ? parseFloat(val) : val),
+      totalPrice: import_zod.z.union([import_zod.z.string(), import_zod.z.number()]).transform((val) => typeof val === "string" ? parseFloat(val) : val)
     });
-    insertCartItemSchema = z.object({
-      sessionId: z.string(),
-      coffeeItemId: z.string(),
-      quantity: z.number()
+    insertCartItemSchema = import_zod.z.object({
+      sessionId: import_zod.z.string(),
+      coffeeItemId: import_zod.z.string(),
+      quantity: import_zod.z.number()
     });
-    insertCustomerSchema = z.object({
-      phone: z.string(),
-      email: z.string().email("\u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u063A\u064A\u0631 \u0635\u0627\u0644\u062D").optional(),
-      name: z.string().min(2, "\u0627\u0644\u0627\u0633\u0645 \u064A\u062C\u0628 \u0623\u0646 \u064A\u0643\u0648\u0646 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644 \u062D\u0631\u0641\u064A\u0646"),
-      password: z.string().min(4, "\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u064A\u062C\u0628 \u0623\u0646 \u062A\u0643\u0648\u0646 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644 4 \u0623\u062D\u0631\u0641").optional(),
-      registeredBy: z.enum(["self", "cashier"]).optional(),
-      isPasswordSet: z.number().optional(),
-      points: z.number().optional(),
-      carType: z.string().optional(),
-      carColor: z.string().optional(),
-      saveCarInfo: z.number().optional()
+    insertCustomerSchema = import_zod.z.object({
+      phone: import_zod.z.string(),
+      email: import_zod.z.string().email("\u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u063A\u064A\u0631 \u0635\u0627\u0644\u062D").optional(),
+      name: import_zod.z.string().min(2, "\u0627\u0644\u0627\u0633\u0645 \u064A\u062C\u0628 \u0623\u0646 \u064A\u0643\u0648\u0646 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644 \u062D\u0631\u0641\u064A\u0646"),
+      password: import_zod.z.string().min(4, "\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u064A\u062C\u0628 \u0623\u0646 \u062A\u0643\u0648\u0646 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644 4 \u0623\u062D\u0631\u0641").optional(),
+      registeredBy: import_zod.z.enum(["self", "cashier"]).optional(),
+      isPasswordSet: import_zod.z.number().optional(),
+      points: import_zod.z.number().optional(),
+      carType: import_zod.z.string().optional(),
+      carColor: import_zod.z.string().optional(),
+      saveCarInfo: import_zod.z.number().optional()
     });
-    insertPasswordResetTokenSchema = z.object({
-      email: z.string(),
-      token: z.string(),
-      expiresAt: z.date()
+    insertPasswordResetTokenSchema = import_zod.z.object({
+      email: import_zod.z.string(),
+      token: import_zod.z.string(),
+      expiresAt: import_zod.z.date()
     });
-    insertDiscountCodeSchema = z.object({
-      code: z.string(),
-      discountPercentage: z.number(),
-      reason: z.string(),
-      employeeId: z.string(),
-      isActive: z.number().optional(),
-      visibleToCustomers: z.boolean().optional()
+    insertDiscountCodeSchema = import_zod.z.object({
+      code: import_zod.z.string(),
+      discountPercentage: import_zod.z.number(),
+      reason: import_zod.z.string(),
+      employeeId: import_zod.z.string(),
+      isActive: import_zod.z.number().optional(),
+      visibleToCustomers: import_zod.z.boolean().optional()
     });
-    insertLoyaltyCardSchema = z.object({
-      customerName: z.string().optional(),
-      phoneNumber: z.string(),
-      cardNumber: z.string().optional(),
-      qrToken: z.string().optional(),
-      customerId: z.string().optional()
+    insertLoyaltyCardSchema = import_zod.z.object({
+      customerName: import_zod.z.string().optional(),
+      phoneNumber: import_zod.z.string(),
+      cardNumber: import_zod.z.string().optional(),
+      qrToken: import_zod.z.string().optional(),
+      customerId: import_zod.z.string().optional()
     });
-    insertCardCodeSchema = z.object({
-      issuedForOrderId: z.string(),
-      drinkName: z.string()
+    insertCardCodeSchema = import_zod.z.object({
+      issuedForOrderId: import_zod.z.string(),
+      drinkName: import_zod.z.string()
     });
-    insertLoyaltyTransactionSchema = z.object({
-      cardId: z.string(),
-      orderId: z.string().optional(),
-      type: z.string(),
-      pointsChange: z.number(),
-      discountAmount: z.union([z.string(), z.number()]).transform((val) => typeof val === "string" ? parseFloat(val) : val).optional(),
-      orderAmount: z.union([z.string(), z.number()]).transform((val) => typeof val === "string" ? parseFloat(val) : val).optional(),
-      description: z.string().optional(),
-      employeeId: z.string().optional()
+    insertLoyaltyTransactionSchema = import_zod.z.object({
+      cardId: import_zod.z.string(),
+      orderId: import_zod.z.string().optional(),
+      type: import_zod.z.string(),
+      pointsChange: import_zod.z.number(),
+      discountAmount: import_zod.z.union([import_zod.z.string(), import_zod.z.number()]).transform((val) => typeof val === "string" ? parseFloat(val) : val).optional(),
+      orderAmount: import_zod.z.union([import_zod.z.string(), import_zod.z.number()]).transform((val) => typeof val === "string" ? parseFloat(val) : val).optional(),
+      description: import_zod.z.string().optional(),
+      employeeId: import_zod.z.string().optional()
     });
-    insertLoyaltyRewardSchema = z.object({
-      nameAr: z.string(),
-      nameEn: z.string().optional(),
-      description: z.string(),
-      pointsCost: z.number(),
-      discountPercentage: z.union([z.string(), z.number()]).transform((val) => typeof val === "string" ? parseFloat(val) : val).optional(),
-      discountAmount: z.union([z.string(), z.number()]).transform((val) => typeof val === "string" ? parseFloat(val) : val).optional(),
-      tier: z.string().optional(),
-      isActive: z.number().optional()
+    insertLoyaltyRewardSchema = import_zod.z.object({
+      nameAr: import_zod.z.string(),
+      nameEn: import_zod.z.string().optional(),
+      description: import_zod.z.string(),
+      pointsCost: import_zod.z.number(),
+      discountPercentage: import_zod.z.union([import_zod.z.string(), import_zod.z.number()]).transform((val) => typeof val === "string" ? parseFloat(val) : val).optional(),
+      discountAmount: import_zod.z.union([import_zod.z.string(), import_zod.z.number()]).transform((val) => typeof val === "string" ? parseFloat(val) : val).optional(),
+      tier: import_zod.z.string().optional(),
+      isActive: import_zod.z.number().optional()
     });
-    insertIngredientSchema = z.object({
-      nameAr: z.string(),
-      nameEn: z.string().optional(),
-      isAvailable: z.number().optional(),
-      icon: z.string().optional()
+    insertIngredientSchema = import_zod.z.object({
+      nameAr: import_zod.z.string(),
+      nameEn: import_zod.z.string().optional(),
+      isAvailable: import_zod.z.number().optional(),
+      icon: import_zod.z.string().optional()
     });
-    insertCoffeeItemIngredientSchema = z.object({
-      coffeeItemId: z.string(),
-      ingredientId: z.string()
+    insertCoffeeItemIngredientSchema = import_zod.z.object({
+      coffeeItemId: import_zod.z.string(),
+      ingredientId: import_zod.z.string()
     });
-    insertUserSchema = z.object({
-      username: z.string(),
-      password: z.string()
+    insertUserSchema = import_zod.z.object({
+      username: import_zod.z.string(),
+      password: import_zod.z.string()
     });
-    insertBranchSchema = z.object({
-      nameAr: z.string().min(2, "\u0627\u0633\u0645 \u0627\u0644\u0641\u0631\u0639 \u0645\u0637\u0644\u0648\u0628"),
-      nameEn: z.string().optional(),
-      address: z.string().min(5, "\u0627\u0644\u0639\u0646\u0648\u0627\u0646 \u0645\u0637\u0644\u0648\u0628"),
-      phone: z.string().min(9, "\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641 \u0645\u0637\u0644\u0648\u0628"),
-      city: z.string().min(2, "\u0627\u0644\u0645\u062F\u064A\u0646\u0629 \u0645\u0637\u0644\u0648\u0628\u0629"),
-      location: z.object({
-        lat: z.number(),
-        lng: z.number()
+    insertBranchSchema = import_zod.z.object({
+      nameAr: import_zod.z.string().min(2, "\u0627\u0633\u0645 \u0627\u0644\u0641\u0631\u0639 \u0645\u0637\u0644\u0648\u0628"),
+      nameEn: import_zod.z.string().optional(),
+      address: import_zod.z.string().min(5, "\u0627\u0644\u0639\u0646\u0648\u0627\u0646 \u0645\u0637\u0644\u0648\u0628"),
+      phone: import_zod.z.string().min(9, "\u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641 \u0645\u0637\u0644\u0648\u0628"),
+      city: import_zod.z.string().min(2, "\u0627\u0644\u0645\u062F\u064A\u0646\u0629 \u0645\u0637\u0644\u0648\u0628\u0629"),
+      location: import_zod.z.object({
+        lat: import_zod.z.number(),
+        lng: import_zod.z.number()
       }).optional(),
-      mapsUrl: z.string().optional(),
-      isActive: z.number().optional(),
-      managerName: z.string().optional()
+      mapsUrl: import_zod.z.string().optional(),
+      isActive: import_zod.z.number().optional(),
+      managerName: import_zod.z.string().optional()
     });
-    insertCategorySchema = z.object({
-      nameAr: z.string().min(2, "\u0627\u0633\u0645 \u0627\u0644\u0641\u0626\u0629 \u0645\u0637\u0644\u0648\u0628"),
-      nameEn: z.string().optional(),
-      description: z.string().optional(),
-      icon: z.string().optional(),
-      sortOrder: z.number().optional(),
-      isActive: z.number().optional()
+    insertCategorySchema = import_zod.z.object({
+      nameAr: import_zod.z.string().min(2, "\u0627\u0633\u0645 \u0627\u0644\u0641\u0626\u0629 \u0645\u0637\u0644\u0648\u0628"),
+      nameEn: import_zod.z.string().optional(),
+      description: import_zod.z.string().optional(),
+      icon: import_zod.z.string().optional(),
+      sortOrder: import_zod.z.number().optional(),
+      isActive: import_zod.z.number().optional()
     });
-    insertTableSchema = z.object({
-      tableNumber: z.string().min(1, "\u0631\u0642\u0645 \u0627\u0644\u0637\u0627\u0648\u0644\u0629 \u0645\u0637\u0644\u0648\u0628"),
-      qrToken: z.string().optional(),
-      branchId: z.string().min(1, "\u0645\u0639\u0631\u0651\u0641 \u0627\u0644\u0641\u0631\u0639 \u0645\u0637\u0644\u0648\u0628"),
-      capacity: z.number().optional(),
-      location: z.string().optional(),
-      isActive: z.number().optional(),
-      isOccupied: z.number().optional(),
-      currentOrderId: z.string().optional(),
-      reservedFor: z.object({
-        customerName: z.string(),
-        customerPhone: z.string(),
-        customerId: z.string().optional(),
-        reservationDate: z.coerce.date().optional(),
-        reservationTime: z.string().optional(),
-        numberOfGuests: z.number().optional(),
-        reservedAt: z.coerce.date().optional(),
-        reservedBy: z.string(),
-        status: z.enum(["pending", "confirmed", "cancelled", "completed"]).optional()
+    insertTableSchema = import_zod.z.object({
+      tableNumber: import_zod.z.string().min(1, "\u0631\u0642\u0645 \u0627\u0644\u0637\u0627\u0648\u0644\u0629 \u0645\u0637\u0644\u0648\u0628"),
+      qrToken: import_zod.z.string().optional(),
+      branchId: import_zod.z.string().min(1, "\u0645\u0639\u0631\u0651\u0641 \u0627\u0644\u0641\u0631\u0639 \u0645\u0637\u0644\u0648\u0628"),
+      capacity: import_zod.z.number().optional(),
+      location: import_zod.z.string().optional(),
+      isActive: import_zod.z.number().optional(),
+      isOccupied: import_zod.z.number().optional(),
+      currentOrderId: import_zod.z.string().optional(),
+      reservedFor: import_zod.z.object({
+        customerName: import_zod.z.string(),
+        customerPhone: import_zod.z.string(),
+        customerId: import_zod.z.string().optional(),
+        reservationDate: import_zod.z.coerce.date().optional(),
+        reservationTime: import_zod.z.string().optional(),
+        numberOfGuests: import_zod.z.number().optional(),
+        reservedAt: import_zod.z.coerce.date().optional(),
+        reservedBy: import_zod.z.string(),
+        status: import_zod.z.enum(["pending", "confirmed", "cancelled", "completed"]).optional()
       }).optional()
     });
-    insertAttendanceSchema = z.object({
-      employeeId: z.string(),
-      branchId: z.string(),
-      checkInTime: z.coerce.date(),
-      checkOutTime: z.coerce.date().optional(),
-      checkInLocation: z.object({
-        lat: z.number(),
-        lng: z.number()
+    insertAttendanceSchema = import_zod.z.object({
+      employeeId: import_zod.z.string(),
+      branchId: import_zod.z.string(),
+      checkInTime: import_zod.z.coerce.date(),
+      checkOutTime: import_zod.z.coerce.date().optional(),
+      checkInLocation: import_zod.z.object({
+        lat: import_zod.z.number(),
+        lng: import_zod.z.number()
       }),
-      checkOutLocation: z.object({
-        lat: z.number(),
-        lng: z.number()
+      checkOutLocation: import_zod.z.object({
+        lat: import_zod.z.number(),
+        lng: import_zod.z.number()
       }).optional(),
-      checkInPhoto: z.string(),
-      checkOutPhoto: z.string().optional(),
-      status: z.enum(["checked_in", "checked_out", "late", "absent"]).optional(),
-      shiftDate: z.coerce.date(),
-      notes: z.string().optional(),
-      isLate: z.number().optional(),
-      lateMinutes: z.number().optional()
+      checkInPhoto: import_zod.z.string(),
+      checkOutPhoto: import_zod.z.string().optional(),
+      status: import_zod.z.enum(["checked_in", "checked_out", "late", "absent"]).optional(),
+      shiftDate: import_zod.z.coerce.date(),
+      notes: import_zod.z.string().optional(),
+      isLate: import_zod.z.number().optional(),
+      lateMinutes: import_zod.z.number().optional()
     });
-    RawItemSchema = new Schema({
+    RawItemSchema = new import_mongoose.Schema({
       code: { type: String, required: true, unique: true },
       nameAr: { type: String, required: true },
       nameEn: { type: String },
@@ -1629,8 +1645,8 @@ var init_schema = __esm({
       createdAt: { type: Date, default: Date.now },
       updatedAt: { type: Date, default: Date.now }
     });
-    RawItemModel = mongoose.model("RawItem", RawItemSchema);
-    SupplierSchema = new Schema({
+    RawItemModel = import_mongoose.default.model("RawItem", RawItemSchema);
+    SupplierSchema = new import_mongoose.Schema({
       code: { type: String, required: true, unique: true },
       nameAr: { type: String, required: true },
       nameEn: { type: String },
@@ -1646,8 +1662,8 @@ var init_schema = __esm({
       createdAt: { type: Date, default: Date.now },
       updatedAt: { type: Date, default: Date.now }
     });
-    SupplierModel = mongoose.model("Supplier", SupplierSchema);
-    BranchStockSchema = new Schema({
+    SupplierModel = import_mongoose.default.model("Supplier", SupplierSchema);
+    BranchStockSchema = new import_mongoose.Schema({
       branchId: { type: String, required: true },
       rawItemId: { type: String, required: true },
       currentQuantity: { type: Number, required: true, default: 0 },
@@ -1657,8 +1673,8 @@ var init_schema = __esm({
       notes: { type: String }
     });
     BranchStockSchema.index({ branchId: 1, rawItemId: 1 }, { unique: true });
-    BranchStockModel = mongoose.model("BranchStock", BranchStockSchema);
-    StockTransferSchema = new Schema({
+    BranchStockModel = import_mongoose.default.model("BranchStock", BranchStockSchema);
+    StockTransferSchema = new import_mongoose.Schema({
       transferNumber: { type: String, required: true, unique: true },
       fromBranchId: { type: String, required: true },
       toBranchId: { type: String, required: true },
@@ -1677,8 +1693,8 @@ var init_schema = __esm({
       createdAt: { type: Date, default: Date.now },
       updatedAt: { type: Date, default: Date.now }
     });
-    StockTransferModel = mongoose.model("StockTransfer", StockTransferSchema);
-    PurchaseInvoiceSchema = new Schema({
+    StockTransferModel = import_mongoose.default.model("StockTransfer", StockTransferSchema);
+    PurchaseInvoiceSchema = new import_mongoose.Schema({
       invoiceNumber: { type: String, required: true, unique: true },
       supplierId: { type: String, required: true },
       branchId: { type: String, required: true },
@@ -1707,8 +1723,8 @@ var init_schema = __esm({
       createdAt: { type: Date, default: Date.now },
       updatedAt: { type: Date, default: Date.now }
     });
-    PurchaseInvoiceModel = mongoose.model("PurchaseInvoice", PurchaseInvoiceSchema);
-    RecipeItemSchema = new Schema({
+    PurchaseInvoiceModel = import_mongoose.default.model("PurchaseInvoice", PurchaseInvoiceSchema);
+    RecipeItemSchema = new import_mongoose.Schema({
       coffeeItemId: { type: String, required: true },
       rawItemId: { type: String, required: true },
       quantity: { type: Number, required: true },
@@ -1718,8 +1734,8 @@ var init_schema = __esm({
       updatedAt: { type: Date, default: Date.now }
     });
     RecipeItemSchema.index({ coffeeItemId: 1, rawItemId: 1 }, { unique: true });
-    RecipeItemModel = mongoose.model("RecipeItem", RecipeItemSchema);
-    RecipeSchema = new Schema({
+    RecipeItemModel = import_mongoose.default.model("RecipeItem", RecipeItemSchema);
+    RecipeSchema = new import_mongoose.Schema({
       coffeeItemId: { type: String, required: true },
       nameAr: { type: String, required: true },
       nameEn: { type: String },
@@ -1739,8 +1755,8 @@ var init_schema = __esm({
     });
     RecipeSchema.index({ coffeeItemId: 1, version: -1 });
     RecipeSchema.index({ isActive: 1 });
-    RecipeModel = mongoose.model("Recipe", RecipeSchema);
-    StockAlertSchema = new Schema({
+    RecipeModel = import_mongoose.default.model("Recipe", RecipeSchema);
+    StockAlertSchema = new import_mongoose.Schema({
       branchId: { type: String, required: true },
       rawItemId: { type: String, required: true },
       alertType: { type: String, enum: ["low_stock", "out_of_stock", "expiring_soon", "expired"], required: true },
@@ -1753,8 +1769,8 @@ var init_schema = __esm({
       createdAt: { type: Date, default: Date.now }
     });
     StockAlertSchema.index({ branchId: 1, isResolved: 1 });
-    StockAlertModel = mongoose.model("StockAlert", StockAlertSchema);
-    StockMovementSchema = new Schema({
+    StockAlertModel = import_mongoose.default.model("StockAlert", StockAlertSchema);
+    StockMovementSchema = new import_mongoose.Schema({
       branchId: { type: String, required: true },
       rawItemId: { type: String, required: true },
       movementType: { type: String, enum: ["purchase", "sale", "transfer_in", "transfer_out", "adjustment", "waste", "return"], required: true },
@@ -1769,8 +1785,8 @@ var init_schema = __esm({
     });
     StockMovementSchema.index({ branchId: 1, rawItemId: 1 });
     StockMovementSchema.index({ createdAt: -1 });
-    StockMovementModel = mongoose.model("StockMovement", StockMovementSchema);
-    UnitConversionSchema = new Schema({
+    StockMovementModel = import_mongoose.default.model("StockMovement", StockMovementSchema);
+    UnitConversionSchema = new import_mongoose.Schema({
       tenantId: { type: String, required: true },
       fromUnit: { type: String, required: true },
       toUnit: { type: String, required: true },
@@ -1778,193 +1794,193 @@ var init_schema = __esm({
       formula: { type: String }
     });
     UnitConversionSchema.index({ tenantId: 1, fromUnit: 1, toUnit: 1 });
-    UnitConversionModel = mongoose.model("UnitConversion", UnitConversionSchema);
-    insertRawItemSchema = z.object({
-      code: z.string(),
-      nameAr: z.string(),
-      nameEn: z.string().optional(),
-      description: z.string().optional(),
-      category: z.enum(["ingredient", "packaging", "equipment", "consumable", "other"]),
-      unit: z.enum(["kg", "g", "liter", "ml", "piece", "box", "bag"]),
-      unitCost: z.number().min(0),
-      minStockLevel: z.number().min(0),
-      maxStockLevel: z.number().min(0).optional(),
-      supplierId: z.string().optional(),
-      isActive: z.number().default(1)
+    UnitConversionModel = import_mongoose.default.model("UnitConversion", UnitConversionSchema);
+    insertRawItemSchema = import_zod.z.object({
+      code: import_zod.z.string(),
+      nameAr: import_zod.z.string(),
+      nameEn: import_zod.z.string().optional(),
+      description: import_zod.z.string().optional(),
+      category: import_zod.z.enum(["ingredient", "packaging", "equipment", "consumable", "other"]),
+      unit: import_zod.z.enum(["kg", "g", "liter", "ml", "piece", "box", "bag"]),
+      unitCost: import_zod.z.number().min(0),
+      minStockLevel: import_zod.z.number().min(0),
+      maxStockLevel: import_zod.z.number().min(0).optional(),
+      supplierId: import_zod.z.string().optional(),
+      isActive: import_zod.z.number().default(1)
     });
-    insertSupplierSchema = z.object({
-      code: z.string(),
-      nameAr: z.string(),
-      nameEn: z.string().optional(),
-      contactPerson: z.string().optional(),
-      phone: z.string(),
-      email: z.string().email().optional(),
-      address: z.string().optional(),
-      city: z.string().optional(),
-      taxNumber: z.string().optional(),
-      paymentTerms: z.string().optional(),
-      notes: z.string().optional(),
-      isActive: z.number().optional()
+    insertSupplierSchema = import_zod.z.object({
+      code: import_zod.z.string(),
+      nameAr: import_zod.z.string(),
+      nameEn: import_zod.z.string().optional(),
+      contactPerson: import_zod.z.string().optional(),
+      phone: import_zod.z.string(),
+      email: import_zod.z.string().email().optional(),
+      address: import_zod.z.string().optional(),
+      city: import_zod.z.string().optional(),
+      taxNumber: import_zod.z.string().optional(),
+      paymentTerms: import_zod.z.string().optional(),
+      notes: import_zod.z.string().optional(),
+      isActive: import_zod.z.number().optional()
     });
-    insertBranchStockSchema = z.object({
-      branchId: z.string(),
-      rawItemId: z.string(),
-      currentQuantity: z.number().min(0),
-      reservedQuantity: z.number().min(0).optional(),
-      notes: z.string().optional()
+    insertBranchStockSchema = import_zod.z.object({
+      branchId: import_zod.z.string(),
+      rawItemId: import_zod.z.string(),
+      currentQuantity: import_zod.z.number().min(0),
+      reservedQuantity: import_zod.z.number().min(0).optional(),
+      notes: import_zod.z.string().optional()
     });
-    insertStockTransferSchema = z.object({
-      fromBranchId: z.string(),
-      toBranchId: z.string(),
-      items: z.array(z.object({
-        rawItemId: z.string(),
-        quantity: z.number().positive(),
-        notes: z.string().optional()
+    insertStockTransferSchema = import_zod.z.object({
+      fromBranchId: import_zod.z.string(),
+      toBranchId: import_zod.z.string(),
+      items: import_zod.z.array(import_zod.z.object({
+        rawItemId: import_zod.z.string(),
+        quantity: import_zod.z.number().positive(),
+        notes: import_zod.z.string().optional()
       })),
-      requestedBy: z.string(),
-      notes: z.string().optional()
+      requestedBy: import_zod.z.string(),
+      notes: import_zod.z.string().optional()
     });
-    insertPurchaseInvoiceSchema = z.object({
-      supplierId: z.string(),
-      branchId: z.string(),
-      items: z.array(z.object({
-        rawItemId: z.string(),
-        quantity: z.number().positive(),
-        unitCost: z.number().min(0),
-        totalCost: z.number().min(0),
-        notes: z.string().optional()
+    insertPurchaseInvoiceSchema = import_zod.z.object({
+      supplierId: import_zod.z.string(),
+      branchId: import_zod.z.string(),
+      items: import_zod.z.array(import_zod.z.object({
+        rawItemId: import_zod.z.string(),
+        quantity: import_zod.z.number().positive(),
+        unitCost: import_zod.z.number().min(0),
+        totalCost: import_zod.z.number().min(0),
+        notes: import_zod.z.string().optional()
       })),
-      subtotal: z.number().min(0),
-      taxAmount: z.number().min(0).optional(),
-      discountAmount: z.number().min(0).optional(),
-      totalAmount: z.number().min(0),
-      invoiceDate: z.coerce.date().optional(),
-      dueDate: z.coerce.date().optional(),
-      createdBy: z.string(),
-      notes: z.string().optional()
+      subtotal: import_zod.z.number().min(0),
+      taxAmount: import_zod.z.number().min(0).optional(),
+      discountAmount: import_zod.z.number().min(0).optional(),
+      totalAmount: import_zod.z.number().min(0),
+      invoiceDate: import_zod.z.coerce.date().optional(),
+      dueDate: import_zod.z.coerce.date().optional(),
+      createdBy: import_zod.z.string(),
+      notes: import_zod.z.string().optional()
     });
-    insertRecipeItemSchema = z.object({
-      coffeeItemId: z.string(),
-      rawItemId: z.string(),
-      quantity: z.number().positive(),
-      unit: z.string(),
-      notes: z.string().optional()
+    insertRecipeItemSchema = import_zod.z.object({
+      coffeeItemId: import_zod.z.string(),
+      rawItemId: import_zod.z.string(),
+      quantity: import_zod.z.number().positive(),
+      unit: import_zod.z.string(),
+      notes: import_zod.z.string().optional()
     });
-    insertStockMovementSchema = z.object({
-      branchId: z.string(),
-      rawItemId: z.string(),
-      movementType: z.enum(["purchase", "sale", "transfer_in", "transfer_out", "adjustment", "waste", "return"]),
-      quantity: z.number(),
-      previousQuantity: z.number(),
-      newQuantity: z.number(),
-      referenceType: z.enum(["purchase_invoice", "order", "transfer", "manual"]).optional(),
-      referenceId: z.string().optional(),
-      notes: z.string().optional(),
-      createdBy: z.string()
+    insertStockMovementSchema = import_zod.z.object({
+      branchId: import_zod.z.string(),
+      rawItemId: import_zod.z.string(),
+      movementType: import_zod.z.enum(["purchase", "sale", "transfer_in", "transfer_out", "adjustment", "waste", "return"]),
+      quantity: import_zod.z.number(),
+      previousQuantity: import_zod.z.number(),
+      newQuantity: import_zod.z.number(),
+      referenceType: import_zod.z.enum(["purchase_invoice", "order", "transfer", "manual"]).optional(),
+      referenceId: import_zod.z.string().optional(),
+      notes: import_zod.z.string().optional(),
+      createdBy: import_zod.z.string()
     });
-    insertTaxInvoiceSchema = z.object({
-      orderId: z.string(),
-      customerName: z.string(),
-      customerPhone: z.string(),
-      customerEmail: z.string().optional(),
-      customerVatNumber: z.string().optional(),
-      customerAddress: z.string().optional(),
-      invoiceType: z.enum(["standard", "simplified", "debit_note", "credit_note"]).optional(),
-      transactionType: z.enum(["B2B", "B2C"]).optional(),
-      items: z.array(z.object({
-        itemId: z.string(),
-        nameAr: z.string(),
-        nameEn: z.string().optional(),
-        quantity: z.number(),
-        unitPrice: z.number(),
-        discountAmount: z.number().optional(),
-        taxRate: z.number().optional()
+    insertTaxInvoiceSchema = import_zod.z.object({
+      orderId: import_zod.z.string(),
+      customerName: import_zod.z.string(),
+      customerPhone: import_zod.z.string(),
+      customerEmail: import_zod.z.string().optional(),
+      customerVatNumber: import_zod.z.string().optional(),
+      customerAddress: import_zod.z.string().optional(),
+      invoiceType: import_zod.z.enum(["standard", "simplified", "debit_note", "credit_note"]).optional(),
+      transactionType: import_zod.z.enum(["B2B", "B2C"]).optional(),
+      items: import_zod.z.array(import_zod.z.object({
+        itemId: import_zod.z.string(),
+        nameAr: import_zod.z.string(),
+        nameEn: import_zod.z.string().optional(),
+        quantity: import_zod.z.number(),
+        unitPrice: import_zod.z.number(),
+        discountAmount: import_zod.z.number().optional(),
+        taxRate: import_zod.z.number().optional()
       })),
-      paymentMethod: z.string(),
-      branchId: z.string().optional(),
-      createdBy: z.string().optional()
+      paymentMethod: import_zod.z.string(),
+      branchId: import_zod.z.string().optional(),
+      createdBy: import_zod.z.string().optional()
     });
-    insertExpenseSchema = z.object({
-      branchId: z.string(),
-      date: z.coerce.date(),
-      category: z.enum(["inventory", "salaries", "rent", "utilities", "marketing", "maintenance", "supplies", "other"]),
-      subcategory: z.string().optional(),
-      description: z.string(),
-      amount: z.number().positive(),
-      vatAmount: z.number().min(0).optional(),
-      paymentMethod: z.enum(["cash", "bank_transfer", "credit_card", "check", "other"]),
-      vendorName: z.string().optional(),
-      vendorVatNumber: z.string().optional(),
-      invoiceNumber: z.string().optional(),
-      receiptUrl: z.string().optional(),
-      createdBy: z.string(),
-      notes: z.string().optional()
+    insertExpenseSchema = import_zod.z.object({
+      branchId: import_zod.z.string(),
+      date: import_zod.z.coerce.date(),
+      category: import_zod.z.enum(["inventory", "salaries", "rent", "utilities", "marketing", "maintenance", "supplies", "other"]),
+      subcategory: import_zod.z.string().optional(),
+      description: import_zod.z.string(),
+      amount: import_zod.z.number().positive(),
+      vatAmount: import_zod.z.number().min(0).optional(),
+      paymentMethod: import_zod.z.enum(["cash", "bank_transfer", "credit_card", "check", "other"]),
+      vendorName: import_zod.z.string().optional(),
+      vendorVatNumber: import_zod.z.string().optional(),
+      invoiceNumber: import_zod.z.string().optional(),
+      receiptUrl: import_zod.z.string().optional(),
+      createdBy: import_zod.z.string(),
+      notes: import_zod.z.string().optional()
     });
-    insertRevenueSchema = z.object({
-      branchId: z.string(),
-      date: z.coerce.date(),
-      orderId: z.string().optional(),
-      invoiceId: z.string().optional(),
-      category: z.enum(["sales", "delivery_fee", "service_charge", "other"]).optional(),
-      description: z.string().optional(),
-      grossAmount: z.number(),
-      vatAmount: z.number(),
-      netAmount: z.number(),
-      paymentMethod: z.string(),
-      employeeId: z.string().optional(),
-      notes: z.string().optional()
+    insertRevenueSchema = import_zod.z.object({
+      branchId: import_zod.z.string(),
+      date: import_zod.z.coerce.date(),
+      orderId: import_zod.z.string().optional(),
+      invoiceId: import_zod.z.string().optional(),
+      category: import_zod.z.enum(["sales", "delivery_fee", "service_charge", "other"]).optional(),
+      description: import_zod.z.string().optional(),
+      grossAmount: import_zod.z.number(),
+      vatAmount: import_zod.z.number(),
+      netAmount: import_zod.z.number(),
+      paymentMethod: import_zod.z.string(),
+      employeeId: import_zod.z.string().optional(),
+      notes: import_zod.z.string().optional()
     });
-    insertCashRegisterSchema = z.object({
-      branchId: z.string(),
-      employeeId: z.string(),
-      openingBalance: z.number().min(0)
+    insertCashRegisterSchema = import_zod.z.object({
+      branchId: import_zod.z.string(),
+      employeeId: import_zod.z.string(),
+      openingBalance: import_zod.z.number().min(0)
     });
-    insertKitchenOrderSchema = z.object({
-      orderId: z.string(),
-      orderNumber: z.string(),
-      branchId: z.string(),
-      items: z.array(z.object({
-        itemId: z.string(),
-        nameAr: z.string(),
-        quantity: z.number(),
-        notes: z.string().optional()
+    insertKitchenOrderSchema = import_zod.z.object({
+      orderId: import_zod.z.string(),
+      orderNumber: import_zod.z.string(),
+      branchId: import_zod.z.string(),
+      items: import_zod.z.array(import_zod.z.object({
+        itemId: import_zod.z.string(),
+        nameAr: import_zod.z.string(),
+        quantity: import_zod.z.number(),
+        notes: import_zod.z.string().optional()
       })),
-      priority: z.enum(["normal", "high", "urgent"]).optional(),
-      orderType: z.enum(["dine-in", "takeaway", "delivery"]),
-      tableNumber: z.string().optional(),
-      customerName: z.string().optional(),
-      notes: z.string().optional()
+      priority: import_zod.z.enum(["normal", "high", "urgent"]).optional(),
+      orderType: import_zod.z.enum(["dine-in", "takeaway", "delivery"]),
+      tableNumber: import_zod.z.string().optional(),
+      customerName: import_zod.z.string().optional(),
+      notes: import_zod.z.string().optional()
     });
-    insertProductAddonSchema = z.object({
-      id: z.string(),
-      nameAr: z.string(),
-      nameEn: z.string().optional(),
-      category: z.enum(["sugar", "milk", "shot", "syrup", "topping", "size", "other", "flavor", "Flavor", "Shot"]),
-      price: z.number().min(0),
-      isAvailable: z.number().optional().default(1),
-      isFree: z.number().optional(),
-      rawItemId: z.string().optional(),
-      quantityPerUnit: z.number().optional(),
-      unit: z.string().optional(),
-      orderIndex: z.number().optional(),
-      sku: z.string().optional(),
-      imageUrl: z.string().optional(),
-      isAddonDrink: z.boolean().optional(),
-      isIndependentProduct: z.boolean().optional(),
-      linkedCoffeeItemId: z.string().optional(),
-      inventoryRawItemId: z.string().optional(),
-      linkedRawItemId: z.string().optional(),
-      menuCategory: z.string().optional()
+    insertProductAddonSchema = import_zod.z.object({
+      id: import_zod.z.string(),
+      nameAr: import_zod.z.string(),
+      nameEn: import_zod.z.string().optional(),
+      category: import_zod.z.enum(["sugar", "milk", "shot", "syrup", "topping", "size", "other", "flavor", "Flavor", "Shot"]),
+      price: import_zod.z.number().min(0),
+      isAvailable: import_zod.z.number().optional().default(1),
+      isFree: import_zod.z.number().optional(),
+      rawItemId: import_zod.z.string().optional(),
+      quantityPerUnit: import_zod.z.number().optional(),
+      unit: import_zod.z.string().optional(),
+      orderIndex: import_zod.z.number().optional(),
+      sku: import_zod.z.string().optional(),
+      imageUrl: import_zod.z.string().optional(),
+      isAddonDrink: import_zod.z.boolean().optional(),
+      isIndependentProduct: import_zod.z.boolean().optional(),
+      linkedCoffeeItemId: import_zod.z.string().optional(),
+      inventoryRawItemId: import_zod.z.string().optional(),
+      linkedRawItemId: import_zod.z.string().optional(),
+      menuCategory: import_zod.z.string().optional()
     });
-    insertCoffeeItemAddonSchema = z.object({
-      coffeeItemId: z.string(),
-      addonId: z.string(),
-      isDefault: z.number().optional(),
-      defaultValue: z.string().optional(),
-      minQuantity: z.number().optional(),
-      maxQuantity: z.number().optional()
+    insertCoffeeItemAddonSchema = import_zod.z.object({
+      coffeeItemId: import_zod.z.string(),
+      addonId: import_zod.z.string(),
+      isDefault: import_zod.z.number().optional(),
+      defaultValue: import_zod.z.string().optional(),
+      minQuantity: import_zod.z.number().optional(),
+      maxQuantity: import_zod.z.number().optional()
     });
-    ProductReviewSchema = new Schema({
+    ProductReviewSchema = new import_mongoose.Schema({
       productId: { type: String },
       customerId: { type: String, default: "" },
       customerName: { type: String, default: "" },
@@ -1989,8 +2005,8 @@ var init_schema = __esm({
     ProductReviewSchema.index({ customerId: 1 });
     ProductReviewSchema.index({ orderId: 1 });
     ProductReviewSchema.index({ branchId: 1 });
-    ProductReviewModel = mongoose.model("ProductReview", ProductReviewSchema);
-    ReferralSchema = new Schema({
+    ProductReviewModel = import_mongoose.default.model("ProductReview", ProductReviewSchema);
+    ReferralSchema = new import_mongoose.Schema({
       referrerId: { type: String, required: true },
       referrerCode: { type: String, required: true, unique: false },
       referredCustomerId: { type: String },
@@ -2006,8 +2022,8 @@ var init_schema = __esm({
     ReferralSchema.index({ referrerId: 1 });
     ReferralSchema.index({ referrerCode: 1 });
     ReferralSchema.index({ referredCustomerId: 1 });
-    ReferralModel = mongoose.model("Referral", ReferralSchema);
-    NotificationSchema = new Schema({
+    ReferralModel = import_mongoose.default.model("Referral", ReferralSchema);
+    NotificationSchema = new import_mongoose.Schema({
       customerId: { type: String },
       userId: { type: String },
       userType: { type: String, enum: ["customer", "employee"], default: "customer" },
@@ -2027,27 +2043,27 @@ var init_schema = __esm({
     NotificationSchema.index({ customerId: 1, createdAt: -1 });
     NotificationSchema.index({ userId: 1, createdAt: -1 });
     NotificationSchema.index({ isRead: 1 });
-    NotificationModel = mongoose.model("Notification", NotificationSchema);
-    insertProductReviewSchema = z.object({
-      productId: z.string(),
-      customerId: z.string(),
-      rating: z.number().min(1).max(5),
-      comment: z.string().optional(),
-      isVerifiedPurchase: z.number().optional()
+    NotificationModel = import_mongoose.default.model("Notification", NotificationSchema);
+    insertProductReviewSchema = import_zod.z.object({
+      productId: import_zod.z.string(),
+      customerId: import_zod.z.string(),
+      rating: import_zod.z.number().min(1).max(5),
+      comment: import_zod.z.string().optional(),
+      isVerifiedPurchase: import_zod.z.number().optional()
     });
-    insertReferralSchema = z.object({
-      referrerId: z.string(),
-      referredPhone: z.string(),
-      referredEmail: z.string().optional()
+    insertReferralSchema = import_zod.z.object({
+      referrerId: import_zod.z.string(),
+      referredPhone: import_zod.z.string(),
+      referredEmail: import_zod.z.string().optional()
     });
-    insertNotificationSchema = z.object({
-      customerId: z.string(),
-      title: z.string(),
-      message: z.string(),
-      type: z.enum(["order_update", "referral", "loyalty", "promotion", "system"]),
-      relatedOrderId: z.string().optional()
+    insertNotificationSchema = import_zod.z.object({
+      customerId: import_zod.z.string(),
+      title: import_zod.z.string(),
+      message: import_zod.z.string(),
+      type: import_zod.z.enum(["order_update", "referral", "loyalty", "promotion", "system"]),
+      relatedOrderId: import_zod.z.string().optional()
     });
-    AccountingSnapshotSchema = new Schema({
+    AccountingSnapshotSchema = new import_mongoose.Schema({
       tenantId: { type: String, required: true },
       branchId: { type: String, required: true },
       snapshotDate: { type: Date, default: Date.now, required: true },
@@ -2094,46 +2110,46 @@ var init_schema = __esm({
     AccountingSnapshotSchema.index({ tenantId: 1, branchId: 1, snapshotDate: -1 });
     AccountingSnapshotSchema.index({ tenantId: 1, snapshotType: 1 });
     AccountingSnapshotSchema.index({ isApproved: 1 });
-    AccountingSnapshotModel = mongoose.model("AccountingSnapshot", AccountingSnapshotSchema);
-    insertAccountingSnapshotSchema = z.object({
-      tenantId: z.string(),
-      branchId: z.string(),
-      snapshotDate: z.date().optional(),
-      snapshotType: z.enum(["daily", "monthly", "custom"]),
-      periodStart: z.date(),
-      periodEnd: z.date(),
-      totalRevenue: z.number(),
-      totalOrders: z.number(),
-      averageOrderValue: z.number(),
-      totalCostOfGoods: z.number(),
-      totalDiscounts: z.number(),
-      totalDeliveryFees: z.number(),
-      staffCosts: z.number().optional(),
-      utilities: z.number().optional(),
-      rent: z.number().optional(),
-      marketing: z.number().optional(),
-      otherExpenses: z.number().optional(),
-      wasteAmount: z.number(),
-      wastePercentage: z.number(),
-      inventoryAdjustments: z.number(),
-      grossProfit: z.number(),
-      grossProfitMargin: z.number(),
-      netProfit: z.number().optional(),
-      netProfitMargin: z.number().optional(),
-      vatPercentage: z.number(),
-      totalVAT: z.number(),
-      taxableAmount: z.number(),
-      ordersWithCOGS: z.number(),
-      uniqueProducts: z.number(),
-      topProductsByRevenue: z.array(z.object({
-        productId: z.string(),
-        productName: z.string(),
-        quantity: z.number(),
-        revenue: z.number()
+    AccountingSnapshotModel = import_mongoose.default.model("AccountingSnapshot", AccountingSnapshotSchema);
+    insertAccountingSnapshotSchema = import_zod.z.object({
+      tenantId: import_zod.z.string(),
+      branchId: import_zod.z.string(),
+      snapshotDate: import_zod.z.date().optional(),
+      snapshotType: import_zod.z.enum(["daily", "monthly", "custom"]),
+      periodStart: import_zod.z.date(),
+      periodEnd: import_zod.z.date(),
+      totalRevenue: import_zod.z.number(),
+      totalOrders: import_zod.z.number(),
+      averageOrderValue: import_zod.z.number(),
+      totalCostOfGoods: import_zod.z.number(),
+      totalDiscounts: import_zod.z.number(),
+      totalDeliveryFees: import_zod.z.number(),
+      staffCosts: import_zod.z.number().optional(),
+      utilities: import_zod.z.number().optional(),
+      rent: import_zod.z.number().optional(),
+      marketing: import_zod.z.number().optional(),
+      otherExpenses: import_zod.z.number().optional(),
+      wasteAmount: import_zod.z.number(),
+      wastePercentage: import_zod.z.number(),
+      inventoryAdjustments: import_zod.z.number(),
+      grossProfit: import_zod.z.number(),
+      grossProfitMargin: import_zod.z.number(),
+      netProfit: import_zod.z.number().optional(),
+      netProfitMargin: import_zod.z.number().optional(),
+      vatPercentage: import_zod.z.number(),
+      totalVAT: import_zod.z.number(),
+      taxableAmount: import_zod.z.number(),
+      ordersWithCOGS: import_zod.z.number(),
+      uniqueProducts: import_zod.z.number(),
+      topProductsByRevenue: import_zod.z.array(import_zod.z.object({
+        productId: import_zod.z.string(),
+        productName: import_zod.z.string(),
+        quantity: import_zod.z.number(),
+        revenue: import_zod.z.number()
       })).optional(),
-      notes: z.string().optional(),
-      createdBy: z.string(),
-      approvedBy: z.string().optional()
+      notes: import_zod.z.string().optional(),
+      createdBy: import_zod.z.string(),
+      approvedBy: import_zod.z.string().optional()
     });
     AccountTypes = {
       ASSET: "asset",
@@ -2143,7 +2159,7 @@ var init_schema = __esm({
       EXPENSE: "expense",
       CONTRA: "contra"
     };
-    FiscalPeriodSchema = new Schema({
+    FiscalPeriodSchema = new import_mongoose.Schema({
       tenantId: { type: String, required: true },
       name: { type: String, required: true },
       nameAr: { type: String, required: true },
@@ -2157,8 +2173,8 @@ var init_schema = __esm({
     });
     FiscalPeriodSchema.index({ tenantId: 1, startDate: 1 });
     FiscalPeriodSchema.index({ tenantId: 1, status: 1 });
-    FiscalPeriodModel = mongoose.model("FiscalPeriod", FiscalPeriodSchema);
-    CostCenterSchema = new Schema({
+    FiscalPeriodModel = import_mongoose.default.model("FiscalPeriod", FiscalPeriodSchema);
+    CostCenterSchema = new import_mongoose.Schema({
       id: { type: String, required: true, unique: true },
       tenantId: { type: String, required: true },
       code: { type: String, required: true },
@@ -2172,8 +2188,8 @@ var init_schema = __esm({
     });
     CostCenterSchema.index({ tenantId: 1, code: 1 }, { unique: true });
     CostCenterSchema.index({ tenantId: 1, branchId: 1 });
-    CostCenterModel = mongoose.model("CostCenter", CostCenterSchema);
-    AccountSchema = new Schema({
+    CostCenterModel = import_mongoose.default.model("CostCenter", CostCenterSchema);
+    AccountSchema = new import_mongoose.Schema({
       id: { type: String, required: true, unique: true },
       tenantId: { type: String, required: true },
       accountNumber: { type: String, required: true },
@@ -2204,8 +2220,8 @@ var init_schema = __esm({
     AccountSchema.index({ tenantId: 1, parentAccountId: 1 });
     AccountSchema.index({ tenantId: 1, isActive: 1 });
     AccountSchema.index({ tenantId: 1, isBankAccount: 1 });
-    AccountModel = mongoose.model("Account", AccountSchema);
-    JournalEntrySchema = new Schema({
+    AccountModel = import_mongoose.default.model("Account", AccountSchema);
+    JournalEntrySchema = new import_mongoose.Schema({
       id: { type: String, required: true, unique: true },
       tenantId: { type: String, required: true },
       entryNumber: { type: String, required: true },
@@ -2241,8 +2257,8 @@ var init_schema = __esm({
     JournalEntrySchema.index({ tenantId: 1, status: 1 });
     JournalEntrySchema.index({ tenantId: 1, referenceType: 1, referenceId: 1 });
     JournalEntrySchema.index({ "lines.accountId": 1 });
-    JournalEntryModel = mongoose.model("JournalEntry", JournalEntrySchema);
-    TaxRateSchema = new Schema({
+    JournalEntryModel = import_mongoose.default.model("JournalEntry", JournalEntrySchema);
+    TaxRateSchema = new import_mongoose.Schema({
       id: { type: String, required: true, unique: true },
       tenantId: { type: String, required: true },
       code: { type: String, required: true },
@@ -2258,8 +2274,8 @@ var init_schema = __esm({
     });
     TaxRateSchema.index({ tenantId: 1, code: 1 }, { unique: true });
     TaxRateSchema.index({ tenantId: 1, isActive: 1 });
-    TaxRateModel = mongoose.model("TaxRate", TaxRateSchema);
-    InvoiceSchema = new Schema({
+    TaxRateModel = import_mongoose.default.model("TaxRate", TaxRateSchema);
+    InvoiceSchema = new import_mongoose.Schema({
       id: { type: String, required: true, unique: true },
       tenantId: { type: String, required: true },
       branchId: { type: String, required: true },
@@ -2328,8 +2344,8 @@ var init_schema = __esm({
     InvoiceSchema.index({ tenantId: 1, orderId: 1 });
     InvoiceSchema.index({ tenantId: 1, zatcaStatus: 1 });
     InvoiceSchema.index({ zatcaUuid: 1 });
-    InvoiceModel = mongoose.model("Invoice", InvoiceSchema);
-    ExpenseErpSchema = new Schema({
+    InvoiceModel = import_mongoose.default.model("Invoice", InvoiceSchema);
+    ExpenseErpSchema = new import_mongoose.Schema({
       id: { type: String, required: true, unique: true },
       tenantId: { type: String, required: true },
       branchId: { type: String, required: true },
@@ -2372,8 +2388,8 @@ var init_schema = __esm({
     ExpenseErpSchema.index({ tenantId: 1, status: 1 });
     ExpenseErpSchema.index({ tenantId: 1, category: 1 });
     ExpenseErpSchema.index({ tenantId: 1, requestedBy: 1 });
-    ExpenseErpModel = mongoose.model("ExpenseErp", ExpenseErpSchema);
-    VendorSchema = new Schema({
+    ExpenseErpModel = import_mongoose.default.model("ExpenseErp", ExpenseErpSchema);
+    VendorSchema = new import_mongoose.Schema({
       id: { type: String, required: true, unique: true },
       tenantId: { type: String, required: true },
       code: { type: String, required: true },
@@ -2402,8 +2418,8 @@ var init_schema = __esm({
     VendorSchema.index({ tenantId: 1, code: 1 }, { unique: true });
     VendorSchema.index({ tenantId: 1, nameAr: 1 });
     VendorSchema.index({ tenantId: 1, isActive: 1 });
-    VendorModel = mongoose.model("Vendor", VendorSchema);
-    PaymentRecordSchema = new Schema({
+    VendorModel = import_mongoose.default.model("Vendor", VendorSchema);
+    PaymentRecordSchema = new import_mongoose.Schema({
       id: { type: String, required: true, unique: true },
       tenantId: { type: String, required: true },
       branchId: { type: String, required: true },
@@ -2431,8 +2447,8 @@ var init_schema = __esm({
     PaymentRecordSchema.index({ tenantId: 1, referenceType: 1, referenceId: 1 });
     PaymentRecordSchema.index({ tenantId: 1, customerId: 1 });
     PaymentRecordSchema.index({ tenantId: 1, vendorId: 1 });
-    PaymentRecordModel = mongoose.model("PaymentRecord", PaymentRecordSchema);
-    BankStatementSchema = new Schema({
+    PaymentRecordModel = import_mongoose.default.model("PaymentRecord", PaymentRecordSchema);
+    BankStatementSchema = new import_mongoose.Schema({
       id: { type: String, required: true, unique: true },
       tenantId: { type: String, required: true },
       bankAccountId: { type: String, required: true },
@@ -2453,8 +2469,8 @@ var init_schema = __esm({
     });
     BankStatementSchema.index({ tenantId: 1, bankAccountId: 1, statementDate: -1 });
     BankStatementSchema.index({ tenantId: 1, status: 1 });
-    BankStatementModel = mongoose.model("BankStatement", BankStatementSchema);
-    BankTransactionSchema = new Schema({
+    BankStatementModel = import_mongoose.default.model("BankStatement", BankStatementSchema);
+    BankTransactionSchema = new import_mongoose.Schema({
       id: { type: String, required: true, unique: true },
       tenantId: { type: String, required: true },
       bankStatementId: { type: String, required: true },
@@ -2477,137 +2493,137 @@ var init_schema = __esm({
     BankTransactionSchema.index({ tenantId: 1, bankStatementId: 1 });
     BankTransactionSchema.index({ tenantId: 1, bankAccountId: 1, transactionDate: -1 });
     BankTransactionSchema.index({ tenantId: 1, isReconciled: 1 });
-    BankTransactionModel = mongoose.model("BankTransaction", BankTransactionSchema);
-    insertAccountSchema = z.object({
-      tenantId: z.string(),
-      accountNumber: z.string(),
-      nameAr: z.string(),
-      nameEn: z.string().optional(),
-      accountType: z.enum(["asset", "liability", "equity", "revenue", "expense", "contra"]),
-      parentAccountId: z.string().optional(),
-      normalBalance: z.enum(["debit", "credit"]),
-      currency: z.string().default("SAR"),
-      isActive: z.number().default(1),
-      isSystemAccount: z.number().default(0),
-      isBankAccount: z.number().default(0),
-      bankName: z.string().optional(),
-      bankAccountNumber: z.string().optional(),
-      iban: z.string().optional(),
-      openingBalance: z.number().default(0),
-      branchId: z.string().optional(),
-      costCenterId: z.string().optional(),
-      description: z.string().optional()
+    BankTransactionModel = import_mongoose.default.model("BankTransaction", BankTransactionSchema);
+    insertAccountSchema = import_zod.z.object({
+      tenantId: import_zod.z.string(),
+      accountNumber: import_zod.z.string(),
+      nameAr: import_zod.z.string(),
+      nameEn: import_zod.z.string().optional(),
+      accountType: import_zod.z.enum(["asset", "liability", "equity", "revenue", "expense", "contra"]),
+      parentAccountId: import_zod.z.string().optional(),
+      normalBalance: import_zod.z.enum(["debit", "credit"]),
+      currency: import_zod.z.string().default("SAR"),
+      isActive: import_zod.z.number().default(1),
+      isSystemAccount: import_zod.z.number().default(0),
+      isBankAccount: import_zod.z.number().default(0),
+      bankName: import_zod.z.string().optional(),
+      bankAccountNumber: import_zod.z.string().optional(),
+      iban: import_zod.z.string().optional(),
+      openingBalance: import_zod.z.number().default(0),
+      branchId: import_zod.z.string().optional(),
+      costCenterId: import_zod.z.string().optional(),
+      description: import_zod.z.string().optional()
     });
-    insertJournalEntrySchema = z.object({
-      tenantId: z.string(),
-      entryDate: z.date(),
-      fiscalPeriodId: z.string().optional(),
-      referenceType: z.enum(["order", "invoice", "expense", "adjustment", "opening", "closing", "manual"]).optional(),
-      referenceId: z.string().optional(),
-      description: z.string(),
-      lines: z.array(z.object({
-        accountId: z.string(),
-        accountNumber: z.string(),
-        accountName: z.string(),
-        debit: z.number().default(0),
-        credit: z.number().default(0),
-        description: z.string().optional(),
-        costCenterId: z.string().optional(),
-        branchId: z.string().optional()
+    insertJournalEntrySchema = import_zod.z.object({
+      tenantId: import_zod.z.string(),
+      entryDate: import_zod.z.date(),
+      fiscalPeriodId: import_zod.z.string().optional(),
+      referenceType: import_zod.z.enum(["order", "invoice", "expense", "adjustment", "opening", "closing", "manual"]).optional(),
+      referenceId: import_zod.z.string().optional(),
+      description: import_zod.z.string(),
+      lines: import_zod.z.array(import_zod.z.object({
+        accountId: import_zod.z.string(),
+        accountNumber: import_zod.z.string(),
+        accountName: import_zod.z.string(),
+        debit: import_zod.z.number().default(0),
+        credit: import_zod.z.number().default(0),
+        description: import_zod.z.string().optional(),
+        costCenterId: import_zod.z.string().optional(),
+        branchId: import_zod.z.string().optional()
       })),
-      createdBy: z.string()
+      createdBy: import_zod.z.string()
     });
-    insertInvoiceSchema = z.object({
-      tenantId: z.string(),
-      branchId: z.string(),
-      invoiceDate: z.date(),
-      dueDate: z.date().optional(),
-      invoiceType: z.enum(["sales", "purchase", "credit_note", "debit_note"]).default("sales"),
-      customerId: z.string().optional(),
-      customerName: z.string(),
-      customerPhone: z.string().optional(),
-      customerEmail: z.string().optional(),
-      customerTaxNumber: z.string().optional(),
-      customerAddress: z.string().optional(),
-      vendorId: z.string().optional(),
-      vendorName: z.string().optional(),
-      vendorTaxNumber: z.string().optional(),
-      orderId: z.string().optional(),
-      lines: z.array(z.object({
-        itemId: z.string().optional(),
-        description: z.string(),
-        quantity: z.number(),
-        unitPrice: z.number(),
-        discountAmount: z.number().default(0),
-        discountPercent: z.number().default(0),
-        taxRate: z.number().default(15)
+    insertInvoiceSchema = import_zod.z.object({
+      tenantId: import_zod.z.string(),
+      branchId: import_zod.z.string(),
+      invoiceDate: import_zod.z.date(),
+      dueDate: import_zod.z.date().optional(),
+      invoiceType: import_zod.z.enum(["sales", "purchase", "credit_note", "debit_note"]).default("sales"),
+      customerId: import_zod.z.string().optional(),
+      customerName: import_zod.z.string(),
+      customerPhone: import_zod.z.string().optional(),
+      customerEmail: import_zod.z.string().optional(),
+      customerTaxNumber: import_zod.z.string().optional(),
+      customerAddress: import_zod.z.string().optional(),
+      vendorId: import_zod.z.string().optional(),
+      vendorName: import_zod.z.string().optional(),
+      vendorTaxNumber: import_zod.z.string().optional(),
+      orderId: import_zod.z.string().optional(),
+      lines: import_zod.z.array(import_zod.z.object({
+        itemId: import_zod.z.string().optional(),
+        description: import_zod.z.string(),
+        quantity: import_zod.z.number(),
+        unitPrice: import_zod.z.number(),
+        discountAmount: import_zod.z.number().default(0),
+        discountPercent: import_zod.z.number().default(0),
+        taxRate: import_zod.z.number().default(15)
       })),
-      paymentTerms: z.string().optional(),
-      paymentMethod: z.string().optional(),
-      notes: z.string().optional(),
-      internalNotes: z.string().optional()
+      paymentTerms: import_zod.z.string().optional(),
+      paymentMethod: import_zod.z.string().optional(),
+      notes: import_zod.z.string().optional(),
+      internalNotes: import_zod.z.string().optional()
     });
-    insertExpenseErpSchema = z.object({
-      tenantId: z.string(),
-      branchId: z.string(),
-      expenseDate: z.date(),
-      category: z.enum(["inventory", "salaries", "salary", "rent", "utilities", "marketing", "maintenance", "supplies", "other", "operating"]),
-      subcategory: z.string().optional(),
-      description: z.string(),
-      amount: z.number(),
-      taxAmount: z.number().default(0),
-      paymentMethod: z.enum(["cash", "bank_transfer", "check", "credit_card", "other"]).default("cash"),
-      paymentReference: z.string().optional(),
-      vendorId: z.string().optional(),
-      vendorName: z.string().optional(),
-      invoiceNumber: z.string().optional(),
-      invoiceDate: z.date().optional(),
-      accountId: z.string().optional(),
-      costCenterId: z.string().optional(),
-      requestedBy: z.string(),
-      notes: z.string().optional(),
-      isRecurring: z.number().default(0),
-      recurringFrequency: z.enum(["weekly", "monthly", "quarterly", "yearly"]).optional()
+    insertExpenseErpSchema = import_zod.z.object({
+      tenantId: import_zod.z.string(),
+      branchId: import_zod.z.string(),
+      expenseDate: import_zod.z.date(),
+      category: import_zod.z.enum(["inventory", "salaries", "salary", "rent", "utilities", "marketing", "maintenance", "supplies", "other", "operating"]),
+      subcategory: import_zod.z.string().optional(),
+      description: import_zod.z.string(),
+      amount: import_zod.z.number(),
+      taxAmount: import_zod.z.number().default(0),
+      paymentMethod: import_zod.z.enum(["cash", "bank_transfer", "check", "credit_card", "other"]).default("cash"),
+      paymentReference: import_zod.z.string().optional(),
+      vendorId: import_zod.z.string().optional(),
+      vendorName: import_zod.z.string().optional(),
+      invoiceNumber: import_zod.z.string().optional(),
+      invoiceDate: import_zod.z.date().optional(),
+      accountId: import_zod.z.string().optional(),
+      costCenterId: import_zod.z.string().optional(),
+      requestedBy: import_zod.z.string(),
+      notes: import_zod.z.string().optional(),
+      isRecurring: import_zod.z.number().default(0),
+      recurringFrequency: import_zod.z.enum(["weekly", "monthly", "quarterly", "yearly"]).optional()
     });
-    insertVendorSchema = z.object({
-      tenantId: z.string(),
-      code: z.string(),
-      nameAr: z.string(),
-      nameEn: z.string().optional(),
-      taxNumber: z.string().optional(),
-      commercialRegistration: z.string().optional(),
-      phone: z.string().optional(),
-      email: z.string().optional(),
-      address: z.string().optional(),
-      city: z.string().optional(),
-      country: z.string().default("SA"),
-      bankName: z.string().optional(),
-      bankAccountNumber: z.string().optional(),
-      iban: z.string().optional(),
-      paymentTerms: z.string().optional(),
-      creditLimit: z.number().default(0),
-      contactPerson: z.string().optional(),
-      contactPhone: z.string().optional(),
-      notes: z.string().optional()
+    insertVendorSchema = import_zod.z.object({
+      tenantId: import_zod.z.string(),
+      code: import_zod.z.string(),
+      nameAr: import_zod.z.string(),
+      nameEn: import_zod.z.string().optional(),
+      taxNumber: import_zod.z.string().optional(),
+      commercialRegistration: import_zod.z.string().optional(),
+      phone: import_zod.z.string().optional(),
+      email: import_zod.z.string().optional(),
+      address: import_zod.z.string().optional(),
+      city: import_zod.z.string().optional(),
+      country: import_zod.z.string().default("SA"),
+      bankName: import_zod.z.string().optional(),
+      bankAccountNumber: import_zod.z.string().optional(),
+      iban: import_zod.z.string().optional(),
+      paymentTerms: import_zod.z.string().optional(),
+      creditLimit: import_zod.z.number().default(0),
+      contactPerson: import_zod.z.string().optional(),
+      contactPhone: import_zod.z.string().optional(),
+      notes: import_zod.z.string().optional()
     });
-    insertPaymentRecordSchema = z.object({
-      tenantId: z.string(),
-      branchId: z.string(),
-      paymentDate: z.date(),
-      paymentType: z.enum(["receipt", "payment"]),
-      referenceType: z.enum(["invoice", "expense", "order", "advance", "refund"]),
-      referenceId: z.string(),
-      customerId: z.string().optional(),
-      vendorId: z.string().optional(),
-      amount: z.number(),
-      paymentMethod: z.enum(["cash", "bank_transfer", "check", "credit_card", "pos", "wallet", "other"]),
-      bankAccountId: z.string().optional(),
-      checkNumber: z.string().optional(),
-      transactionReference: z.string().optional(),
-      description: z.string().optional(),
-      processedBy: z.string()
+    insertPaymentRecordSchema = import_zod.z.object({
+      tenantId: import_zod.z.string(),
+      branchId: import_zod.z.string(),
+      paymentDate: import_zod.z.date(),
+      paymentType: import_zod.z.enum(["receipt", "payment"]),
+      referenceType: import_zod.z.enum(["invoice", "expense", "order", "advance", "refund"]),
+      referenceId: import_zod.z.string(),
+      customerId: import_zod.z.string().optional(),
+      vendorId: import_zod.z.string().optional(),
+      amount: import_zod.z.number(),
+      paymentMethod: import_zod.z.enum(["cash", "bank_transfer", "check", "credit_card", "pos", "wallet", "other"]),
+      bankAccountId: import_zod.z.string().optional(),
+      checkNumber: import_zod.z.string().optional(),
+      transactionReference: import_zod.z.string().optional(),
+      description: import_zod.z.string().optional(),
+      processedBy: import_zod.z.string()
     });
-    DeliveryIntegrationSchema = new Schema({
+    DeliveryIntegrationSchema = new import_mongoose.Schema({
       id: { type: String, required: true, unique: true },
       tenantId: { type: String, required: true },
       branchId: { type: String },
@@ -2630,7 +2646,7 @@ var init_schema = __esm({
       autoAssignDriver: { type: Number, default: 0 },
       commissionPercent: { type: Number, default: 0 },
       fixedFee: { type: Number, default: 0 },
-      settings: { type: Schema.Types.Mixed },
+      settings: { type: import_mongoose.Schema.Types.Mixed },
       lastSyncAt: { type: Date },
       createdAt: { type: Date, default: Date.now },
       updatedAt: { type: Date, default: Date.now }
@@ -2638,8 +2654,8 @@ var init_schema = __esm({
     DeliveryIntegrationSchema.index({ tenantId: 1 });
     DeliveryIntegrationSchema.index({ tenantId: 1, providerName: 1 });
     DeliveryIntegrationSchema.index({ tenantId: 1, isActive: 1 });
-    DeliveryIntegrationModel = mongoose.model("DeliveryIntegration", DeliveryIntegrationSchema);
-    DeliveryZoneSchema = new Schema({
+    DeliveryIntegrationModel = import_mongoose.default.model("DeliveryIntegration", DeliveryIntegrationSchema);
+    DeliveryZoneSchema = new import_mongoose.Schema({
       id: { type: String, required: true, unique: true },
       tenantId: { type: String, required: true },
       branchId: { type: String, required: true },
@@ -2676,8 +2692,8 @@ var init_schema = __esm({
     DeliveryZoneSchema.index({ tenantId: 1, branchId: 1 });
     DeliveryZoneSchema.index({ tenantId: 1, isActive: 1 });
     DeliveryZoneSchema.index({ branchId: 1, isActive: 1 });
-    DeliveryZoneModel = mongoose.model("DeliveryZone", DeliveryZoneSchema);
-    DeliveryDriverSchema = new Schema({
+    DeliveryZoneModel = import_mongoose.default.model("DeliveryZone", DeliveryZoneSchema);
+    DeliveryDriverSchema = new import_mongoose.Schema({
       id: { type: String, required: true, unique: true },
       tenantId: { type: String, required: true },
       branchId: { type: String },
@@ -2714,8 +2730,8 @@ var init_schema = __esm({
     DeliveryDriverSchema.index({ tenantId: 1, status: 1, isActive: 1 });
     DeliveryDriverSchema.index({ tenantId: 1, branchId: 1 });
     DeliveryDriverSchema.index({ phone: 1 });
-    DeliveryDriverModel = mongoose.model("DeliveryDriver", DeliveryDriverSchema);
-    DeliveryOrderSchema = new Schema({
+    DeliveryDriverModel = import_mongoose.default.model("DeliveryDriver", DeliveryDriverSchema);
+    DeliveryOrderSchema = new import_mongoose.Schema({
       id: { type: String, required: true, unique: true },
       tenantId: { type: String, required: true },
       branchId: { type: String, required: true },
@@ -2775,95 +2791,95 @@ var init_schema = __esm({
     DeliveryOrderSchema.index({ tenantId: 1, driverId: 1, status: 1 });
     DeliveryOrderSchema.index({ orderId: 1 });
     DeliveryOrderSchema.index({ externalOrderId: 1 });
-    DeliveryOrderModel = mongoose.model("DeliveryOrder", DeliveryOrderSchema);
-    insertDeliveryIntegrationSchema = z.object({
-      tenantId: z.string(),
-      branchId: z.string().optional(),
-      providerName: z.enum(["noon_food", "hunger_station", "keeta", "jahez", "toyou", "mrsool", "careem", "custom"]),
-      providerNameAr: z.string(),
-      providerLogo: z.string().optional(),
-      apiKey: z.string().optional(),
-      apiSecret: z.string().optional(),
-      merchantId: z.string().optional(),
-      webhookUrl: z.string().optional(),
-      webhookSecret: z.string().optional(),
-      baseUrl: z.string().optional(),
-      isActive: z.number().default(0),
-      isTestMode: z.number().default(1),
-      autoAcceptOrders: z.number().default(0),
-      autoAssignDriver: z.number().default(0),
-      commissionPercent: z.number().default(0),
-      fixedFee: z.number().default(0),
-      settings: z.record(z.any()).optional()
+    DeliveryOrderModel = import_mongoose.default.model("DeliveryOrder", DeliveryOrderSchema);
+    insertDeliveryIntegrationSchema = import_zod.z.object({
+      tenantId: import_zod.z.string(),
+      branchId: import_zod.z.string().optional(),
+      providerName: import_zod.z.enum(["noon_food", "hunger_station", "keeta", "jahez", "toyou", "mrsool", "careem", "custom"]),
+      providerNameAr: import_zod.z.string(),
+      providerLogo: import_zod.z.string().optional(),
+      apiKey: import_zod.z.string().optional(),
+      apiSecret: import_zod.z.string().optional(),
+      merchantId: import_zod.z.string().optional(),
+      webhookUrl: import_zod.z.string().optional(),
+      webhookSecret: import_zod.z.string().optional(),
+      baseUrl: import_zod.z.string().optional(),
+      isActive: import_zod.z.number().default(0),
+      isTestMode: import_zod.z.number().default(1),
+      autoAcceptOrders: import_zod.z.number().default(0),
+      autoAssignDriver: import_zod.z.number().default(0),
+      commissionPercent: import_zod.z.number().default(0),
+      fixedFee: import_zod.z.number().default(0),
+      settings: import_zod.z.record(import_zod.z.any()).optional()
     });
-    insertDeliveryZoneSchema = z.object({
-      tenantId: z.string(),
-      branchId: z.string(),
-      nameAr: z.string(),
-      nameEn: z.string().optional(),
-      description: z.string().optional(),
-      zoneType: z.enum(["polygon", "radius", "city", "district"]).default("radius"),
-      boundary: z.array(z.object({ lat: z.number(), lng: z.number() })).optional(),
-      centerLat: z.number().optional(),
-      centerLng: z.number().optional(),
-      radiusKm: z.number().default(5),
-      city: z.string().optional(),
-      district: z.string().optional(),
-      baseFee: z.number().default(10),
-      feePerKm: z.number().default(2),
-      minOrderAmount: z.number().default(0),
-      maxOrderAmount: z.number().optional(),
-      freeDeliveryThreshold: z.number().optional(),
-      estimatedMinMinutes: z.number().default(20),
-      estimatedMaxMinutes: z.number().default(45),
-      isActive: z.number().default(1),
-      priority: z.number().default(0)
+    insertDeliveryZoneSchema = import_zod.z.object({
+      tenantId: import_zod.z.string(),
+      branchId: import_zod.z.string(),
+      nameAr: import_zod.z.string(),
+      nameEn: import_zod.z.string().optional(),
+      description: import_zod.z.string().optional(),
+      zoneType: import_zod.z.enum(["polygon", "radius", "city", "district"]).default("radius"),
+      boundary: import_zod.z.array(import_zod.z.object({ lat: import_zod.z.number(), lng: import_zod.z.number() })).optional(),
+      centerLat: import_zod.z.number().optional(),
+      centerLng: import_zod.z.number().optional(),
+      radiusKm: import_zod.z.number().default(5),
+      city: import_zod.z.string().optional(),
+      district: import_zod.z.string().optional(),
+      baseFee: import_zod.z.number().default(10),
+      feePerKm: import_zod.z.number().default(2),
+      minOrderAmount: import_zod.z.number().default(0),
+      maxOrderAmount: import_zod.z.number().optional(),
+      freeDeliveryThreshold: import_zod.z.number().optional(),
+      estimatedMinMinutes: import_zod.z.number().default(20),
+      estimatedMaxMinutes: import_zod.z.number().default(45),
+      isActive: import_zod.z.number().default(1),
+      priority: import_zod.z.number().default(0)
     });
-    insertDeliveryDriverSchema = z.object({
-      tenantId: z.string(),
-      branchId: z.string().optional(),
-      employeeId: z.string().optional(),
-      fullName: z.string(),
-      phone: z.string(),
-      email: z.string().optional(),
-      nationalId: z.string().optional(),
-      licenseNumber: z.string().optional(),
-      licenseExpiry: z.date().optional(),
-      vehicleType: z.enum(["motorcycle", "car", "bicycle", "scooter"]).default("motorcycle"),
-      vehiclePlate: z.string().optional(),
-      vehicleModel: z.string().optional(),
-      vehicleColor: z.string().optional(),
-      photoUrl: z.string().optional(),
-      maxConcurrentOrders: z.number().default(3),
-      workingZoneIds: z.array(z.string()).optional(),
-      shiftStart: z.string().optional(),
-      shiftEnd: z.string().optional()
+    insertDeliveryDriverSchema = import_zod.z.object({
+      tenantId: import_zod.z.string(),
+      branchId: import_zod.z.string().optional(),
+      employeeId: import_zod.z.string().optional(),
+      fullName: import_zod.z.string(),
+      phone: import_zod.z.string(),
+      email: import_zod.z.string().optional(),
+      nationalId: import_zod.z.string().optional(),
+      licenseNumber: import_zod.z.string().optional(),
+      licenseExpiry: import_zod.z.date().optional(),
+      vehicleType: import_zod.z.enum(["motorcycle", "car", "bicycle", "scooter"]).default("motorcycle"),
+      vehiclePlate: import_zod.z.string().optional(),
+      vehicleModel: import_zod.z.string().optional(),
+      vehicleColor: import_zod.z.string().optional(),
+      photoUrl: import_zod.z.string().optional(),
+      maxConcurrentOrders: import_zod.z.number().default(3),
+      workingZoneIds: import_zod.z.array(import_zod.z.string()).optional(),
+      shiftStart: import_zod.z.string().optional(),
+      shiftEnd: import_zod.z.string().optional()
     });
-    insertDeliveryOrderSchema = z.object({
-      tenantId: z.string(),
-      branchId: z.string(),
-      orderId: z.string(),
-      orderNumber: z.string().optional(),
-      deliveryType: z.enum(["internal", "external"]).default("internal"),
-      externalProvider: z.string().optional(),
-      externalOrderId: z.string().optional(),
-      driverId: z.string().optional(),
-      customerName: z.string(),
-      customerPhone: z.string(),
-      customerAddress: z.string(),
-      customerAddressDetails: z.string().optional(),
-      customerLat: z.number(),
-      customerLng: z.number(),
-      branchLat: z.number().optional(),
-      branchLng: z.number().optional(),
-      distanceKm: z.number().default(0),
-      deliveryFee: z.number().default(0),
-      preparationMinutes: z.number().default(0),
-      travelMinutes: z.number().default(0),
-      notes: z.string().optional(),
-      customerNotes: z.string().optional()
+    insertDeliveryOrderSchema = import_zod.z.object({
+      tenantId: import_zod.z.string(),
+      branchId: import_zod.z.string(),
+      orderId: import_zod.z.string(),
+      orderNumber: import_zod.z.string().optional(),
+      deliveryType: import_zod.z.enum(["internal", "external"]).default("internal"),
+      externalProvider: import_zod.z.string().optional(),
+      externalOrderId: import_zod.z.string().optional(),
+      driverId: import_zod.z.string().optional(),
+      customerName: import_zod.z.string(),
+      customerPhone: import_zod.z.string(),
+      customerAddress: import_zod.z.string(),
+      customerAddressDetails: import_zod.z.string().optional(),
+      customerLat: import_zod.z.number(),
+      customerLng: import_zod.z.number(),
+      branchLat: import_zod.z.number().optional(),
+      branchLng: import_zod.z.number().optional(),
+      distanceKm: import_zod.z.number().default(0),
+      deliveryFee: import_zod.z.number().default(0),
+      preparationMinutes: import_zod.z.number().default(0),
+      travelMinutes: import_zod.z.number().default(0),
+      notes: import_zod.z.string().optional(),
+      customerNotes: import_zod.z.string().optional()
     });
-    GiftCardSchema = new Schema({
+    GiftCardSchema = new import_mongoose.Schema({
       code: { type: String, required: true, unique: true },
       initialValue: { type: Number, required: true },
       balance: { type: Number, required: true },
@@ -2880,8 +2896,8 @@ var init_schema = __esm({
     });
     GiftCardSchema.index({ tenantId: 1 });
     GiftCardSchema.index({ status: 1 });
-    GiftCardModel = mongoose.models["GiftCard"] || mongoose.model("GiftCard", GiftCardSchema);
-    CashierShiftSchema = new Schema({
+    GiftCardModel = import_mongoose.default.models["GiftCard"] || import_mongoose.default.model("GiftCard", GiftCardSchema);
+    CashierShiftSchema = new import_mongoose.Schema({
       shiftNumber: { type: String, required: true },
       employeeId: { type: String, required: true },
       employeeName: { type: String, required: true },
@@ -2934,8 +2950,8 @@ var init_schema = __esm({
     CashierShiftSchema.index({ branchId: 1, status: 1 });
     CashierShiftSchema.index({ openedAt: -1 });
     CashierShiftSchema.index({ tenantId: 1 });
-    CashierShiftModel = mongoose.models["CashierShift"] || mongoose.model("CashierShift", CashierShiftSchema);
-    PayrollSnapshotSchema = new Schema({
+    CashierShiftModel = import_mongoose.default.models["CashierShift"] || import_mongoose.default.model("CashierShift", CashierShiftSchema);
+    PayrollSnapshotSchema = new import_mongoose.Schema({
       id: { type: String, required: true, unique: true },
       tenantId: { type: String, required: true },
       branchId: { type: String },
@@ -2976,8 +2992,8 @@ var init_schema = __esm({
     });
     PayrollSnapshotSchema.index({ tenantId: 1, year: 1, month: 1 }, { unique: true });
     PayrollSnapshotSchema.index({ tenantId: 1, status: 1 });
-    PayrollSnapshotModel = mongoose.models["PayrollSnapshot"] || mongoose.model("PayrollSnapshot", PayrollSnapshotSchema);
-    RefundItemSchema = new Schema({
+    PayrollSnapshotModel = import_mongoose.default.models["PayrollSnapshot"] || import_mongoose.default.model("PayrollSnapshot", PayrollSnapshotSchema);
+    RefundItemSchema = new import_mongoose.Schema({
       coffeeItemId: { type: String, required: true },
       nameAr: { type: String, required: true },
       nameEn: { type: String },
@@ -2985,7 +3001,7 @@ var init_schema = __esm({
       unitPrice: { type: Number, required: true },
       totalPrice: { type: Number, required: true }
     });
-    RefundSchema = new Schema({
+    RefundSchema = new import_mongoose.Schema({
       tenantId: { type: String, required: true },
       branchId: { type: String },
       refundNumber: { type: String, required: true, unique: true },
@@ -3009,7 +3025,7 @@ var init_schema = __esm({
     RefundSchema.index({ tenantId: 1, branchId: 1, createdAt: -1 });
     RefundSchema.index({ originalOrderId: 1 });
     RefundSchema.index({ refundNumber: 1, tenantId: 1 });
-    RefundModel = mongoose.models["Refund"] || mongoose.model("Refund", RefundSchema);
+    RefundModel = import_mongoose.default.models["Refund"] || import_mongoose.default.model("Refund", RefundSchema);
   }
 });
 
@@ -3026,8 +3042,6 @@ __export(push_service_exports, {
   sendPushToCustomer: () => sendPushToCustomer,
   sendPushToEmployee: () => sendPushToEmployee
 });
-import webpush from "web-push";
-import mongoose4 from "mongoose";
 function initWebPush() {
   const vapidPublicKey = process.env.VAPID_PUBLIC_KEY;
   const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
@@ -3036,7 +3050,7 @@ function initWebPush() {
     console.warn("[PUSH] VAPID keys not configured. Web Push notifications disabled.");
     return;
   }
-  webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
+  import_web_push.default.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
   console.log("\u2705 Web Push initialized with VAPID keys");
 }
 function getVapidPublicKey() {
@@ -3085,7 +3099,7 @@ async function sendPushToSubscriptions(subscriptions, payload) {
   });
   const results = await Promise.allSettled(
     subscriptions.map(
-      (sub) => webpush.sendNotification(
+      (sub) => import_web_push.default.sendNotification(
         { endpoint: sub.endpoint, keys: sub.keys },
         pushPayload
       )
@@ -3158,11 +3172,13 @@ async function sendPushToAll(tenantId, payload) {
 async function sendPushBySubscriptions(subscriptions, payload) {
   await sendPushToSubscriptions(subscriptions, payload);
 }
-var pushSubscriptionSchema, PushSubscriptionModel;
+var import_web_push, import_mongoose4, pushSubscriptionSchema, PushSubscriptionModel;
 var init_push_service = __esm({
   "server/push-service.ts"() {
     "use strict";
-    pushSubscriptionSchema = new mongoose4.Schema({
+    import_web_push = __toESM(require("web-push"), 1);
+    import_mongoose4 = __toESM(require("mongoose"), 1);
+    pushSubscriptionSchema = new import_mongoose4.default.Schema({
       endpoint: { type: String, required: true, unique: true },
       keys: {
         p256dh: { type: String },
@@ -3174,7 +3190,7 @@ var init_push_service = __esm({
       tenantId: { type: String, default: "demo-tenant" },
       createdAt: { type: Date, default: Date.now }
     });
-    PushSubscriptionModel = mongoose4.models.PushSubscription || mongoose4.model("PushSubscription", pushSubscriptionSchema);
+    PushSubscriptionModel = import_mongoose4.default.models.PushSubscription || import_mongoose4.default.model("PushSubscription", pushSubscriptionSchema);
   }
 });
 
@@ -3186,7 +3202,6 @@ __export(notification_engine_exports, {
   fireNotifyBroadcast: () => fireNotifyBroadcast,
   registerWSHooks: () => registerWSHooks
 });
-import mongoose5 from "mongoose";
 function registerWSHooks(pushToUserFn, pushToAdminsFn) {
   _pushToUser = pushToUserFn;
   _pushToAdmins = pushToAdminsFn;
@@ -3281,7 +3296,7 @@ async function fireNotifyAdmins(title, body, opts = {}) {
   const notifTag = tag || `notif-admin-${Date.now()}`;
   let adminIds = [];
   try {
-    const EmployeeCollection = mongoose5.connection.collection("employees");
+    const EmployeeCollection = import_mongoose5.default.connection.collection("employees");
     const admins = await EmployeeCollection.find({
       tenantId,
       role: { $in: ["admin", "manager", "owner", "superadmin"] },
@@ -3384,12 +3399,13 @@ async function fireNotifyBroadcast(title, body, opts = {}) {
     console.error("[NOTIFY] Broadcast push failed:", err);
   }
 }
-var _pushToUser, _pushToAdmins;
+var import_mongoose5, _pushToUser, _pushToAdmins;
 var init_notification_engine = __esm({
   "server/notification-engine.ts"() {
     "use strict";
     init_schema();
     init_push_service();
+    import_mongoose5 = __toESM(require("mongoose"), 1);
     _pushToUser = null;
     _pushToAdmins = null;
   }
@@ -3400,11 +3416,11 @@ var websocket_exports = {};
 __export(websocket_exports, {
   wsManager: () => wsManager
 });
-import { WebSocket, WebSocketServer } from "ws";
-var OrderWebSocketManager, wsManager;
+var import_ws, OrderWebSocketManager, wsManager;
 var init_websocket = __esm({
   "server/websocket.ts"() {
     "use strict";
+    import_ws = require("ws");
     init_push_service();
     init_notification_engine();
     OrderWebSocketManager = class {
@@ -3412,7 +3428,7 @@ var init_websocket = __esm({
       clients = /* @__PURE__ */ new Map();
       heartbeatInterval = null;
       setup(server) {
-        this.wss = new WebSocketServer({ noServer: true });
+        this.wss = new import_ws.WebSocketServer({ noServer: true });
         server.on("upgrade", (request, socket, head) => {
           const pathname = new URL(request.url || "", "http://localhost").pathname;
           if (pathname !== "/ws/orders") return;
@@ -3480,7 +3496,7 @@ var init_websocket = __esm({
             }
             client.isAlive = false;
             try {
-              if (ws.readyState === WebSocket.OPEN) {
+              if (ws.readyState === import_ws.WebSocket.OPEN) {
                 ws.ping();
               }
             } catch (e) {
@@ -3544,7 +3560,7 @@ var init_websocket = __esm({
       }
       cleanupStaleClients() {
         this.clients.forEach((client, ws) => {
-          if (ws.readyState !== WebSocket.OPEN) {
+          if (ws.readyState !== import_ws.WebSocket.OPEN) {
             console.log("[WS] Removing closed connection");
             this.clients.delete(ws);
           }
@@ -3559,7 +3575,7 @@ var init_websocket = __esm({
           timestamp: Date.now()
         });
         this.clients.forEach((client, ws) => {
-          if (ws.readyState === WebSocket.OPEN) {
+          if (ws.readyState === import_ws.WebSocket.OPEN) {
             if (client.type === "kitchen" || client.type === "display" || client.type === "pos" || client.type === "order-tracking" && client.orderId === order.id) {
               try {
                 ws.send(message);
@@ -3579,7 +3595,7 @@ var init_websocket = __esm({
           timestamp: Date.now()
         });
         this.clients.forEach((client, ws) => {
-          if (ws.readyState === WebSocket.OPEN) {
+          if (ws.readyState === import_ws.WebSocket.OPEN) {
             if (client.type === "kitchen" || client.type === "display" || client.type === "pos") {
               try {
                 ws.send(message);
@@ -3621,7 +3637,7 @@ var init_websocket = __esm({
           timestamp: Date.now()
         });
         this.clients.forEach((client, ws) => {
-          if (ws.readyState === WebSocket.OPEN) {
+          if (ws.readyState === import_ws.WebSocket.OPEN) {
             if (client.type === "display" || client.type === "order-tracking" && client.orderId === order.id) {
               try {
                 ws.send(message);
@@ -3641,7 +3657,7 @@ var init_websocket = __esm({
           timestamp: Date.now()
         });
         this.clients.forEach((client, ws) => {
-          if (ws.readyState === WebSocket.OPEN) {
+          if (ws.readyState === import_ws.WebSocket.OPEN) {
             if (client.type === "inventory" || client.type === "display") {
               try {
                 ws.send(message);
@@ -3662,7 +3678,7 @@ var init_websocket = __esm({
           timestamp: Date.now()
         });
         this.clients.forEach((client, ws) => {
-          if (ws.readyState === WebSocket.OPEN) {
+          if (ws.readyState === import_ws.WebSocket.OPEN) {
             if (client.type === "inventory" || client.type === "display") {
               try {
                 ws.send(message);
@@ -3687,7 +3703,7 @@ var init_websocket = __esm({
           timestamp: Date.now()
         });
         this.clients.forEach((client, ws) => {
-          if (ws.readyState === WebSocket.OPEN) {
+          if (ws.readyState === import_ws.WebSocket.OPEN) {
             const isDriver = client.type === "delivery-driver" && client.driverId && driverId && client.driverId === driverId;
             const isTracker = client.type === "delivery-tracking" && client.deliveryOrderId && orderId && client.deliveryOrderId === orderId;
             if (isDriver || isTracker) {
@@ -3713,7 +3729,7 @@ var init_websocket = __esm({
           timestamp: Date.now()
         });
         this.clients.forEach((client, ws) => {
-          if (ws.readyState === WebSocket.OPEN) {
+          if (ws.readyState === import_ws.WebSocket.OPEN) {
             const matchesOrder = client.type === "delivery-tracking" && client.deliveryOrderId && normalizedOrderId && client.deliveryOrderId === normalizedOrderId;
             const matchesDriver = client.type === "delivery-tracking" && client.driverId && normalizedDriverId && client.driverId === normalizedDriverId;
             if (matchesOrder || matchesDriver) {
@@ -3745,7 +3761,7 @@ var init_websocket = __esm({
             timestamp: Date.now()
           });
           this.clients.forEach((client, ws) => {
-            if (ws.readyState === WebSocket.OPEN && client.type === "manager-tracking") {
+            if (ws.readyState === import_ws.WebSocket.OPEN && client.type === "manager-tracking") {
               const branchMatch = !data.branchId || !client.branchId || client.branchId === data.branchId || client.branchId === "all";
               if (branchMatch) {
                 try {
@@ -3758,7 +3774,7 @@ var init_websocket = __esm({
           });
         }
         this.clients.forEach((client, ws) => {
-          if (ws.readyState === WebSocket.OPEN && client.type === "manager-tracking") {
+          if (ws.readyState === import_ws.WebSocket.OPEN && client.type === "manager-tracking") {
             const branchMatch = !data.branchId || !client.branchId || client.branchId === data.branchId || client.branchId === "all";
             if (branchMatch) {
               try {
@@ -3780,7 +3796,7 @@ var init_websocket = __esm({
           timestamp: Date.now()
         });
         this.clients.forEach((client, ws) => {
-          if (ws.readyState === WebSocket.OPEN) {
+          if (ws.readyState === import_ws.WebSocket.OPEN) {
             if (client.type === "delivery-driver") {
               const branchMatches = !normalizedBranchId || client.branchId && client.branchId === normalizedBranchId;
               if (branchMatches) {
@@ -3803,7 +3819,7 @@ var init_websocket = __esm({
           timestamp: Date.now()
         });
         this.clients.forEach((client, ws) => {
-          if (ws.readyState === WebSocket.OPEN) {
+          if (ws.readyState === import_ws.WebSocket.OPEN) {
             const branchMatches = !normalizedBranchId || client.branchId && client.branchId === normalizedBranchId;
             if (branchMatches) {
               try {
@@ -3824,7 +3840,7 @@ var init_websocket = __esm({
           timestamp: Date.now()
         });
         this.clients.forEach((client, ws) => {
-          if (ws.readyState === WebSocket.OPEN) {
+          if (ws.readyState === import_ws.WebSocket.OPEN) {
             if (client.type === "customer" && client.customerId === normalizedCustomerId) {
               try {
                 ws.send(message);
@@ -3844,7 +3860,7 @@ var init_websocket = __esm({
           timestamp: Date.now()
         });
         this.clients.forEach((client, ws) => {
-          if (ws.readyState === WebSocket.OPEN && client.type === "pos-display") {
+          if (ws.readyState === import_ws.WebSocket.OPEN && client.type === "pos-display") {
             const branchMatches = !branchId || !client.branchId || client.branchId === branchId;
             if (branchMatches) {
               try {
@@ -3860,7 +3876,7 @@ var init_websocket = __esm({
         if (!this.wss || !userId) return;
         const message = JSON.stringify(data);
         this.clients.forEach((client, ws) => {
-          if (ws.readyState === WebSocket.OPEN) {
+          if (ws.readyState === import_ws.WebSocket.OPEN) {
             const match = client.userId === userId || client.customerId === userId;
             if (match) {
               try {
@@ -3876,7 +3892,7 @@ var init_websocket = __esm({
         if (!this.wss) return;
         const message = JSON.stringify(data);
         this.clients.forEach((client, ws) => {
-          if (ws.readyState === WebSocket.OPEN) {
+          if (ws.readyState === import_ws.WebSocket.OPEN) {
             if (client.type === "pos" || client.type === "kitchen" || client.type === "display") {
               try {
                 ws.send(message);
@@ -3929,7 +3945,6 @@ __export(mail_service_exports, {
   sendWelcomeEmail: () => sendWelcomeEmail,
   testEmailConnection: () => testEmailConnection
 });
-import nodemailer from "nodemailer";
 async function loadSmtpSecrets() {
   return {
     smtpHost: process.env.SMTP_HOST || "mail.smtp2go.com",
@@ -4003,7 +4018,7 @@ async function getTransporter() {
       options.requireTLS = true;
       options.secure = false;
     }
-    transporter = nodemailer.createTransport(options);
+    transporter = import_nodemailer.default.createTransport(options);
     transporterInitialized = true;
     console.log("\u2705 SMTP transporter created");
     transporter.verify().then(() => {
@@ -4294,10 +4309,11 @@ async function sendOTPEmail(customerEmail, customerName, otp) {
     `
   });
 }
-var transporter, transporterInitialized;
+var import_nodemailer, transporter, transporterInitialized;
 var init_mail_service = __esm({
   "server/mail-service.ts"() {
     "use strict";
+    import_nodemailer = __toESM(require("nodemailer"), 1);
     transporter = null;
     transporterInitialized = false;
     setInterval(async () => {
@@ -4395,8 +4411,6 @@ var init_objectAcl = __esm({
 });
 
 // server/qirox_studio_integrations/object_storage/objectStorage.ts
-import { Storage } from "@google-cloud/storage";
-import { randomUUID } from "crypto";
 function parseObjectPath(path2) {
   if (!path2.startsWith("/")) {
     path2 = `/${path2}`;
@@ -4442,13 +4456,15 @@ async function signObjectURL({
   const { signed_url: signedURL } = await response.json();
   return signedURL;
 }
-var SIDECAR_ENDPOINT, objectStorageClient, ObjectNotFoundError, ObjectStorageService;
+var import_storage, import_crypto, SIDECAR_ENDPOINT, objectStorageClient, ObjectNotFoundError, ObjectStorageService;
 var init_objectStorage = __esm({
   "server/qirox_studio_integrations/object_storage/objectStorage.ts"() {
     "use strict";
+    import_storage = require("@google-cloud/storage");
+    import_crypto = require("crypto");
     init_objectAcl();
     SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
-    objectStorageClient = new Storage({
+    objectStorageClient = new import_storage.Storage({
       credentials: {
         audience: "replit",
         subject_token_type: "access_token",
@@ -4548,7 +4564,7 @@ var init_objectStorage = __esm({
             "PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' tool and set PRIVATE_OBJECT_DIR env var."
           );
         }
-        const objectId = randomUUID();
+        const objectId = (0, import_crypto.randomUUID)();
         const fullPath = `${privateObjectDir}/uploads/${objectId}`;
         const { bucketName, objectName } = parseObjectPath(fullPath);
         return signObjectURL({
@@ -4694,7 +4710,6 @@ __export(smart_scheduler_exports, {
   sendAdminDailySummaryNow: () => sendAdminDailySummaryNow,
   startSmartScheduler: () => startSmartScheduler
 });
-import mongoose7 from "mongoose";
 function getSaudiTime() {
   const now = /* @__PURE__ */ new Date();
   const saudi = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Riyadh" }));
@@ -4783,7 +4798,7 @@ function pickRandom(arr) {
 }
 async function buildPersonalizedMessage(customerId, baseTitle, baseBody) {
   try {
-    const OrderCollection = mongoose7.connection.collection("orders");
+    const OrderCollection = import_mongoose7.default.connection.collection("orders");
     const result = await OrderCollection.aggregate([
       { $match: { customerId } },
       { $unwind: "$items" },
@@ -4827,8 +4842,8 @@ async function broadcastToCustomers(payload, personalizeForCustomer = false) {
 }
 async function sendAdminDailySummary() {
   try {
-    const OrderCollection = mongoose7.connection.collection("orders");
-    const RawItemCollection = mongoose7.connection.collection("rawitems");
+    const OrderCollection = import_mongoose7.default.connection.collection("orders");
+    const RawItemCollection = import_mongoose7.default.connection.collection("rawitems");
     const now = /* @__PURE__ */ new Date();
     const startOfDay = new Date(now);
     startOfDay.setHours(0, 0, 0, 0);
@@ -4883,7 +4898,7 @@ async function sendAdminDailySummary() {
 }
 async function checkAndAlertLowStock() {
   try {
-    const RawItemCollection = mongoose7.connection.collection("rawitems");
+    const RawItemCollection = import_mongoose7.default.connection.collection("rawitems");
     const criticalItems = await RawItemCollection.find({
       $expr: { $lte: ["$currentQuantity", { $multiply: ["$minimumQuantity", 0.5] }] }
     }).toArray();
@@ -5003,7 +5018,7 @@ function startSmartScheduler() {
 }
 async function checkDineInAppointments() {
   try {
-    if (mongoose7.connection.readyState !== 1) return;
+    if (import_mongoose7.default.connection.readyState !== 1) return;
     const now = /* @__PURE__ */ new Date();
     const saudi = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Riyadh" }));
     const orders = await OrderModel.find({
@@ -5080,10 +5095,11 @@ async function checkDineInAppointments() {
     console.error("[SCHEDULER] checkDineInAppointments error:", err);
   }
 }
-var MORNING_MESSAGES, RAMADAN_SUHOOR_MESSAGES, RAMADAN_IFTAR_MESSAGES, EVENING_MESSAGES, WEEKEND_MESSAGES, sentToday, lastDateKey;
+var import_mongoose7, MORNING_MESSAGES, RAMADAN_SUHOOR_MESSAGES, RAMADAN_IFTAR_MESSAGES, EVENING_MESSAGES, WEEKEND_MESSAGES, sentToday, lastDateKey;
 var init_smart_scheduler = __esm({
   "server/smart-scheduler.ts"() {
     "use strict";
+    import_mongoose7 = __toESM(require("mongoose"), 1);
     init_push_service();
     init_notification_engine();
     init_schema();
@@ -5126,14 +5142,10 @@ __export(qirox_admin_exports, {
   SystemLogModel: () => SystemLogModel,
   registerQiroxRoutes: () => registerQiroxRoutes
 });
-import mongoose8, { Schema as Schema3 } from "mongoose";
-import bcrypt2 from "bcryptjs";
-import crypto from "crypto";
-import rateLimit from "express-rate-limit";
 async function ensureSuperAdmin() {
   const existing = await QiroxAdminModel.findOne();
   if (!existing) {
-    const hash = await bcrypt2.hash(SUPER_ADMIN_PASSWORD, 12);
+    const hash = await import_bcryptjs2.default.hash(SUPER_ADMIN_PASSWORD, 12);
     await QiroxAdminModel.create({ passwordHash: hash });
   }
 }
@@ -5152,7 +5164,7 @@ function requireQiroxAuth(req, res, next) {
 }
 function registerQiroxRoutes(app2) {
   ensureSuperAdmin();
-  const qiroxLoginLimiter = rateLimit({
+  const qiroxLoginLimiter = (0, import_express_rate_limit.default)({
     windowMs: 15 * 60 * 1e3,
     max: 5,
     message: { error: "Too many login attempts. Try again in 15 minutes." },
@@ -5169,7 +5181,7 @@ function registerQiroxRoutes(app2) {
       if (!admin) {
         return res.status(401).json({ error: "System not configured" });
       }
-      const valid = await bcrypt2.compare(password, admin.passwordHash);
+      const valid = await import_bcryptjs2.default.compare(password, admin.passwordHash);
       if (!valid) {
         await SystemLogModel.create({
           action: "login_failed",
@@ -5178,7 +5190,7 @@ function registerQiroxRoutes(app2) {
         });
         return res.status(401).json({ error: "Invalid password" });
       }
-      const sessionToken = crypto.randomBytes(48).toString("hex");
+      const sessionToken = import_crypto2.default.randomBytes(48).toString("hex");
       admin.sessionToken = sessionToken;
       admin.lastLogin = /* @__PURE__ */ new Date();
       await admin.save();
@@ -5209,11 +5221,11 @@ function registerQiroxRoutes(app2) {
   });
   app2.get("/api/qirox/dashboard", requireQiroxAuth, async (req, res) => {
     try {
-      const CafeCollection = mongoose8.connection.collection("cafes");
-      const EmployeeCollection = mongoose8.connection.collection("employees");
-      const OrderCollection = mongoose8.connection.collection("orders");
-      const CustomerCollection = mongoose8.connection.collection("customers");
-      const BranchCollection = mongoose8.connection.collection("branches");
+      const CafeCollection = import_mongoose8.default.connection.collection("cafes");
+      const EmployeeCollection = import_mongoose8.default.connection.collection("employees");
+      const OrderCollection = import_mongoose8.default.connection.collection("orders");
+      const CustomerCollection = import_mongoose8.default.connection.collection("customers");
+      const BranchCollection = import_mongoose8.default.connection.collection("branches");
       const [tenants, employees, orders, customers, branches, subscriptions, recentLogs] = await Promise.all([
         CafeCollection.countDocuments(),
         EmployeeCollection.countDocuments(),
@@ -5268,13 +5280,13 @@ function registerQiroxRoutes(app2) {
   });
   app2.get("/api/qirox/tenants", requireQiroxAuth, async (req, res) => {
     try {
-      const CafeCollection = mongoose8.connection.collection("cafes");
+      const CafeCollection = import_mongoose8.default.connection.collection("cafes");
       const tenants = await CafeCollection.find().toArray();
       const tenantsWithSubs = await Promise.all(tenants.map(async (t) => {
         const sub = await SubscriptionConfigModel.findOne({ tenantId: t.tenantId || t._id?.toString() });
-        const BranchCollection = mongoose8.connection.collection("branches");
+        const BranchCollection = import_mongoose8.default.connection.collection("branches");
         const branchCount = await BranchCollection.countDocuments({ tenantId: t.tenantId || t._id?.toString() });
-        const EmployeeCollection = mongoose8.connection.collection("employees");
+        const EmployeeCollection = import_mongoose8.default.connection.collection("employees");
         const employeeCount = await EmployeeCollection.countDocuments({ tenantId: t.tenantId || t._id?.toString() });
         return {
           ...t,
@@ -5365,10 +5377,10 @@ function registerQiroxRoutes(app2) {
   });
   app2.get("/api/qirox/system-health", requireQiroxAuth, async (req, res) => {
     try {
-      const dbState = mongoose8.connection.readyState;
+      const dbState = import_mongoose8.default.connection.readyState;
       const dbStates = { 0: "disconnected", 1: "connected", 2: "connecting", 3: "disconnecting" };
-      const collections = await mongoose8.connection.db.listCollections().toArray();
-      const dbStats = await mongoose8.connection.db.stats();
+      const collections = await import_mongoose8.default.connection.db.listCollections().toArray();
+      const dbStats = await import_mongoose8.default.connection.db.stats();
       res.json({
         database: {
           status: dbStates[dbState] || "unknown",
@@ -5413,10 +5425,10 @@ function registerQiroxRoutes(app2) {
       }
       const admin = await QiroxAdminModel.findOne();
       if (!admin) return res.status(404).json({ error: "Admin not found" });
-      const valid = await bcrypt2.compare(currentPassword, admin.passwordHash);
+      const valid = await import_bcryptjs2.default.compare(currentPassword, admin.passwordHash);
       if (!valid) return res.status(401).json({ error: "Current password incorrect" });
-      admin.passwordHash = await bcrypt2.hash(newPassword, 12);
-      admin.sessionToken = crypto.randomBytes(48).toString("hex");
+      admin.passwordHash = await import_bcryptjs2.default.hash(newPassword, 12);
+      admin.sessionToken = import_crypto2.default.randomBytes(48).toString("hex");
       await admin.save();
       req.session.qiroxToken = admin.sessionToken;
       await SystemLogModel.create({
@@ -5430,8 +5442,8 @@ function registerQiroxRoutes(app2) {
   });
   app2.get("/api/qirox/analytics", requireQiroxAuth, async (req, res) => {
     try {
-      const OrderCollection = mongoose8.connection.collection("orders");
-      const CustomerCollection = mongoose8.connection.collection("customers");
+      const OrderCollection = import_mongoose8.default.connection.collection("orders");
+      const CustomerCollection = import_mongoose8.default.connection.collection("customers");
       const now = /* @__PURE__ */ new Date();
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1e3);
       const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1e3);
@@ -5477,21 +5489,25 @@ function registerQiroxRoutes(app2) {
     }
   });
 }
-var QiroxAdminSchema, QiroxAdminModel, SubscriptionConfigSchema, SubscriptionConfigModel, SystemLogSchema, SystemLogModel, PLAN_DEFAULTS, SUPER_ADMIN_PASSWORD;
+var import_mongoose8, import_bcryptjs2, import_crypto2, import_express_rate_limit, QiroxAdminSchema, QiroxAdminModel, SubscriptionConfigSchema, SubscriptionConfigModel, SystemLogSchema, SystemLogModel, PLAN_DEFAULTS, SUPER_ADMIN_PASSWORD;
 var init_qirox_admin = __esm({
   "server/qirox-admin.ts"() {
     "use strict";
-    QiroxAdminSchema = new Schema3({
+    import_mongoose8 = __toESM(require("mongoose"), 1);
+    import_bcryptjs2 = __toESM(require("bcryptjs"), 1);
+    import_crypto2 = __toESM(require("crypto"), 1);
+    import_express_rate_limit = __toESM(require("express-rate-limit"), 1);
+    QiroxAdminSchema = new import_mongoose8.Schema({
       passwordHash: { type: String, required: true },
       sessionToken: { type: String },
       lastLogin: { type: Date },
       createdAt: { type: Date, default: Date.now }
     });
-    QiroxAdminModel = mongoose8.models["QiroxAdmin"] || mongoose8.model("QiroxAdmin", QiroxAdminSchema);
-    SubscriptionConfigSchema = new Schema3({
+    QiroxAdminModel = import_mongoose8.default.models["QiroxAdmin"] || import_mongoose8.default.model("QiroxAdmin", QiroxAdminSchema);
+    SubscriptionConfigSchema = new import_mongoose8.Schema({
       tenantId: { type: String, required: true, unique: true },
       plan: { type: String, enum: ["lite", "pro", "infinity"], default: "lite" },
-      features: { type: Schema3.Types.Mixed, default: {} },
+      features: { type: import_mongoose8.Schema.Types.Mixed, default: {} },
       maxBranches: { type: Number, default: 1 },
       maxEmployees: { type: Number, default: 5 },
       maxProducts: { type: Number, default: 50 },
@@ -5522,8 +5538,8 @@ var init_qirox_admin = __esm({
       activatedBy: { type: String, default: "system" },
       updatedAt: { type: Date, default: Date.now }
     });
-    SubscriptionConfigModel = mongoose8.models["SubscriptionConfig"] || mongoose8.model("SubscriptionConfig", SubscriptionConfigSchema);
-    SystemLogSchema = new Schema3({
+    SubscriptionConfigModel = import_mongoose8.default.models["SubscriptionConfig"] || import_mongoose8.default.model("SubscriptionConfig", SubscriptionConfigSchema);
+    SystemLogSchema = new import_mongoose8.Schema({
       action: { type: String, required: true },
       details: { type: String },
       performedBy: { type: String, default: "qirox-admin" },
@@ -5533,7 +5549,7 @@ var init_qirox_admin = __esm({
     });
     SystemLogSchema.index({ timestamp: -1 });
     SystemLogSchema.index({ action: 1 });
-    SystemLogModel = mongoose8.models["SystemLog"] || mongoose8.model("SystemLog", SystemLogSchema);
+    SystemLogModel = import_mongoose8.default.models["SystemLog"] || import_mongoose8.default.model("SystemLog", SystemLogSchema);
     PLAN_DEFAULTS = {
       lite: {
         maxBranches: 1,
@@ -5635,9 +5651,8 @@ __export(zatca_exports, {
   getInvoicesByBranch: () => getInvoicesByBranch,
   getPaymentMeansCode: () => getPaymentMeansCode
 });
-import crypto2 from "crypto";
 function generateUUID() {
-  return crypto2.randomUUID();
+  return import_crypto3.default.randomUUID();
 }
 function generateInvoiceNumber(counter) {
   const date = /* @__PURE__ */ new Date();
@@ -5684,7 +5699,7 @@ function generateZATCAQRCode(data) {
 }
 function generateInvoiceHash(invoiceData, previousHash) {
   const dataToHash = previousHash ? `${previousHash}${invoiceData}` : invoiceData;
-  return crypto2.createHash("sha256").update(dataToHash).digest("base64");
+  return import_crypto3.default.createHash("sha256").update(dataToHash).digest("base64");
 }
 function formatDateISO(date) {
   return date.toISOString();
@@ -5990,10 +6005,11 @@ async function getInvoiceStats(branchId, startDate, endDate) {
     averageInvoiceValue: result[0].totalRevenue / result[0].totalInvoices
   };
 }
-var VAT_RATE, SELLER_NAME, SELLER_NAME_EN, SELLER_VAT_NUMBER, SELLER_ADDRESS, SELLER_CR_NUMBER, SELLER_BUILDING_NUMBER, SELLER_POSTAL_CODE, SELLER_DISTRICT, SELLER_CITY, ZATCA_API_URL, ZATCA_COMPLIANCE_CSID, ZATCA_PRODUCTION_CSID, ZATCA_SECRET;
+var import_crypto3, VAT_RATE, SELLER_NAME, SELLER_NAME_EN, SELLER_VAT_NUMBER, SELLER_ADDRESS, SELLER_CR_NUMBER, SELLER_BUILDING_NUMBER, SELLER_POSTAL_CODE, SELLER_DISTRICT, SELLER_CITY, ZATCA_API_URL, ZATCA_COMPLIANCE_CSID, ZATCA_PRODUCTION_CSID, ZATCA_SECRET;
 var init_zatca = __esm({
   "server/utils/zatca.ts"() {
     "use strict";
+    import_crypto3 = __toESM(require("crypto"), 1);
     init_schema();
     VAT_RATE = parseFloat(process.env.VAT_RATE || "0.15");
     SELLER_NAME = process.env.ZATCA_SELLER_NAME || "\u0645\u0643\u0627\u0646 \u0627\u0644\u0634\u064A\u0641 \u0627\u0644\u0628\u062E\u0627\u0631\u064A";
@@ -6163,12 +6179,12 @@ var schema_leave_exports = {};
 __export(schema_leave_exports, {
   LeaveRequestModel: () => LeaveRequestModel
 });
-import mongoose9, { Schema as Schema4 } from "mongoose";
-var LeaveRequestSchema, LeaveRequestModel;
+var import_mongoose9, LeaveRequestSchema, LeaveRequestModel;
 var init_schema_leave = __esm({
   "shared/schema-leave.ts"() {
     "use strict";
-    LeaveRequestSchema = new Schema4({
+    import_mongoose9 = __toESM(require("mongoose"), 1);
+    LeaveRequestSchema = new import_mongoose9.Schema({
       employeeId: { type: String, required: true, index: true },
       startDate: { type: Date, required: true },
       endDate: { type: Date, required: true },
@@ -6181,7 +6197,7 @@ var init_schema_leave = __esm({
       createdAt: { type: Date, default: Date.now, index: true },
       updatedAt: { type: Date, default: Date.now }
     });
-    LeaveRequestModel = mongoose9.model("LeaveRequest", LeaveRequestSchema);
+    LeaveRequestModel = import_mongoose9.default.model("LeaveRequest", LeaveRequestSchema);
   }
 });
 
@@ -6789,27 +6805,32 @@ var init_internal_ai = __esm({
 });
 
 // server/vercel-entry.ts
-import express from "express";
-import session from "express-session";
-import MongoStore from "connect-mongo";
-import compression from "compression";
-import mongoose11 from "mongoose";
+var vercel_entry_exports = {};
+__export(vercel_entry_exports, {
+  default: () => handler
+});
+module.exports = __toCommonJS(vercel_entry_exports);
+var import_express = __toESM(require("express"), 1);
+var import_express_session = __toESM(require("express-session"), 1);
+var import_connect_mongo = __toESM(require("connect-mongo"), 1);
+var import_compression = __toESM(require("compression"), 1);
+var import_mongoose12 = __toESM(require("mongoose"), 1);
 
 // server/routes.ts
-import crypto3 from "crypto";
-import mongoose10 from "mongoose";
-import { createServer } from "http";
+var import_crypto4 = __toESM(require("crypto"), 1);
+var import_mongoose10 = __toESM(require("mongoose"), 1);
+var import_http = require("http");
 
 // server/storage.ts
 init_schema();
-import bcrypt from "bcryptjs";
-import { nanoid as nanoid2 } from "nanoid";
+var import_bcryptjs = __toESM(require("bcryptjs"), 1);
+var import_nanoid2 = require("nanoid");
 
 // server/erp-accounting-service.ts
-import { nanoid } from "nanoid";
+var import_nanoid = require("nanoid");
 
 // server/zatca-utils.ts
-import QRCode from "qrcode";
+var import_qrcode = __toESM(require("qrcode"), 1);
 var ZATCA_TAGS = {
   SELLER_NAME: 1,
   VAT_NUMBER: 2,
@@ -6841,7 +6862,7 @@ function generateZatcaTLV(data) {
 }
 async function generateZatcaQRCode(data) {
   const tlvBase64 = generateZatcaTLV(data);
-  const qrDataUrl = await QRCode.toDataURL(tlvBase64, {
+  const qrDataUrl = await import_qrcode.default.toDataURL(tlvBase64, {
     errorCorrectionLevel: "M",
     margin: 2,
     width: 200,
@@ -6912,7 +6933,7 @@ var ErpAccountingService = class {
     const accountMap = {};
     const createdAccounts = [];
     for (const accountDef of DEFAULT_CHART_OF_ACCOUNTS) {
-      const accountId = nanoid();
+      const accountId = (0, import_nanoid.nanoid)();
       const parentAccountId = accountDef.parentAccountNumber ? accountMap[accountDef.parentAccountNumber] : void 0;
       const account = await AccountModel.create({
         id: accountId,
@@ -6988,7 +7009,7 @@ var ErpAccountingService = class {
       }
     }
     return AccountModel.create({
-      id: nanoid(),
+      id: (0, import_nanoid.nanoid)(),
       ...data,
       level,
       path: path2,
@@ -7010,7 +7031,7 @@ var ErpAccountingService = class {
     }
     const entryNumber = await this.generateEntryNumber(data.tenantId);
     const journalEntry = await JournalEntryModel.create({
-      id: nanoid(),
+      id: (0, import_nanoid.nanoid)(),
       tenantId: data.tenantId,
       entryNumber,
       entryDate: data.entryDate,
@@ -7209,7 +7230,7 @@ var ErpAccountingService = class {
       zatcaQRCode = await generateZatcaQRCode(zatcaData);
     }
     return InvoiceModel.create({
-      id: nanoid(),
+      id: (0, import_nanoid.nanoid)(),
       tenantId,
       branchId,
       invoiceNumber,
@@ -7275,7 +7296,7 @@ var ErpAccountingService = class {
     const zatcaTLV = generateZatcaTLV(zatcaData);
     const zatcaQRCode = await generateZatcaQRCode(zatcaData);
     return InvoiceModel.create({
-      id: nanoid(),
+      id: (0, import_nanoid.nanoid)(),
       tenantId: data.tenantId,
       branchId: data.branchId,
       invoiceNumber,
@@ -7508,7 +7529,7 @@ var ErpAccountingService = class {
     const expenseNumber = await this.generateExpenseNumber(data.tenantId);
     const totalAmount = data.amount + (data.taxAmount || 0);
     return ExpenseErpModel.create({
-      id: nanoid(),
+      id: (0, import_nanoid.nanoid)(),
       tenantId: data.tenantId,
       branchId: data.branchId,
       expenseNumber,
@@ -7565,7 +7586,7 @@ var ErpAccountingService = class {
    */
   static async createVendor(data) {
     return VendorModel.create({
-      id: nanoid(),
+      id: (0, import_nanoid.nanoid)(),
       ...data,
       country: "SA",
       currentBalance: 0,
@@ -7643,7 +7664,7 @@ var DBStorage = class {
   async initializeDemoEmployee() {
     const existing = await EmployeeModel.findOne({ username: "manager" });
     if (existing) return;
-    const hashedPassword = bcrypt.hashSync("2030", 10);
+    const hashedPassword = import_bcryptjs.default.hashSync("2030", 10);
     await EmployeeModel.create({
       id: "manager-demo",
       username: "manager",
@@ -7720,7 +7741,7 @@ var DBStorage = class {
     return user || void 0;
   }
   async createUser(user) {
-    const hashedPassword = await bcrypt.hash(user.password, 10);
+    const hashedPassword = await import_bcryptjs.default.hash(user.password, 10);
     const newUser = await UserModel.create({
       ...user,
       password: hashedPassword
@@ -7776,9 +7797,9 @@ var DBStorage = class {
     return result;
   }
   async createEmployee(insertEmployee) {
-    const employmentNumber = insertEmployee.employmentNumber || nanoid2(10);
+    const employmentNumber = insertEmployee.employmentNumber || (0, import_nanoid2.nanoid)(10);
     if (insertEmployee.password) {
-      const hashedPassword = await bcrypt.hash(insertEmployee.password, 10);
+      const hashedPassword = await import_bcryptjs.default.hash(insertEmployee.password, 10);
       const newEmployee = await EmployeeModel.create({
         ...insertEmployee,
         employmentNumber,
@@ -7807,7 +7828,7 @@ var DBStorage = class {
   }
   async updateEmployee(id, updates) {
     if (updates.password) {
-      updates.password = await bcrypt.hash(updates.password, 10);
+      updates.password = await import_bcryptjs.default.hash(updates.password, 10);
     }
     updates.updatedAt = /* @__PURE__ */ new Date();
     let employee = await EmployeeModel.findOneAndUpdate({ id }, updates, { new: true }).lean();
@@ -7826,7 +7847,7 @@ var DBStorage = class {
   async activateEmployee(phone, fullName, password) {
     const employee = await EmployeeModel.findOne({ phone, fullName, isActivated: 0 });
     if (!employee) return void 0;
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await import_bcryptjs.default.hash(password, 10);
     employee.password = hashedPassword;
     employee.isActivated = 1;
     employee.updatedAt = /* @__PURE__ */ new Date();
@@ -7843,7 +7864,7 @@ var DBStorage = class {
   async resetEmployeePasswordByUsername(username, newPassword) {
     const employee = await this.getEmployeeByUsername(username);
     if (!employee) return false;
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const hashedPassword = await import_bcryptjs.default.hash(newPassword, 10);
     await EmployeeModel.updateOne({ username }, { password: hashedPassword });
     return true;
   }
@@ -7905,7 +7926,7 @@ var DBStorage = class {
   async transferPoints(fromPhone, toPhone, points, password) {
     const fromCustomer = await CustomerModel.findOne({ phone: fromPhone });
     if (!fromCustomer) return { success: false, message: "\u0627\u0644\u0645\u0631\u0633\u0644 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F" };
-    const isMatch = await bcrypt.compare(password, fromCustomer.password || "");
+    const isMatch = await import_bcryptjs.default.compare(password, fromCustomer.password || "");
     if (!isMatch) return { success: false, message: "\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629" };
     if ((fromCustomer.points || 0) < points) return { success: false, message: "\u0627\u0644\u0646\u0642\u0627\u0637 \u063A\u064A\u0631 \u0643\u0627\u0641\u064A\u0629" };
     const toCustomer = await CustomerModel.findOne({ phone: toPhone });
@@ -8365,7 +8386,7 @@ var DBStorage = class {
     const codes = [];
     for (const drink of drinks) {
       for (let i = 0; i < drink.quantity; i++) {
-        const code = nanoid2(8).toUpperCase();
+        const code = (0, import_nanoid2.nanoid)(8).toUpperCase();
         const newCode = await CardCodeModel.create({ code, orderId, isRedeemed: 0 });
         codes.push(serializeDoc(newCode));
       }
@@ -8474,7 +8495,7 @@ var DBStorage = class {
     return appointment || void 0;
   }
   async createAppointment(appointment) {
-    const id = nanoid2(10);
+    const id = (0, import_nanoid2.nanoid)(10);
     const newAppointment = await AppointmentModel.create({ ...appointment, id });
     return newAppointment.toObject();
   }
@@ -8591,7 +8612,7 @@ var DBStorage = class {
           branchId,
           rawItemId,
           currentQuantity: newQuantity,
-          id: nanoid2(),
+          id: (0, import_nanoid2.nanoid)(),
           lastUpdated: /* @__PURE__ */ new Date()
         });
       }
@@ -8605,7 +8626,7 @@ var DBStorage = class {
         newQuantity,
         createdBy,
         notes,
-        id: nanoid2(),
+        id: (0, import_nanoid2.nanoid)(),
         createdAt: /* @__PURE__ */ new Date()
       });
       return serializeDoc(stock);
@@ -8683,7 +8704,7 @@ var DBStorage = class {
         toStock.lastUpdated = /* @__PURE__ */ new Date();
         await toStock.save();
       } else {
-        await BranchStockModel.create({ branchId: transfer.toBranchId, rawItemId: item.rawItemId, currentQuantity: item.quantity, id: nanoid2(), lastUpdated: /* @__PURE__ */ new Date() });
+        await BranchStockModel.create({ branchId: transfer.toBranchId, rawItemId: item.rawItemId, currentQuantity: item.quantity, id: (0, import_nanoid2.nanoid)(), lastUpdated: /* @__PURE__ */ new Date() });
       }
     }
     transfer.status = "completed";
@@ -8726,7 +8747,7 @@ var DBStorage = class {
         stock.currentQuantity += item.quantity;
         await stock.save();
       } else {
-        await BranchStockModel.create({ branchId: invoice.branchId, rawItemId: item.rawItemId, currentQuantity: item.quantity, id: nanoid2() });
+        await BranchStockModel.create({ branchId: invoice.branchId, rawItemId: item.rawItemId, currentQuantity: item.quantity, id: (0, import_nanoid2.nanoid)() });
       }
     }
     invoice.status = "received";
@@ -8831,7 +8852,7 @@ var DBStorage = class {
     return alerts.map(serializeDoc);
   }
   async createStockAlert(branchId, rawItemId, alertType, currentQuantity, thresholdQuantity) {
-    const alert = await StockAlertModel.create({ branchId, rawItemId, alertType, currentQuantity, thresholdQuantity, id: nanoid2() });
+    const alert = await StockAlertModel.create({ branchId, rawItemId, alertType, currentQuantity, thresholdQuantity, id: (0, import_nanoid2.nanoid)() });
     return serializeDoc(alert);
   }
   async resolveStockAlert(id, resolvedBy) {
@@ -8938,7 +8959,7 @@ var DBStorage = class {
           message: `Successfully deducted (${source})`
         });
         StockMovementModel.create({
-          id: nanoid2(),
+          id: (0, import_nanoid2.nanoid)(),
           branchId,
           rawItemId,
           movementType: "sale",
@@ -8964,7 +8985,7 @@ var DBStorage = class {
           { branchId, rawItemId, isResolved: { $ne: 1 } },
           {
             $setOnInsert: {
-              id: nanoid2(),
+              id: (0, import_nanoid2.nanoid)(),
               branchId,
               rawItemId,
               alertType: "out_of_stock",
@@ -9089,18 +9110,18 @@ var DBStorage = class {
   async verifyCustomerPassword(phone, password) {
     const customer = await CustomerModel.findOne({ phone });
     if (customer && customer.password) {
-      const isMatch = await bcrypt.compare(password, customer.password);
+      const isMatch = await import_bcryptjs.default.compare(password, customer.password);
       if (isMatch) return customer;
     }
     return void 0;
   }
   async resetCustomerPassword(email, newPassword) {
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const hashedPassword = await import_bcryptjs.default.hash(newPassword, 10);
     const result = await CustomerModel.updateOne({ email }, { password: hashedPassword });
     return result.modifiedCount > 0;
   }
   async createPasswordResetToken(email) {
-    const token = nanoid2(32);
+    const token = (0, import_nanoid2.nanoid)(32);
     const expiresAt = new Date(Date.now() + 36e5);
     await PasswordResetTokenModel.create({ email, token, expiresAt });
     return { token, expiresAt };
@@ -10244,9 +10265,9 @@ var AccountingEngine = class {
 };
 
 // server/delivery-service.ts
+var import_nanoid3 = require("nanoid");
 init_schema();
-import { nanoid as nanoid3 } from "nanoid";
-import * as turf from "@turf/turf";
+var turf = __toESM(require("@turf/turf"), 1);
 var MINUTES_PER_KM = 2;
 var MINUTES_PER_DRINK = 5;
 var DeliveryService = class {
@@ -10259,7 +10280,7 @@ var DeliveryService = class {
   async createIntegration(data) {
     const integration = new DeliveryIntegrationModel({
       ...data,
-      id: nanoid3(),
+      id: (0, import_nanoid3.nanoid)(),
       createdAt: /* @__PURE__ */ new Date(),
       updatedAt: /* @__PURE__ */ new Date()
     });
@@ -10287,7 +10308,7 @@ var DeliveryService = class {
   async createZone(data) {
     const zone = new DeliveryZoneModel({
       ...data,
-      id: nanoid3(),
+      id: (0, import_nanoid3.nanoid)(),
       createdAt: /* @__PURE__ */ new Date(),
       updatedAt: /* @__PURE__ */ new Date()
     });
@@ -10323,7 +10344,7 @@ var DeliveryService = class {
   async createDriver(data) {
     const driver = new DeliveryDriverModel({
       ...data,
-      id: nanoid3(),
+      id: (0, import_nanoid3.nanoid)(),
       status: "offline",
       totalDeliveries: 0,
       totalEarnings: 0,
@@ -10413,7 +10434,7 @@ var DeliveryService = class {
     const estimatedDeliveryTime = new Date(now.getTime() + totalEstimatedMinutes * 6e4);
     const order = new DeliveryOrderModel({
       ...data,
-      id: nanoid3(),
+      id: (0, import_nanoid3.nanoid)(),
       distanceKm,
       travelMinutes,
       totalEstimatedMinutes,
@@ -11096,19 +11117,19 @@ var PermissionsEngine = class {
 };
 
 // server/middleware/auth.ts
-import mongoose2 from "mongoose";
+var import_mongoose2 = __toESM(require("mongoose"), 1);
 async function tryRestoreFromHeaders(req, res) {
   const employeeId = req.headers["x-employee-id"];
   const restoreKey = req.headers["x-restore-key"];
   if (!employeeId || !restoreKey) return false;
   try {
-    const EmployeeCollection = mongoose2.connection.collection("employees");
+    const EmployeeCollection = import_mongoose2.default.connection.collection("employees");
     const employee = await EmployeeCollection.findOne({
       $or: [
         { id: employeeId },
         { _id: (() => {
           try {
-            return new mongoose2.Types.ObjectId(employeeId);
+            return new import_mongoose2.default.Types.ObjectId(employeeId);
           } catch {
             return null;
           }
@@ -11118,7 +11139,7 @@ async function tryRestoreFromHeaders(req, res) {
     if (!employee) return false;
     const storedKey = employee.lastRestoreKey;
     if (!storedKey || storedKey !== restoreKey) return false;
-    const newRestoreKey = __require("crypto").randomBytes(32).toString("hex");
+    const newRestoreKey = require("crypto").randomBytes(32).toString("hex");
     await EmployeeCollection.updateOne(
       { _id: employee._id },
       { $set: { lastRestoreKey: newRestoreKey } }
@@ -11224,19 +11245,19 @@ function requireCustomerAuth(req, res, next) {
 }
 
 // shared/tenant-schema.ts
-import mongoose3, { Schema as Schema2 } from "mongoose";
-var TenantSchema = new Schema2({
+var import_mongoose3 = __toESM(require("mongoose"), 1);
+var TenantSchema = new import_mongoose3.Schema({
   id: { type: String, required: true, unique: true },
   nameAr: { type: String, required: true },
   nameEn: { type: String, required: true },
   type: { type: String, enum: ["demo", "client"], default: "demo" },
   status: { type: String, enum: ["active", "inactive", "suspended"], default: "active" },
   subscriptionPlan: { type: String, default: "free" },
-  features: { type: Schema2.Types.Mixed, default: {} },
+  features: { type: import_mongoose3.Schema.Types.Mixed, default: {} },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
-var TenantModel = mongoose3.model("Tenant", TenantSchema);
+var TenantModel = import_mongoose3.default.model("Tenant", TenantSchema);
 
 // server/middleware/tenant.ts
 function getTenantIdFromRequest(req) {
@@ -11245,26 +11266,26 @@ function getTenantIdFromRequest(req) {
 
 // server/routes.ts
 init_websocket();
+var import_bcryptjs3 = __toESM(require("bcryptjs"), 1);
+var import_multer = __toESM(require("multer"), 1);
+var import_path = __toESM(require("path"), 1);
+var import_url = require("url");
+var import_fs = __toESM(require("fs"), 1);
+var import_mongoose11 = require("mongoose");
+var import_nanoid4 = require("nanoid");
 init_mail_service();
 init_push_service();
 init_object_storage();
-import bcrypt3 from "bcryptjs";
-import multer from "multer";
-import path from "path";
-import { fileURLToPath } from "url";
-import fs from "fs";
-import { Types } from "mongoose";
-import { nanoid as nanoid4 } from "nanoid";
 
 // server/models.ts
-import mongoose6 from "mongoose";
-var storeHourSchema = new mongoose6.Schema({
+var import_mongoose6 = __toESM(require("mongoose"), 1);
+var storeHourSchema = new import_mongoose6.default.Schema({
   open: { type: String, default: "00:00" },
   close: { type: String, default: "23:59" },
   isOpen: { type: Boolean, default: true },
   isAlwaysOpen: { type: Boolean, default: true }
 }, { _id: false });
-var businessConfigSchema = new mongoose6.Schema({
+var businessConfigSchema = new import_mongoose6.default.Schema({
   tenantId: { type: String, required: true, unique: true },
   tradeNameAr: String,
   tradeNameEn: String,
@@ -11377,8 +11398,8 @@ var businessConfigSchema = new mongoose6.Schema({
   },
   updatedAt: { type: Date, default: Date.now }
 });
-var BusinessConfigModel2 = mongoose6.models.BusinessConfig || mongoose6.model("BusinessConfig", businessConfigSchema);
-var appointmentSchema = new mongoose6.Schema({
+var BusinessConfigModel2 = import_mongoose6.default.models.BusinessConfig || import_mongoose6.default.model("BusinessConfig", businessConfigSchema);
+var appointmentSchema = new import_mongoose6.default.Schema({
   id: { type: String, required: true, unique: true },
   branchId: String,
   customerId: String,
@@ -11394,8 +11415,8 @@ var appointmentSchema = new mongoose6.Schema({
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
-var AppointmentModel2 = mongoose6.models.Appointment || mongoose6.model("Appointment", appointmentSchema);
-var printJobSchema = new mongoose6.Schema({
+var AppointmentModel2 = import_mongoose6.default.models.Appointment || import_mongoose6.default.model("Appointment", appointmentSchema);
+var printJobSchema = new import_mongoose6.default.Schema({
   data: { type: String, required: true },
   // base64 ESC/POS bytes
   printerIp: { type: String, required: true },
@@ -11408,15 +11429,16 @@ var printJobSchema = new mongoose6.Schema({
   // auto-delete after 5 min
   doneAt: Date
 });
-var PrintJobModel = mongoose6.models.PrintJob || mongoose6.model("PrintJob", printJobSchema);
+var PrintJobModel = import_mongoose6.default.models.PrintJob || import_mongoose6.default.model("PrintJob", printJobSchema);
 
 // server/routes.ts
-var isValidObjectId = (id) => Types.ObjectId.isValid(id);
+var import_meta = {};
+var isValidObjectId = (id) => import_mongoose11.Types.ObjectId.isValid(id);
 var IS_VERCEL = !!process.env.VERCEL;
 function getUploadsDir(subDir) {
-  const base = IS_VERCEL ? "/tmp/uploads" : path.resolve(__dirname, "..", "attached_assets");
-  const dir = path.join(base, subDir);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  const base = IS_VERCEL ? "/tmp/uploads" : import_path.default.resolve(__dirname, "..", "attached_assets");
+  const dir = import_path.default.join(base, subDir);
+  if (!import_fs.default.existsSync(dir)) import_fs.default.mkdirSync(dir, { recursive: true });
   return dir;
 }
 var VAT_RATE2 = 0.15;
@@ -11575,19 +11597,19 @@ function invalidateCoffeeItemsCache(tenantId) {
   cache.invalidate("menu-items");
   cache.invalidate("product-addons:" + tenantId);
 }
-var __filename = fileURLToPath(import.meta.url);
-var __dirname = path.dirname(__filename);
+var __filename = typeof __filename !== "undefined" ? __filename : (0, import_url.fileURLToPath)(import_meta.url);
+var __dirname = typeof __dirname !== "undefined" ? __dirname : import_path.default.dirname(__filename);
 var uploadDirs = [
-  path.resolve(__dirname, "..", "attached_assets", "drinks"),
-  path.resolve(__dirname, "..", "attached_assets", "sizes"),
-  path.resolve(__dirname, "..", "attached_assets", "addons"),
-  path.resolve(__dirname, "..", "attached_assets", "employees"),
-  path.resolve(__dirname, "..", "attached_assets", "attendance"),
-  path.resolve(__dirname, "..", "attached_assets", "receipts")
+  import_path.default.resolve(__dirname, "..", "attached_assets", "drinks"),
+  import_path.default.resolve(__dirname, "..", "attached_assets", "sizes"),
+  import_path.default.resolve(__dirname, "..", "attached_assets", "addons"),
+  import_path.default.resolve(__dirname, "..", "attached_assets", "employees"),
+  import_path.default.resolve(__dirname, "..", "attached_assets", "attendance"),
+  import_path.default.resolve(__dirname, "..", "attached_assets", "receipts")
 ];
 uploadDirs.forEach((dir) => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+  if (!import_fs.default.existsSync(dir)) {
+    import_fs.default.mkdirSync(dir, { recursive: true });
   }
 });
 function serializeDoc2(doc) {
@@ -11691,20 +11713,20 @@ async function deductInventoryForOrder(orderId, branchId, employeeId) {
         }
         let loyaltyCard = null;
         if (order.customerId) {
-          loyaltyCard = await mongoose10.model("LoyaltyCard").findOne({ customerId: order.customerId });
+          loyaltyCard = await import_mongoose10.default.model("LoyaltyCard").findOne({ customerId: order.customerId });
         }
         if (!loyaltyCard) {
           const customerPhone = order.customerPhone || order.customerInfo?.customerPhone;
           if (customerPhone) {
             const cleanPhone = customerPhone.replace(/\D/g, "").replace(/^966/, "0").replace(/^9665/, "05");
-            loyaltyCard = await mongoose10.model("LoyaltyCard").findOne({ phoneNumber: { $in: [cleanPhone, customerPhone, `+966${cleanPhone.slice(1)}`, `966${cleanPhone.slice(1)}`] } });
+            loyaltyCard = await import_mongoose10.default.model("LoyaltyCard").findOne({ phoneNumber: { $in: [cleanPhone, customerPhone, `+966${cleanPhone.slice(1)}`, `966${cleanPhone.slice(1)}`] } });
           }
         }
         if (!loyaltyCard && order.customerId) {
           const cust = await CustomerModel.findOne({ id: order.customerId }).lean();
           if (cust?.phone) {
             const p = cust.phone.replace(/\D/g, "").replace(/^966/, "0").replace(/^9665/, "05");
-            loyaltyCard = await mongoose10.model("LoyaltyCard").findOne({ phoneNumber: { $in: [p, cust.phone, `+966${p.slice(1)}`, `966${p.slice(1)}`] } });
+            loyaltyCard = await import_mongoose10.default.model("LoyaltyCard").findOne({ phoneNumber: { $in: [p, cust.phone, `+966${p.slice(1)}`, `966${p.slice(1)}`] } });
             if (loyaltyCard && !loyaltyCard.customerId) {
               loyaltyCard.customerId = order.customerId;
             }
@@ -11831,16 +11853,16 @@ async function sendInvoiceEmail(to, invoiceNumber, invoiceData) {
   }
 }
 var uploadsDir = getUploadsDir("receipts");
-var storage_multer = multer.diskStorage({
+var storage_multer = import_multer.default.diskStorage({
   destination: function(req, file, cb) {
     cb(null, uploadsDir);
   },
   filename: function(req, file, cb) {
-    const uniqueSuffix = `${Date.now()}-${nanoid4(8)}`;
-    cb(null, `receipt-${uniqueSuffix}${path.extname(file.originalname)}`);
+    const uniqueSuffix = `${Date.now()}-${(0, import_nanoid4.nanoid)(8)}`;
+    cb(null, `receipt-${uniqueSuffix}${import_path.default.extname(file.originalname)}`);
   }
 });
-var upload = multer({
+var upload = (0, import_multer.default)({
   storage: storage_multer,
   limits: {
     fileSize: 5 * 1024 * 1024
@@ -11848,7 +11870,7 @@ var upload = multer({
   },
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|webp|pdf/;
-    const ext = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const ext = allowedTypes.test(import_path.default.extname(file.originalname).toLowerCase());
     const mimeType = allowedTypes.test(file.mimetype);
     if (ext && mimeType) {
       cb(null, true);
@@ -12247,16 +12269,16 @@ async function registerRoutes(app2, options = {}) {
             const last9 = rawDigits.slice(-9);
             const cPh = rawDigits.replace(/^966/, "0").replace(/^9665/, "05");
             const phVariants = [.../* @__PURE__ */ new Set([cPh, cardPhone, rawDigits, last9, `0${last9}`, `+966${last9}`, `966${last9}`])];
-            const loyCard = await mongoose10.model("LoyaltyCard").findOne({ phoneNumber: { $in: phVariants } });
+            const loyCard = await import_mongoose10.default.model("LoyaltyCard").findOne({ phoneNumber: { $in: phVariants } });
             if (loyCard) {
               const curPts = Number(loyCard.points) || 0;
               const ptsToDeduct = Math.min(redeemPts, curPts);
               if (ptsToDeduct > 0) {
-                await mongoose10.model("LoyaltyCard").findByIdAndUpdate(loyCard._id, {
+                await import_mongoose10.default.model("LoyaltyCard").findByIdAndUpdate(loyCard._id, {
                   $inc: { points: -ptsToDeduct },
                   $set: { lastUsedAt: /* @__PURE__ */ new Date() }
                 });
-                const LoyaltyTransactionModel2 = mongoose10.model("LoyaltyTransaction");
+                const LoyaltyTransactionModel2 = import_mongoose10.default.model("LoyaltyTransaction");
                 await LoyaltyTransactionModel2.create({
                   cardId: loyCard.id || loyCard._id.toString(),
                   customerId: body.customerId || loyCard.customerId || void 0,
@@ -12295,10 +12317,10 @@ async function registerRoutes(app2, options = {}) {
             return itemPrice > 1 ? sum + (Number(item.quantity) || 1) : sum;
           }, 0);
           const earnedPts = eligibleDrinks * pointsPerDrinkCfg;
-          let card = await mongoose10.model("LoyaltyCard").findOne({ phoneNumber: { $in: phoneVariants } });
+          let card = await import_mongoose10.default.model("LoyaltyCard").findOne({ phoneNumber: { $in: phoneVariants } });
           const customerName = body.customerName || body.customerInfo?.customerName || "\u0639\u0645\u064A\u0644";
           if (!card && body.customerId) {
-            card = await mongoose10.model("LoyaltyCard").findOne({ customerId: body.customerId });
+            card = await import_mongoose10.default.model("LoyaltyCard").findOne({ customerId: body.customerId });
           }
           if (!card) {
             card = await storage.createLoyaltyCard({
@@ -12309,11 +12331,11 @@ async function registerRoutes(app2, options = {}) {
             console.log(`[LOYALTY] Created new card for ${cleanPhone}`);
           }
           if (card && body.customerId && !card.customerId) {
-            await mongoose10.model("LoyaltyCard").findByIdAndUpdate(card._id, { $set: { customerId: body.customerId } });
+            await import_mongoose10.default.model("LoyaltyCard").findByIdAndUpdate(card._id, { $set: { customerId: body.customerId } });
           }
           if (card && earnedPts > 0) {
             if (shouldAutoConfirm) {
-              await mongoose10.model("LoyaltyCard").findByIdAndUpdate(card._id, {
+              await import_mongoose10.default.model("LoyaltyCard").findByIdAndUpdate(card._id, {
                 $inc: { points: earnedPts },
                 $set: { lastUsedAt: /* @__PURE__ */ new Date() }
               });
@@ -12323,7 +12345,7 @@ async function registerRoutes(app2, options = {}) {
               await OrderModel.findOneAndUpdate({ id: order.id }, { pointsAwarded: true });
               console.log(`[LOYALTY] POS: Awarded ${earnedPts} actual points to card ${card.id} (${cleanPhone})`);
             } else {
-              await mongoose10.model("LoyaltyCard").findByIdAndUpdate(card._id, {
+              await import_mongoose10.default.model("LoyaltyCard").findByIdAndUpdate(card._id, {
                 $inc: { pendingPoints: earnedPts },
                 $set: { lastUsedAt: /* @__PURE__ */ new Date() }
               });
@@ -12795,13 +12817,13 @@ async function registerRoutes(app2, options = {}) {
       const tenantId = getTenantIdFromRequest(req) || "demo-tenant";
       const existing = await TableModel.findOne({ tableNumber, branchId, tenantId });
       if (existing) return res.status(400).json({ error: "\u0631\u0642\u0645 \u0627\u0644\u0637\u0627\u0648\u0644\u0629 \u0645\u0648\u062C\u0648\u062F \u0645\u0633\u0628\u0642\u0627\u064B \u0641\u064A \u0647\u0630\u0627 \u0627\u0644\u0641\u0631\u0639" });
-      const tableId = nanoid4(10);
+      const tableId = (0, import_nanoid4.nanoid)(10);
       const tableData = {
         id: tableId,
         tableNumber: String(tableNumber),
         branchId,
         tenantId,
-        qrToken: nanoid4(12),
+        qrToken: (0, import_nanoid4.nanoid)(12),
         isActive: 1,
         isOccupied: 0
       };
@@ -12838,13 +12860,13 @@ async function registerRoutes(app2, options = {}) {
       let createdCount = 0;
       while (createdCount < numCount) {
         if (!existingNumbers.has(currentNum) && !existingNumbers.has(String(currentNum))) {
-          const tableId = nanoid4(10);
+          const tableId = (0, import_nanoid4.nanoid)(10);
           const tableData = {
             id: tableId,
             tableNumber: String(currentNum),
             branchId,
             tenantId,
-            qrToken: nanoid4(12),
+            qrToken: (0, import_nanoid4.nanoid)(12),
             isActive: 1,
             isOccupied: 0
           };
@@ -12964,7 +12986,7 @@ async function registerRoutes(app2, options = {}) {
       const tenantId = getTenantIdFromRequest(req) || "demo-tenant";
       const bannerData = {
         ...req.body,
-        id: nanoid4(10),
+        id: (0, import_nanoid4.nanoid)(10),
         tenantId,
         createdAt: /* @__PURE__ */ new Date(),
         updatedAt: /* @__PURE__ */ new Date()
@@ -13313,7 +13335,7 @@ async function registerRoutes(app2, options = {}) {
       }
       const tenantId = req.employee?.tenantId || getTenantIdFromRequest(req) || "demo-tenant";
       const movement = await StockMovementModel.create({
-        id: crypto3.randomUUID(),
+        id: import_crypto4.default.randomUUID(),
         tenantId,
         branchId,
         rawItemId,
@@ -13367,7 +13389,7 @@ async function registerRoutes(app2, options = {}) {
         const keepAddonIds = [];
         for (const addon of addons) {
           if (!addon || !addon.nameAr) continue;
-          if (!addon.id) addon.id = nanoid4();
+          if (!addon.id) addon.id = (0, import_nanoid4.nanoid)();
           keepAddonIds.push(addon.id);
           try {
             await ProductAddonModel.findOneAndUpdate(
@@ -13682,7 +13704,7 @@ async function registerRoutes(app2, options = {}) {
       if (!pg || pg.provider === "none") {
         return res.status(400).json({ error: "\u0644\u0645 \u064A\u062A\u0645 \u062A\u0643\u0648\u064A\u0646 \u0628\u0648\u0627\u0628\u0629 \u062F\u0641\u0639 \u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A" });
       }
-      const internalSessionId = nanoid4();
+      const internalSessionId = (0, import_nanoid4.nanoid)();
       if (pg.provider === "geidea") {
         const publicKey = pg.geidea?.publicKey;
         const apiPassword = pg.geidea?.apiPassword;
@@ -15555,7 +15577,7 @@ async function registerRoutes(app2, options = {}) {
         fullName: employee.fullName,
         tenantId: employee.tenantId
       };
-      const restoreKey = crypto3.randomBytes(32).toString("hex");
+      const restoreKey = import_crypto4.default.randomBytes(32).toString("hex");
       req.session.restoreKey = restoreKey;
       await EmployeeModel.findByIdAndUpdate(employee._id, { $set: { lastRestoreKey: restoreKey } });
       req.session.save((err) => {
@@ -15621,7 +15643,7 @@ async function registerRoutes(app2, options = {}) {
         console.log(`[AUTH] Employee not found or no password: ${username}`);
         return res.status(401).json({ error: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0623\u0648 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629" });
       }
-      const isPasswordValid = await bcrypt3.compare(password, employee.password);
+      const isPasswordValid = await import_bcryptjs3.default.compare(password, employee.password);
       if (!isPasswordValid) {
         console.log(`[AUTH] Invalid password for: ${username}`);
         return res.status(401).json({ error: "\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0623\u0648 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629" });
@@ -15638,7 +15660,7 @@ async function registerRoutes(app2, options = {}) {
         fullName: employee.fullName,
         tenantId: employee.tenantId
       };
-      const restoreKey = crypto3.randomBytes(32).toString("hex");
+      const restoreKey = import_crypto4.default.randomBytes(32).toString("hex");
       req.session.restoreKey = restoreKey;
       await EmployeeModel.findByIdAndUpdate(employee._id, { $set: { lastRestoreKey: restoreKey } });
       req.session.save((err) => {
@@ -15672,7 +15694,7 @@ async function registerRoutes(app2, options = {}) {
         console.log(`[AUTH-RESTORE] Invalid restore key for employee: ${employeeId}`);
         return res.status(401).json({ error: "Invalid restore key" });
       }
-      const newRestoreKey = crypto3.randomBytes(32).toString("hex");
+      const newRestoreKey = import_crypto4.default.randomBytes(32).toString("hex");
       await EmployeeModel.findByIdAndUpdate(employee._id, { $set: { lastRestoreKey: newRestoreKey } });
       const sessionEmployee = {
         id: employee.id || employee._id?.toString(),
@@ -15992,7 +16014,7 @@ async function registerRoutes(app2, options = {}) {
         permissions: bodyData.permissions || [],
         allowedPages: bodyData.allowedPages || [],
         tenantId,
-        id: nanoid4(),
+        id: (0, import_nanoid4.nanoid)(),
         isActivated: bodyData.password ? 1 : 0,
         createdAt: /* @__PURE__ */ new Date(),
         updatedAt: /* @__PURE__ */ new Date()
@@ -16419,7 +16441,7 @@ async function registerRoutes(app2, options = {}) {
           return res.status(400).json({ error: "\u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A \u0645\u0633\u062C\u0644 \u0645\u0633\u0628\u0642\u0627\u064B" });
         }
       }
-      const hashedPassword = await bcrypt3.hash(password, 10);
+      const hashedPassword = await import_bcryptjs3.default.hash(password, 10);
       const customer = await storage.createCustomer({
         phone: cleanPhone,
         ...cleanEmail ? { email: cleanEmail } : {},
@@ -16432,7 +16454,7 @@ async function registerRoutes(app2, options = {}) {
       let newLoyaltyCard = null;
       try {
         const cardNumber = `QC${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-        const qrToken = nanoid4(12);
+        const qrToken = (0, import_nanoid4.nanoid)(12);
         const serializedCustomer = serializeDoc2(customer);
         newLoyaltyCard = await storage.createLoyaltyCard({
           customerName: name.trim(),
@@ -16480,7 +16502,7 @@ async function registerRoutes(app2, options = {}) {
         }
       }
       try {
-        const OrderModel2 = mongoose10.model("Order");
+        const OrderModel2 = import_mongoose10.default.model("Order");
         const linkedResult = await OrderModel2.updateMany(
           { customerPhone: cleanPhone, $or: [{ customerId: null }, { customerId: { $exists: false } }] },
           { $set: { customerId: customer.id } }
@@ -16519,7 +16541,7 @@ async function registerRoutes(app2, options = {}) {
               requiresPasswordSetup: true
             });
           }
-          const isPasswordValid = await bcrypt3.compare(password, foundCustomer.password);
+          const isPasswordValid = await import_bcryptjs3.default.compare(password, foundCustomer.password);
           if (isPasswordValid) {
             customer = foundCustomer;
           }
@@ -16672,7 +16694,7 @@ async function registerRoutes(app2, options = {}) {
       if (!nameMatch) {
         return res.status(400).json({ error: "\u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629" });
       }
-      const hashedPassword = await bcrypt3.hash(newPassword, 10);
+      const hashedPassword = await import_bcryptjs3.default.hash(newPassword, 10);
       const updated = await storage.updateCustomer(customer._id.toString(), {
         password: hashedPassword
       });
@@ -16851,7 +16873,7 @@ async function registerRoutes(app2, options = {}) {
       const { identifier } = req.params;
       const { OrderModel: OrderModel2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
       const cleanPhone = identifier.trim().replace(/\s/g, "").replace(/^\+966/, "").replace(/^00966/, "");
-      const isMongoId = mongoose10?.Types?.ObjectId?.isValid?.(identifier) || /^[a-f\d]{24}$/i.test(identifier);
+      const isMongoId = import_mongoose10.default?.Types?.ObjectId?.isValid?.(identifier) || /^[a-f\d]{24}$/i.test(identifier);
       let customerId = null;
       try {
         const customer = await storage.getCustomerByPhone(cleanPhone);
@@ -17011,7 +17033,7 @@ async function registerRoutes(app2, options = {}) {
       if (!otpVerification.valid) {
         return res.status(400).json({ error: otpVerification.message || "\u0631\u0645\u0632 \u0627\u0644\u062A\u062D\u0642\u0642 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D" });
       }
-      const hashedPassword = await bcrypt3.hash(password, 10);
+      const hashedPassword = await import_bcryptjs3.default.hash(password, 10);
       const updated = await storage.updateCustomer(customer._id.toString(), {
         password: hashedPassword
       });
@@ -17311,7 +17333,7 @@ async function registerRoutes(app2, options = {}) {
       validatedData.createdByEmployeeId = req.employee?.id || "demo-employee";
       validatedData.createdByBranchId = branchId;
       if (!validatedData.id) {
-        validatedData.id = nanoid4();
+        validatedData.id = (0, import_nanoid4.nanoid)();
       }
       const vd = validatedData;
       const newCoffeeItem = new CoffeeItemModel({
@@ -17364,7 +17386,7 @@ async function registerRoutes(app2, options = {}) {
       if (validatedData.addons && Array.isArray(validatedData.addons) && validatedData.addons.length > 0) {
         for (const addon of validatedData.addons) {
           if (addon.nameAr && !addon.id) {
-            addon.id = nanoid4();
+            addon.id = (0, import_nanoid4.nanoid)();
           }
           try {
             await ProductAddonModel.findOneAndUpdate(
@@ -17497,7 +17519,7 @@ async function registerRoutes(app2, options = {}) {
       const tenantId = getTenantIdFromRequest(req) || "demo-tenant";
       console.log(`[AVAILABILITY] Updating item ${id} for tenant ${tenantId}, branch ${branchId}`);
       let item = await CoffeeItemModel.findOne({ id, tenantId }).exec();
-      if (!item && mongoose10.Types.ObjectId.isValid(id)) {
+      if (!item && import_mongoose10.default.Types.ObjectId.isValid(id)) {
         item = await CoffeeItemModel.findOne({ _id: id, tenantId }).exec();
       }
       if (!item) {
@@ -17661,7 +17683,7 @@ async function registerRoutes(app2, options = {}) {
         if (deleteResult.deletedCount === 0) {
           deleteResult = await CartItemModel.deleteOne({ sessionId, coffeeItemId: cartItemId, selectedSize: "default" });
         }
-        if (deleteResult.deletedCount === 0 && mongoose10.Types.ObjectId.isValid(cartItemId)) {
+        if (deleteResult.deletedCount === 0 && import_mongoose10.default.Types.ObjectId.isValid(cartItemId)) {
           deleteResult = await CartItemModel.deleteOne({ sessionId, _id: cartItemId });
         }
         return res.json({ message: "Item removed" });
@@ -17678,7 +17700,7 @@ async function registerRoutes(app2, options = {}) {
           { new: true }
         );
       }
-      if (!cartItem && mongoose10.Types.ObjectId.isValid(cartItemId)) {
+      if (!cartItem && import_mongoose10.default.Types.ObjectId.isValid(cartItemId)) {
         cartItem = await CartItemModel.findOneAndUpdate(
           { sessionId, _id: cartItemId },
           { $set: { quantity } },
@@ -17703,7 +17725,7 @@ async function registerRoutes(app2, options = {}) {
       if (result.deletedCount === 0) {
         result = await CartItemModel.deleteOne({ sessionId, coffeeItemId: cartItemId, selectedSize: "default" });
       }
-      if (result.deletedCount === 0 && mongoose10.Types.ObjectId.isValid(cartItemId)) {
+      if (result.deletedCount === 0 && import_mongoose10.default.Types.ObjectId.isValid(cartItemId)) {
         result = await CartItemModel.deleteOne({ sessionId, _id: cartItemId });
       }
       if (result.deletedCount === 0) {
@@ -17847,7 +17869,7 @@ async function registerRoutes(app2, options = {}) {
             const isOpenTab = req.body.isOpenTab === true;
             const tableOrderStatus = isOpenTab ? "open" : initialStatus;
             const orderData = {
-              orderNumber: `T-${nanoid4(6).toUpperCase()}`,
+              orderNumber: `T-${(0, import_nanoid4.nanoid)(6).toUpperCase()}`,
               items: processedItems,
               totalAmount: Number(totalAmount),
               paymentMethod: isOpenTab ? "cash" : paymentMethod || "cash",
@@ -17957,7 +17979,7 @@ async function registerRoutes(app2, options = {}) {
                       points: currentPoints - redeemPoints,
                       lastUsedAt: /* @__PURE__ */ new Date()
                     });
-                    const LoyaltyTransactionModel2 = mongoose10.model("LoyaltyTransaction");
+                    const LoyaltyTransactionModel2 = import_mongoose10.default.model("LoyaltyTransaction");
                     await LoyaltyTransactionModel2.create({
                       cardId: loyaltyCard.id,
                       type: "points_redeemed",
@@ -18120,7 +18142,7 @@ async function registerRoutes(app2, options = {}) {
             const taxRate = VAT_RATE2;
             const invoiceSubtotal = parseFloat(totalAmount.toString()) / (1 + taxRate);
             const invoiceTax = invoiceSubtotal * taxRate;
-            const invoiceNumber = `INV-${Date.now()}-${nanoid4(6)}`;
+            const invoiceNumber = `INV-${Date.now()}-${(0, import_nanoid4.nanoid)(6)}`;
             const invoiceData = {
               customerName: customerInfo.customerName,
               customerPhone: customerInfo.phoneNumber,
@@ -19055,7 +19077,7 @@ async function registerRoutes(app2, options = {}) {
   app2.get("/api/loyalty/transactions/customer/:customerId", requireAuth, async (req, res) => {
     try {
       const { customerId } = req.params;
-      const LoyaltyTransactionModel2 = mongoose10.model("LoyaltyTransaction");
+      const LoyaltyTransactionModel2 = import_mongoose10.default.model("LoyaltyTransaction");
       const transactions = await LoyaltyTransactionModel2.find({ customerId }).sort({ createdAt: -1 });
       res.json(transactions.map(serializeDoc2));
     } catch (error) {
@@ -19191,7 +19213,7 @@ async function registerRoutes(app2, options = {}) {
       if (!customer || customerPhone !== cleanPhone) {
         return res.status(401).json({ error: "\u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629" });
       }
-      const isPasswordValid = await bcrypt3.compare(password, customer.password || "");
+      const isPasswordValid = await import_bcryptjs3.default.compare(password, customer.password || "");
       if (!isPasswordValid) {
         return res.status(401).json({ error: "\u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u063A\u064A\u0631 \u0635\u062D\u064A\u062D\u0629" });
       }
@@ -19530,7 +19552,7 @@ async function registerRoutes(app2, options = {}) {
         return res.status(404).json({ error: "\u0628\u0637\u0627\u0642\u062A\u0643 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629" });
       }
       const customer = await storage.getCustomerByPhone(cleanSenderPhone);
-      if (customer?.password && pin && !await bcrypt3.compare(pin, customer.password)) {
+      if (customer?.password && pin && !await import_bcryptjs3.default.compare(pin, customer.password)) {
         return res.status(401).json({ error: "\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u0633\u0631\u064A \u063A\u064A\u0631 \u0635\u062D\u064A\u062D" });
       }
       const currentPoints = senderCard.points || 0;
@@ -20110,7 +20132,7 @@ async function registerRoutes(app2, options = {}) {
       const { managerAssignment, ...cleanBranchData } = branchData;
       const tenantId = req.employee?.tenantId || "demo-tenant";
       const cafeId = cleanBranchData.cafeId || tenantId;
-      const id = cleanBranchData.id || nanoid4();
+      const id = cleanBranchData.id || (0, import_nanoid4.nanoid)();
       const newBranch = await BranchModel2.create({
         ...cleanBranchData,
         id,
@@ -20180,7 +20202,7 @@ async function registerRoutes(app2, options = {}) {
       } else {
         const branchNameAr = branchData.nameAr || "\u0641\u0631\u0639 \u062C\u062F\u064A\u062F";
         const branchNameSlug = branchNameAr.replace(/\s+/g, "_").toLowerCase();
-        const managerUsername = `manager_${branchNameSlug}_${nanoid4(4)}`;
+        const managerUsername = `manager_${branchNameSlug}_${(0, import_nanoid4.nanoid)(4)}`;
         const temporaryPassword = `manager${Math.random().toString(36).slice(-8)}`;
         try {
           const manager = await storage.createEmployee({
@@ -20313,7 +20335,7 @@ async function registerRoutes(app2, options = {}) {
     try {
       const manager = await storage.getEmployeeByUsername("manager");
       if (manager && manager._id) {
-        const hashedPassword = await bcrypt3.hash("2030", 10);
+        const hashedPassword = await import_bcryptjs3.default.hash("2030", 10);
         await storage.updateEmployee(manager._id.toString(), { password: hashedPassword });
         res.json({ message: "Manager password reset successfully" });
       } else {
@@ -20481,7 +20503,7 @@ async function registerRoutes(app2, options = {}) {
         }
         console.log(`[TABLES] Auto-clearing expired reservation for table ${table.tableNumber}`);
       }
-      const bookingId = nanoid4();
+      const bookingId = (0, import_nanoid4.nanoid)();
       const now = /* @__PURE__ */ new Date();
       const updatedTable = await storage.updateTable(tableId, {
         reservedFor: {
@@ -21336,16 +21358,16 @@ async function registerRoutes(app2, options = {}) {
     });
   };
   const employeeUploadsDir = getUploadsDir("employees");
-  const employeeStorage = multer.diskStorage({
+  const employeeStorage = import_multer.default.diskStorage({
     destination: function(req, file, cb) {
       cb(null, employeeUploadsDir);
     },
     filename: function(req, file, cb) {
-      const uniqueSuffix = `${Date.now()}-${nanoid4(8)}`;
-      cb(null, `employee-${uniqueSuffix}${path.extname(file.originalname)}`);
+      const uniqueSuffix = `${Date.now()}-${(0, import_nanoid4.nanoid)(8)}`;
+      cb(null, `employee-${uniqueSuffix}${import_path.default.extname(file.originalname)}`);
     }
   });
-  const employeeUpload = multer({
+  const employeeUpload = (0, import_multer.default)({
     storage: employeeStorage,
     limits: {
       fileSize: 15 * 1024 * 1024
@@ -21393,19 +21415,19 @@ async function registerRoutes(app2, options = {}) {
     }
   });
   const drinksUploadsDir = getUploadsDir("drinks");
-  const drinksStorage = multer.diskStorage({
+  const drinksStorage = import_multer.default.diskStorage({
     destination: function(req, file, cb) {
-      if (!fs.existsSync(drinksUploadsDir)) {
-        fs.mkdirSync(drinksUploadsDir, { recursive: true });
+      if (!import_fs.default.existsSync(drinksUploadsDir)) {
+        import_fs.default.mkdirSync(drinksUploadsDir, { recursive: true });
       }
       cb(null, drinksUploadsDir);
     },
     filename: function(req, file, cb) {
-      const uniqueSuffix = `${Date.now()}-${nanoid4(8)}`;
-      cb(null, `drink-${uniqueSuffix}${path.extname(file.originalname)}`);
+      const uniqueSuffix = `${Date.now()}-${(0, import_nanoid4.nanoid)(8)}`;
+      cb(null, `drink-${uniqueSuffix}${import_path.default.extname(file.originalname)}`);
     }
   });
-  const drinkUpload = multer({
+  const drinkUpload = (0, import_multer.default)({
     storage: drinksStorage,
     limits: {
       fileSize: 15 * 1024 * 1024
@@ -21454,18 +21476,18 @@ async function registerRoutes(app2, options = {}) {
   });
   app2.get("/api/drink-images", requireAuth, async (req, res) => {
     try {
-      const drinksDir = path.resolve(__dirname, "..", "attached_assets", "drinks");
-      if (!fs.existsSync(drinksDir)) {
+      const drinksDir = import_path.default.resolve(__dirname, "..", "attached_assets", "drinks");
+      if (!import_fs.default.existsSync(drinksDir)) {
         return res.json([]);
       }
-      const files = fs.readdirSync(drinksDir).filter((f) => /\.(png|jpg|jpeg|webp)$/i.test(f)).sort((a, b) => {
-        const statA = fs.statSync(path.join(drinksDir, a));
-        const statB = fs.statSync(path.join(drinksDir, b));
+      const files = import_fs.default.readdirSync(drinksDir).filter((f) => /\.(png|jpg|jpeg|webp)$/i.test(f)).sort((a, b) => {
+        const statA = import_fs.default.statSync(import_path.default.join(drinksDir, a));
+        const statB = import_fs.default.statSync(import_path.default.join(drinksDir, b));
         return statB.mtimeMs - statA.mtimeMs;
       }).map((f) => ({
         filename: f,
         url: `/attached_assets/drinks/${f}`,
-        uploadedAt: fs.statSync(path.join(drinksDir, f)).mtime.toISOString()
+        uploadedAt: import_fs.default.statSync(import_path.default.join(drinksDir, f)).mtime.toISOString()
       }));
       res.json(files);
     } catch (error) {
@@ -21473,19 +21495,19 @@ async function registerRoutes(app2, options = {}) {
     }
   });
   const sizesUploadsDir = getUploadsDir("sizes");
-  const sizesStorage = multer.diskStorage({
+  const sizesStorage = import_multer.default.diskStorage({
     destination: function(req, file, cb) {
-      if (!fs.existsSync(sizesUploadsDir)) {
-        fs.mkdirSync(sizesUploadsDir, { recursive: true });
+      if (!import_fs.default.existsSync(sizesUploadsDir)) {
+        import_fs.default.mkdirSync(sizesUploadsDir, { recursive: true });
       }
       cb(null, sizesUploadsDir);
     },
     filename: function(req, file, cb) {
-      const uniqueSuffix = `${Date.now()}-${nanoid4(8)}`;
-      cb(null, `size-${uniqueSuffix}${path.extname(file.originalname)}`);
+      const uniqueSuffix = `${Date.now()}-${(0, import_nanoid4.nanoid)(8)}`;
+      cb(null, `size-${uniqueSuffix}${import_path.default.extname(file.originalname)}`);
     }
   });
-  const sizeUpload = multer({
+  const sizeUpload = (0, import_multer.default)({
     storage: sizesStorage,
     limits: { fileSize: 15 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
@@ -21510,19 +21532,19 @@ async function registerRoutes(app2, options = {}) {
     }
   });
   const addonsUploadsDir = getUploadsDir("addons");
-  const addonsStorage = multer.diskStorage({
+  const addonsStorage = import_multer.default.diskStorage({
     destination: function(req, file, cb) {
-      if (!fs.existsSync(addonsUploadsDir)) {
-        fs.mkdirSync(addonsUploadsDir, { recursive: true });
+      if (!import_fs.default.existsSync(addonsUploadsDir)) {
+        import_fs.default.mkdirSync(addonsUploadsDir, { recursive: true });
       }
       cb(null, addonsUploadsDir);
     },
     filename: function(req, file, cb) {
-      const uniqueSuffix = `${Date.now()}-${nanoid4(8)}`;
-      cb(null, `addon-${uniqueSuffix}${path.extname(file.originalname)}`);
+      const uniqueSuffix = `${Date.now()}-${(0, import_nanoid4.nanoid)(8)}`;
+      cb(null, `addon-${uniqueSuffix}${import_path.default.extname(file.originalname)}`);
     }
   });
-  const addonUpload = multer({
+  const addonUpload = (0, import_multer.default)({
     storage: addonsStorage,
     limits: { fileSize: 15 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
@@ -21558,16 +21580,16 @@ async function registerRoutes(app2, options = {}) {
     }
   });
   const attendanceUploadsDir = getUploadsDir("attendance");
-  const attendanceStorage = multer.diskStorage({
+  const attendanceStorage = import_multer.default.diskStorage({
     destination: function(req, file, cb) {
       cb(null, attendanceUploadsDir);
     },
     filename: function(req, file, cb) {
-      const uniqueSuffix = `${Date.now()}-${nanoid4(8)}`;
-      cb(null, `attendance-${uniqueSuffix}${path.extname(file.originalname)}`);
+      const uniqueSuffix = `${Date.now()}-${(0, import_nanoid4.nanoid)(8)}`;
+      cb(null, `attendance-${uniqueSuffix}${import_path.default.extname(file.originalname)}`);
     }
   });
-  const attendanceUpload = multer({
+  const attendanceUpload = (0, import_multer.default)({
     storage: attendanceStorage,
     limits: {
       fileSize: 5 * 1024 * 1024
@@ -21575,7 +21597,7 @@ async function registerRoutes(app2, options = {}) {
     },
     fileFilter: (req, file, cb) => {
       const allowedTypes = /jpeg|jpg|png|webp/;
-      const ext = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+      const ext = allowedTypes.test(import_path.default.extname(file.originalname).toLowerCase());
       const mimeType = allowedTypes.test(file.mimetype);
       if (ext && mimeType) {
         cb(null, true);
@@ -22149,7 +22171,7 @@ async function registerRoutes(app2, options = {}) {
       }
       const tenantId = getTenantIdFromRequest(req) || "demo-tenant";
       const { OrderModel: OrderModel2, CartItemModel: CartItemModel2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
-      const DailyAccounting = mongoose10.models["DailyAccounting"];
+      const DailyAccounting = import_mongoose10.default.models["DailyAccounting"];
       const results = await Promise.all([
         OrderModel2.deleteMany({ tenantId }),
         CartItemModel2.deleteMany({ tenantId }),
@@ -26905,7 +26927,7 @@ async function registerRoutes(app2, options = {}) {
         return res.status(409).json({ error: "\u064A\u0648\u062C\u062F \u0643\u0634\u0641 \u0631\u0648\u0627\u062A\u0628 \u0645\u062C\u0645\u062F \u0628\u0627\u0644\u0641\u0639\u0644 \u0644\u0647\u0630\u0627 \u0627\u0644\u0634\u0647\u0631", snapshotId: existing.id });
       }
       const snapshot = await PayrollSnapshotModel2.create({
-        id: nanoid4(),
+        id: (0, import_nanoid4.nanoid)(),
         tenantId,
         year,
         month,
@@ -27329,7 +27351,7 @@ async function registerRoutes(app2, options = {}) {
       res.json({ serverUrl, agentKey: PRINT_AGENT_KEY });
     });
   }
-  const httpServer = createServer(app2);
+  const httpServer = (0, import_http.createServer)(app2);
   if (!options.skipWebSocket) {
     wsManager.setup(httpServer);
   }
@@ -27339,16 +27361,15 @@ async function registerRoutes(app2, options = {}) {
 // server/vercel-entry.ts
 init_qirox_admin();
 init_push_service();
-import helmet from "helmet";
-import rateLimit2 from "express-rate-limit";
-import mongoSanitize from "express-mongo-sanitize";
-import hpp from "hpp";
-var MONGODB_URI = process.env.MONGODB_URI?.trim();
+var import_helmet = __toESM(require("helmet"), 1);
+var import_express_rate_limit2 = __toESM(require("express-rate-limit"), 1);
+var import_express_mongo_sanitize = __toESM(require("express-mongo-sanitize"), 1);
+var import_hpp = __toESM(require("hpp"), 1);
+var MONGODB_URI = (process.env.MONGODB_URI || "mongodb+srv://chefsplace:chefsplace123@chefsplace.zy8ckot.mongodb.net/?appName=chefsplace").trim();
 async function connectDatabase() {
-  if (mongoose11.connection.readyState === 1) return;
-  if (!MONGODB_URI) throw new Error("MONGODB_URI not set");
+  if (import_mongoose12.default.connection.readyState === 1) return;
   if (!global._mongoConnPromise) {
-    global._mongoConnPromise = mongoose11.connect(MONGODB_URI, {
+    global._mongoConnPromise = import_mongoose12.default.connect(MONGODB_URI, {
       serverSelectionTimeoutMS: 15e3,
       socketTimeoutMS: 45e3,
       connectTimeoutMS: 15e3,
@@ -27437,7 +27458,7 @@ async function seedInitialData() {
       "kiosk",
       "notifications"
     ];
-    const branch = await mongoose11.connection.collection("branches").findOne({}, { projection: { id: 1 } });
+    const branch = await import_mongoose12.default.connection.collection("branches").findOne({}, { projection: { id: 1 } });
     const branchId = branch?.id || "";
     const ownerPassword = await bcrypt4.hash("123456", 10);
     const ownerExists = await EmployeeModel2.findOne({ username: "owner" });
@@ -27530,9 +27551,9 @@ async function seedInitialData() {
     seeded = false;
   }
 }
-var app = express();
+var app = (0, import_express.default)();
 app.use(
-  helmet({
+  (0, import_helmet.default)({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
@@ -27551,17 +27572,17 @@ app.use(
     crossOriginResourcePolicy: { policy: "cross-origin" }
   })
 );
-var authLimiter = rateLimit2({ windowMs: 15 * 60 * 1e3, max: 50, standardHeaders: true, legacyHeaders: false });
-var apiLimiter = rateLimit2({ windowMs: 60 * 1e3, max: 300, standardHeaders: true, legacyHeaders: false });
+var authLimiter = (0, import_express_rate_limit2.default)({ windowMs: 15 * 60 * 1e3, max: 50, standardHeaders: true, legacyHeaders: false });
+var apiLimiter = (0, import_express_rate_limit2.default)({ windowMs: 60 * 1e3, max: 300, standardHeaders: true, legacyHeaders: false });
 app.use("/api/employees/login", authLimiter);
 app.use("/api/customers/login", authLimiter);
 app.use("/api/customers/register", authLimiter);
 app.use("/api", apiLimiter);
-app.use(compression({ level: 6, threshold: 1024 }));
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: false, limit: "10mb" }));
-app.use(mongoSanitize({ replaceWith: "_" }));
-app.use(hpp());
+app.use((0, import_compression.default)({ level: 6, threshold: 1024 }));
+app.use(import_express.default.json({ limit: "10mb" }));
+app.use(import_express.default.urlencoded({ extended: false, limit: "10mb" }));
+app.use((0, import_express_mongo_sanitize.default)({ replaceWith: "_" }));
+app.use((0, import_hpp.default)());
 app.set("trust proxy", 1);
 app.disable("x-powered-by");
 app.use((_req, res, next) => {
@@ -27571,42 +27592,40 @@ app.use((_req, res, next) => {
   if (_req.method === "OPTIONS") return res.sendStatus(200);
   next();
 });
-if (MONGODB_URI) {
-  app.use(
-    session({
-      secret: process.env.SESSION_SECRET || "qirox-vercel-secret-2025",
-      resave: false,
-      saveUninitialized: false,
-      name: "qirox.sid",
-      store: MongoStore.create({
-        mongoUrl: MONGODB_URI,
-        collectionName: "sessions",
-        ttl: 30 * 24 * 60 * 60,
-        autoRemove: "native",
-        touchAfter: 24 * 3600
-      }),
-      cookie: {
-        secure: true,
-        httpOnly: true,
-        maxAge: 30 * 24 * 60 * 60 * 1e3,
-        sameSite: "none",
-        path: "/"
-      }
-    })
-  );
-}
+app.use(
+  (0, import_express_session.default)({
+    secret: process.env.SESSION_SECRET || "qirox-vercel-secret-2025",
+    resave: false,
+    saveUninitialized: false,
+    name: "qirox.sid",
+    store: import_connect_mongo.default.create({
+      mongoUrl: MONGODB_URI,
+      collectionName: "sessions",
+      ttl: 30 * 24 * 60 * 60,
+      autoRemove: "native",
+      touchAfter: 24 * 3600
+    }),
+    cookie: {
+      secure: true,
+      httpOnly: true,
+      maxAge: 30 * 24 * 60 * 60 * 1e3,
+      sameSite: "none",
+      path: "/"
+    }
+  })
+);
 app.get("/healthz", (_req, res) => res.status(200).send("OK"));
 app.get(
   "/health",
   (_req, res) => res.status(200).json({
     status: "ok",
     timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-    database: mongoose11.connection.readyState === 1 ? "connected" : "disconnected",
+    database: import_mongoose12.default.connection.readyState === 1 ? "connected" : "disconnected",
     env: "vercel"
   })
 );
 app.use("/api", async (_req, res, next) => {
-  if (mongoose11.connection.readyState !== 1) {
+  if (import_mongoose12.default.connection.readyState !== 1) {
     try {
       await connectDatabase();
     } catch (err) {
@@ -27643,12 +27662,6 @@ async function initialize() {
 }
 initialize().catch(console.error);
 async function handler(req, res) {
-  if (!MONGODB_URI) {
-    return res.status(500).json({
-      error: "MONGODB_URI is not configured.",
-      fix: "Go to Vercel \u2192 Project \u2192 Settings \u2192 Environment Variables and add MONGODB_URI"
-    });
-  }
   try {
     await initialize();
   } catch (err) {
@@ -27657,6 +27670,3 @@ async function handler(req, res) {
   }
   return app(req, res);
 }
-export {
-  handler as default
-};
