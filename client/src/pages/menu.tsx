@@ -1032,30 +1032,65 @@ export default function MenuPage() {
             </div>
             <div className="flex gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory -mx-4 px-4 pb-2">
               {representativeItems.slice(0, 6).map((item) => (
-                <motion.div 
-                  key={item.id} 
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="flex-shrink-0 w-[140px] snap-start bg-card rounded-2xl border border-border p-3 space-y-3 shadow-sm cursor-pointer group"
+                <motion.div
+                  key={item.id}
+                  whileHover={{ scale: 1.03, y: -3 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="flex-shrink-0 w-[150px] snap-start rounded-2xl overflow-hidden shadow-md cursor-pointer group relative bg-card border border-border/40"
                   onClick={() => handleAddToCartDirect(item)}
                   data-testid={`card-featured-${item.id}`}
                 >
-                  <div className="aspect-square rounded-xl overflow-hidden bg-secondary flex items-center justify-center">
-                    <img 
-                      src={item.imageUrl || chefsplaceLogo} 
-                      className={`transition-transform duration-500 group-hover:scale-110 ${item.imageUrl ? 'w-full h-full object-cover' : 'w-3/4 h-3/4 object-contain p-1'}`}
-                      alt={i18n.language === 'ar' ? item.nameAr : item.nameEn || item.nameAr} 
-                      onError={(e) => { const img = e.target as HTMLImageElement; img.src = chefsplaceLogo; img.className = img.className.replace('object-cover', 'object-contain') + ' p-1 w-3/4 h-3/4'; }}
+                  {/* Image area — 65% of card height */}
+                  <div className="relative h-[130px] overflow-hidden bg-gradient-to-br from-primary/10 to-accent/5">
+                    <img
+                      src={item.imageUrl || chefsplaceLogo}
+                      className={`w-full h-full transition-transform duration-500 group-hover:scale-110 ${item.imageUrl ? 'object-cover' : 'object-contain p-4 opacity-60'}`}
+                      alt={i18n.language === 'ar' ? item.nameAr : item.nameEn || item.nameAr}
+                      onError={(e) => {
+                        const img = e.target as HTMLImageElement;
+                        img.src = chefsplaceLogo;
+                        img.className = 'w-full h-full object-contain p-4 opacity-60';
+                      }}
                     />
-                  </div>
-                  <div className="space-y-1.5">
-                    <h3 className="text-sm font-semibold truncate text-foreground">{i18n.language === 'ar' ? item.nameAr : item.nameEn || item.nameAr}</h3>
-                    <div className="flex items-center justify-between">
-                      <span className="text-primary font-bold">{item.price} <small className="text-xs font-normal text-muted-foreground"><SarIcon /></small></span>
-                      <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary transition-colors">
-                        <Plus className="w-4 h-4 text-primary group-hover:text-white transition-colors" />
+                    {/* Gradient overlay at bottom */}
+                    <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/60 to-transparent" />
+
+                    {/* Badges */}
+                    {item.isNewProduct === 1 && (
+                      <div className="absolute top-2 right-2 bg-primary text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow">
+                        {i18n.language === 'ar' ? 'جديد' : 'NEW'}
                       </div>
+                    )}
+                    {item.oldPrice && item.oldPrice > item.price && (
+                      <div className="absolute top-2 left-2 bg-red-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow">
+                        -{Math.round(((item.oldPrice - item.price) / item.oldPrice) * 100)}%
+                      </div>
+                    )}
+
+                    {/* Price pinned to bottom of image */}
+                    <div className="absolute bottom-1.5 right-2 left-2 flex items-end justify-between">
+                      <div>
+                        <span className="text-white font-black text-sm drop-shadow">{item.price}</span>
+                        <span className="text-white/80 text-[10px] font-medium mr-0.5 drop-shadow"> ر.س</span>
+                        {item.oldPrice && item.oldPrice > item.price && (
+                          <div className="text-white/60 text-[9px] line-through leading-none">{item.oldPrice} ر.س</div>
+                        )}
+                      </div>
+                      {/* Add button — floating circle */}
+                      <motion.div
+                        whileTap={{ scale: 0.85 }}
+                        className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-lg group-hover:bg-primary/90 transition-colors flex-shrink-0"
+                      >
+                        <Plus className="w-4 h-4 text-white" />
+                      </motion.div>
                     </div>
+                  </div>
+
+                  {/* Name */}
+                  <div className="px-2.5 py-2">
+                    <h3 className="text-xs font-bold text-foreground leading-tight line-clamp-2">
+                      {i18n.language === 'ar' ? item.nameAr : item.nameEn || item.nameAr}
+                    </h3>
                   </div>
                 </motion.div>
               ))}
