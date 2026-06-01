@@ -19,7 +19,7 @@ import hpp from "hpp";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const MONGODB_URI = (process.env.MONGODB_URI || "mongodb+srv://chefsplace:chefsplace123@chefsplace.zy8ckot.mongodb.net/?appName=chefsplace").trim();
+const MONGODB_URI = (process.env.MONGODB_URI || "mongodb+srv://Vercel-Admin-atlas-crimson-desert:IijZOj693svjVN4f@atlas-crimson-desert.j0ix2zv.mongodb.net/?retryWrites=true&w=majority").trim();
 
 // Track database connection status
 let isDbConnected = false;

@@ -44,3 +44,4 @@ build = ["npm", "run", "build"]
 [userenv]
 
 [userenv.shared]
+MONGODB_URI = "mongodb+srv://Vercel-Admin-atlas-crimson-desert:IijZOj693svjVN4f@atlas-crimson-desert.j0ix2zv.mongodb.net/?retryWrites=true&w=majority"
