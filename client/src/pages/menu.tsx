@@ -575,7 +575,7 @@ export default function MenuPage() {
       <header className="fixed top-0 inset-x-0 z-[60] bg-black/60 backdrop-blur-md border-b border-white/10 flex items-end justify-between px-4 pb-3 min-h-[64px]" style={{paddingTop: 'max(env(safe-area-inset-top, 0px), 12px)'}}>
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-white/10 p-1.5 flex items-center justify-center">
-            <img src={chefsplaceLogo} alt="Logo" className="w-full h-full object-contain" />
+            <img src={chefsplaceLogo} alt="Logo" className="w-6 h-6 object-contain" />
           </div>
           <div className="flex flex-col">
             <h1 className="text-base font-black text-white leading-tight">مكان الشيف البخاري</h1>
