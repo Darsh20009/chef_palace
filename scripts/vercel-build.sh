@@ -8,7 +8,7 @@ node_modules/.bin/esbuild server/vercel-entry.ts \
   --packages=external \
   --platform=node \
   --format=cjs \
-  --outfile=api/index.js \
+  --outfile=api/index.cjs \
   --tsconfig=tsconfig.json \
   --external:bufferutil \
   --external:utf-8-validate \
