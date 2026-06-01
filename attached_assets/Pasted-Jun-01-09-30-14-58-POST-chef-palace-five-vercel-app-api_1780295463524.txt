@@ -1,0 +1,275 @@
+Jun 01 09:30:14.58
+POST
+---
+chef-palace-five.vercel.app
+/api/employees/login
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:30:04.25
+GET
+500
+chef-palace-five.vercel.app
+/api/public/loyalty-settings
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:30:03.71
+GET
+500
+chef-palace-five.vercel.app
+/api/business-config
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:30:03.50
+GET
+500
+chef-palace-five.vercel.app
+/api/payment-methods
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:30:03.25
+GET
+500
+chef-palace-five.vercel.app
+/api/cart/session-1780291111349-728rlz72x
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:30:03.24
+GET
+500
+chef-palace-five.vercel.app
+/api/custom-banners
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:30:03.22
+GET
+500
+chef-palace-five.vercel.app
+/api/coffee-items
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:30:03.11
+GET
+500
+chef-palace-five.vercel.app
+/api/product-addons
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:30:03.05
+GET
+500
+chef-palace-five.vercel.app
+/api/menu-categories
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:30:02.19
+GET
+500
+chef-palace-five.vercel.app
+/api/public/loyalty-settings
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:30:01.41
+GET
+500
+chef-palace-five.vercel.app
+/api/business-config
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:30:01.22
+GET
+500
+chef-palace-five.vercel.app
+/api/cart/session-1780291111349-728rlz72x
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:30:01.14
+GET
+500
+chef-palace-five.vercel.app
+/api/public/loyalty-settings
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:30:01.10
+GET
+500
+chef-palace-five.vercel.app
+/api/custom-banners
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:30:01.05
+GET
+500
+chef-palace-five.vercel.app
+/api/payment-methods
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:30:01.03
+GET
+500
+chef-palace-five.vercel.app
+/api/coffee-items
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:30:00.93
+GET
+500
+chef-palace-five.vercel.app
+/api/product-addons
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:30:00.90
+GET
+500
+chef-palace-five.vercel.app
+/api/menu-categories
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:29:59.90
+GET
+500
+chef-palace-five.vercel.app
+/api/public/loyalty-settings
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:29:59.89
+GET
+500
+chef-palace-five.vercel.app
+/api/payment-methods
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:29:59.89
+GET
+500
+chef-palace-five.vercel.app
+/api/custom-banners
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:29:59.89
+GET
+500
+chef-palace-five.vercel.app
+/api/product-addons
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:29:59.88
+GET
+500
+chef-palace-five.vercel.app
+/api/cart/session-1780291111349-728rlz72x
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:29:59.88
+GET
+500
+chef-palace-five.vercel.app
+/api/menu-categories
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:29:59.88
+GET
+500
+chef-palace-five.vercel.app
+/api/coffee-items
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:29:59.87
+GET
+500
+chef-palace-five.vercel.app
+/api/business-config
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:29:42.01
+POST
+500
+chef-palace-five.vercel.app
+/api/customer/proximity-notify
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:29:41.45
+GET
+500
+chef-palace-five.vercel.app
+/api/promo-offers
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:29:41.38
+GET
+500
+chef-palace-five.vercel.app
+/api/coffee-items/addons-preview
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:29:41.29
+GET
+500
+chef-palace-five.vercel.app
+/api/custom-banners
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:29:41.29
+GET
+500
+chef-palace-five.vercel.app
+/api/business-config
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:29:41.29
+GET
+500
+chef-palace-five.vercel.app
+/api/payment-methods
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:29:41.28
+GET
+500
+chef-palace-five.vercel.app
+/api/public/loyalty-settings
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:29:41.27
+GET
+500
+chef-palace-five.vercel.app
+/api/cart/session-1780291111349-728rlz72x
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:29:41.26
+GET
+500
+chef-palace-five.vercel.app
+/api/coffee-items/with-addons
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:29:41.26
+GET
+500
+chef-palace-five.vercel.app
+/api/menu-categories
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:29:41.20
+GET
+500
+chef-palace-five.vercel.app
+/api/product-addons
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:29:41.13
+GET
+500
+chef-palace-five.vercel.app
+/api/coffee-items
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:29:39.11
+GET
+500
+chef-palace-five.vercel.app
+/api/promo-offers
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:29:39.11
+GET
+500
+chef-palace-five.vercel.app
+/api/coffee-items/with-addons
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:29:39.11
+GET
+500
+chef-palace-five.vercel.app
+/api/coffee-items/addons-preview
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:29:39.00
+GET
+500
+chef-palace-five.vercel.app
+/api/public/loyalty-settings
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:29:39.00
+GET
+500
+chef-palace-five.vercel.app
+/api/payment-methods
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:29:39.00
+GET
+500
+chef-palace-five.vercel.app
+/api/custom-banners
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:29:38.99
+GET
+500
+chef-palace-five.vercel.app
+/api/product-addons
+OverwriteModelError: Cannot overwrite `CoffeeItem` model once compiled. at Mongoose.model (/var/task/node_modules/mongoose/lib/mongoose.js:610:13) at shared/schema.ts (/var/task/api/index.js:263:47) at __init (/var/task/api/index.js:9:56) at Object.<anonymous> (/var/task/api/index.js:6825:1) at Module.<anonymous> (/opt/rust/bytecode.js:2:1451) at O.l._compile (/opt/rust/bytecode.js:2:3854) at Object..js (node:internal/modules/cjs/loader:1943:10) at Module.load (node:internal/modules/cjs/loader:1533:32) at Module.<anonymous> (node:internal/modules/cjs/loader:1335:12) at /opt/rust/nodejs.js:2:13533 Node.js process exited with exit status: 1. The logs above can help with debugging the issue.
+Jun 01 09:29:38.99
+GET
+500
+chef-palace-five.vercel.app
+/api/menu-categories

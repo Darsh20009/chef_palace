@@ -175,7 +175,7 @@ CoffeeItemSchema.index({ isAvailable: 1 });
 CoffeeItemSchema.index({ createdByBranchId: 1 });
 CoffeeItemSchema.index({ id: 1 }, { unique: true });
 
-export const CoffeeItemModel = mongoose.model<ICoffeeItem>("CoffeeItem", CoffeeItemSchema);
+export const CoffeeItemModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // نظام التخصيصات والإضافات - Product Customizations & Add-ons
 export interface IProductAddon extends Document {
@@ -230,7 +230,7 @@ const ProductAddonSchema = new Schema<IProductAddon>({
   createdAt: { type: Date, default: Date.now },
 }, { timestamps: false });
 
-export const ProductAddonModel = mongoose.model<IProductAddon>("ProductAddon", ProductAddonSchema);
+export const ProductAddonModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // Warehouse Transfer Model
 export interface IWarehouseTransfer extends Document {
@@ -269,7 +269,7 @@ const WarehouseTransferSchema = new Schema<IWarehouseTransfer>({
   updatedAt: { type: Date, default: Date.now },
 });
 
-export const WarehouseTransferModel = mongoose.model<IWarehouseTransfer>("WarehouseTransfer", WarehouseTransferSchema);
+export const WarehouseTransferModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // ربط التخصيصات بالمشروبات - Link Addons to Coffee Items
 export interface ICoffeeItemAddon extends Document {
@@ -298,7 +298,7 @@ const CoffeeItemAddonSchema = new Schema<ICoffeeItemAddon>({
 
 CoffeeItemAddonSchema.index({ coffeeItemId: 1, addonId: 1 }, { unique: true });
 
-export const CoffeeItemAddonModel = mongoose.model<ICoffeeItemAddon>("CoffeeItemAddon", CoffeeItemAddonSchema);
+export const CoffeeItemAddonModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // نظام العروض - Promotional Offers / Bundles
 export interface IPromoOffer extends Document {
@@ -354,7 +354,7 @@ const PromoOfferSchema = new Schema<IPromoOffer>({
 PromoOfferSchema.index({ tenantId: 1, isActive: 1 });
 PromoOfferSchema.index({ id: 1 }, { unique: true });
 
-export const PromoOfferModel = mongoose.model<IPromoOffer>("PromoOffer", PromoOfferSchema);
+export const PromoOfferModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // Menu Categories - Custom dynamic categories for drinks/food
 export interface IMenuCategory extends Document {
@@ -388,7 +388,7 @@ const MenuCategorySchema = new Schema<IMenuCategory>({
 MenuCategorySchema.index({ tenantId: 1, isActive: 1 });
 MenuCategorySchema.index({ id: 1 }, { unique: true });
 
-export const MenuCategoryModel = mongoose.model<IMenuCategory>("MenuCategory", MenuCategorySchema);
+export const MenuCategoryModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // Custom Banners for Admin Control
 export interface ICustomBanner extends Document {
@@ -439,7 +439,7 @@ const CustomBannerSchema = new Schema<ICustomBanner>({
 
 CustomBannerSchema.index({ tenantId: 1, isActive: 1, orderIndex: 1 });
 
-export const CustomBannerModel = mongoose.model<ICustomBanner>("CustomBanner", CustomBannerSchema);
+export const CustomBannerModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 export interface ICustomer extends Document {
   phone: string;
@@ -479,7 +479,7 @@ const CustomerSchema = new Schema<ICustomer>({
   createdAt: { type: Date, default: Date.now },
 });
 
-export const CustomerModel = mongoose.model<ICustomer>("Customer", CustomerSchema);
+export const CustomerModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // ---------------- Appointment System ----------------
 export interface IAppointment extends Document {
@@ -518,7 +518,7 @@ AppointmentSchema.index({ tenantId: 1, branchId: 1 });
 AppointmentSchema.index({ appointmentDate: 1 });
 AppointmentSchema.index({ customerPhone: 1 });
 
-export const AppointmentModel = mongoose.model<IAppointment>("Appointment", AppointmentSchema);
+export const AppointmentModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 export interface IPointTransfer extends Document {
   tenantId: string;
@@ -542,7 +542,7 @@ const PointTransferSchema = new Schema<IPointTransfer>({
   createdAt: { type: Date, default: Date.now },
 });
 
-export const PointTransferModel = mongoose.model<IPointTransfer>("PointTransfer", PointTransferSchema);
+export const PointTransferModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 export interface IPasswordResetToken extends Document {
   email: string;
@@ -564,7 +564,7 @@ const PasswordResetTokenSchema = new Schema<IPasswordResetToken>({
   createdAt: { type: Date, default: Date.now },
 });
 
-export const PasswordResetTokenModel = mongoose.model<IPasswordResetToken>("PasswordResetToken", PasswordResetTokenSchema);
+export const PasswordResetTokenModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 export interface IPasswordSetupOTP extends Document {
   phone: string;
@@ -593,7 +593,7 @@ PasswordSetupOTPSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 // Index for quick phone lookup
 PasswordSetupOTPSchema.index({ phone: 1 });
 
-export const PasswordSetupOTPModel = mongoose.model<IPasswordSetupOTP>("PasswordSetupOTP", PasswordSetupOTPSchema);
+export const PasswordSetupOTPModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // Multi-Tenant: Cafe Management
 export interface ICafe extends Document {
@@ -660,7 +660,7 @@ const CafeSchema = new Schema<ICafe>({
   updatedAt: { type: Date, default: Date.now },
 });
 
-export const CafeModel = mongoose.model<ICafe>("Cafe", CafeSchema);
+export const CafeModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // --- NEW OPERATING SYSTEM CORE MODELS ---
 
@@ -883,7 +883,7 @@ const BusinessConfigSchema = new Schema<IBusinessConfig>({
   updatedAt: { type: Date, default: Date.now },
 });
 
-export const BusinessConfigModel = mongoose.model<IBusinessConfig>("BusinessConfig", BusinessConfigSchema);
+export const BusinessConfigModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // 2. Ingredient Model (Recipe Core) - PHASE 2 Enhanced
 export interface IIngredientItem extends Document {
@@ -939,7 +939,7 @@ const IngredientItemSchema = new Schema<IIngredientItem>({
 });
 
 IngredientItemSchema.index({ tenantId: 1, sku: 1 });
-export const IngredientItemModel = mongoose.model<IIngredientItem>("IngredientItem", IngredientItemSchema);
+export const IngredientItemModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // 3. Recipe Engine
 export interface IRecipeDefinition extends Document {
@@ -1022,8 +1022,8 @@ const RecipeHistorySchema = new Schema<IRecipeHistory>({
 RecipeDefinitionSchema.index({ tenantId: 1, productId: 1, isActive: 1 });
 RecipeHistorySchema.index({ tenantId: 1, productId: 1, version: 1 });
 
-export const RecipeDefinitionModel = mongoose.model<IRecipeDefinition>("RecipeDefinition", RecipeDefinitionSchema);
-export const RecipeHistoryModel = mongoose.model<IRecipeHistory>("RecipeHistory", RecipeHistorySchema);
+export const RecipeDefinitionModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
+export const RecipeHistoryModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // 5. Centralized Warehouse Model
 export interface IWarehouse extends Document {
@@ -1060,7 +1060,7 @@ const WarehouseSchema = new Schema<IWarehouse>({
   updatedAt: { type: Date, default: Date.now },
 });
 
-export const WarehouseModel = mongoose.model<IWarehouse>("Warehouse", WarehouseSchema);
+export const WarehouseModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // 6. Warehouse Stock
 export interface IWarehouseStock extends Document {
@@ -1084,7 +1084,7 @@ const WarehouseStockSchema = new Schema<IWarehouseStock>({
 });
 
 WarehouseStockSchema.index({ tenantId: 1, warehouseId: 1, ingredientId: 1 }, { unique: true });
-export const WarehouseStockModel = mongoose.model<IWarehouseStock>("WarehouseStock", WarehouseStockSchema);
+export const WarehouseStockModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // 7. Delivery App Integration Model - تعريفه في نهاية الملف بشكل شامل
 
@@ -1151,7 +1151,7 @@ const BranchSchema = new Schema<IBranch>({
   createdAt: { type: Date, default: Date.now },
 }, { timestamps: false });
 
-export const BranchModel = mongoose.model<IBranch>("Branch", BranchSchema);
+export const BranchModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 export interface IDiscountCode extends Document {
   code: string;
@@ -1182,7 +1182,7 @@ const DiscountCodeSchema = new Schema<IDiscountCode>({
   createdAt: { type: Date, default: Date.now },
 });
 
-export const DiscountCodeModel = mongoose.model<IDiscountCode>("DiscountCode", DiscountCodeSchema);
+export const DiscountCodeModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 export interface IOrder extends Document {
   tenantId: string;
@@ -1373,7 +1373,7 @@ OrderSchema.index({ tenantId: 1, branchId: 1, createdAt: -1 });
 OrderSchema.index({ tenantId: 1, paymentStatus: 1, createdAt: -1 });
 OrderSchema.index({ tableId: 1, status: 1 });
 
-export const OrderModel = mongoose.model<IOrder>("Order", OrderSchema);
+export const OrderModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 export interface IOrderItemCustomization {
   selectedAddons: Array<{
@@ -1441,7 +1441,7 @@ const OrderItemSchema = new Schema<IOrderItem>({
   lineItemId: { type: String }
 });
 
-export const OrderItemModel = mongoose.model<IOrderItem>("OrderItem", OrderItemSchema);
+export const OrderItemModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 export interface ICartItem extends Document {
   id: string;
@@ -1474,7 +1474,7 @@ const CartItemSchema = new Schema<ICartItem>({
 // Important: Index by sessionId and id for quick lookup
 CartItemSchema.index({ sessionId: 1, id: 1 });
 
-export const CartItemModel = mongoose.model<ICartItem>("CartItem", CartItemSchema);
+export const CartItemModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 export interface ILoyaltyCard extends Document {
   customerId: string;
@@ -1532,7 +1532,7 @@ LoyaltyCardSchema.index({ customerId: 1 });
 LoyaltyCardSchema.index({ phoneNumber: 1 });
 LoyaltyCardSchema.index({ isActive: 1, tier: 1 });
 
-export const LoyaltyCardModel = mongoose.model<ILoyaltyCard>("LoyaltyCard", LoyaltyCardSchema);
+export const LoyaltyCardModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // Status History Model to track status changes for orders, transfers, etc.
 export interface IStatusHistory extends Document {
@@ -1561,7 +1561,7 @@ const StatusHistorySchema = new Schema<IStatusHistory>({
   createdAt: { type: Date, default: Date.now },
 });
 
-export const StatusHistoryModel = mongoose.model<IStatusHistory>("StatusHistory", StatusHistorySchema);
+export const StatusHistoryModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 export interface ICardCode extends Document {
   code: string;
@@ -1588,7 +1588,7 @@ const CardCodeSchema = new Schema<ICardCode>({
   createdAt: { type: Date, default: Date.now },
 });
 
-export const CardCodeModel = mongoose.model<ICardCode>("CardCode", CardCodeSchema);
+export const CardCodeModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 export interface ILoyaltyTransaction extends Document {
   cardId: string;
@@ -1621,7 +1621,7 @@ const LoyaltyTransactionSchema = new Schema<ILoyaltyTransaction>({
 LoyaltyTransactionSchema.index({ cardId: 1, createdAt: -1 });
 LoyaltyTransactionSchema.index({ type: 1 });
 
-export const LoyaltyTransactionModel = mongoose.model<ILoyaltyTransaction>("LoyaltyTransaction", LoyaltyTransactionSchema);
+export const LoyaltyTransactionModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 export interface ILoyaltyReward extends Document {
   nameAr: string;
@@ -1651,7 +1651,7 @@ const LoyaltyRewardSchema = new Schema<ILoyaltyReward>({
   createdAt: { type: Date, default: Date.now },
 });
 
-export const LoyaltyRewardModel = mongoose.model<ILoyaltyReward>("LoyaltyReward", LoyaltyRewardSchema);
+export const LoyaltyRewardModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 /**
  * @deprecated Use RawItem with category='ingredient' instead.
@@ -1682,7 +1682,7 @@ const IngredientSchema = new Schema<IIngredient>({
   updatedAt: { type: Date, default: Date.now },
 });
 
-export const IngredientModel = mongoose.model<IIngredient>("Ingredient", IngredientSchema);
+export const IngredientModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 /**
  * @deprecated Use RecipeItem instead for linking coffee items to raw materials.
@@ -1712,7 +1712,7 @@ const CoffeeItemIngredientSchema = new Schema<ICoffeeItemIngredient>({
 
 CoffeeItemIngredientSchema.index({ coffeeItemId: 1, ingredientId: 1 }, { unique: true });
 
-export const CoffeeItemIngredientModel = mongoose.model<ICoffeeItemIngredient>("CoffeeItemIngredient", CoffeeItemIngredientSchema);
+export const CoffeeItemIngredientModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // IBranch is already defined above, removing duplicate declaration at line 704
 // const BranchSchema is already defined above, removing duplicate declaration at line 721
@@ -1744,7 +1744,7 @@ const CategorySchema = new Schema<ICategory>({
   updatedAt: { type: Date, default: Date.now },
 });
 
-export const CategoryModel = mongoose.model<ICategory>("Category", CategorySchema);
+export const CategoryModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 export interface IUser extends Document {
   username: string;
@@ -1756,7 +1756,7 @@ const UserSchema = new Schema<IUser>({
   password: { type: String, required: true },
 });
 
-export const UserModel = mongoose.model<IUser>("User", UserSchema);
+export const UserModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // مناطق التوصيل - تعريفها في نهاية الملف بشكل شامل
 
@@ -1823,7 +1823,7 @@ const TableSchema = new Schema<ITable>({
 
 TableSchema.index({ tableNumber: 1, branchId: 1 }, { unique: true });
 
-export const TableModel = mongoose.model<ITable>("Table", TableSchema);
+export const TableModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // ZATCA Phase 1 & 2 Compliant Tax Invoice
 export interface ITaxInvoice extends Document {
@@ -1972,7 +1972,7 @@ TaxInvoiceSchema.index({ invoiceDate: -1 });
 TaxInvoiceSchema.index({ branchId: 1, invoiceDate: -1 });
 TaxInvoiceSchema.index({ zatcaStatus: 1 });
 
-export const TaxInvoiceModel = mongoose.model<ITaxInvoice>("TaxInvoice", TaxInvoiceSchema);
+export const TaxInvoiceModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // ===== ACCOUNTING SYSTEM MODELS =====
 
@@ -2016,7 +2016,7 @@ const RevenueSchema = new Schema<IRevenue>({
 RevenueSchema.index({ branchId: 1, date: -1 });
 RevenueSchema.index({ category: 1 });
 
-export const RevenueModel = mongoose.model<IRevenue>("Revenue", RevenueSchema);
+export const RevenueModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // Expense Tracking - المصروفات
 export interface IExpense extends Document {
@@ -2071,7 +2071,7 @@ ExpenseSchema.index({ branchId: 1, date: -1 });
 ExpenseSchema.index({ category: 1 });
 ExpenseSchema.index({ status: 1 });
 
-export const ExpenseModel = mongoose.model<IExpense>("Expense", ExpenseSchema);
+export const ExpenseModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // Daily Cash Register - الصندوق اليومي
 export interface ICashRegister extends Document {
@@ -2147,7 +2147,7 @@ const CashRegisterSchema = new Schema<ICashRegister>({
 CashRegisterSchema.index({ branchId: 1, date: -1 });
 CashRegisterSchema.index({ employeeId: 1, date: -1 });
 
-export const CashRegisterModel = mongoose.model<ICashRegister>("CashRegister", CashRegisterSchema);
+export const CashRegisterModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // Daily Accounting Summary - ملخص المحاسبة اليومي
 export interface IDailySummary extends Document {
@@ -2235,7 +2235,7 @@ const DailySummarySchema = new Schema<IDailySummary>({
 
 DailySummarySchema.index({ branchId: 1, date: -1 }, { unique: true });
 
-export const DailySummaryModel = mongoose.model<IDailySummary>("DailySummary", DailySummarySchema);
+export const DailySummaryModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // Kitchen Order Queue - طلبات المطبخ
 export interface IKitchenOrder extends Document {
@@ -2300,7 +2300,7 @@ KitchenOrderSchema.index({ branchId: 1, status: 1 });
 KitchenOrderSchema.index({ assignedTo: 1, status: 1 });
 KitchenOrderSchema.index({ createdAt: -1 });
 
-export const KitchenOrderModel = mongoose.model<IKitchenOrder>("KitchenOrder", KitchenOrderSchema);
+export const KitchenOrderModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 export interface IAttendance extends Document {
   employeeId: string;
@@ -2365,7 +2365,7 @@ const AttendanceSchema = new Schema<IAttendance>({
 AttendanceSchema.index({ employeeId: 1, shiftDate: 1 });
 AttendanceSchema.index({ branchId: 1, shiftDate: 1 });
 
-export const AttendanceModel = mongoose.model<IAttendance>("Attendance", AttendanceSchema);
+export const AttendanceModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // ───────────────────────────────────────────────────────────
 // Live Location Tracking
@@ -2398,7 +2398,7 @@ LocationTrackSchema.index({ attendanceId: 1, timestamp: 1 });
 LocationTrackSchema.index({ employeeId: 1, timestamp: -1 });
 LocationTrackSchema.index({ branchId: 1, timestamp: -1 });
 
-export const LocationTrackModel = mongoose.model<ILocationTrack>("LocationTrack", LocationTrackSchema);
+export const LocationTrackModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 export const insertCoffeeItemSchema = z.object({
   id: z.string(),
@@ -2596,7 +2596,7 @@ EmployeeSchema.index({ tenantId: 1, role: 1 });
 EmployeeSchema.index({ tenantId: 1, branchId: 1, isActive: 1 });
 EmployeeSchema.index({ tenantId: 1, isActive: 1 });
 
-export const EmployeeModel = mongoose.model<IEmployee>("Employee", EmployeeSchema);
+export const EmployeeModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // نظام الإشعارات للمديرين - Manager Notifications
 export interface IManagerNotification extends Document {
@@ -2660,7 +2660,7 @@ ManagerNotificationSchema.index({ branchId: 1, isRead: 1 });
 ManagerNotificationSchema.index({ managerId: 1, isRead: 1 });
 ManagerNotificationSchema.index({ employeeId: 1, createdAt: -1 });
 
-export const ManagerNotificationModel = mongoose.model<IManagerNotification>("ManagerNotification", ManagerNotificationSchema);
+export const ManagerNotificationModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // نظام الورديات - Shift Management
 export interface IShift extends Document {
@@ -2699,7 +2699,7 @@ const ShiftSchema = new Schema<IShift>({
 
 ShiftSchema.index({ branchId: 1, isActive: 1 });
 
-export const ShiftModel = mongoose.model<IShift>("Shift", ShiftSchema);
+export const ShiftModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // جدول الموظفين في الورديات - Employee Shift Assignments
 export interface IEmployeeShiftAssignment extends Document {
@@ -2735,7 +2735,7 @@ const EmployeeShiftAssignmentSchema = new Schema<IEmployeeShiftAssignment>({
 EmployeeShiftAssignmentSchema.index({ employeeId: 1, dayOfWeek: 1, isActive: 1 });
 EmployeeShiftAssignmentSchema.index({ branchId: 1, shiftId: 1 });
 
-export const EmployeeShiftAssignmentModel = mongoose.model<IEmployeeShiftAssignment>("EmployeeShiftAssignment", EmployeeShiftAssignmentSchema);
+export const EmployeeShiftAssignmentModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 export const insertOrderSchema = z.object({
   items: z.any(),
@@ -3121,7 +3121,7 @@ const RawItemSchema = new Schema<IRawItem>({
   updatedAt: { type: Date, default: Date.now },
 });
 
-export const RawItemModel = mongoose.model<IRawItem>("RawItem", RawItemSchema);
+export const RawItemModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // الموردين - Suppliers
 export interface ISupplier extends Document {
@@ -3162,7 +3162,7 @@ const SupplierSchema = new Schema<ISupplier>({
   updatedAt: { type: Date, default: Date.now },
 });
 
-export const SupplierModel = mongoose.model<ISupplier>("Supplier", SupplierSchema);
+export const SupplierModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // مخزون الفرع - Branch Stock
 export interface IBranchStock extends Document {
@@ -3187,7 +3187,7 @@ const BranchStockSchema = new Schema<IBranchStock>({
 
 BranchStockSchema.index({ branchId: 1, rawItemId: 1 }, { unique: true });
 
-export const BranchStockModel = mongoose.model<IBranchStock>("BranchStock", BranchStockSchema);
+export const BranchStockModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // تحويلات المخزون - Stock Transfers
 export interface IStockTransfer extends Document {
@@ -3235,7 +3235,7 @@ const StockTransferSchema = new Schema<IStockTransfer>({
   updatedAt: { type: Date, default: Date.now },
 });
 
-export const StockTransferModel = mongoose.model<IStockTransfer>("StockTransfer", StockTransferSchema);
+export const StockTransferModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // فواتير الشراء - Purchase Invoices
 export interface IPurchaseInvoice extends Document {
@@ -3302,7 +3302,7 @@ const PurchaseInvoiceSchema = new Schema<IPurchaseInvoice>({
   updatedAt: { type: Date, default: Date.now },
 });
 
-export const PurchaseInvoiceModel = mongoose.model<IPurchaseInvoice>("PurchaseInvoice", PurchaseInvoiceSchema);
+export const PurchaseInvoiceModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // وصفة المنتج - Recipe (ربط المنتجات بالمواد الخام مع الكميات)
 export interface IRecipeItem extends Document {
@@ -3331,7 +3331,7 @@ const RecipeItemSchema = new Schema<IRecipeItem>({
 
 RecipeItemSchema.index({ coffeeItemId: 1, rawItemId: 1 }, { unique: true });
 
-export const RecipeItemModel = mongoose.model<IRecipeItem>("RecipeItem", RecipeItemSchema);
+export const RecipeItemModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // ============ RECIPE COMPLETE MODEL (Phase 1) ============
 // Recipe container with versioning and cost calculation
@@ -3380,7 +3380,7 @@ const RecipeSchema = new Schema<IRecipe>({
 RecipeSchema.index({ coffeeItemId: 1, version: -1 });
 RecipeSchema.index({ isActive: 1 });
 
-export const RecipeModel = mongoose.model<IRecipe>("Recipe", RecipeSchema);
+export const RecipeModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // تنبيهات المخزون - Stock Alerts
 export interface IStockAlert extends Document {
@@ -3415,7 +3415,7 @@ const StockAlertSchema = new Schema<IStockAlert>({
 
 StockAlertSchema.index({ branchId: 1, isResolved: 1 });
 
-export const StockAlertModel = mongoose.model<IStockAlert>("StockAlert", StockAlertSchema);
+export const StockAlertModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // حركات المخزون - Stock Movements (للتتبع)
 export interface IStockMovement extends Document {
@@ -3453,7 +3453,7 @@ const StockMovementSchema = new Schema<IStockMovement>({
 StockMovementSchema.index({ branchId: 1, rawItemId: 1 });
 StockMovementSchema.index({ createdAt: -1 });
 
-export const StockMovementModel = mongoose.model<IStockMovement>("StockMovement", StockMovementSchema);
+export const StockMovementModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // PHASE 2: Unit Conversion Model
 export interface IUnitConversion extends Document {
@@ -3473,7 +3473,7 @@ const UnitConversionSchema = new Schema<IUnitConversion>({
 });
 
 UnitConversionSchema.index({ tenantId: 1, fromUnit: 1, toUnit: 1 });
-export const UnitConversionModel = mongoose.model<IUnitConversion>("UnitConversion", UnitConversionSchema);
+export const UnitConversionModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // PHASE 2: Stock Alert Model (Enhanced)
 export interface IStockAlertEnhanced extends IStockAlert {
@@ -3813,7 +3813,7 @@ ProductReviewSchema.index({ customerId: 1 });
 ProductReviewSchema.index({ orderId: 1 });
 ProductReviewSchema.index({ branchId: 1 });
 
-export const ProductReviewModel = mongoose.model<IProductReview>("ProductReview", ProductReviewSchema);
+export const ProductReviewModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // ============ REFERRAL PROGRAM ============
 export interface IReferral extends Document {
@@ -3852,7 +3852,7 @@ ReferralSchema.index({ referrerId: 1 });
 ReferralSchema.index({ referrerCode: 1 });
 ReferralSchema.index({ referredCustomerId: 1 });
 
-export const ReferralModel = mongoose.model<IReferral>("Referral", ReferralSchema);
+export const ReferralModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // ============ CUSTOMER NOTIFICATIONS ============
 export interface INotification extends Document {
@@ -3899,7 +3899,7 @@ NotificationSchema.index({ customerId: 1, createdAt: -1 });
 NotificationSchema.index({ userId: 1, createdAt: -1 });
 NotificationSchema.index({ isRead: 1 });
 
-export const NotificationModel = mongoose.model<INotification>("Notification", NotificationSchema);
+export const NotificationModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // Zod schemas
 export const insertProductReviewSchema = z.object({
@@ -4040,7 +4040,7 @@ AccountingSnapshotSchema.index({ tenantId: 1, branchId: 1, snapshotDate: -1 });
 AccountingSnapshotSchema.index({ tenantId: 1, snapshotType: 1 });
 AccountingSnapshotSchema.index({ isApproved: 1 });
 
-export const AccountingSnapshotModel = mongoose.model<IAccountingSnapshot>("AccountingSnapshot", AccountingSnapshotSchema);
+export const AccountingSnapshotModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // Zod schemas for Accounting Snapshot
 export const insertAccountingSnapshotSchema = z.object({
@@ -4137,7 +4137,7 @@ const FiscalPeriodSchema = new Schema<IFiscalPeriod>({
 FiscalPeriodSchema.index({ tenantId: 1, startDate: 1 });
 FiscalPeriodSchema.index({ tenantId: 1, status: 1 });
 
-export const FiscalPeriodModel = mongoose.model<IFiscalPeriod>("FiscalPeriod", FiscalPeriodSchema);
+export const FiscalPeriodModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // مراكز التكلفة - Cost Centers
 export interface ICostCenter extends Document {
@@ -4173,7 +4173,7 @@ const CostCenterSchema = new Schema<ICostCenter>({
 CostCenterSchema.index({ tenantId: 1, code: 1 }, { unique: true });
 CostCenterSchema.index({ tenantId: 1, branchId: 1 });
 
-export const CostCenterModel = mongoose.model<ICostCenter>("CostCenter", CostCenterSchema);
+export const CostCenterModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // دليل الحسابات - Chart of Accounts
 export interface IAccount extends Document {
@@ -4240,7 +4240,7 @@ AccountSchema.index({ tenantId: 1, parentAccountId: 1 });
 AccountSchema.index({ tenantId: 1, isActive: 1 });
 AccountSchema.index({ tenantId: 1, isBankAccount: 1 });
 
-export const AccountModel = mongoose.model<IAccount>("Account", AccountSchema);
+export const AccountModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // قيود اليومية - Journal Entries
 export interface IJournalLine {
@@ -4319,7 +4319,7 @@ JournalEntrySchema.index({ tenantId: 1, status: 1 });
 JournalEntrySchema.index({ tenantId: 1, referenceType: 1, referenceId: 1 });
 JournalEntrySchema.index({ 'lines.accountId': 1 });
 
-export const JournalEntryModel = mongoose.model<IJournalEntry>("JournalEntry", JournalEntrySchema);
+export const JournalEntryModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // معدلات الضريبة - Tax Rates
 export interface ITaxRate extends Document {
@@ -4359,7 +4359,7 @@ const TaxRateSchema = new Schema<ITaxRate>({
 TaxRateSchema.index({ tenantId: 1, code: 1 }, { unique: true });
 TaxRateSchema.index({ tenantId: 1, isActive: 1 });
 
-export const TaxRateModel = mongoose.model<ITaxRate>("TaxRate", TaxRateSchema);
+export const TaxRateModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // الفواتير الإلكترونية - Professional Invoices
 export interface IInvoiceLine {
@@ -4502,7 +4502,7 @@ InvoiceSchema.index({ tenantId: 1, orderId: 1 });
 InvoiceSchema.index({ tenantId: 1, zatcaStatus: 1 });
 InvoiceSchema.index({ zatcaUuid: 1 });
 
-export const InvoiceModel = mongoose.model<IInvoice>("Invoice", InvoiceSchema);
+export const InvoiceModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // المصروفات المتقدمة - ERP Expenses (Advanced Expense Management)
 export interface IExpenseErp extends Document {
@@ -4593,7 +4593,7 @@ ExpenseErpSchema.index({ tenantId: 1, status: 1 });
 ExpenseErpSchema.index({ tenantId: 1, category: 1 });
 ExpenseErpSchema.index({ tenantId: 1, requestedBy: 1 });
 
-export const ExpenseErpModel = mongoose.model<IExpenseErp>("ExpenseErp", ExpenseErpSchema);
+export const ExpenseErpModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // الموردين - Vendors
 export interface IVendor extends Document {
@@ -4658,7 +4658,7 @@ VendorSchema.index({ tenantId: 1, code: 1 }, { unique: true });
 VendorSchema.index({ tenantId: 1, nameAr: 1 });
 VendorSchema.index({ tenantId: 1, isActive: 1 });
 
-export const VendorModel = mongoose.model<IVendor>("Vendor", VendorSchema);
+export const VendorModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // سجل المدفوعات - Payment Records
 export interface IPaymentRecord extends Document {
@@ -4719,7 +4719,7 @@ PaymentRecordSchema.index({ tenantId: 1, referenceType: 1, referenceId: 1 });
 PaymentRecordSchema.index({ tenantId: 1, customerId: 1 });
 PaymentRecordSchema.index({ tenantId: 1, vendorId: 1 });
 
-export const PaymentRecordModel = mongoose.model<IPaymentRecord>("PaymentRecord", PaymentRecordSchema);
+export const PaymentRecordModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // كشف حساب البنك - Bank Statements
 export interface IBankStatement extends Document {
@@ -4769,7 +4769,7 @@ const BankStatementSchema = new Schema<IBankStatement>({
 BankStatementSchema.index({ tenantId: 1, bankAccountId: 1, statementDate: -1 });
 BankStatementSchema.index({ tenantId: 1, status: 1 });
 
-export const BankStatementModel = mongoose.model<IBankStatement>("BankStatement", BankStatementSchema);
+export const BankStatementModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // معاملات البنك - Bank Transactions
 export interface IBankTransaction extends Document {
@@ -4822,7 +4822,7 @@ BankTransactionSchema.index({ tenantId: 1, bankStatementId: 1 });
 BankTransactionSchema.index({ tenantId: 1, bankAccountId: 1, transactionDate: -1 });
 BankTransactionSchema.index({ tenantId: 1, isReconciled: 1 });
 
-export const BankTransactionModel = mongoose.model<IBankTransaction>("BankTransaction", BankTransactionSchema);
+export const BankTransactionModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // Zod Schemas for ERP Accounting
 
@@ -5046,7 +5046,7 @@ DeliveryIntegrationSchema.index({ tenantId: 1 });
 DeliveryIntegrationSchema.index({ tenantId: 1, providerName: 1 });
 DeliveryIntegrationSchema.index({ tenantId: 1, isActive: 1 });
 
-export const DeliveryIntegrationModel = mongoose.model<IDeliveryIntegration>("DeliveryIntegration", DeliveryIntegrationSchema);
+export const DeliveryIntegrationModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // مناطق التوصيل - Delivery Zones
 export interface IDeliveryZone extends Document {
@@ -5124,7 +5124,7 @@ DeliveryZoneSchema.index({ tenantId: 1, branchId: 1 });
 DeliveryZoneSchema.index({ tenantId: 1, isActive: 1 });
 DeliveryZoneSchema.index({ branchId: 1, isActive: 1 });
 
-export const DeliveryZoneModel = mongoose.model<IDeliveryZone>("DeliveryZone", DeliveryZoneSchema);
+export const DeliveryZoneModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // مناديب التوصيل الداخلي - Internal Delivery Drivers
 export interface IDeliveryDriver extends Document {
@@ -5204,7 +5204,7 @@ DeliveryDriverSchema.index({ tenantId: 1, status: 1, isActive: 1 });
 DeliveryDriverSchema.index({ tenantId: 1, branchId: 1 });
 DeliveryDriverSchema.index({ phone: 1 });
 
-export const DeliveryDriverModel = mongoose.model<IDeliveryDriver>("DeliveryDriver", DeliveryDriverSchema);
+export const DeliveryDriverModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // طلبات التوصيل - Delivery Orders
 export interface IDeliveryOrder extends Document {
@@ -5325,7 +5325,7 @@ DeliveryOrderSchema.index({ tenantId: 1, driverId: 1, status: 1 });
 DeliveryOrderSchema.index({ orderId: 1 });
 DeliveryOrderSchema.index({ externalOrderId: 1 });
 
-export const DeliveryOrderModel = mongoose.model<IDeliveryOrder>("DeliveryOrder", DeliveryOrderSchema);
+export const DeliveryOrderModel = (mongoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
 
 // Zod Schemas for Delivery System
 export const insertDeliveryIntegrationSchema = z.object({
