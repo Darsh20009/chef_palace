@@ -27349,10 +27349,11 @@ async function connectDatabase() {
   if (!MONGODB_URI) throw new Error("MONGODB_URI not set");
   if (!global._mongoConnPromise) {
     global._mongoConnPromise = mongoose11.connect(MONGODB_URI, {
-      serverSelectionTimeoutMS: 1e4,
+      serverSelectionTimeoutMS: 15e3,
       socketTimeoutMS: 45e3,
-      maxPoolSize: 10,
-      minPoolSize: 2,
+      connectTimeoutMS: 15e3,
+      maxPoolSize: 5,
+      minPoolSize: 1,
       retryWrites: true,
       retryReads: true
     }).then(() => {
@@ -27364,12 +27365,192 @@ async function connectDatabase() {
   }
   await global._mongoConnPromise;
 }
+var seeded = false;
+async function seedInitialData() {
+  if (seeded) return;
+  seeded = true;
+  try {
+    const bcrypt4 = await import("bcryptjs");
+    const { v4: uuidv4 } = await import("uuid");
+    const { EmployeeModel: EmployeeModel2 } = await Promise.resolve().then(() => (init_schema(), schema_exports));
+    const allPermissions = [
+      "order.create",
+      "order.view",
+      "order.void",
+      "order.refund",
+      "order.apply_discount",
+      "order.modify",
+      "kitchen.view_queue",
+      "kitchen.update_status",
+      "inventory.view",
+      "inventory.stock_in",
+      "inventory.stock_out",
+      "inventory.waste",
+      "inventory.adjustment",
+      "menu.view",
+      "menu.create",
+      "menu.edit",
+      "menu.delete",
+      "recipe.view",
+      "recipe.create",
+      "recipe.edit",
+      "reports.daily",
+      "reports.branch",
+      "reports.all_branches",
+      "reports.export",
+      "employees.view",
+      "employees.create",
+      "employees.edit",
+      "employees.delete",
+      "settings.branch",
+      "settings.cafe",
+      "settings.billing",
+      "shift.open",
+      "shift.close",
+      "shift.view_history",
+      "shift.cash_movement",
+      "pos.open_drawer",
+      "pos.apply_coupon",
+      "tables.manage",
+      "delivery.manage",
+      "accounting.view",
+      "accounting.export"
+    ];
+    const allPages = [
+      "dashboard",
+      "cashier",
+      "pos",
+      "shifts",
+      "orders",
+      "kitchen",
+      "tables",
+      "menu_management",
+      "inventory",
+      "reports",
+      "accounting",
+      "employees",
+      "settings",
+      "delivery",
+      "unified_reports",
+      "bi_analytics",
+      "promotions",
+      "kiosk",
+      "notifications"
+    ];
+    const branch = await mongoose11.connection.collection("branches").findOne({}, { projection: { id: 1 } });
+    const branchId = branch?.id || "";
+    const ownerPassword = await bcrypt4.hash("123456", 10);
+    const ownerExists = await EmployeeModel2.findOne({ username: "owner" });
+    if (!ownerExists) {
+      await EmployeeModel2.create({
+        id: uuidv4(),
+        tenantId: "demo-tenant",
+        username: "owner",
+        password: ownerPassword,
+        fullName: "\u0627\u0644\u0645\u0627\u0644\u0643",
+        role: "owner",
+        phone: "0000000001",
+        jobTitle: "\u0627\u0644\u0645\u0627\u0644\u0643",
+        branchId,
+        permissions: allPermissions,
+        allowedPages: allPages,
+        isActivated: 1,
+        isActive: 1
+      });
+    } else {
+      await EmployeeModel2.updateOne(
+        { username: "owner" },
+        { $set: { password: ownerPassword, role: "owner", branchId, permissions: allPermissions, allowedPages: allPages, isActivated: 1, isActive: 1 } }
+      );
+    }
+    const adminPassword = await bcrypt4.hash("admin", 10);
+    const adminExists = await EmployeeModel2.findOne({ username: "admin" });
+    if (!adminExists) {
+      await EmployeeModel2.create({
+        id: uuidv4(),
+        tenantId: "demo-tenant",
+        username: "admin",
+        password: adminPassword,
+        fullName: "\u0627\u0644\u0645\u0633\u0624\u0648\u0644",
+        role: "admin",
+        phone: "0000000002",
+        jobTitle: "\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0646\u0638\u0627\u0645",
+        branchId,
+        permissions: allPermissions,
+        allowedPages: allPages,
+        isActivated: 1,
+        isActive: 1
+      });
+    } else {
+      await EmployeeModel2.updateOne(
+        { username: "admin" },
+        { $set: { password: adminPassword, role: "admin", branchId, permissions: allPermissions, allowedPages: allPages, isActivated: 1, isActive: 1 } }
+      );
+    }
+    const { SubscriptionConfigModel: SubscriptionConfigModel2 } = await Promise.resolve().then(() => (init_qirox_admin(), qirox_admin_exports));
+    await SubscriptionConfigModel2.findOneAndUpdate(
+      { tenantId: "demo-tenant" },
+      {
+        $set: {
+          plan: "infinity",
+          isActive: true,
+          maxBranches: 999,
+          maxEmployees: 9999,
+          maxProducts: 9999,
+          maxOrders: 999999,
+          customBranding: true,
+          apiAccess: true,
+          advancedAnalytics: true,
+          multiLanguage: true,
+          inventoryManagement: true,
+          recipeManagement: true,
+          accountingModule: true,
+          erpIntegration: true,
+          deliveryManagement: true,
+          loyaltyProgram: true,
+          giftCards: true,
+          tableManagement: true,
+          kitchenDisplay: true,
+          customerApp: true,
+          posSystem: true,
+          payrollManagement: true,
+          supplierManagement: true,
+          warehouseManagement: true,
+          zatcaCompliance: true,
+          supportPriority: "dedicated",
+          activatedBy: "system",
+          updatedAt: /* @__PURE__ */ new Date()
+        }
+      },
+      { upsert: true }
+    );
+    console.log("\u2705 Vercel: seed complete (owner/admin/subscription)");
+  } catch (err) {
+    console.error("Vercel seed error:", err);
+    seeded = false;
+  }
+}
 var app = express();
-app.use(helmet({
-  contentSecurityPolicy: false,
-  crossOriginEmbedderPolicy: false,
-  crossOriginResourcePolicy: false
-}));
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://*.geidea.net", "https://*.paymob.com", "blob:"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "https://fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:", "blob:", "https:"],
+        connectSrc: ["'self'", "wss:", "ws:", "https://*.geidea.net", "https://*.paymob.com"],
+        frameSrc: ["'self'", "https://*.geidea.net", "https://*.paymob.com", "https://accept.paymob.com"],
+        workerSrc: ["'self'", "blob:"],
+        objectSrc: ["'none'"],
+        scriptSrcAttr: ["'unsafe-inline'"]
+      }
+    },
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+  })
+);
 var authLimiter = rateLimit2({ windowMs: 15 * 60 * 1e3, max: 50, standardHeaders: true, legacyHeaders: false });
 var apiLimiter = rateLimit2({ windowMs: 60 * 1e3, max: 300, standardHeaders: true, legacyHeaders: false });
 app.use("/api/employees/login", authLimiter);
@@ -27382,47 +27563,58 @@ app.use(express.urlencoded({ extended: false, limit: "10mb" }));
 app.use(mongoSanitize({ replaceWith: "_" }));
 app.use(hpp());
 app.set("trust proxy", 1);
+app.disable("x-powered-by");
 app.use((_req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS");
+  res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS,PATCH");
   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, Content-Length, X-Requested-With, x-employee-id, x-restore-key");
+  if (_req.method === "OPTIONS") return res.sendStatus(200);
   next();
 });
-app.disable("x-powered-by");
 if (MONGODB_URI) {
-  app.use(session({
-    secret: process.env.SESSION_SECRET || "dev-secret",
-    resave: false,
-    saveUninitialized: false,
-    name: "qirox.sid",
-    store: MongoStore.create({
-      mongoUrl: MONGODB_URI,
-      collectionName: "sessions",
-      ttl: 30 * 24 * 60 * 60,
-      autoRemove: "native",
-      touchAfter: 24 * 3600
-    }),
-    cookie: {
-      secure: true,
-      httpOnly: true,
-      maxAge: 30 * 24 * 60 * 60 * 1e3,
-      sameSite: "none",
-      path: "/"
-    }
-  }));
+  app.use(
+    session({
+      secret: process.env.SESSION_SECRET || "qirox-vercel-secret-2025",
+      resave: false,
+      saveUninitialized: false,
+      name: "qirox.sid",
+      store: MongoStore.create({
+        mongoUrl: MONGODB_URI,
+        collectionName: "sessions",
+        ttl: 30 * 24 * 60 * 60,
+        autoRemove: "native",
+        touchAfter: 24 * 3600
+      }),
+      cookie: {
+        secure: true,
+        httpOnly: true,
+        maxAge: 30 * 24 * 60 * 60 * 1e3,
+        sameSite: "none",
+        path: "/"
+      }
+    })
+  );
 }
 app.get("/healthz", (_req, res) => res.status(200).send("OK"));
-app.get("/health", (_req, res) => res.status(200).json({
-  status: "ok",
-  timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-  database: mongoose11.connection.readyState === 1 ? "connected" : "disconnected"
-}));
+app.get(
+  "/health",
+  (_req, res) => res.status(200).json({
+    status: "ok",
+    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+    database: mongoose11.connection.readyState === 1 ? "connected" : "disconnected",
+    env: "vercel"
+  })
+);
 app.use("/api", async (_req, res, next) => {
   if (mongoose11.connection.readyState !== 1) {
     try {
       await connectDatabase();
-    } catch {
-      return res.status(503).json({ message: "\u062E\u062F\u0645\u0629 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631\u0629\u060C \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.", retryAfter: 5 });
+    } catch (err) {
+      console.error("DB connection failed:", err);
+      return res.status(503).json({
+        message: "\u062E\u062F\u0645\u0629 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631\u0629\u060C \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.",
+        retryAfter: 5
+      });
     }
   }
   next();
@@ -27434,23 +27626,35 @@ async function initialize() {
   if (initPromise) return initPromise;
   initPromise = (async () => {
     await connectDatabase();
+    await seedInitialData();
     initWebPush();
     registerQiroxRoutes(app);
     await registerRoutes(app, { skipWebSocket: true });
     app.use((err, _req, res, _next) => {
       const status = err.status || err.statusCode || 500;
-      res.status(status).json({ message: err.message || "Internal Server Error" });
+      const message = err.message || "Internal Server Error";
+      console.error("[Vercel Error]", err);
+      res.status(status).json({ message });
     });
     initialized = true;
+    console.log("\u2705 Vercel app initialized");
   })();
   return initPromise;
 }
 initialize().catch(console.error);
 async function handler(req, res) {
   if (!MONGODB_URI) {
-    return res.status(500).json({ error: "MONGODB_URI environment variable is not set" });
+    return res.status(500).json({
+      error: "MONGODB_URI is not configured.",
+      fix: "Go to Vercel \u2192 Project \u2192 Settings \u2192 Environment Variables and add MONGODB_URI"
+    });
   }
-  await initialize();
+  try {
+    await initialize();
+  } catch (err) {
+    console.error("Init failed:", err);
+    return res.status(503).json({ message: "Server initialization failed. Please try again." });
+  }
   return app(req, res);
 }
 export {
