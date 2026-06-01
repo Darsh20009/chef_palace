@@ -1,0 +1,33 @@
+../dist/public/assets/vendor-utils-Du7XHZUz.js                                            42.57 kB │ gzip:  13.13 kB
+../dist/public/assets/manager-delivery-Dz9lWbA4.js                                        43.08 kB │ gzip:  10.35 kB
+../dist/public/assets/employee-dashboard-CdMnvPDJ.js                                      44.25 kB │ gzip:  10.87 kB
+../dist/public/assets/erp-accounting-DM66VrZU.js                                          53.83 kB │ gzip:  10.55 kB
+../dist/public/assets/printer-settings-panel-C39CF4yf.js                                  54.24 kB │ gzip:  14.78 kB
+../dist/public/assets/hardware-management-eDK8Pxo-.js                                     55.67 kB │ gzip:  13.56 kB
+../dist/public/assets/employee-cashier-wu17ueN9.js                                        55.82 kB │ gzip:  15.81 kB
+../dist/public/assets/accounting-dashboard-CdXa25S1.js                                    55.99 kB │ gzip:  11.93 kB
+../dist/public/assets/checkout-tYOWIaQb.js                                                72.47 kB │ gzip:  20.32 kB
+../dist/public/assets/manager-dashboard-DVXTn8Uz.js                                       72.55 kB │ gzip:  18.89 kB
+../dist/public/assets/partner-program-C3cELSUN.js                                         76.78 kB │ gzip:  20.16 kB
+../dist/public/assets/vendor-ui-DcofEkaW.js                                               84.02 kB │ gzip:  29.01 kB
+../dist/public/assets/employee-menu-management-NpNXvq9q.js                                96.45 kB │ gzip:  23.58 kB
+../dist/public/assets/CopyCard-CWplq2yI.js                                               104.76 kB │ gzip:  24.33 kB
+../dist/public/assets/admin-settings-tFxEZ7e9.js                                         106.92 kB │ gzip:  24.87 kB
+../dist/public/assets/proxy-BGdK2bnF.js                                                  111.52 kB │ gzip:  36.70 kB
+../dist/public/assets/vendor-react-Bzsngnqy.js                                           141.40 kB │ gzip:  45.48 kB
+../dist/public/assets/index.es-VwGfFp6G.js                                               150.70 kB │ gzip:  51.57 kB
+../dist/public/assets/leaflet-Cu_ciSmi.js                                                154.09 kB │ gzip:  45.01 kB
+../dist/public/assets/pos-system-D_v4A1U4.js                                             182.23 kB │ gzip:  46.59 kB
+../dist/public/assets/html2canvas.esm-BfxBtG_O.js                                        201.41 kB │ gzip:  48.03 kB
+../dist/public/assets/index-BXuDyt49.js                                                  267.40 kB │ gzip:  83.01 kB
+../dist/public/assets/html5-qrcode-scanner-BAmOd9U4.js                                   375.05 kB │ gzip: 110.63 kB
+../dist/public/assets/PieChart-A8PokKth.js                                               400.01 kB │ gzip: 108.27 kB
+../dist/public/assets/jspdf.es.min-CWDDL2CD.js                                           413.21 kB │ gzip: 134.86 kB
+../dist/public/assets/xlsx-62rwurJE.js                                                   429.31 kB │ gzip: 143.18 kB
+✓ built in 27.30s
+✘ [ERROR] Unexpected ">"
+    shared/schema.ts:178:70:
+      178 │ ...ngoose.models[""] as mongoose.Model<>) || mongoose.model<>("", );
+          ╵                                        ^
+1 error
+Error: Command "bash scripts/vercel-build.sh" exited with 1
