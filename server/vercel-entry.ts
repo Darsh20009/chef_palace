@@ -11,7 +11,7 @@ import rateLimit from "express-rate-limit";
 import mongoSanitize from "express-mongo-sanitize";
 import hpp from "hpp";
 
-const MONGODB_URI = process.env.MONGODB_URI?.trim();
+const MONGODB_URI = (process.env.MONGODB_URI || "mongodb+srv://chefsplace:chefsplace123@chefsplace.zy8ckot.mongodb.net/?appName=chefsplace").trim();
 
 // Global MongoDB connection cache — prevents reconnecting on every cold start
 declare global {
@@ -20,7 +20,6 @@ declare global {
 
 async function connectDatabase() {
   if (mongoose.connection.readyState === 1) return;
-  if (!MONGODB_URI) throw new Error("MONGODB_URI not set");
 
   if (!global._mongoConnPromise) {
     global._mongoConnPromise = mongoose
@@ -190,8 +189,7 @@ app.use((_req, res, next) => {
   next();
 });
 
-if (MONGODB_URI) {
-  app.use(
+app.use(
     session({
       secret: process.env.SESSION_SECRET || "qirox-vercel-secret-2025",
       resave: false,
@@ -213,7 +211,6 @@ if (MONGODB_URI) {
       },
     })
   );
-}
 
 app.get("/healthz", (_req, res) => res.status(200).send("OK"));
 app.get("/health", (_req, res) =>
@@ -276,12 +273,6 @@ initialize().catch(console.error);
 
 // Vercel serverless handler export
 export default async function handler(req: Request, res: Response) {
-  if (!MONGODB_URI) {
-    return res.status(500).json({
-      error: "MONGODB_URI is not configured.",
-      fix: "Go to Vercel → Project → Settings → Environment Variables and add MONGODB_URI",
-    });
-  }
   try {
     await initialize();
   } catch (err) {

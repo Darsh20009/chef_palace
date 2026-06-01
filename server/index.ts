@@ -19,12 +19,7 @@ import hpp from "hpp";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const MONGODB_URI = process.env.MONGODB_URI?.trim();
-
-if (!MONGODB_URI) {
-  console.error("❌ ERROR: MONGODB_URI environment variable is not set");
-  process.exit(1);
-}
+const MONGODB_URI = (process.env.MONGODB_URI || "mongodb+srv://chefsplace:chefsplace123@chefsplace.zy8ckot.mongodb.net/?appName=chefsplace").trim();
 
 // Track database connection status
 let isDbConnected = false;
