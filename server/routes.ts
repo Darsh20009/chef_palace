@@ -277,8 +277,8 @@ async function calcOrderPrepTime(tenantId: string, items: any[]): Promise<number
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
-const __filename = typeof __filename !== "undefined" ? __filename : fileURLToPath(import.meta.url);
-const __dirname = typeof __dirname !== "undefined" ? __dirname : path.dirname(__filename);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import nodemailer from "nodemailer";
 import {
   sendOrderNotificationEmail,
