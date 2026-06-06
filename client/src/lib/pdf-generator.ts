@@ -202,76 +202,28 @@ export const generatePDF = async (
  backgroundColor: '#ffffff'
  });
 
- // Convert canvas to PDF using jsPDF
- const { jsPDF } = await import('jspdf');
- const pdf = new jsPDF('p', 'mm', 'a4');
- 
- const imgData = canvas.toDataURL('image/png');
- const imgWidth = 210; // A4 width in mm
- const pageHeight = 295; // A4 height in mm
- const imgHeight = (canvas.height * imgWidth) / canvas.width;
- let heightLeft = imgHeight;
-
- let position = 0;
-
- pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
- heightLeft -= pageHeight;
-
- while (heightLeft >= 0) {
- position = heightLeft - imgHeight;
- pdf.addPage();
- pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
- heightLeft -= pageHeight;
- }
-
- return pdf.output('blob');
- } else {
- // Fallback: Create a simple text-based PDF
- const { jsPDF } = await import('jspdf');
- const pdf = new jsPDF('p', 'mm', 'a4');
- 
- // Add Arabic font support if available
- pdf.setFont('helvetica');
- pdf.setFontSize(16);
- 
- let yPosition = 20;
- const lineHeight = 7;
- 
- // Header
- pdf.text('مكان الشيف البخاري - Coffee Invoice', 105, yPosition, { align: 'center' });
- yPosition += lineHeight * 2;
- 
- // Order details
- pdf.setFontSize(12);
- pdf.text(`Order Number: ${order.orderNumber}`, 20, yPosition);
- yPosition += lineHeight;
- pdf.text(`Date: ${new Date(order.createdAt).toLocaleDateString()}`, 20, yPosition);
- yPosition += lineHeight;
- pdf.text(`Time: ${new Date(order.createdAt).toLocaleTimeString()}`, 20, yPosition);
- yPosition += lineHeight * 2;
- 
- // Items
- pdf.text('Order Items:', 20, yPosition);
- yPosition += lineHeight;
- 
- cartItems.forEach(item => {
- const itemText = `${item.coffeeItem?.nameEn || item.coffeeItem?.nameAr || 'Item'} x${item.quantity} - ${(parseFloat(item.coffeeItem?.price || '0') * item.quantity).toFixed(2)} SAR`;
- pdf.text(itemText, 25, yPosition);
- yPosition += lineHeight;
+ return new Promise<Blob>((resolve) => {
+   canvas.toBlob((blob) => {
+     resolve(blob || new Blob([], { type: 'image/png' }));
+   }, 'image/png');
  });
- 
- yPosition += lineHeight;
- pdf.setFontSize(14);
- pdf.text(`Total: ${order.totalAmount} SAR`, 20, yPosition);
- yPosition += lineHeight * 2;
- 
- // Payment method
- pdf.setFontSize(12);
- pdf.text(`Payment Method: ${paymentMethodNames[paymentMethod]}`, 20, yPosition);
- yPosition += lineHeight;
- pdf.text(`Details: ${paymentDetails[paymentMethod]}`, 20, yPosition);
- 
- return pdf.output('blob');
+ } else {
+ // Fallback: plain text blob
+ const lines = [
+   `مكان الشيف البخاري`,
+   `رقم الطلب: ${order.orderNumber}`,
+   `التاريخ: ${new Date(order.createdAt).toLocaleDateString()}`,
+   `الوقت: ${new Date(order.createdAt).toLocaleTimeString()}`,
+   '',
+   'تفاصيل الطلب:',
+   ...cartItems.map(item =>
+     `${item.coffeeItem?.nameAr || 'منتج'} x${item.quantity} - ${(parseFloat(item.coffeeItem?.price || '0') * item.quantity).toFixed(2)} ر.س`
+   ),
+   '',
+   `الإجمالي: ${order.totalAmount} ر.س`,
+   `طريقة الدفع: ${paymentMethodNames[paymentMethod]}`,
+ ];
+ return new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
  }
  } finally {
  // Clean up
@@ -283,17 +235,11 @@ export const generatePDF = async (
 declare global {
  interface Window {
  html2canvas?: any;
- jsPDF?: any;
  }
 }
 
 // Dynamically load required libraries
 export const loadPDFLibraries = async (): Promise<void> => {
- // Load jsPDF
- if (!window.jsPDF) {
- await import('jspdf');
- }
- 
  // Load html2canvas for better PDF generation
  if (!window.html2canvas) {
  try {

@@ -606,37 +606,31 @@ export default function AccountingDashboardPage() {
   };
 
   const exportToPDF = (title: string, data: any) => {
-    import('jspdf').then(({ jsPDF }) => {
-      const doc = new jsPDF({ orientation: 'portrait' });
-      doc.setFont('helvetica');
-      doc.setFontSize(18);
-      doc.text(title, 105, 20, { align: 'center' });
-      doc.setFontSize(12);
-      doc.text(`الفترة: ${periodLabels[period]}`, 105, 30, { align: 'center' });
-      doc.text(`التاريخ: ${format(new Date(), 'yyyy/MM/dd')}`, 105, 38, { align: 'center' });
-      
-      let y = 55;
+    try {
+      const lines: string[] = [];
+      lines.push(title);
+      lines.push(`الفترة: ${periodLabels[period]}`);
+      lines.push(`التاريخ: ${format(new Date(), 'yyyy/MM/dd')}`);
+      lines.push('');
       if (data.summary) {
-        doc.setFontSize(14);
-        doc.text('ملخص الأداء المالي', 105, y, { align: 'center' });
-        y += 12;
-        doc.setFontSize(11);
-        doc.text(`إجمالي الإيرادات: ${data.summary.totalRevenue?.toFixed(2) || 0} ر.س`, 20, y);
-        y += 8;
-        doc.text(`تكلفة المكونات: ${data.summary.totalCogs?.toFixed(2) || 0} ر.س`, 20, y);
-        y += 8;
-        doc.text(`المصروفات: ${data.summary.totalExpenses?.toFixed(2) || 0} ر.س`, 20, y);
-        y += 8;
-        doc.text(`صافي الربح: ${data.summary.netProfit?.toFixed(2) || 0} ر.س`, 20, y);
-        y += 8;
-        doc.text(`هامش الربح: ${data.summary.profitMargin?.toFixed(1) || 0}%`, 20, y);
+        lines.push('ملخص الأداء المالي');
+        lines.push(`إجمالي الإيرادات: ${data.summary.totalRevenue?.toFixed(2) || 0} ر.س`);
+        lines.push(`تكلفة المكونات: ${data.summary.totalCogs?.toFixed(2) || 0} ر.س`);
+        lines.push(`المصروفات: ${data.summary.totalExpenses?.toFixed(2) || 0} ر.س`);
+        lines.push(`صافي الربح: ${data.summary.netProfit?.toFixed(2) || 0} ر.س`);
+        lines.push(`هامش الربح: ${data.summary.profitMargin?.toFixed(1) || 0}%`);
       }
-      
-      doc.save(`${title}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
-      toast({ title: tc('تم تصدير التقرير بنجاح', 'Report exported successfully'), description: 'تم حفظ الملف بصيغة PDF' });
-    }).catch(() => {
+      const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${title}_${format(new Date(), 'yyyy-MM-dd')}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: tc('تم تصدير التقرير بنجاح', 'Report exported successfully'), description: 'تم حفظ الملف' });
+    } catch {
       toast({ title: tc('فشل التصدير', 'Export failed'), variant: 'destructive' });
-    });
+    }
   };
 
   const handleExportSummaryExcel = () => {
