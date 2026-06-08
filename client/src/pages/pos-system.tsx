@@ -87,7 +87,7 @@ export default function PosSystem() {
   const PAYMENT_METHOD_LABELS: Record<string, string> = {
     cash: tc("نقدي","Cash"),
     card: tc("شبكة","Network"),
-    "qahwa-card": tc("بطاقة بلاك روز","BLACK ROSE Card"),
+    "qahwa-card": tc("بطاقة مكان الشيف","Chef's Card"),
     split: tc("نقدي + شبكة","Cash + Network"),
   };
   const dir = i18n.language === 'ar' ? 'rtl' : 'ltr';
@@ -1796,7 +1796,7 @@ export default function PosSystem() {
             <div className="bg-primary/10 p-1.5 sm:p-2 rounded-lg">
               <Coffee className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
             </div>
-            <h1 className="text-lg sm:text-2xl font-black tracking-tight text-primary">BLACK ROSE</h1>
+            <h1 className="text-lg sm:text-2xl font-black tracking-tight text-primary">مكان الشيف</h1>
           </div>
           
           <div className="flex items-center gap-2 sm:hidden">

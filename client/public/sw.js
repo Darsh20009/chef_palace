@@ -160,7 +160,7 @@ function buildOrderStatusNotification(data) {
 }
 
 self.addEventListener('push', function(event) {
-  let data = { title: 'BLACK ROSE Cafe', body: 'لديك إشعار جديد', url: '/', type: 'general' };
+  let data = { title: 'مكان الشيف البخاري', body: 'لديك إشعار جديد', url: '/', type: 'general' };
 
   try {
     if (event.data) {

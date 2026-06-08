@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-const blackRoseLogo = "/logo.png";
+const chefsplaceLogo = "/logo.png";
 
 export default function QiroxLogin() {
   const [password, setPassword] = useState("");
@@ -46,7 +46,7 @@ export default function QiroxLogin() {
         <div className="bg-[#111111] border border-[#1e1e1e] rounded-2xl p-8 shadow-2xl">
           <div className="text-center mb-8">
             <div className="w-20 h-20 mx-auto mb-4">
-              <img src={blackRoseLogo} alt="مكان الشيف البخاري" className="w-full h-full object-contain rounded-2xl" />
+              <img src={chefsplaceLogo} alt="مكان الشيف البخاري" className="w-full h-full object-contain rounded-2xl" />
             </div>
             <h1 className="text-2xl font-bold text-white tracking-tight">مكان الشيف البخاري</h1>
             <p className="text-[#666] text-sm mt-1">System Control Panel</p>

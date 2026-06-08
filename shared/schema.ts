@@ -1915,8 +1915,8 @@ const TaxInvoiceSchema = new Schema<ITaxInvoice>({
   uuid: { type: String, required: true, unique: true },
   orderId: { type: String, required: true },
 
-  sellerName: { type: String, required: true, default: 'BLACK ROSE CAFE' },
-  sellerNameEn: { type: String, default: 'BLACK ROSE CAFE' },
+  sellerName: { type: String, required: true, default: 'مكان الشيف البخاري' },
+  sellerNameEn: { type: String, default: "Chef Bukhari's Place" },
   sellerVatNumber: { type: String, required: true, default: '311234567890003' },
   sellerCrNumber: { type: String },
   sellerAddress: { type: String, required: true, default: 'الرياض، المملكة العربية السعودية' },

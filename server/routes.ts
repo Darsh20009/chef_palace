@@ -10071,7 +10071,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       const passJson = {
         formatVersion: 1,
         passTypeIdentifier: passTypeId,
-        serialNumber: `BLACKROSE-${rawDigits.slice(-9)}`,
+        serialNumber: `CHEFSPLACE-${rawDigits.slice(-9)}`,
         teamIdentifier: teamId,
         organizationName: "مكان الشيف البخاري",
         description: "بطاقة ولاء - مكان الشيف البخاري",

@@ -22,7 +22,7 @@ import { useLoyaltyCard } from "@/hooks/useLoyaltyCard";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { useTranslate, tc } from "@/lib/useTranslate";
 import { User, Gift, CheckCircle, Sparkles, Loader2, Ticket, Tag, Wrench, Coffee, Award, CreditCard, Star, Coins, X, ChevronLeft, Upload, Camera, Truck, Printer, Navigation, MapPin, PackageCheck, Bell, ClipboardList } from "lucide-react";
-import BlackRoseCard from "@/components/BlackRoseCard";
+import ChefBukhariCard from "@/components/ChefBukhariCard";
 import { printTaxInvoice } from "@/lib/print-utils";
 import { useTranslation } from "react-i18next";
 import type { PaymentMethodInfo, PaymentMethod } from "@shared/schema";
@@ -65,7 +65,7 @@ function LoyaltyCheckoutCard({
   return (
     <div className="space-y-3" data-testid="loyalty-checkout-section">
       
-      <BlackRoseCard
+      <ChefBukhariCard
         phone={loyaltyCard?.phoneNumber || loyaltyCard?.customerPhone}
         points={loyaltyPoints}
         sarValue={totalPointsValue}

@@ -1,6 +1,6 @@
 {
-  "appId": "blackrose.com.sa",
-  "appName": "Black Rose Cafe",
+  "appId": "chefsplace.online",
+  "appName": "مكان الشيف البخاري",
   "webDir": "dist/public",
   "bundledWebRuntime": false,
   "ios": {

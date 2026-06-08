@@ -1,4 +1,4 @@
-# Apple Wallet Setup — Black Rose Cafe
+# Apple Wallet Setup — مكان الشيف البخاري
 
 ## الملفات الجاهزة ✅
 

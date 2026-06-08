@@ -3,7 +3,7 @@ import { useLocation, useRoute } from "wouter";
 import { motion } from "framer-motion";
 import { Ticket, LogIn, ShoppingBag, BadgePercent } from "lucide-react";
 const chefsplaceLogo = "/logo.png";
-import bannerImage1 from "@assets/blackrose-banner-1.png";
+import bannerImage1 from "@assets/image_1773902463502.png";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 

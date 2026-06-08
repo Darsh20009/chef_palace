@@ -10,7 +10,7 @@ echo "=========================================="
 echo ""
 
 echo "Secret 1: APPLE_PASS_TYPE_ID"
-echo "Value: pass.sa.blackrose.loyalty"
+echo "Value: pass.chefsplace.online.loyalty"
 echo "------------------------------------------"
 echo ""
 

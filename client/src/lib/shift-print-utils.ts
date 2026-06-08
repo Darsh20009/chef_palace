@@ -18,7 +18,7 @@ function _receiptProducts(productsByCategory: any[]): string {
   return html;
 }
 
-export function buildShiftPrintFragment(p: any, bizName = 'BLACK ROSE CAFE'): string {
+export function buildShiftPrintFragment(p: any, bizName = 'مكان الشيف البخاري'): string {
   const fmtT = (iso: string) => new Date(iso).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
   const fmtD = (iso: string) => new Date(iso).toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
   return `<div style="font-family:Tahoma,Arial,sans-serif;font-size:12px;padding:5px 3px;direction:rtl;color:#000;background:#fff;">
@@ -47,7 +47,7 @@ export function buildShiftPrintFragment(p: any, bizName = 'BLACK ROSE CAFE'): st
 </div>`;
 }
 
-export function buildMergedPrintFragment(periods: any[], dateLabel: string, bizName = 'BLACK ROSE CAFE'): string {
+export function buildMergedPrintFragment(periods: any[], dateLabel: string, bizName = 'مكان الشيف البخاري'): string {
   if (periods.length === 0) return '';
   const totalOrders = periods.reduce((s, p) => s + (p.totalOrders || 0), 0);
   const totalSales  = periods.reduce((s, p) => s + (p.totalSales  || 0), 0);

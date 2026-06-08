@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ChevronRight, ArrowLeftRight, Star, Wallet } from "lucide-react";
-import BlackRoseCard from "@/components/BlackRoseCard";
+import ChefBukhariCard from "@/components/ChefBukhariCard";
 import { useCustomer } from "@/contexts/CustomerContext";
 import { useLocation } from "wouter";
 import { CustomerLayout } from "@/components/layouts/CustomerLayout";
@@ -204,7 +204,7 @@ export default function MyCardPage() {
 
         {/* ── The Card ── */}
         <div className="px-4 mb-7">
-          <BlackRoseCard
+          <ChefBukhariCard
             phone={customer?.phone}
             points={points}
             sarValue={sarValueNum}

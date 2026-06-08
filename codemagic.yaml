@@ -13,7 +13,7 @@ workflows:
       node: 20
       cocoapods: default
       vars:
-        BUNDLE_ID: "blackrose.com.sa"
+        BUNDLE_ID: "chefsplace.online"
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
     scripts:
@@ -92,13 +92,13 @@ workflows:
   #
   # Before running this workflow you must:
   #  1. Codemagic → Teams → Integrations → App Store Connect
-  #     Name the integration exactly: blackrose_appstore
+  #     Name the integration exactly: chefsplace_appstore
   #     Key ID:    CSNAT4HD83
   #     Issuer ID: 1f96495e-ca18-401c-8f57-eedb187ebf64
   #  2. Codemagic → Teams → Code signing → upload:
   #     • iOS Distribution certificate (.p12 + password)
   #     • App Store provisioning profile (.mobileprovision)
-  #       Bundle ID: blackrose.com.sa
+  #       Bundle ID: chefsplace.online
   #  3. Codemagic → Teams → Environment variables
   #     Create group: apple_credentials
   #     Add: APPLE_TEAM_ID = V4K6RM59LS
@@ -108,7 +108,7 @@ workflows:
     max_build_duration: 90
     instance_type: mac_mini_m2
     integrations:
-      app_store_connect: blackrose_appstore
+      app_store_connect: chefsplace_appstore
     environment:
       xcode: latest
       node: 20
@@ -116,7 +116,7 @@ workflows:
       groups:
         - apple_credentials
       vars:
-        BUNDLE_ID: "blackrose.com.sa"
+        BUNDLE_ID: "chefsplace.online"
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
     scripts:
@@ -175,7 +175,7 @@ workflows:
 
       - name: Fetch signing certificates & profiles (App Store)
         # Codemagic fetches the Distribution certificate + App Store provisioning
-        # profile for blackrose.com.sa automatically via the integration.
+        # profile for chefsplace.online automatically via the integration.
         script: |
           keychain initialize
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
