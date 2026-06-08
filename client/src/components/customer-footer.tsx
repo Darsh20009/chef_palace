@@ -79,7 +79,7 @@ export function CustomerFooter() {
           <div className="flex flex-col items-center justify-center gap-2 text-center">
             <div className="text-xl font-bold text-primary tracking-tighter">{brand.nameEn}</div>
             <div className="text-xs text-muted-foreground/60 font-ibm-arabic max-w-[200px]">
-              {t("footer.tagline") || "نقدم لك أشهى بخاري في الرياض"}
+              {t("footer.tagline") || "نقدم لك تجربة قهوة لا تُنسى في ينبع"}
             </div>
           </div>
 
@@ -88,7 +88,7 @@ export function CustomerFooter() {
               <div className="text-xs font-bold text-primary font-ibm-arabic">{t("legal.vat")}</div>
             </div>
             <div className="text-[10px] text-muted-foreground/60 text-center font-ibm-arabic leading-relaxed">
-              جميع الأسعار تشمل ضريبة القيمة المضافة<br/>رقم التسجيل: {businessConfig?.vatNumber || brand.taxNumber}{(businessConfig?.commercialRegister || brand.commercialRegister) ? <> · س.ت: {businessConfig?.commercialRegister || brand.commercialRegister}</> : null}
+              جميع الأسعار تشمل ضريبة القيمة المضافة<br/>رقم التسجيل: 312718675800003
             </div>
           </div>
         </div>

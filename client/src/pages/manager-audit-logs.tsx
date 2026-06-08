@@ -217,7 +217,7 @@ export default function ManagerAuditLogsPage() {
                       </div>
                     </div>
                     <div className="text-xs text-gray-400 shrink-0 text-left">
-                      {formatDate(log.createdAt)}
+                      {new Date(log.createdAt).toLocaleString("ar-SA")}
                     </div>
                   </div>
                 );

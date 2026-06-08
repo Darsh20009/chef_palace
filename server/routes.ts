@@ -30,7 +30,9 @@ import {
   WarehouseModel, 
   WarehouseStockModel, 
   WarehouseTransferModel, 
-  DeliveryIntegrationModel, 
+  DeliveryIntegrationModel,
+  DeliveryOrderModel,
+  DeliveryDriverModel,
   CartItemModel,
   EmployeeModel,
   PointTransferModel,
@@ -43,7 +45,8 @@ import {
   VendorModel,
   TaxInvoiceModel,
   CashierShiftModel,
-  RefundModel
+  StocktakeSessionModel,
+  WastageModel
 } from "@shared/schema";
 import { RecipeEngine } from "./recipe-engine";
 import { UnitsEngine } from "./units-engine";
@@ -52,6 +55,7 @@ import { AccountingEngine } from "./accounting-engine";
 import { ErpAccountingService } from "./erp-accounting-service";
 import { deliveryService } from "./delivery-service";
 import { requireAuth, requireManager, requireAdmin, filterByBranch, requireKitchenAccess, requireCashierAccess, requireDeliveryAccess, requirePermission, requireCustomerAuth, type AuthRequest, type CustomerAuthRequest } from "./middleware/auth";
+import { logFromRequest, logAudit } from "./audit-logger";
 import { PermissionsEngine, PERMISSIONS } from "./permissions-engine";
 import { requireTenant, getTenantIdFromRequest } from "./middleware/tenant";
 import { wsManager } from "./websocket";
@@ -63,15 +67,6 @@ import fs from "fs";
 import { Types } from "mongoose";
 import { nanoid } from "nanoid";
 const isValidObjectId = (id: string) => Types.ObjectId.isValid(id);
-
-// Upload directory helper — uses /tmp on Vercel (read-only FS), local attached_assets otherwise
-const IS_VERCEL = !!process.env.VERCEL;
-function getUploadsDir(subDir: string): string {
-  const base = IS_VERCEL ? '/tmp/uploads' : path.resolve(__dirname, '..', 'attached_assets');
-  const dir = path.join(base, subDir);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  return dir;
-}
 
 // ─── Centralized VAT Rate ────────────────────────────────────────────────────
 // Saudi Arabia standard VAT rate (15%). Change here to update all calculations.
@@ -101,125 +96,13 @@ function getSaudiEndOfDay(date?: Date): Date {
   const start = getSaudiStartOfDay(date);
   return new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1);
 }
-
-function getAutoShiftPeriod(now: Date, hours: number): { index: number; start: Date; end: Date } {
-  const safeHours = Math.max(1, Math.min(24, Math.floor(hours || 12)));
-  const midnight = getSaudiStartOfDay(now);
-  const elapsedMs = now.getTime() - midnight.getTime();
-  const periodMs = safeHours * 3600000;
-  const index = Math.floor(elapsedMs / periodMs);
-  const start = new Date(midnight.getTime() + index * periodMs);
-  const end = new Date(start.getTime() + periodMs);
-  return { index, start, end };
-}
-
-async function getEffectiveNow(tenantId?: string): Promise<Date> {
-  try {
-    const cfg = await BusinessConfigModel.findOne(tenantId ? { tenantId } : {}).lean();
-    const offset = Number((cfg as any)?.manualTimeOffsetMinutes || 0);
-    return new Date(Date.now() + offset * 60000);
-  } catch {
-    return new Date();
-  }
-}
-
-function aggregateOrdersAsShift(
-  orders: any[],
-  periodStart: Date,
-  periodEnd: Date,
-  coffeeItemMap?: Map<string, any>,
-  categoryMap?: Map<string, any>,
-) {
-  const summary: any = {
-    totalSales: 0,
-    totalOrders: 0,
-    totalCashSales: 0,
-    totalCardSales: 0,
-    totalDigitalSales: 0,
-    totalDiscounts: 0,
-    totalVAT: 0,
-    netRevenue: 0,
-    paymentBreakdown: { cash: 0, card: 0, loyalty: 0 },
-    orderTypeBreakdown: { dine_in: 0, takeaway: 0, car_pickup: 0, delivery: 0, online: 0 },
-    employees: [] as Array<{ name: string; orders: number; sales: number }>,
-    categories: [] as Array<{ categoryId: string; nameAr: string; quantity: number; sales: number; itemsCount: number }>,
-    topProducts: [] as Array<{ id: string; nameAr: string; categoryNameAr: string; quantity: number; sales: number }>,
-    orderIds: [] as string[],
-  };
-  const empMap: Record<string, { name: string; orders: number; sales: number }> = {};
-  const catAgg: Record<string, { categoryId: string; nameAr: string; quantity: number; sales: number; itemsCount: number }> = {};
-  const prodAgg: Record<string, { id: string; nameAr: string; categoryNameAr: string; quantity: number; sales: number }> = {};
-
-  for (const o of orders) {
-    const amount = Number(o.totalAmount || 0);
-    const vat = Number(o.vat || o.taxAmount || 0);
-    const discount = Number(o.discount || o.discountAmount || 0);
-    const method = String(o.paymentMethod || 'cash').toLowerCase();
-    const type = String(o.orderType || 'takeaway').toLowerCase();
-    summary.totalSales += amount;
-    summary.totalOrders += 1;
-    summary.totalDiscounts += discount;
-    summary.totalVAT += vat;
-    summary.netRevenue += (amount - vat);
-    summary.orderIds.push(o.id || o._id?.toString());
-    if (method === 'cash') {
-      summary.totalCashSales += amount;
-      summary.paymentBreakdown.cash += amount;
-    } else if (method === 'qahwa-card' || method === 'loyalty-card') {
-      summary.totalDigitalSales += amount;
-      summary.paymentBreakdown.loyalty += amount;
-    } else {
-      summary.totalCardSales += amount;
-      summary.paymentBreakdown.card += amount;
-    }
-    if (summary.orderTypeBreakdown[type] !== undefined) {
-      summary.orderTypeBreakdown[type] += 1;
-    }
-    const empName = o.employeeName || o.cashierName || o.createdByName || 'غير معروف';
-    if (!empMap[empName]) empMap[empName] = { name: empName, orders: 0, sales: 0 };
-    empMap[empName].orders += 1;
-    empMap[empName].sales += amount;
-
-    // Category + product aggregation
-    if (coffeeItemMap && Array.isArray(o.items)) {
-      for (const it of o.items) {
-        const cid = it.coffeeItemId || it.id;
-        const qty = Number(it.quantity) || 1;
-        const ci = coffeeItemMap.get(String(cid));
-        const itemName = ci?.nameAr || it.coffeeItem?.nameAr || it.nameAr || it.name || 'منتج';
-        const catId = ci?.category || 'uncategorized';
-        const catName = categoryMap?.get(String(catId))?.nameAr || (catId === 'uncategorized' ? 'بدون تصنيف' : catId);
-        const lineTotal = Number(it.totalPrice || it.priceTotal || (it.unitPrice ? it.unitPrice * qty : 0) || (ci?.price ? ci.price * qty : 0));
-        if (!catAgg[catId]) catAgg[catId] = { categoryId: catId, nameAr: catName, quantity: 0, sales: 0, itemsCount: 0 };
-        catAgg[catId].quantity += qty;
-        catAgg[catId].sales += lineTotal;
-        catAgg[catId].itemsCount += 1;
-        const pkey = String(cid || itemName);
-        if (!prodAgg[pkey]) prodAgg[pkey] = { id: pkey, nameAr: itemName, categoryNameAr: catName, quantity: 0, sales: 0 };
-        prodAgg[pkey].quantity += qty;
-        prodAgg[pkey].sales += lineTotal;
-      }
-    }
-  }
-  summary.employees = Object.values(empMap).sort((a, b) => b.sales - a.sales);
-  summary.categories = Object.values(catAgg).sort((a, b) => b.quantity - a.quantity);
-  summary.topProducts = Object.values(prodAgg).sort((a, b) => b.quantity - a.quantity).slice(0, 20);
-  return summary;
-}
-
-async function loadMenuMaps(tenantId: string): Promise<{ coffeeItemMap: Map<string, any>; categoryMap: Map<string, any> }> {
-  try {
-    const [items, cats] = await Promise.all([
-      CoffeeItemModel.find({ tenantId }).select('id nameAr category price').lean(),
-      MenuCategoryModel.find({ tenantId }).select('id nameAr').lean(),
-    ]);
-    return {
-      coffeeItemMap: new Map(items.map((i: any) => [String(i.id), i])),
-      categoryMap: new Map(cats.map((c: any) => [String(c.id), c])),
-    };
-  } catch {
-    return { coffeeItemMap: new Map(), categoryMap: new Map() };
-  }
+// Returns a custom 24-hour business-day window starting at `dayStartHour` (Saudi time) on the given date.
+// e.g. dayStartHour=6 means the business day runs 6 AM → 6 AM next day in Riyadh time.
+function getBusinessDayBoundaries(date?: Date, dayStartHour: number = 0): { start: Date; end: Date } {
+  const safeHour = Math.max(0, Math.min(23, Math.floor(Number(dayStartHour) || 0)));
+  const start = new Date(getSaudiStartOfDay(date).getTime() + safeHour * 60 * 60 * 1000);
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1);
+  return { start, end };
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -453,9 +336,20 @@ async function deductInventoryForOrder(orderId: string, branchId: string, employ
 
     const totalPointsToAward = orderItems.reduce((acc: any, item: any) => acc + (item.quantity * pointsPerDrink), 0);
     
-    // Award points — search by customerId first, then by customer phone as fallback
-    // Guard against duplicate awarding: skip if points were already awarded for this order
-    if (totalPointsToAward > 0 && !(order as any).pointsAwarded) {
+    // Award points — atomic lock prevents duplicate awarding in concurrent requests
+    // findOneAndUpdate with condition is atomic in MongoDB — only one concurrent call will get updated doc back
+    let pointsActuallyAwarded = false;
+    if (totalPointsToAward > 0) {
+      const atomicLock = await OrderModel.findOneAndUpdate(
+        { id: orderId, pointsAwarded: { $ne: true } },
+        { $set: { pointsAwarded: true } },
+        { new: false }
+      );
+      // Only proceed if WE were the ones who set pointsAwarded (atomicLock is the pre-update doc, not yet awarded)
+      pointsActuallyAwarded = !!atomicLock;
+    }
+
+    if (pointsActuallyAwarded) {
       try {
         // Update Customer document if customerId exists
         if (order.customerId) {
@@ -499,12 +393,10 @@ async function deductInventoryForOrder(orderId: string, branchId: string, employ
           console.warn(`[LOYALTY] No loyalty card found for order ${order.id} (customerId: ${order.customerId}, phone: ${order.customerPhone})`);
         }
 
-        // Mark points as awarded on the order to prevent future duplicates
-        await OrderModel.findOneAndUpdate({ id: orderId }, { pointsAwarded: true });
       } catch (e) {
         console.error("[LOYALTY] Failed to update loyalty card:", e);
       }
-    } else if ((order as any).pointsAwarded) {
+    } else if (totalPointsToAward > 0) {
       console.log(`[LOYALTY] Points already awarded for order ${order.id}, skipping`);
     }
 
@@ -523,53 +415,57 @@ async function deductInventoryForOrder(orderId: string, branchId: string, employ
       console.warn(`[INVENTORY] Order ${order.orderNumber} warnings:`, result.warnings);
     }
 
-    // Auto-create COGS journal entry for accounting (only on full success, with idempotency)
-    if (result.success && result.costOfGoods > 0) {
-      try {
-        const tenantId = order.tenantId || 'demo-tenant';
-        const { JournalEntryModel } = await import("@shared/schema");
-        const existingEntry = await JournalEntryModel.findOne({ tenantId, referenceType: 'order_cogs', referenceId: orderId });
-        
-        if (!existingEntry) {
+    // Auto-create accounting journal entries (idempotent — skip if already created)
+    try {
+      const tenantId = order.tenantId || 'demo-tenant';
+      const { JournalEntryModel } = await import("@shared/schema");
+
+      // ── 1. COGS entry: DR Cost-of-Goods-Sold (5100) / CR Inventory (1130) ──
+      if (result.success && result.costOfGoods > 0) {
+        const existingCogs = await JournalEntryModel.findOne({ tenantId, referenceType: 'order_cogs', referenceId: orderId });
+        if (!existingCogs) {
           const cogsAccount = await AccountModel.findOne({ tenantId, accountNumber: "5100" });
           const inventoryAccount = await AccountModel.findOne({ tenantId, accountNumber: "1130" });
-          
           if (cogsAccount && inventoryAccount) {
             await ErpAccountingService.createJournalEntry({
-              tenantId,
-              entryDate: new Date(),
-              description: `تكلفة البضاعة المباعة - طلب رقم ${order.orderNumber}`,
+              tenantId, entryDate: new Date(),
+              description: `تكلفة البضاعة المباعة - طلب ${order.orderNumber}`,
               lines: [
-                {
-                  accountId: cogsAccount.id,
-                  accountNumber: cogsAccount.accountNumber,
-                  accountName: cogsAccount.nameAr,
-                  debit: result.costOfGoods,
-                  credit: 0,
-                  description: `تكلفة البضاعة المباعة - طلب ${order.orderNumber}`,
-                  branchId,
-                },
-                {
-                  accountId: inventoryAccount.id,
-                  accountNumber: inventoryAccount.accountNumber,
-                  accountName: inventoryAccount.nameAr,
-                  debit: 0,
-                  credit: result.costOfGoods,
-                  description: `خصم مخزون - طلب ${order.orderNumber}`,
-                  branchId,
-                },
+                { accountId: cogsAccount.id, accountNumber: cogsAccount.accountNumber, accountName: cogsAccount.nameAr, debit: result.costOfGoods, credit: 0, description: `COGS - طلب ${order.orderNumber}`, branchId },
+                { accountId: inventoryAccount.id, accountNumber: inventoryAccount.accountNumber, accountName: inventoryAccount.nameAr, debit: 0, credit: result.costOfGoods, description: `خصم مخزون - طلب ${order.orderNumber}`, branchId },
               ],
-              referenceType: 'order_cogs',
-              referenceId: orderId,
-              createdBy: employeeId,
-              autoPost: true,
+              referenceType: 'order_cogs', referenceId: orderId, createdBy: employeeId, autoPost: true,
             });
-            console.log(`[ACCOUNTING] COGS journal entry created for order ${order.orderNumber}: ${result.costOfGoods} SAR`);
+            console.log(`[ACCOUNTING] COGS entry created for order ${order.orderNumber}: ${result.costOfGoods} SAR`);
           }
         }
-      } catch (accountingError) {
-        console.error(`[ACCOUNTING] Failed to create COGS journal entry for order ${order.orderNumber}:`, accountingError);
       }
+
+      // ── 2. Sales entry: DR Cash/Card (1101/1102) / CR Sales Revenue (4100) ──
+      const orderTotal = (order as any).totalAmount || 0;
+      if (orderTotal > 0) {
+        const existingSales = await JournalEntryModel.findOne({ tenantId, referenceType: 'order_sales', referenceId: orderId });
+        if (!existingSales) {
+          const salesAccount = await AccountModel.findOne({ tenantId, accountNumber: "4100" });
+          const payMethod = (order as any).paymentMethod || 'cash';
+          const debitAccNum = payMethod === 'card' || payMethod === 'network' || payMethod === 'mada' ? "1102" : "1101";
+          const debitAccount = await AccountModel.findOne({ tenantId, accountNumber: debitAccNum });
+          if (salesAccount && debitAccount) {
+            await ErpAccountingService.createJournalEntry({
+              tenantId, entryDate: new Date(),
+              description: `إيرادات مبيعات - طلب ${order.orderNumber}`,
+              lines: [
+                { accountId: debitAccount.id, accountNumber: debitAccount.accountNumber, accountName: debitAccount.nameAr, debit: orderTotal, credit: 0, description: `قبض - طلب ${order.orderNumber} (${payMethod})`, branchId },
+                { accountId: salesAccount.id, accountNumber: salesAccount.accountNumber, accountName: salesAccount.nameAr, debit: 0, credit: orderTotal, description: `إيراد مبيعات - طلب ${order.orderNumber}`, branchId },
+              ],
+              referenceType: 'order_sales', referenceId: orderId, createdBy: employeeId, autoPost: true,
+            });
+            console.log(`[ACCOUNTING] Sales entry created for order ${order.orderNumber}: ${orderTotal} SAR`);
+          }
+        }
+      }
+    } catch (accountingError) {
+      console.error(`[ACCOUNTING] Failed to create journal entries for order:`, accountingError);
     }
 
     return { 
@@ -715,7 +611,7 @@ async function sendInvoiceEmail(to: string, invoiceNumber: string, invoiceData: 
 }
 
 // Configure multer for file uploads
-const uploadsDir = getUploadsDir('receipts');
+const uploadsDir = path.join(__dirname, '..', 'attached_assets', 'receipts');
 const storage_multer = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, uploadsDir);
@@ -872,7 +768,7 @@ async function calcFreeDrinkThreshold(tenantId: string, pointsPerSar = 20, fallb
   }
 }
 
-export async function registerRoutes(app: Express, options: { skipWebSocket?: boolean } = {}): Promise<Server> {
+export async function registerRoutes(app: Express): Promise<Server> {
   registerObjectStorageRoutes(app);
 
   // Send manual email to customer
@@ -954,7 +850,30 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
   });
 
   // --- Manually send promo to all customers ---
-  app.post("/api/push/send-promo", async (req: any, res) => {
+  // --- Test push notification (admin/owner only) ---
+  app.post("/api/push/test", requireAuth, requireAdmin, async (req: any, res) => {
+    try {
+      const employee = req.session?.employee;
+      const userId = employee?.id || employee?.username || 'admin';
+      const { PushSubscriptionModel, sendPushBySubscriptions } = await import("./push-service");
+      const subs = await PushSubscriptionModel.find({ userId });
+      if (subs.length === 0) {
+        return res.json({ success: false, message: "لم يتم العثور على اشتراك لهذا المستخدم. تأكد من تفعيل الإشعارات أولاً." });
+      }
+      await sendPushBySubscriptions(subs, {
+        title: "✅ اختبار الإشعارات",
+        body: "الإشعارات تعمل بشكل صحيح في الخلفية!",
+        url: "/admin/dashboard",
+        tag: "push-test",
+        type: "general",
+      });
+      res.json({ success: true, message: `تم إرسال إشعار تجريبي إلى ${subs.length} جهاز` });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to send test notification" });
+    }
+  });
+
+  app.post("/api/push/send-promo", requireAuth, requireAdmin, async (req: any, res) => {
     try {
       const { title, body, url } = req.body;
       if (!title || !body) return res.status(400).json({ error: "title and body are required" });
@@ -969,7 +888,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
   });
 
   // --- Manually trigger admin daily summary ---
-  app.post("/api/push/admin-summary", async (req: any, res) => {
+  app.post("/api/push/admin-summary", requireAuth, requireAdmin, async (req: any, res) => {
     try {
       const { sendAdminDailySummaryNow } = await import("./smart-scheduler");
       await sendAdminDailySummaryNow();
@@ -984,7 +903,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
     try {
       const { OrderModel } = await import("@shared/schema");
       const employee = req.session?.employee;
-      const tenantId = employee?.tenantId || getTenantIdFromRequest(req) || 'demo-tenant';
+      const tenantId = (employee as any)?.tenantId || getTenantIdFromRequest(req) || 'demo-tenant';
       const branchId = (req.query.branchId as string) || employee?.branchId;
 
       // 2-second burst cache: prevents DB hammering when multiple staff pages poll simultaneously
@@ -994,7 +913,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
 
       const query: any = {
         tenantId,
-        status: { $in: ['pending', 'in_progress', 'ready', 'payment_confirmed', 'confirmed', 'preparing', 'serving'] }
+        status: { $in: ['pending', 'in_progress', 'ready', 'payment_confirmed', 'confirmed', 'preparing', 'serving', 'delivered', 'received', 'suspended'] }
       };
       if (branchId) query.branchId = branchId;
 
@@ -1026,6 +945,29 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
     }
   });
 
+  // ── Curbside / Car Pickup Orders ─────────────────────────────────────────
+  app.get("/api/orders/curbside", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const { OrderModel } = await import("@shared/schema");
+      const employee = req.session?.employee;
+      const tenantId = (employee as any)?.tenantId || getTenantIdFromRequest(req) || 'demo-tenant';
+      const branchId = (req.query.branchId as string) || employee?.branchId;
+
+      const query: any = {
+        tenantId,
+        $or: [{ orderType: "car_pickup" }, { orderType: "car-pickup" }, { carPickup: true }],
+        status: { $in: ['pending', 'payment_confirmed', 'confirmed', 'in_progress', 'ready', 'delivered', 'received'] },
+      };
+      if (branchId) query.branchId = branchId;
+
+      const orders = await OrderModel.find(query).sort({ arrivalTime: 1, createdAt: -1 }).limit(50).lean();
+      res.json(orders);
+    } catch (err) {
+      console.error("[GET /api/orders/curbside] Error:", err);
+      res.status(500).json({ error: "Failed to fetch curbside orders" });
+    }
+  });
+
   app.post("/api/orders", async (req, res) => {
     try {
       const body = req.body;
@@ -1035,25 +977,39 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         'cash': 'cash',
         'card': 'pos',
         'apple_pay': 'apple_pay',
+        'paymob-apple-pay': 'paymob-apple-pay',
+        'neoleap-apple-pay': 'neoleap-apple-pay',
         'stc_pay': 'stc-pay',
+        'stc-pay': 'stc-pay',
         'qahwa-card': 'qahwa-card',
+        'qirox-card': 'qirox-card',
+        'loyalty-card': 'loyalty-card',
         'pos': 'pos',
         'pos-network': 'pos-network',
         'mada': 'mada',
         'split': 'split',
+        'paymob-card': 'paymob-card',
+        'paymob': 'paymob',
+        'geidea': 'geidea',
+        'bank_transfer': 'bank_transfer',
+        'rajhi': 'rajhi',
+        'alinma': 'alinma',
+        'ur': 'ur',
+        'barq': 'barq',
       };
 
       const tenantId = body.tenantId || getTenantIdFromRequest(req) || 'demo-tenant';
 
-      const mappedPaymentMethod = paymentMethodMap[body.paymentMethod] || body.paymentMethod || 'cash';
+      const mappedPaymentMethod = paymentMethodMap[body.paymentMethod] || body.paymentMethod || 'other';
 
       // Auto-confirm orders from POS channel with immediate payment methods
-      const autoConfirmMethods = ['cash', 'pos', 'pos-network', 'mada', 'apple_pay', 'stc-pay', 'qahwa-card', 'split'];
+      const autoConfirmMethods = ['cash', 'pos', 'pos-network', 'mada', 'apple_pay', 'paymob-apple-pay', 'neoleap-apple-pay', 'stc-pay', 'qahwa-card', 'qirox-card', 'split', 'paymob-card', 'geidea'];
       const isPosChannel = body.channel === 'pos';
       const shouldAutoConfirm = isPosChannel && autoConfirmMethods.includes(mappedPaymentMethod);
 
-      // ── QAHWA CARD / POINTS DISCOUNT VALIDATION ───────────────────────────
-      // Validate points redemption when pointsRedeemed is sent in the order body
+      // ── QAHWA CARD / POINTS DISCOUNT VALIDATION (ATOMIC) ─────────────────
+      // Uses findOneAndUpdate with $gte to atomically deduct points — prevents
+      // double-spend race conditions when two requests arrive simultaneously.
       const pointsRedeemedInBody = Number(body.pointsRedeemed) || 0;
       if (pointsRedeemedInBody > 0 || mappedPaymentMethod === 'qahwa-card') {
         const cardPhone = body.customerPhone || body.customerInfo?.customerPhone;
@@ -1061,22 +1017,55 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
           const cPhone = cardPhone.replace(/\D/g, '').replace(/^966/, '0').replace(/^9665/, '05');
           const phoneVariants = [cPhone, cardPhone, `+966${cPhone.slice(1)}`, `966${cPhone.slice(1)}`];
           const { LoyaltyCardModel: LCM } = await import("@shared/schema");
-          const loyCard = await LCM.findOne({ phoneNumber: { $in: phoneVariants } });
-          if (loyCard) {
-            const availPts = Number(loyCard.points) || 0;
-            const minPtsForRedemption = 100;
-            if (pointsRedeemedInBody > 0 && availPts < minPtsForRedemption) {
+
+          const bizCfg = await BusinessConfigModel.findOne({ tenantId }).lean().catch(() => null);
+          const pointsPerSar = Number((bizCfg as any)?.loyalty?.pointsPerSar) || 50;
+          const minPtsForRedemption = 100;
+
+          if (pointsRedeemedInBody > 0) {
+            // Atomic check-and-deduct: only succeeds if points >= requested amount
+            // This prevents race conditions — no separate read needed
+            const updatedLoyCard = await LCM.findOneAndUpdate(
+              {
+                phoneNumber: { $in: phoneVariants },
+                points: { $gte: Math.max(pointsRedeemedInBody, minPtsForRedemption) }
+              },
+              { $inc: { points: -pointsRedeemedInBody } },
+              { new: false }
+            );
+
+            if (!updatedLoyCard) {
+              // Either card not found or insufficient points — read to give correct error
+              const loyCard = await LCM.findOne({ phoneNumber: { $in: phoneVariants } });
+              if (!loyCard) {
+                return res.status(400).json({ error: "بطاقة الولاء غير موجودة" });
+              }
+              const availPts = Number(loyCard.points) || 0;
               return res.status(400).json({
                 error: `رصيد النقاط غير كافٍ للصرف`,
                 details: `لديك ${availPts} نقطة، والحد الأدنى للصرف ${minPtsForRedemption} نقطة`,
                 currentPoints: availPts,
                 requiredPoints: minPtsForRedemption,
+                code: 'INSUFFICIENT_POINTS',
               });
             }
-            const pointsToUse = Math.min(pointsRedeemedInBody, availPts);
-            const discountSar = parseFloat((pointsToUse / 50).toFixed(2));
-            body.pointsRedeemed = pointsToUse;
+
+            // Points deducted atomically — store in body for order record
+            const pointsToUse = Math.min(pointsRedeemedInBody, Number(updatedLoyCard.points));
+            const discountSar = parseFloat((pointsRedeemedInBody / pointsPerSar).toFixed(2));
+            body.pointsRedeemed = pointsRedeemedInBody;
             body.pointsValue = discountSar;
+            // Flag so points-awarding flow skips re-deduction on this order
+            body._pointsPreDeducted = true;
+          } else {
+            // qahwa-card payment without explicit pointsRedeemed — read-only lookup
+            const loyCard = await LCM.findOne({ phoneNumber: { $in: phoneVariants } });
+            if (loyCard) {
+              const availPts = Number(loyCard.points) || 0;
+              const discountSar = parseFloat((availPts / pointsPerSar).toFixed(2));
+              body.pointsRedeemed = availPts;
+              body.pointsValue = discountSar;
+            }
           }
         }
         if (mappedPaymentMethod === 'qahwa-card') {
@@ -1149,7 +1138,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         orderData.giftCardRemainingBalance = Number(card.balance) - deducted;
 
         // Deduct balance atomically — use findOneAndUpdate to avoid race conditions
-        await GiftCardModel.findOneAndUpdate(
+        const updatedCard = await GiftCardModel.findOneAndUpdate(
           { code: giftCardCode, status: 'active', balance: { $gte: deducted } },
           {
             $inc: { balance: -deducted },
@@ -1157,35 +1146,85 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
               status: Number(card.balance) - deducted <= 0 ? 'used' : 'active',
               updatedAt: new Date()
             }
-          }
+          },
+          { new: true }
         );
+        if (!updatedCard) {
+          return res.status(409).json({ error: "تعذّر خصم بطاقة الهدية — قد تكون مستخدمة بالفعل", code: "GIFT_CARD_RACE" });
+        }
+        orderData.giftCardRemainingBalance = Number(updatedCard.balance);
       }
       // ─────────────────────────────────────────────────────────────────────────
 
       const order = await storage.createOrder(orderData);
       const serializedOrder = serializeDoc(order);
       cache.invalidate('live-orders:');
+      // Invalidate analytics so dashboards reflect new order within 1 cycle
+      cache.invalidate('analytics:advanced:');
+      cache.invalidate('reports:unified:');
       
       // Only notify employees when order is confirmed (not when awaiting payment)
       if (orderData.status !== 'awaiting_payment') {
         wsManager.broadcastNewOrder(serializedOrder);
       }
 
+      // === Update active cashier shift totals (BEFORE response — financial data integrity) ===
+      // Runs synchronously to prevent data loss if server crashes between response and setImmediate.
+      try {
+        const shiftEmployeeId = orderData.employeeId || (req as any).employee?._id?.toString() || (req as any).employee?.id;
+        if (shiftEmployeeId && orderData.status !== 'awaiting_payment') {
+          const activeShift = await CashierShiftModel.findOne({ employeeId: shiftEmployeeId, status: 'open' });
+          if (activeShift) {
+            const amount = Number(orderData.totalAmount) || 0;
+            const method = ((orderData as any).paymentMethod || '').toLowerCase();
+            activeShift.totalSales += amount;
+            activeShift.totalOrders += 1;
+            activeShift.netRevenue += amount;
+            const ordId = serializedOrder.id || serializedOrder._id?.toString();
+            if (ordId && !activeShift.orderIds.includes(ordId)) activeShift.orderIds.push(ordId);
+            if (method === 'cash') {
+              activeShift.totalCashSales += amount;
+              activeShift.paymentBreakdown.cash = (activeShift.paymentBreakdown.cash || 0) + amount;
+            } else if (method === 'qahwa-card' || method === 'loyalty-card' || method === 'qirox-card') {
+              activeShift.totalDigitalSales += amount;
+              activeShift.paymentBreakdown.loyalty = (activeShift.paymentBreakdown.loyalty || 0) + amount;
+            } else if (method) {
+              // non-cash, non-loyalty, non-empty: card/digital/Apple Pay/etc.
+              activeShift.totalCardSales += amount;
+              activeShift.paymentBreakdown.card = (activeShift.paymentBreakdown.card || 0) + amount;
+            }
+            // if method is '' (unknown/pending), still counted in totalSales but not in a specific bucket
+            const type = ((orderData as any).orderType || 'takeaway').toLowerCase();
+            if (type === 'dine_in' || type === 'dine-in') activeShift.orderTypeBreakdown.dine_in = (activeShift.orderTypeBreakdown.dine_in || 0) + 1;
+            else if (type === 'car_pickup' || type === 'car-pickup') activeShift.orderTypeBreakdown.car_pickup = (activeShift.orderTypeBreakdown.car_pickup || 0) + 1;
+            else if (type === 'delivery') activeShift.orderTypeBreakdown.delivery = (activeShift.orderTypeBreakdown.delivery || 0) + 1;
+            else activeShift.orderTypeBreakdown.takeaway = (activeShift.orderTypeBreakdown.takeaway || 0) + 1;
+            await activeShift.save();
+          }
+        }
+      } catch (shiftErr) {
+        // Log but don't fail the order — shift can be recalculated from orders if needed
+        console.error('[SHIFT] ⚠️ Failed to update cashier shift totals:', shiftErr);
+      }
+
       res.status(201).json(serializedOrder);
 
-      // Increment salesCount for each ordered item (fire-and-forget, non-blocking)
+      // Increment salesCount for each ordered item (async, non-blocking — statistics only)
       setImmediate(async () => {
         try {
-          const orderItems: any[] = body.items || [];
-          for (const item of orderItems) {
-            const coffeeItemId = item.coffeeItemId || item.id;
-            const qty = Number(item.quantity) || 1;
-            if (coffeeItemId) {
-              await CoffeeItemModel.updateOne({ id: coffeeItemId }, { $inc: { salesCount: qty } }).catch(() => {});
+          const orderedItems: any[] = orderData.items || [];
+          for (const item of orderedItems) {
+            const itemId = item.coffeeItemId || item.id;
+            if (itemId) {
+              await CoffeeItemModel.findOneAndUpdate(
+                { id: itemId },
+                { $inc: { salesCount: Number(item.quantity) || 1 } }
+              );
             }
           }
+          cache.invalidate('coffee-items:');
         } catch (err) {
-          // Non-critical: ignore salesCount increment errors
+          console.error('[salesCount] Failed to increment:', err);
         }
       });
 
@@ -1212,6 +1251,49 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
           });
         } catch (notifErr) {
           console.error("[NOTIFY] Order creation notification failed:", notifErr);
+        }
+      });
+
+      // === Auto-Create Delivery Order for home delivery orders ===
+      setImmediate(async () => {
+        try {
+          const isDeliveryOrder = (
+            serializedOrder.orderType === 'delivery' ||
+            serializedOrder.deliveryType === 'delivery' ||
+            serializedOrder.deliveryMode === 'delivery'
+          );
+          if (!isDeliveryOrder) return;
+
+          // Check if delivery order already exists for this order
+          const existing = await DeliveryOrderModel.findOne({ orderId: serializedOrder.id || serializedOrder._id });
+          if (existing) return;
+
+          const branchLat = serializedOrder.branchLat || 24.7136;
+          const branchLng = serializedOrder.branchLng || 46.6753;
+          const customerLat = serializedOrder.customerLat || serializedOrder.deliveryLat || 0;
+          const customerLng = serializedOrder.customerLng || serializedOrder.deliveryLng || 0;
+
+          await deliveryService.createDeliveryOrder({
+            tenantId: serializedOrder.tenantId || 'demo-tenant',
+            orderId: serializedOrder.id || serializedOrder._id?.toString(),
+            orderNumber: serializedOrder.orderNumber,
+            branchId: serializedOrder.branchId,
+            branchLat,
+            branchLng,
+            customerName: serializedOrder.customerInfo?.customerName || serializedOrder.customerName || 'عميل',
+            customerPhone: serializedOrder.customerInfo?.customerPhone || serializedOrder.customerPhone || '',
+            customerAddress: serializedOrder.deliveryAddress || serializedOrder.customerAddress || '',
+            customerLat,
+            customerLng,
+            totalAmount: serializedOrder.totalAmount || 0,
+            deliveryFee: serializedOrder.deliveryFee || 0,
+            deliveryType: 'internal',
+            status: 'pending',
+            preparationMinutes: serializedOrder.estimatedPrepTimeInMinutes || 10,
+          });
+          console.log(`[DELIVERY] Auto-created delivery order for order ${serializedOrder.orderNumber || serializedOrder.id}`);
+        } catch (deliveryErr) {
+          console.error("[DELIVERY] Failed to auto-create delivery order:", deliveryErr);
         }
       });
 
@@ -1576,6 +1658,30 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
     }
   });
 
+  // Public settings alias — returns a subset of business-config safe for unauthenticated use
+  app.get("/api/public/settings", async (req, res) => {
+    try {
+      const tenantId = getTenantIdFromRequest(req) || "demo-tenant";
+      const config = await BusinessConfigModel.findOne({ tenantId }).lean();
+      if (!config) return res.json({});
+      res.json({
+        tradeNameAr: (config as any).tradeNameAr,
+        tradeNameEn: (config as any).tradeNameEn,
+        currency: (config as any).currency || 'SAR',
+        vatPercentage: (config as any).vatPercentage || 15,
+        isEmergencyClosed: (config as any).isEmergencyClosed || false,
+        maintenanceMode: (config as any).maintenanceMode || false,
+        allowGuestCheckout: (config as any).allowGuestCheckout ?? true,
+        minimumOrderAmount: (config as any).minimumOrderAmount || 0,
+        deliveryFee: (config as any).deliveryFee || 0,
+        timezone: (config as any).timezone || 'Asia/Riyadh',
+      });
+    } catch (error) {
+      console.error("Error fetching public settings:", error);
+      res.status(500).json({ error: "Failed to fetch public settings" });
+    }
+  });
+
   app.patch("/api/business-config", requireAuth, requireManager, async (req: AuthRequest, res) => {
     try {
       const tenantId = getTenantIdFromRequest(req) || "demo-tenant";
@@ -1640,6 +1746,17 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       order.updatedAt = new Date();
       await order.save();
       cache.invalidate('live-orders:');
+
+      // Audit log for status change
+      logFromRequest(req, {
+        action: status === 'cancelled' ? 'order.cancel' : 'order.status_change',
+        entityType: 'order',
+        entityId: orderId,
+        entityLabel: `طلب #${(order as any).orderNumber}`,
+        before: { status: oldStatus },
+        after: { status },
+        details: cancellationReason ? { reason: cancellationReason } : undefined,
+      });
 
       // Reverse totalSpent on loyalty card when order is cancelled by staff
       if (status === 'cancelled' && oldStatus !== 'cancelled' && order.customerId) {
@@ -1716,7 +1833,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
                   taxRate: VAT_RATE,
                   discountAmount: item.discountAmount || 0
                 })),
-                paymentMethod: order.paymentMethod || 'cash',
+                paymentMethod: order.paymentMethod || 'unknown',
                 branchId: order.branchId,
                 createdBy: employee?.id,
                 invoiceType: 'simplified'
@@ -1778,7 +1895,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       
       const query: any = { 
         tenantId, 
-        status: { $in: ['pending', 'in_progress', 'ready'] } 
+        status: { $in: ['pending', 'in_progress', 'ready', 'delivered', 'received', 'suspended'] } 
       };
       if (branchId) query.branchId = branchId;
       
@@ -1823,10 +1940,18 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
   app.delete("/api/orders/:id", requireAuth, requireManager, async (req: AuthRequest, res) => {
     try {
       const { id } = req.params;
+      const existingOrder = await OrderModel.findOne({ id }).lean() as any;
       const deleted = await storage.deleteOrder(id);
       if (!deleted) return res.status(404).json({ error: "Order not found" });
       const branchId = req.employee?.branchId;
       wsManager.broadcastToBranch(branchId || 'all', { type: 'orders_updated' });
+      logFromRequest(req, {
+        action: 'order.delete',
+        entityType: 'order',
+        entityId: id,
+        entityLabel: existingOrder ? `طلب #${existingOrder.orderNumber}` : `Order ${id}`,
+        details: { orderNumber: existingOrder?.orderNumber, amount: existingOrder?.totalAmount },
+      });
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting order:", error);
@@ -1989,7 +2114,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
     }
   });
 
-  app.delete("/api/tables/all", async (req, res) => {
+  app.delete("/api/tables/all", requireAuth, requireManager, async (req: AuthRequest, res) => {
     try {
       const result = await TableModel.deleteMany({});
       cache.invalidate('tables:');
@@ -2146,6 +2271,9 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
   });
 
   app.delete("/api/admin/clear-all-data", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(403).json({ error: 'Destructive demo cleanup disabled in production' });
+    }
     try {
       const tenantId = getTenantIdFromRequest(req) || 'demo-tenant';
       
@@ -2217,7 +2345,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
   // Public loyalty settings (no auth required) for customer-facing pages
   app.get("/api/public/loyalty-settings", async (req, res) => {
     try {
-      const tenantId = 'demo-tenant';
+      const tenantId = getTenantIdFromRequest(req) || 'demo-tenant';
       const ck = cacheKey('loyalty-settings', tenantId);
       const cached = cache.get<any>(ck);
       if (cached) return res.json(cached);
@@ -2250,7 +2378,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
 
   app.get("/api/loyalty-config", async (req, res) => {
     try {
-      const tenantId = 'demo-tenant';
+      const tenantId = getTenantIdFromRequest(req) || 'demo-tenant';
       const ck = cacheKey('loyalty-settings', tenantId);
       const cached = cache.get<any>(ck);
       if (cached) return res.json(cached);
@@ -2282,7 +2410,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
   });
 
   // Claim free drink - resets all customer points to 0
-  app.post("/api/loyalty/claim-free-drink", async (req, res) => {
+  app.post("/api/loyalty/claim-free-drink", requireAuth, async (req: AuthRequest, res) => {
     try {
       const { phone } = req.body;
       if (!phone) return res.status(400).json({ error: "رقم الهاتف مطلوب" });
@@ -2417,8 +2545,16 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
   });
 
   app.patch("/api/addons/:id", requireAuth, requireManager, async (req: AuthRequest, res) => {
-    const updated = await ProductAddonModel.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true });
-    res.json(updated);
+    try {
+      let updated = await ProductAddonModel.findOneAndUpdate({ id: req.params.id }, { $set: req.body }, { new: true });
+      if (!updated && req.params.id.match(/^[a-f\d]{24}$/i)) {
+        updated = await ProductAddonModel.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true });
+      }
+      if (!updated) return res.status(404).json({ error: "الإضافة غير موجودة" });
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "فشل في تحديث الإضافة" });
+    }
   });
 
   // Stock Movements API
@@ -2530,6 +2666,12 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       }
 
       invalidateCoffeeItemsCache(tenantId || 'demo-tenant');
+      logFromRequest(req, {
+        action: 'product.delete',
+        entityType: 'product',
+        entityId: id,
+        entityLabel: deletedItem.nameAr || deletedItem.nameEn || id,
+      });
       res.json({ 
         success: true, 
         message: "تم حذف المشروب وجميع البيانات المرتبطة به بنجاح" 
@@ -2559,17 +2701,27 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
           if (!addon.id) addon.id = nanoid();
           keepAddonIds.push(addon.id);
           try {
+            // Strip _id from the spread to avoid E11000 duplicate key on upsert
+            const { _id: _addonId, __v, ...addonData } = addon;
             await ProductAddonModel.findOneAndUpdate(
               { id: addon.id },
-              { $set: { id: addon.id, ...addon, category: addon.category || 'other', createdAt: addon.createdAt || new Date() } },
-              { upsert: true, new: true }
+              {
+                $set: { ...addonData, id: addon.id, category: addonData.category || 'other' },
+                $setOnInsert: { createdAt: new Date() },
+              },
+              { upsert: true, new: true, runValidators: false }
             );
             await CoffeeItemAddonModel.findOneAndUpdate(
               { coffeeItemId: itemId, addonId: addon.id },
-              { $set: { coffeeItemId: itemId, addonId: addon.id, isDefault: addon.isDefault || 0, minQuantity: addon.minQuantity || 0, maxQuantity: addon.maxQuantity || 10, createdAt: new Date() } },
-              { upsert: true }
+              {
+                $set: { coffeeItemId: itemId, addonId: addon.id, isDefault: addon.isDefault || 0, minQuantity: addon.minQuantity || 0, maxQuantity: addon.maxQuantity || 10 },
+                $setOnInsert: { createdAt: new Date() },
+              },
+              { upsert: true, runValidators: false }
             );
-          } catch (err) {
+          } catch (err: any) {
+            // Ignore duplicate key errors — the document already exists and was already updated
+            if (err?.code === 11000) continue;
             console.error("[PUT /api/coffee-items/:id] Error saving addon:", err);
           }
         }
@@ -2583,7 +2735,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
 
       const tenantId = getTenantIdFromRequest(req) || 'demo-tenant';
       invalidateCoffeeItemsCache(tenantId);
-      cache.invalidateKey(cacheKey('with-addons', 'global'));
+      cache.invalidate('with-addons');
       res.json(serializeDoc(updated));
     } catch (error) {
       console.error("[PUT /api/coffee-items/:id] Error:", error);
@@ -2613,14 +2765,6 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
     res.json(transfer);
   });
 
-  // --- DELIVERY INTEGRATION MOCK API ---
-  app.get("/api/integrations/delivery/mock-status", requireAuth, async (req: AuthRequest, res) => {
-    res.json({
-      hungerstation: { status: 'connected', latency: '120ms', ordersToday: 45 },
-      jahez: { status: 'connected', latency: '95ms', ordersToday: 32 },
-      toyou: { status: 'disconnected', lastActive: '2025-12-29' }
-    });
-  });
 
   // Real service status endpoint
   app.get("/api/integrations/delivery/service-status", requireAuth, async (req: AuthRequest, res) => {
@@ -2672,7 +2816,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       }
 
       if (!pg || pg.qahwaCardEnabled !== false) {
-        allMethods.push({ id: 'qahwa-card', nameAr: 'بطاقة مكان الشيف البخاري', nameEn: "مكان الشيف البخاري Card", details: 'ادفع ببطاقة الولاء', icon: 'fas fa-gift' });
+        allMethods.push({ id: 'qahwa-card', nameAr: 'بطاقة مكان الشيف', nameEn: "Chef's Card", details: 'ادفع ببطاقة الولاء', icon: 'fas fa-gift' });
       }
 
       // STC Pay — only show if explicitly enabled
@@ -2713,6 +2857,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         const hasLegacyCredentials = !!(pg.paymob?.apiKey && pg.paymob?.integrationId);
         if (hasSACredentials || hasLegacyCredentials) {
           allMethods.push({ id: 'paymob-card', nameAr: 'بطاقة بنكية', nameEn: 'Card Payment', details: 'مدى، فيزا، ماستر كارد عبر Paymob', icon: 'fas fa-credit-card', gateway: 'paymob' });
+          allMethods.push({ id: 'paymob-apple-pay', nameAr: 'Apple Pay', nameEn: 'Apple Pay', details: 'الدفع السريع عبر Apple Pay', icon: 'fas fa-mobile-alt', gateway: 'paymob' });
           if (!hasSACredentials && pg.paymob?.walletIntegrationId) {
             allMethods.push({ id: 'paymob-wallet', nameAr: 'محفظة إلكترونية', nameEn: 'Mobile Wallet', details: 'الدفع عبر المحفظة الإلكترونية', icon: 'fas fa-mobile-alt', gateway: 'paymob' });
           }
@@ -2720,6 +2865,25 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       }
 
       allMethods.push({ id: 'loyalty-card', nameAr: 'بطاقة كوبي (رقم العميل)', nameEn: 'Loyalty Card', details: 'خصم تلقائي ودفع بالنقاط', icon: 'fas fa-gift' });
+
+      // Append custom payment methods
+      if (pg?.customPaymentMethods?.length) {
+        for (const cm of pg.customPaymentMethods) {
+          if (cm.id && cm.nameAr) {
+            allMethods.push({
+              id: cm.id,
+              nameAr: cm.nameAr,
+              nameEn: cm.nameEn || cm.nameAr,
+              details: cm.nameAr,
+              icon: 'fas fa-credit-card',
+              emoji: cm.icon || '💳',
+              isCustom: true,
+              enabledForCustomer: cm.enabledForCustomer !== false,
+              enabledForPos: cm.enabledForPos !== false,
+            });
+          }
+        }
+      }
 
       cache.set(ck, allMethods, CACHE_TTL.PAYMENT_METHODS);
       res.json(allMethods);
@@ -2863,6 +3027,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       if (body.bankAccountHolder !== undefined) updates['paymentGateway.bankAccountHolder'] = body.bankAccountHolder;
       if (body.stcPayEnabled !== undefined) updates['paymentGateway.stcPayEnabled'] = body.stcPayEnabled;
       if (body.paymentTestMode !== undefined) updates['paymentGateway.paymentTestMode'] = !!body.paymentTestMode;
+      if (Array.isArray(body.customPaymentMethods)) updates['paymentGateway.customPaymentMethods'] = body.customPaymentMethods;
 
       if (body.neoleapClientId) updates['paymentGateway.neoleap.clientId'] = body.neoleapClientId;
       if (body.neoleapClientSecret) updates['paymentGateway.neoleap.clientSecret'] = body.neoleapClientSecret;
@@ -2901,6 +3066,87 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
   });
 
   // Initialize payment session (gateway-agnostic)
+  // ── Public QR-pay endpoints ─────────────────────────────────────────────
+  // Helper: build a safe, minimal public view of an order for the pay page.
+  // Does NOT expose customer PII (name/phone), notes, employee, tenant, etc.
+  const buildPublicPayPayload = (order: any) => {
+    const totalAmount = Number(order.totalAmount || order.total || 0);
+    const subtotal = Number(order.subtotal || (totalAmount / 1.15));
+    const tax = Number(order.tax || (totalAmount - subtotal));
+    const items = (Array.isArray(order.items) ? order.items : []).map((it: any) => {
+      const qty = Number(it.quantity || 1);
+      const price = Number(it.price || it.unitPrice || 0);
+      return {
+        name: it.name || it.nameAr || it.coffeeItem?.nameAr || '',
+        quantity: qty,
+        price,
+        total: +(price * qty).toFixed(2),
+      };
+    });
+    const alreadyPaid =
+      order.paymentStatus === 'paid' ||
+      order.status === 'payment_confirmed' ||
+      order.status === 'completed';
+    return {
+      id: order.id,
+      orderNumber: order.orderNumber,
+      status: order.status,
+      paymentStatus: order.paymentStatus || 'pending',
+      total: +totalAmount.toFixed(2),
+      subtotal: +subtotal.toFixed(2),
+      tax: +tax.toFixed(2),
+      tableNumber: order.tableNumber || undefined,
+      items,
+      alreadyPaid,
+    };
+  };
+
+  // Lookup by unguessable nanoid `id` field — avoids IDOR via predictable
+  // `orderNumber` (which wraps `ORD#0001..0999`). Tenant is NOT trusted from
+  // the request; nanoid is globally unique across tenants.
+  app.get("/api/pay/order/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (!id || id.length < 8) return res.status(404).json({ error: "الفاتورة غير موجودة" });
+      const order = await OrderModel.findOne({ id }).lean() as any;
+      if (!order) return res.status(404).json({ error: "الفاتورة غير موجودة" });
+      return res.json(buildPublicPayPayload(order));
+    } catch (err: any) {
+      console.error('[pay/order]', err);
+      return res.status(500).json({ error: "خطأ في جلب الفاتورة" });
+    }
+  });
+
+  // Returns the table info + any open/unpaid bills for that table's QR token.
+  // Tenant is taken from the table record itself, never from the client.
+  app.get("/api/pay/table/:qrToken", async (req, res) => {
+    try {
+      const { qrToken } = req.params;
+      const table = await storage.getTableByQRToken(qrToken);
+      if (!table) return res.status(404).json({ error: "الطاولة غير موجودة" });
+
+      const tenantId = (table as any).tenantId;
+      if (!tenantId) return res.status(404).json({ error: "الطاولة غير موجودة" });
+
+      const orders = await OrderModel.find({
+        tenantId,
+        tableNumber: table.tableNumber,
+        $and: [
+          { paymentStatus: { $ne: 'paid' } },
+          { status: { $nin: ['cancelled', 'completed', 'payment_confirmed'] } },
+        ],
+      }).sort({ createdAt: -1 }).limit(10).lean() as any[];
+
+      return res.json({
+        table: { tableNumber: table.tableNumber },
+        bills: orders.map(buildPublicPayPayload),
+      });
+    } catch (err: any) {
+      console.error('[pay/table]', err);
+      return res.status(500).json({ error: "خطأ في جلب فواتير الطاولة" });
+    }
+  });
+
   app.post("/api/payments/init", async (req, res) => {
     try {
       const { amount, orderId, currency = 'SAR', customerEmail, customerPhone, customerName, returnUrl } = req.body;
@@ -2909,7 +3155,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         return res.status(400).json({ error: "المبلغ مطلوب" });
       }
 
-      const tenantId = 'demo-tenant';
+      const tenantId = getTenantIdFromRequest(req) || 'demo-tenant';
       const config = await BusinessConfigModel.findOne({ tenantId }).lean();
       const pg = (config as any)?.paymentGateway;
 
@@ -3076,19 +3322,12 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
             ? pg.paymob.integrationIds.map(Number).filter(Boolean)
             : [];
 
-          // Determine site URL from request or env
-          const siteOrigin = process.env.SITE_URL
-            || (req.headers.origin as string)
-            || `${req.protocol}://${req.headers.host}`
-            || 'https://www.chefsplace.online';
-
           try {
             const amountHalalas = Math.round(Number(amount) * 100);
             const intentBody: any = {
               amount: amountHalalas,
               currency: currency || 'SAR',
-              // Only include payment_methods if we have IDs — omitting lets PayMob show all methods
-              ...(integrationIds.length > 0 ? { payment_methods: integrationIds } : {}),
+              payment_methods: integrationIds,
               items: [],
               billing_data: {
                 first_name: (customerName || 'Guest').split(' ')[0] || 'Guest',
@@ -3096,7 +3335,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
                 email: customerEmail || 'guest@chefsplace.online',
                 phone_number: customerPhone || '0500000000',
                 street: 'N/A', building: 'N/A', floor: 'N/A',
-                apartment: 'N/A', city: 'Riyadh', country: 'SAU',
+                apartment: 'N/A', city: 'Yanbu', country: 'SAU',
                 state: 'N/A', postal_code: 'N/A',
               },
               customer: {
@@ -3107,10 +3346,10 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
               },
               extras: { order_ref: orderId || internalSessionId },
               special_reference: orderId || internalSessionId,
-              notification_url: `${siteOrigin}/api/payments/paymob/webhook`,
+              notification_url: `${process.env.SITE_URL || 'https://www.chefsplace.online'}/api/payments/paymob/webhook`,
               redirection_url: returnUrl
                 ? `${returnUrl}${returnUrl.includes('?') ? '&' : '?'}session=${internalSessionId}`
-                : `${siteOrigin}/payment-return-iframe?session=${internalSessionId}&orderRef=${encodeURIComponent(orderId || internalSessionId)}`,
+                : `${process.env.SITE_URL || 'https://www.chefsplace.online'}/payment-return-iframe?session=${internalSessionId}&orderRef=${encodeURIComponent(orderId || internalSessionId)}`,
             };
 
             const intentRes = await fetch(`${baseUrl}/v1/intention/`, {
@@ -3243,7 +3482,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         return res.status(400).json({ verified: false, error: "معرّف الجلسة مطلوب" });
       }
 
-      const tenantId = 'demo-tenant';
+      const tenantId = getTenantIdFromRequest(req) || 'demo-tenant';
       const config = await BusinessConfigModel.findOne({ tenantId });
       const pg = config?.paymentGateway;
       const provider = reqProvider || pg?.provider;
@@ -3484,7 +3723,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       const body = req.body;
       console.log('[Geidea Webhook] Received:', JSON.stringify(body));
 
-      const tenantId = 'demo-tenant';
+      const tenantId = getTenantIdFromRequest(req) || 'demo-tenant';
       const config = await BusinessConfigModel.findOne({ tenantId });
       const pg = config?.paymentGateway;
 
@@ -3535,7 +3774,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       if (!amount || Number(amount) <= 0) {
         return res.status(400).json({ error: "المبلغ مطلوب" });
       }
-      const tenantId = 'demo-tenant';
+      const tenantId = getTenantIdFromRequest(req) || 'demo-tenant';
       const config = await BusinessConfigModel.findOne({ tenantId });
       const pg = config?.paymentGateway;
       if (!pg || pg.provider !== 'geidea' || !pg.geidea?.publicKey || !pg.geidea?.apiPassword) {
@@ -3570,7 +3809,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
   // Payment simulation endpoint — only works when paymentTestMode is enabled
   app.post("/api/payments/simulate-success", async (req, res) => {
     try {
-      const tenantId = 'demo-tenant';
+      const tenantId = getTenantIdFromRequest(req) || 'demo-tenant';
       const config = await BusinessConfigModel.findOne({ tenantId });
       const pg = config?.paymentGateway;
       if (!pg?.paymentTestMode) {
@@ -3599,7 +3838,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
   // Business config — expose paymentTestMode to frontend (no auth needed, read-only)
   app.get("/api/payments/config", async (req, res) => {
     try {
-      const tenantId = 'demo-tenant';
+      const tenantId = getTenantIdFromRequest(req) || 'demo-tenant';
       const config = await BusinessConfigModel.findOne({ tenantId });
       const pg = config?.paymentGateway;
       return res.json({
@@ -3738,7 +3977,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
   app.get("/api/payments/order-status/:orderNumber", async (req, res) => {
     try {
       const { orderNumber } = req.params;
-      const tenantId = 'demo-tenant';
+      const tenantId = getTenantIdFromRequest(req) || 'demo-tenant';
       const order = await OrderModel.findOne({ tenantId, orderNumber }).lean() as any;
       if (!order) {
         return res.json({ found: false, paid: false });
@@ -3834,7 +4073,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       const body = req.body;
       console.log('[Paymob Webhook]', JSON.stringify(body));
 
-      const tenantId = 'demo-tenant';
+      const tenantId = getTenantIdFromRequest(req) || 'demo-tenant';
       const config = await BusinessConfigModel.findOne({ tenantId });
       const hmacSecret = config?.paymentGateway?.paymob?.hmacSecret;
 
@@ -3982,45 +4221,9 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       }
 
       if (pg.provider === 'paymob') {
-        const secretKey = pg.paymob?.secretKey || process.env.PAYMOB_SECRET_KEY;
-        const publicKey = pg.paymob?.publicKey || process.env.PAYMOB_PUBLIC_KEY;
         const apiKey = pg.paymob?.apiKey;
-
-        // ── PayMob Saudi Arabia test (Secret Key / Intention API) ──
-        if (secretKey && publicKey) {
-          try {
-            const baseUrl = pg.paymob?.baseUrl || 'https://ksa.paymob.com';
-            const testRes = await fetch(`${baseUrl}/v1/intention/`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${secretKey}` },
-              body: JSON.stringify({
-                amount: 100,
-                currency: 'SAR',
-                payment_methods: [],
-                items: [],
-                billing_data: {
-                  first_name: 'Test', last_name: 'Test', email: 'test@test.com',
-                  phone_number: '0500000000', street: 'N/A', building: 'N/A',
-                  floor: 'N/A', apartment: 'N/A', city: 'Riyadh', country: 'SAU',
-                  state: 'N/A', postal_code: 'N/A',
-                },
-                special_reference: `test-${Date.now()}`,
-              }),
-            });
-            const testData = await testRes.json() as any;
-            if (testData.client_secret) {
-              return res.json({ success: true, message: "اتصال Paymob السعودية ناجح ✓", provider: 'paymob', flow: 'sa' });
-            } else {
-              return res.json({ success: false, message: "فشل اتصال Paymob — تحقق من Secret Key و Public Key", details: testData?.detail || testData?.message || JSON.stringify(testData).slice(0, 150) });
-            }
-          } catch (err: any) {
-            return res.json({ success: false, message: `خطأ في الاتصال بـ Paymob: ${err.message}` });
-          }
-        }
-
-        // ── PayMob Legacy test (Egypt / API Key) ──
         if (!apiKey) {
-          return res.json({ success: false, message: "مفاتيح Paymob غير مكوّنة — أدخل Secret Key و Public Key" });
+          return res.json({ success: false, message: "مفتاح API لـ Paymob غير مكوّن" });
         }
         try {
           const authRes = await fetch('https://accept.paymob.com/api/auth/tokens', {
@@ -4135,34 +4338,66 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
 
       await new Promise<void>((resolve, reject) => {
         const socket = new net.Socket();
-        let resolved = false;
+        let resolved    = false;
         let writeStarted = false;
 
-        const cleanup = (err?: Error) => {
+        // Dynamic timeout: minimum 10s + 1s per 10KB — handles large raster receipts
+        const dynamicTimeout = Math.max(Number(timeout) || 10000, Math.ceil(printBuffer.length / 10000) * 1000);
+
+        const onError = (err: Error) => {
           if (resolved) return;
           resolved = true;
           socket.destroy();
-          if (err) reject(err);
-          else resolve();
+          reject(err);
         };
 
-        socket.setTimeout(Number(timeout));
-        socket.on('error', (err) => cleanup(err));
-        socket.on('timeout', () => cleanup(new Error(`انتهت مهلة الاتصال بـ ${ip}:${port}`)));
-        // Only auto-resolve on close if we haven't started writing yet;
-        // during a write the write-callback (or error) handles resolution.
-        socket.on('close', () => { if (!writeStarted) cleanup(); });
+        const onDone = () => {
+          if (resolved) return;
+          resolved = true;
+          resolve();
+        };
 
-        socket.connect(Number(port), ip, () => {
+        socket.setTimeout(dynamicTimeout);
+        socket.on('error', (err) => onError(err));
+        socket.on('timeout', () => {
+          if (!writeStarted) {
+            onError(new Error(`انتهت مهلة الاتصال بـ ${ip}:${port}`));
+          } else {
+            // Timeout after write started — close gracefully
+            socket.destroy();
+            onDone();
+          }
+        });
+        // Resolve when connection fully closes = all data flushed to printer
+        socket.on('close', onDone);
+
+        socket.connect(Number(port), ip, async () => {
           writeStarted = true;
-          socket.write(printBuffer, (err) => {
-            if (err) {
-              cleanup(err);
-            } else {
-              // Give printer 800ms to process all data before closing
-              setTimeout(() => cleanup(), 800);
+          // ── Chunked write — prevents printer buffer overflow on large receipts ──
+          // Most thermal printers (Xprinter, Sunmi, Epson clones) have a 4-8 KB
+          // internal receive buffer. Sending the full payload at once causes garbled
+          // output on receipts with 5+ items. We split into 512-byte chunks and add
+          // a 30 ms delay between each to give the printer time to process.
+          const CHUNK_SIZE  = 512;
+          const CHUNK_DELAY = 30; // ms between chunks
+
+          try {
+            for (let offset = 0; offset < printBuffer.length; offset += CHUNK_SIZE) {
+              if (resolved) return; // socket already errored
+              const chunk = printBuffer.slice(offset, offset + CHUNK_SIZE);
+              await new Promise<void>((res, rej) => {
+                socket.write(chunk, (err) => (err ? rej(err) : res()));
+              });
+              // Add delay between chunks (not after the last one)
+              if (offset + CHUNK_SIZE < printBuffer.length) {
+                await new Promise(r => setTimeout(r, CHUNK_DELAY));
+              }
             }
-          });
+            // All chunks sent — graceful close (FIN) so buffered data is flushed
+            socket.end();
+          } catch (err: any) {
+            onError(err);
+          }
         });
       });
 
@@ -4286,6 +4521,55 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
 
   // ==================== CASHIER SHIFT MANAGEMENT ====================
 
+  // ─── Helper: aggregate order items into productsByCategory ──────────────────
+  async function aggregateShiftProducts(tenantId: string, orders: any[]): Promise<Array<{categoryNameAr: string; items: Array<{nameAr: string; quantity: number; totalAmount: number}>}>> {
+    try {
+      const categories = await MenuCategoryModel.find({ tenantId }).select('id nameAr').lean();
+      const categoryMap = new Map<string, string>(categories.map((c: any) => [c.id, c.nameAr]));
+
+      const productMap = new Map<string, {nameAr: string; categoryId: string; categoryNameAr: string; quantity: number; totalAmount: number}>();
+
+      for (const order of orders) {
+        let items: any[] = [];
+        try {
+          items = Array.isArray((order as any).items) ? (order as any).items : JSON.parse((order as any).items || '[]');
+        } catch { continue; }
+
+        for (const item of items) {
+          const nameAr = item.coffeeItem?.nameAr || item.nameAr || item.name || 'منتج';
+          const qty = Number(item.quantity) || 1;
+          const price = Number(item.price) || 0;
+          const categoryId = item.category || item.coffeeItem?.category || '';
+          const categoryNameAr = categoryMap.get(categoryId) || 'أخرى';
+          const key = `${categoryId}::${nameAr}`;
+          if (productMap.has(key)) {
+            const ex = productMap.get(key)!;
+            ex.quantity += qty;
+            ex.totalAmount += qty * price;
+          } else {
+            productMap.set(key, { nameAr, categoryId, categoryNameAr, quantity: qty, totalAmount: qty * price });
+          }
+        }
+      }
+
+      const grouped = new Map<string, {categoryNameAr: string; items: any[]}>();
+      for (const p of productMap.values()) {
+        if (!grouped.has(p.categoryId)) grouped.set(p.categoryId, { categoryNameAr: p.categoryNameAr, items: [] });
+        grouped.get(p.categoryId)!.items.push({ nameAr: p.nameAr, quantity: p.quantity, totalAmount: p.totalAmount });
+      }
+      return Array.from(grouped.values())
+        .map(cat => ({ ...cat, items: cat.items.sort((a: any, b: any) => b.quantity - a.quantity) }))
+        .sort((a, b) => a.categoryNameAr.localeCompare(b.categoryNameAr, 'ar'));
+    } catch { return []; }
+  }
+
+  // ─── Helper: get start-of-day UTC for a given local offset ─────────────────
+  function getLocalStartOfDay(now: Date, tzOffset: number): Date {
+    const localDate = new Date(now.getTime() + tzOffset * 3600000);
+    const localMidnight = new Date(Date.UTC(localDate.getUTCFullYear(), localDate.getUTCMonth(), localDate.getUTCDate(), 0, 0, 0, 0));
+    return new Date(localMidnight.getTime() - tzOffset * 3600000);
+  }
+
   // Open a new cashier shift
   app.post("/api/shifts/open", requireAuth, async (req: AuthRequest, res) => {
     try {
@@ -4294,10 +4578,8 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         return res.status(403).json({ error: "غير مصرح لك بفتح وردية" });
       }
 
-      const { openingCash, notes, continueFromAuto } = req.body;
+      const { openingCash, notes } = req.body;
       const employeeId = (req.employee as any)._id?.toString() || (req.employee as any).id;
-      const tenantId = getTenantIdFromRequest(req) || (req.employee as any).tenantId || "demo-tenant";
-      const branchId = req.employee.branchId || 'main';
 
       // Check if employee already has an open shift
       const existingShift = await CashierShiftModel.findOne({ 
@@ -4312,90 +4594,35 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         });
       }
 
-      const shiftCount = await CashierShiftModel.countDocuments({ branchId });
+      const shiftCount = await CashierShiftModel.countDocuments({
+        branchId: req.employee.branchId || 'main'
+      });
       const shiftNumber = `SH-${Date.now().toString(36).toUpperCase()}-${(shiftCount + 1).toString().padStart(4, '0')}`;
-
-      // Optional: seed the new shift with the current auto-shift period's orders so the
-      // employee's manual shift "continues" from the auto period (no order is lost).
-      let seed = {
-        openedAt: new Date(),
-        orderIds: [] as string[],
-        totalSales: 0, totalOrders: 0,
-        totalCashSales: 0, totalCardSales: 0, totalDigitalSales: 0,
-        totalDiscounts: 0, totalVAT: 0, netRevenue: 0,
-        paymentBreakdown: { cash: 0, card: 0, loyalty: 0 },
-        orderTypeBreakdown: { dine_in: 0, takeaway: 0, car_pickup: 0, delivery: 0, online: 0 },
-      };
-      if (continueFromAuto) {
-        try {
-          const cfg = await BusinessConfigModel.findOne({ tenantId }).lean() as any;
-          const hours = Number(cfg?.autoShiftHours || 12);
-          const now = await getEffectiveNow(tenantId);
-          const period = getAutoShiftPeriod(now, hours);
-          const manualShifts = await CashierShiftModel.find({
-            tenantId, branchId,
-            $or: [
-              { openedAt: { $gte: period.start, $lte: now } },
-              { closedAt: { $gte: period.start, $lte: now } },
-              { status: 'active', openedAt: { $lte: now } },
-            ],
-          }).lean();
-          const coveredIds = new Set<string>();
-          for (const s of manualShifts as any[]) {
-            for (const oid of (s.orderIds || [])) coveredIds.add(String(oid));
-          }
-          const orders = await OrderModel.find({
-            tenantId, branchId,
-            createdAt: { $gte: period.start, $lte: now },
-            status: { $ne: 'cancelled' },
-          }).lean();
-          const filtered = orders.filter((o: any) => !coveredIds.has(String(o.id || o._id)));
-          const { coffeeItemMap, categoryMap } = await loadMenuMaps(tenantId);
-          const summary = aggregateOrdersAsShift(filtered, period.start, now, coffeeItemMap, categoryMap);
-          seed.openedAt = period.start;
-          seed.orderIds = filtered.map((o: any) => String(o.id || o._id));
-          seed.totalSales = summary.totalSales || 0;
-          seed.totalOrders = summary.totalOrders || 0;
-          seed.totalCashSales = summary.totalCashSales || 0;
-          seed.totalCardSales = summary.totalCardSales || 0;
-          seed.totalDigitalSales = summary.totalDigitalSales || 0;
-          seed.totalDiscounts = summary.totalDiscounts || 0;
-          seed.totalVAT = summary.totalVAT || 0;
-          seed.netRevenue = summary.netRevenue || 0;
-          seed.paymentBreakdown = summary.paymentBreakdown || seed.paymentBreakdown;
-          seed.orderTypeBreakdown = summary.orderTypeBreakdown || seed.orderTypeBreakdown;
-        } catch (e) {
-          console.warn("[SHIFT] continueFromAuto seed failed, opening empty shift:", e);
-        }
-      }
 
       const newShift = await CashierShiftModel.create({
         shiftNumber,
         employeeId,
         employeeName: req.employee.fullName || req.employee.username,
-        branchId,
+        branchId: req.employee.branchId || 'main',
         branchName: '',
         status: 'open',
-        openedAt: seed.openedAt,
+        openedAt: new Date(),
         openingCash: Number(openingCash) || 0,
         notes: notes || '',
-        totalSales: seed.totalSales,
-        totalOrders: seed.totalOrders,
-        totalCashSales: seed.totalCashSales,
-        totalCardSales: seed.totalCardSales,
-        totalDigitalSales: seed.totalDigitalSales,
+        totalSales: 0,
+        totalOrders: 0,
+        totalCashSales: 0,
+        totalCardSales: 0,
+        totalDigitalSales: 0,
         totalRefunds: 0,
-        totalDiscounts: seed.totalDiscounts,
+        totalDiscounts: 0,
         totalCancelledOrders: 0,
-        totalVAT: seed.totalVAT,
-        netRevenue: seed.netRevenue,
-        paymentBreakdown: seed.paymentBreakdown,
-        orderTypeBreakdown: seed.orderTypeBreakdown,
-        orderIds: seed.orderIds,
-        tenantId,
+        totalVAT: 0,
+        netRevenue: 0,
+        orderIds: [],
       });
 
-      console.log(`[SHIFT] Opened shift ${shiftNumber} by ${req.employee.username}${continueFromAuto ? ' (continued from auto-period, ' + seed.orderIds.length + ' orders)' : ''}`);
+      console.log(`[SHIFT] Opened shift ${shiftNumber} by ${req.employee.username}`);
       res.status(201).json(newShift);
     } catch (error: any) {
       console.error("[SHIFT] Error opening shift:", error);
@@ -4406,15 +4633,74 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
   // Get active shift for current employee
   app.get("/api/shifts/active", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const employeeId = (req.employee as any)?._id?.toString() || (req.employee as any)?.id;
-      if (!employeeId) return res.json(null);
+      const empMongo = (req.employee as any)?._id?.toString();
+      const empNano  = (req.employee as any)?.id;
+      if (!empMongo && !empNano) return res.json(null);
 
-      const activeShift = await CashierShiftModel.findOne({ 
-        employeeId, 
-        status: 'open' 
-      }).lean();
+      // Short cache — employee shift data refreshes every ~15s on the client; 10s cache avoids Atlas round-trip
+      const shiftActiveCk = cacheKey('shift-active', empNano || empMongo);
+      const shiftActiveCached = cache.get<any>(shiftActiveCk);
+      if (shiftActiveCached !== null) return res.json(shiftActiveCached);
 
-      res.json(activeShift || null);
+      // Try both id formats
+      const activeShift = await CashierShiftModel.findOne({
+        employeeId: { $in: [empMongo, empNano].filter(Boolean) },
+        status: 'open',
+      }).lean() as any;
+
+      if (!activeShift) return res.json(null);
+
+      // ── Real-time recalculation from orders placed since shift opened ──────
+      try {
+        const { OrderModel: OM } = await import('@shared/schema');
+        const tenantId = getTenantIdFromRequest(req) || 'demo-tenant';
+        const empBranchId = (req.employee as any)?.branchId;
+        // Build a flexible query — match by employeeId (any format) OR channel=pos in the same branch
+        const shiftQuery: any = {
+          tenantId,
+          createdAt: { $gte: new Date(activeShift.openedAt) },
+          status: { $nin: ['cancelled', 'awaiting_payment'] },
+        };
+        if (empBranchId) {
+          // Only count POS orders from this branch during the shift window
+          shiftQuery.branchId = empBranchId;
+          shiftQuery.channel = 'pos';
+        } else {
+          // Fallback: filter by employeeId in any format
+          const empIds = [empMongo, empNano].filter(Boolean);
+          if (empIds.length) shiftQuery.employeeId = { $in: empIds };
+        }
+        const shiftOrders = await OM.find(shiftQuery).lean();
+
+        let totalOrders = shiftOrders.length;
+        let totalSales = 0, totalCashSales = 0, totalCardSales = 0, totalDigitalSales = 0;
+        const paymentBreakdown: Record<string, number> = { cash: 0, card: 0, loyalty: 0 };
+
+        for (const o of shiftOrders) {
+          const amt = Number((o as any).totalAmount) || 0;
+          totalSales += amt;
+          const m = ((o as any).paymentMethod || '').toLowerCase();
+          if (m === 'cash') { totalCashSales += amt; paymentBreakdown.cash += amt; }
+          else if (m === 'qahwa-card' || m === 'qirox-card' || m === 'loyalty-card' || m === 'loyalty') { totalDigitalSales += amt; paymentBreakdown.loyalty += amt; }
+          else { totalCardSales += amt; paymentBreakdown.card += amt; }
+        }
+
+        const shiftResponse = {
+          ...activeShift,
+          totalOrders,
+          totalSales: Math.round(totalSales * 100) / 100,
+          totalCashSales: Math.round(totalCashSales * 100) / 100,
+          totalCardSales: Math.round(totalCardSales * 100) / 100,
+          totalDigitalSales: Math.round(totalDigitalSales * 100) / 100,
+          paymentBreakdown,
+        };
+        cache.set(shiftActiveCk, shiftResponse, 10);
+        return res.json(shiftResponse);
+      } catch (_) {
+        // Fallback to stored values if recalculation fails
+        cache.set(shiftActiveCk, activeShift, 10);
+        return res.json(activeShift);
+      }
     } catch (error) {
       console.error("[SHIFT] Error getting active shift:", error);
       res.status(500).json({ error: "فشل في جلب الوردية النشطة" });
@@ -4436,16 +4722,10 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         return res.json({ success: true, message: "لا توجد وردية مفتوحة" });
       }
 
-      // Idempotency: if this order is already attached to the shift (e.g. it was
-      // seeded from an auto-shift period via continueFromAuto), do not double-count.
-      if (orderId && (activeShift.orderIds || []).map(String).includes(String(orderId))) {
-        return res.json({ success: true, shift: activeShift, alreadyCounted: true });
-      }
-
       const amount = Number(totalAmount) || 0;
       const discountAmt = Number(discount) || 0;
       const vatAmt = Number(vat) || 0;
-      const method = (paymentMethod || 'cash').toLowerCase();
+      const method = (paymentMethod || '').toLowerCase();
       const type = (orderType || 'takeaway').toLowerCase();
 
       activeShift.totalSales += amount;
@@ -4458,7 +4738,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       if (method === 'cash') {
         activeShift.totalCashSales += amount;
         activeShift.paymentBreakdown.cash += amount;
-      } else if (method === 'qahwa-card' || method === 'loyalty-card') {
+      } else if (method === 'qahwa-card' || method === 'qirox-card' || method === 'loyalty-card' || method === 'loyalty') {
         activeShift.totalDigitalSales += amount;
         activeShift.paymentBreakdown.loyalty += amount;
       } else {
@@ -4611,131 +4891,14 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
     }
   });
 
-  // Merge multiple shifts into a unified Z-Report (no destructive change to source shifts)
-  app.post("/api/shifts/merge", requireAuth, async (req: AuthRequest, res) => {
-    try {
-      const allowedRoles = ['cashier', 'supervisor', 'branch_manager', 'manager', 'admin', 'owner'];
-      if (!req.employee || !allowedRoles.includes(req.employee.role)) {
-        return res.status(403).json({ error: "غير مصرح لك بدمج الورديات" });
-      }
-      const { shiftIds } = req.body as { shiftIds: string[] };
-      if (!Array.isArray(shiftIds) || shiftIds.length < 2) {
-        return res.status(400).json({ error: "اختر وردتين على الأقل للدمج" });
-      }
-      const tenantId = getTenantIdFromRequest(req) || (req.employee as any)?.tenantId || 'demo-tenant';
-      const validIds = shiftIds.filter((x: string) => /^[0-9a-fA-F]{24}$/.test(x));
-
-      // Tenant-scope + closed-only filter for merge eligibility
-      const shiftFilter: any = { _id: { $in: validIds }, tenantId, status: 'closed' };
-      const elevatedRoles = ['owner', 'admin', 'branch_manager', 'manager'];
-      const isElevated = elevatedRoles.includes(req.employee.role);
-      if (!isElevated && req.employee.branchId) {
-        shiftFilter.branchId = req.employee.branchId;
-      }
-
-      const shifts: any[] = await CashierShiftModel.find(shiftFilter).lean();
-      if (shifts.length === 0) return res.status(404).json({ error: "لم يتم العثور على ورديات مغلقة قابلة للدمج" });
-      if (shifts.length < 2) return res.status(400).json({ error: "يجب اختيار وردتين مغلقتين على الأقل للدمج" });
-
-      // Ensure all merged shifts belong to the same branch (data integrity for Z-report)
-      const branches = new Set(shifts.map(s => s.branchId || ''));
-      if (branches.size > 1) {
-        return res.status(400).json({ error: "لا يمكن دمج ورديات من فروع مختلفة" });
-      }
-
-      const merged: any = {
-        shiftNumber: 'MERGED-' + Date.now(),
-        employeeName: shifts.map(s => s.employeeName).filter(Boolean).join(' + '),
-        branchName: shifts[0]?.branchName || 'الرئيسي',
-        openedAt: shifts.reduce((a, s) => !a || new Date(s.openedAt) < new Date(a) ? s.openedAt : a, null as any),
-        closedAt: shifts.reduce((a, s) => !a || (s.closedAt && new Date(s.closedAt) > new Date(a)) ? s.closedAt : a, null as any),
-        openingCash: shifts.reduce((s, x) => s + (x.openingCash || 0), 0),
-        closingCash: shifts.reduce((s, x) => s + (x.closingCash || 0), 0),
-        expectedCash: shifts.reduce((s, x) => s + (x.expectedCash || 0), 0),
-        cashDifference: shifts.reduce((s, x) => s + (x.cashDifference || 0), 0),
-        totalSales: shifts.reduce((s, x) => s + (x.totalSales || 0), 0),
-        totalOrders: shifts.reduce((s, x) => s + (x.totalOrders || 0), 0),
-        totalCashSales: shifts.reduce((s, x) => s + (x.totalCashSales || 0), 0),
-        totalCardSales: shifts.reduce((s, x) => s + (x.totalCardSales || 0), 0),
-        totalDigitalSales: shifts.reduce((s, x) => s + (x.totalDigitalSales || 0), 0),
-        totalDiscounts: shifts.reduce((s, x) => s + (x.totalDiscounts || 0), 0),
-        totalVAT: shifts.reduce((s, x) => s + (x.totalVAT || 0), 0),
-        netRevenue: shifts.reduce((s, x) => s + (x.netRevenue || 0), 0),
-        paymentBreakdown: { cash: 0, card: 0, loyalty: 0 },
-        orderTypeBreakdown: { dine_in: 0, takeaway: 0, car_pickup: 0, delivery: 0, online: 0 },
-        cashMovements: [] as any[],
-        sourceShifts: shifts.map(s => ({ shiftNumber: s.shiftNumber, employeeName: s.employeeName, totalSales: s.totalSales, totalOrders: s.totalOrders })),
-      };
-      for (const s of shifts) {
-        const pb = s.paymentBreakdown || {};
-        for (const k of Object.keys(merged.paymentBreakdown)) merged.paymentBreakdown[k] += (pb as any)[k] || 0;
-        const ob = s.orderTypeBreakdown || {};
-        for (const k of Object.keys(merged.orderTypeBreakdown)) merged.orderTypeBreakdown[k] += (ob as any)[k] || 0;
-        if (Array.isArray(s.cashMovements)) merged.cashMovements.push(...s.cashMovements);
-      }
-
-      // Aggregate categories + topProducts from union of all order IDs
-      const allOrderIds: string[] = Array.from(new Set(
-        shifts.flatMap((s: any) => (Array.isArray(s.orderIds) ? s.orderIds.map(String) : []))
-      ));
-      let categories: any[] = [];
-      let topProducts: any[] = [];
-      if (allOrderIds.length > 0) {
-        const orders = await OrderModel.find({
-          tenantId,
-          $or: [
-            { id: { $in: allOrderIds } },
-            { _id: { $in: allOrderIds.filter((x: string) => /^[0-9a-fA-F]{24}$/.test(x)) } },
-          ],
-        }).lean();
-        const { coffeeItemMap, categoryMap } = await loadMenuMaps(tenantId);
-        const agg = aggregateOrdersAsShift(
-          orders,
-          new Date(merged.openedAt || Date.now()),
-          new Date(merged.closedAt || Date.now()),
-          coffeeItemMap,
-          categoryMap,
-        );
-        categories = agg.categories;
-        topProducts = agg.topProducts;
-      }
-
-      res.json({ ...merged, categories, topProducts });
-    } catch (error: any) {
-      console.error("[SHIFT] merge error:", error);
-      res.status(500).json({ error: "فشل في دمج الورديات" });
-    }
-  });
-
   // Get Z-Report for a specific shift
   app.get("/api/shifts/:shiftId/z-report", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const tenantId = getTenantIdFromRequest(req) || (req.employee as any)?.tenantId || "demo-tenant";
-      const shift: any = await CashierShiftModel.findOne({ _id: req.params.shiftId, tenantId }).lean();
+      const shift = await CashierShiftModel.findById(req.params.shiftId).lean();
       if (!shift) return res.status(404).json({ error: "الوردية غير موجودة" });
 
-      // Branch scope: non-elevated employees may only read shifts of their own branch.
-      const elevatedRoles = ['owner', 'admin', 'branch_manager', 'manager'];
-      const isElevated = !!(req.employee && elevatedRoles.includes(req.employee.role));
-      if (!isElevated && req.employee?.branchId && shift.branchId && shift.branchId !== req.employee.branchId) {
-        return res.status(403).json({ error: "غير مصرح لك بعرض هذه الوردية" });
-      }
-      const orderIds: string[] = Array.isArray(shift.orderIds) ? shift.orderIds.map(String) : [];
-      let categories: any[] = [];
-      let topProducts: any[] = [];
-      if (orderIds.length > 0) {
-        const orders = await OrderModel.find({
-          $or: [{ id: { $in: orderIds } }, { _id: { $in: orderIds.filter((x: string) => /^[0-9a-fA-F]{24}$/.test(x)) } }],
-        }).lean();
-        const { coffeeItemMap, categoryMap } = await loadMenuMaps(tenantId);
-        const agg = aggregateOrdersAsShift(orders, new Date(shift.openedAt), new Date(shift.closedAt || Date.now()), coffeeItemMap, categoryMap);
-        categories = agg.categories;
-        topProducts = agg.topProducts;
-      }
-
-      res.json({ ...shift, categories, topProducts });
+      res.json(shift);
     } catch (error) {
-      console.error("[SHIFT] z-report error:", error);
       res.status(500).json({ error: "فشل في جلب التقرير" });
     }
   });
@@ -4744,17 +4907,9 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
   app.get("/api/shifts/history", requireAuth, async (req: AuthRequest, res) => {
     try {
       const { branchId, employeeId, startDate, endDate, status, limit: limitParam } = req.query;
-      const tenantId = getTenantIdFromRequest(req) || (req.employee as any)?.tenantId || "demo-tenant";
-      const filter: any = { tenantId };
+      const filter: any = {};
 
-      const elevatedRoles = ['owner', 'admin', 'branch_manager', 'manager'];
-      const isElevated = !!(req.employee && elevatedRoles.includes(req.employee.role));
-      if (isElevated) {
-        if (branchId) filter.branchId = branchId;
-      } else if (req.employee?.branchId) {
-        // Non-elevated: locked to their own branch regardless of query param
-        filter.branchId = req.employee.branchId;
-      }
+      if (branchId) filter.branchId = branchId;
       if (employeeId) filter.employeeId = employeeId;
       if (status) filter.status = status;
       if (startDate || endDate) {
@@ -4852,159 +5007,307 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
     }
   });
 
-  // Auto-shift current period (when no manual shift open)
+  // ─── Auto-Shift: compute current 12h window from orders (no DB record needed) ───
   app.get("/api/shifts/auto-current", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const tenantId = getTenantIdFromRequest(req) || "demo-tenant";
-      const cfg = await BusinessConfigModel.findOne({ tenantId }).lean() as any;
-      const hours = Number(cfg?.autoShiftHours || 12);
-      const enabled = cfg?.autoShiftEnabled !== false;
-      const now = await getEffectiveNow(tenantId);
-      const period = getAutoShiftPeriod(now, hours);
-      const branchId = req.employee?.branchId || 'main';
+      const tenantId = getTenantIdFromRequest(req) || 'demo-tenant';
 
-      if (!enabled) {
-        return res.json({
-          enabled: false,
-          autoShiftHours: hours,
-          period: { index: period.index, start: period.start, end: period.end, now },
-          totalOrders: 0, totalSales: 0, totalCashSales: 0, totalCardSales: 0, totalDigitalSales: 0,
-          totalDiscounts: 0, totalVAT: 0, netRevenue: 0,
-          paymentBreakdown: { cash: 0, card: 0, loyalty: 0 },
-          orderTypeBreakdown: { dine_in: 0, takeaway: 0, car_pickup: 0, delivery: 0, online: 0 },
-          employees: [], orderIds: [], branchId,
+      // Cache for 15 seconds — this endpoint does heavy aggregation and is polled frequently
+      const autoCurrentCk = cacheKey('shift-auto-current', tenantId);
+      const autoCurrentCached = cache.get<any>(autoCurrentCk);
+      if (autoCurrentCached !== null) return res.json(autoCurrentCached);
+
+      const bizConfig = await BusinessConfigModel.findOne({ tenantId }).lean();
+
+      // If auto-shifts are disabled, signal the client so it waits for a manual shift
+      if ((bizConfig as any)?.autoShiftsEnabled === false) {
+        return res.json({ isAuto: false, disabled: true });
+      }
+
+      const tzOffset: number = Number((bizConfig as any)?.timezoneOffsetHours ?? 3);
+      const now = new Date();
+      const localDayOfWeek = ((now.getUTCDay() + Math.floor((now.getUTCHours() + tzOffset) / 24)) % 7 + 7) % 7;
+
+      // Use per-day config if available, otherwise fall back to global shiftPeriods
+      const dayShiftConfig: Record<string, Array<{start: number; end: number}>> = (bizConfig as any)?.dayShiftConfig || {};
+      const shiftPeriods: Array<{start: number; end: number}> =
+        dayShiftConfig[String(localDayOfWeek)]?.length
+          ? dayShiftConfig[String(localDayOfWeek)]
+          : (bizConfig as any)?.shiftPeriods || [{start: 6, end: 18}, {start: 18, end: 6}];
+
+      const currentLocalHour = (now.getUTCHours() + tzOffset) % 24;
+
+      // Find which period we're in
+      const period = shiftPeriods.find(p => {
+        if (p.end > p.start) return currentLocalHour >= p.start && currentLocalHour < p.end;
+        return currentLocalHour >= p.start || currentLocalHour < p.end; // overnight
+      }) || shiftPeriods[0] || {start: 6, end: 18};
+
+      // Compute UTC window boundaries using configured offset
+      const dayStartUTC = getLocalStartOfDay(now, tzOffset);
+      let windowStartUTC = new Date(dayStartUTC.getTime() + period.start * 3600000);
+      let windowEndUTC: Date;
+      if (period.end > period.start) {
+        windowEndUTC = new Date(dayStartUTC.getTime() + period.end * 3600000);
+      } else {
+        if (currentLocalHour >= period.start) {
+          windowEndUTC = new Date(dayStartUTC.getTime() + (period.end + 24) * 3600000);
+        } else {
+          windowStartUTC = new Date(dayStartUTC.getTime() - (24 - period.start) * 3600000);
+          windowEndUTC = new Date(dayStartUTC.getTime() + period.end * 3600000);
+        }
+      }
+
+      // Query orders in this window (include items for product aggregation)
+      const orders = await OrderModel.find({
+        tenantId,
+        createdAt: { $gte: windowStartUTC, $lte: now },
+        status: { $nin: ['cancelled', 'refunded'] },
+      }).select('totalAmount paymentMethod createdAt items').lean();
+
+      let totalSales = 0, totalCash = 0, totalCard = 0, totalDigital = 0;
+      for (const o of orders) {
+        const amt = Number((o as any).totalAmount) || 0;
+        totalSales += amt;
+        const method = ((o as any).paymentMethod || '').toLowerCase();
+        if (method === 'cash') totalCash += amt;
+        else if (method === 'qahwa-card' || method === 'qirox-card' || method === 'loyalty-card' || method === 'loyalty') totalDigital += amt;
+        else totalCard += amt;
+      }
+
+      const productsByCategory = await aggregateShiftProducts(tenantId, orders);
+
+      const autoCurrentResponse = {
+        isAuto: true,
+        windowStart: windowStartUTC.toISOString(),
+        windowEnd: windowEndUTC.toISOString(),
+        totalOrders: orders.length,
+        totalSales,
+        totalCash,
+        totalCard,
+        totalDigital,
+        periodLabel: `${period.start}:00 — ${period.end}:00`,
+        productsByCategory,
+      };
+      cache.set(autoCurrentCk, autoCurrentResponse, 15);
+      res.json(autoCurrentResponse);
+    } catch (error) {
+      console.error('[SHIFT] auto-current error:', error);
+      res.status(500).json({ error: 'فشل في حساب الوردية التلقائية' });
+    }
+  });
+
+  // ─── Auto-Shift Periods: all periods for a given date (or today) ─────────────
+  app.get("/api/shifts/auto-periods", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = getTenantIdFromRequest(req) || 'demo-tenant';
+      const bizConfig = await BusinessConfigModel.findOne({ tenantId }).lean();
+
+      // If auto-shifts disabled, return empty periods list
+      if ((bizConfig as any)?.autoShiftsEnabled === false) {
+        return res.json({ periods: [], disabled: true });
+      }
+
+      const tzOffset: number = Number((bizConfig as any)?.timezoneOffsetHours ?? 3);
+      const now = new Date();
+
+      // Support optional ?date=YYYY-MM-DD for historical queries
+      let targetDate: Date;
+      if (req.query.date && typeof req.query.date === 'string') {
+        const [y, m, d] = req.query.date.split('-').map(Number);
+        targetDate = new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0) - tzOffset * 3600000);
+      } else {
+        targetDate = now;
+      }
+
+      const isHistorical = !!(req.query.date && req.query.date !== new Date(now.getTime() + tzOffset * 3600000).toISOString().slice(0, 10));
+      const dayStartUTC = getLocalStartOfDay(targetDate, tzOffset);
+      const prevDayStartUTC = new Date(dayStartUTC.getTime() - 24 * 3600000);
+      const results: any[] = [];
+
+      // Determine which shift periods to use for the target date (per-day or default)
+      const targetLocalDayOfWeek = new Date(dayStartUTC.getTime() + tzOffset * 3600000).getUTCDay();
+      const dayShiftConfigP: Record<string, Array<{start: number; end: number}>> = (bizConfig as any)?.dayShiftConfig || {};
+      const shiftPeriods: Array<{start: number; end: number}> =
+        dayShiftConfigP[String(targetLocalDayOfWeek)]?.length
+          ? dayShiftConfigP[String(targetLocalDayOfWeek)]
+          : (bizConfig as any)?.shiftPeriods || [{start: 6, end: 18}, {start: 18, end: 6}];
+
+      // Build all candidate windows for the requested date.
+      // For overnight periods (end < start) we check TWO instances:
+      //   - "prev instance": started previous calendar day, ends this calendar day (early morning)
+      //   - "cur instance":  starts this calendar day (evening), ends next calendar day
+      // This ensures orders made between midnight and the first shift start are captured.
+      type Window = { windowStartUTC: Date; windowEndUTC: Date; label: string };
+      const windows: Window[] = [];
+
+      for (const period of shiftPeriods) {
+        const isOvernight = period.end <= period.start;
+
+        if (!isOvernight) {
+          // Normal same-day period (e.g. 06:00–18:00)
+          windows.push({
+            windowStartUTC: new Date(dayStartUTC.getTime() + period.start * 3600000),
+            windowEndUTC:   new Date(dayStartUTC.getTime() + period.end   * 3600000),
+            label: `${String(period.start).padStart(2,'0')}:00 — ${String(period.end).padStart(2,'0')}:00`,
+          });
+        } else {
+          // Overnight period (e.g. 18:00–06:00).
+          // Instance that started YESTERDAY and ends TODAY (early morning):
+          const prevStart = new Date(prevDayStartUTC.getTime() + period.start * 3600000);
+          const prevEnd   = new Date(dayStartUTC.getTime()     + period.end   * 3600000);
+          windows.push({ windowStartUTC: prevStart, windowEndUTC: prevEnd, label: `${String(period.start).padStart(2,'0')}:00 — ${String(period.end).padStart(2,'0')}:00` });
+
+          // Instance that STARTS TODAY and ends tomorrow:
+          const curStart = new Date(dayStartUTC.getTime()     + period.start * 3600000);
+          const curEnd   = new Date(dayStartUTC.getTime()     + (period.end + 24) * 3600000);
+          windows.push({ windowStartUTC: curStart, windowEndUTC: curEnd, label: `${String(period.start).padStart(2,'0')}:00 — ${String(period.end).padStart(2,'0')}:00` });
+        }
+      }
+
+      for (const { windowStartUTC, windowEndUTC, label } of windows) {
+        // For today: skip periods that haven't started yet
+        if (!isHistorical && windowStartUTC > now) continue;
+        // Skip windows entirely before the requested calendar day (to avoid double-counting previous days)
+        if (windowEndUTC <= prevDayStartUTC) continue;
+
+        const effectiveEnd = isHistorical
+          ? windowEndUTC
+          : new Date(Math.min(windowEndUTC.getTime(), now.getTime()));
+
+        const orders = await OrderModel.find({
+          tenantId,
+          createdAt: { $gte: windowStartUTC, $lte: effectiveEnd },
+          status: { $nin: ['cancelled', 'refunded'] },
+        }).select('totalAmount paymentMethod items').lean();
+
+        if (orders.length === 0) continue; // always skip empty windows
+
+        let totalSales = 0, totalCash = 0, totalCard = 0;
+        for (const o of orders) {
+          const amt = Number((o as any).totalAmount) || 0;
+          totalSales += amt;
+          const method = ((o as any).paymentMethod || '').toLowerCase();
+          if (method === 'cash') totalCash += amt;
+          else totalCard += amt;
+        }
+
+        const productsByCategory = await aggregateShiftProducts(tenantId, orders);
+
+        results.push({
+          periodLabel: label,
+          windowStart: windowStartUTC.toISOString(),
+          windowEnd: windowEndUTC.toISOString(),
+          isOngoing: !isHistorical && windowEndUTC > now,
+          totalOrders: orders.length,
+          totalSales,
+          totalCash,
+          totalCard,
+          productsByCategory,
         });
       }
 
-      // Collect order IDs already covered by manual shifts in this period to avoid double-count
-      const manualShifts = await CashierShiftModel.find({
-        tenantId, branchId,
-        $or: [
-          { openedAt: { $gte: period.start, $lte: now } },
-          { closedAt: { $gte: period.start, $lte: now } },
-          { openedAt: { $lte: period.start }, closedAt: { $gte: now } },
-          { status: 'active', openedAt: { $lte: now } },
-        ],
-      }).lean();
-      const coveredIds = new Set<string>();
-      for (const s of manualShifts as any[]) {
-        for (const oid of (s.orderIds || [])) coveredIds.add(String(oid));
-      }
+      // Sort by window start time ascending
+      results.sort((a, b) => new Date(a.windowStart).getTime() - new Date(b.windowStart).getTime());
+
+      res.json(results);
+    } catch (error) {
+      console.error('[SHIFT] auto-periods error:', error);
+      res.status(500).json({ error: 'فشل في جلب الورديات التلقائية' });
+    }
+  });
+
+  // Custom time-range merge report
+  // GET /api/shifts/custom-range?date=YYYY-MM-DD&fromTime=HH:MM&toTime=HH:MM
+  app.get("/api/shifts/custom-range", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = getTenantIdFromRequest(req) || 'demo-tenant';
+      const bizConfig = await BusinessConfigModel.findOne({ tenantId }).lean();
+      const tzOffset: number = Number((bizConfig as any)?.timezoneOffsetHours ?? 3);
+
+      const dateStr = (req.query.date as string) || new Date(Date.now() + tzOffset * 3600000).toISOString().slice(0, 10);
+      const fromTime = (req.query.fromTime as string) || '00:00';
+      const toTime   = (req.query.toTime   as string) || '23:59';
+
+      const [fy, fm, fd] = dateStr.split('-').map(Number);
+      const [fh, fmin]   = fromTime.split(':').map(Number);
+      const [th, tmin]   = toTime.split(':').map(Number);
+
+      // Build UTC boundaries from local (Saudi) time
+      const dayStartUTC = new Date(Date.UTC(fy, fm - 1, fd, 0, 0, 0) - tzOffset * 3600000);
+      const fromUTC = new Date(dayStartUTC.getTime() + (fh * 60 + fmin) * 60000);
+      let   toUTC   = new Date(dayStartUTC.getTime() + (th * 60 + tmin) * 60000);
+
+      // If toTime <= fromTime, assume it crosses midnight (next day)
+      if (toUTC <= fromUTC) toUTC = new Date(toUTC.getTime() + 24 * 3600000);
 
       const orders = await OrderModel.find({
-        tenantId, branchId,
-        createdAt: { $gte: period.start, $lte: now },
-        status: { $ne: 'cancelled' },
-      }).lean();
-      const filtered = orders.filter((o: any) => !coveredIds.has(String(o.id || o._id)));
+        tenantId,
+        createdAt: { $gte: fromUTC, $lte: toUTC },
+        status: { $nin: ['cancelled', 'refunded'] },
+      }).select('totalAmount paymentMethod items').lean();
 
-      const { coffeeItemMap, categoryMap } = await loadMenuMaps(tenantId);
-      const summary = aggregateOrdersAsShift(filtered, period.start, now, coffeeItemMap, categoryMap);
-      res.json({
-        enabled,
-        autoShiftHours: hours,
-        period: { index: period.index, start: period.start, end: period.end, now },
-        ...summary,
-        branchId,
-        excludedManualOrders: orders.length - filtered.length,
-      });
-    } catch (error: any) {
-      console.error("[SHIFT] auto-current error:", error);
-      res.status(500).json({ error: "فشل في حساب الوردية التلقائية" });
-    }
-  });
-
-  // Auto-shift periods history (past N days)
-  app.get("/api/shifts/auto-periods", requireAuth, async (req: AuthRequest, res) => {
-    try {
-      const tenantId = getTenantIdFromRequest(req) || "demo-tenant";
-      const cfg = await BusinessConfigModel.findOne({ tenantId }).lean() as any;
-      const hours = Number(cfg?.autoShiftHours || 12);
-      const enabled = cfg?.autoShiftEnabled !== false;
-      const branchId = req.employee?.branchId || 'main';
-      if (!enabled) {
-        return res.json({ enabled: false, autoShiftHours: hours, periods: [] });
-      }
-      const days = Math.min(30, Math.max(1, Number(req.query.days) || 7));
-      const now = await getEffectiveNow(tenantId);
-      const periodMs = hours * 3600000;
-      const startBoundary = new Date(getSaudiStartOfDay(new Date(now.getTime() - days * 86400000)).getTime());
-
-      const manualShifts = await CashierShiftModel.find({
-        tenantId, branchId,
-        openedAt: { $gte: startBoundary },
-      }).lean();
-      const coveredIds = new Set<string>();
-      for (const s of manualShifts as any[]) {
-        for (const oid of (s.orderIds || [])) coveredIds.add(String(oid));
-      }
-
-      const ordersAll = await OrderModel.find({
-        tenantId, branchId,
-        createdAt: { $gte: startBoundary, $lte: now },
-        status: { $ne: 'cancelled' },
-      }).lean();
-      const orders = ordersAll.filter((o: any) => !coveredIds.has(String(o.id || o._id)));
-
-      const buckets: Record<string, any[]> = {};
+      let totalSales = 0, totalCash = 0, totalCard = 0;
       for (const o of orders) {
-        const t = new Date((o as any).createdAt).getTime();
-        const idx = Math.floor((t - startBoundary.getTime()) / periodMs);
-        const bStart = new Date(startBoundary.getTime() + idx * periodMs);
-        const key = bStart.toISOString();
-        if (!buckets[key]) buckets[key] = [];
-        buckets[key].push(o);
+        const amt = Number((o as any).totalAmount) || 0;
+        totalSales += amt;
+        const method = ((o as any).paymentMethod || '').toLowerCase();
+        if (method === 'cash') totalCash += amt;
+        else totalCard += amt;
       }
 
-      const { coffeeItemMap, categoryMap } = await loadMenuMaps(tenantId);
-      const periods = Object.entries(buckets)
-        .map(([key, list]) => {
-          const start = new Date(key);
-          const end = new Date(start.getTime() + periodMs);
-          return { start, end, ...aggregateOrdersAsShift(list, start, end, coffeeItemMap, categoryMap) };
-        })
-        .sort((a, b) => b.start.getTime() - a.start.getTime());
+      const productsByCategory = await aggregateShiftProducts(tenantId, orders);
 
-      res.json({ autoShiftHours: hours, periods });
-    } catch (error: any) {
-      console.error("[SHIFT] auto-periods error:", error);
-      res.status(500).json({ error: "فشل في جلب سجل الورديات التلقائية" });
-    }
-  });
-
-  // Server's effective time (with manualTimeOffsetMinutes applied)
-  app.get("/api/shifts/effective-time", requireAuth, async (req: AuthRequest, res) => {
-    try {
-      const tenantId = getTenantIdFromRequest(req) || "demo-tenant";
-      const cfg = await BusinessConfigModel.findOne({ tenantId }).lean() as any;
-      const offset = Number(cfg?.manualTimeOffsetMinutes || 0);
-      const now = new Date(Date.now() + offset * 60000);
       res.json({
-        serverNow: new Date().toISOString(),
-        effectiveNow: now.toISOString(),
-        manualTimeOffsetMinutes: offset,
-        timezone: cfg?.timezone || 'Asia/Riyadh',
+        periodLabel: `${fromTime} — ${toTime}`,
+        reportTitle: `تقرير مخصص — ${dateStr}  (${fromTime} → ${toTime})`,
+        windowStart: fromUTC.toISOString(),
+        windowEnd: toUTC.toISOString(),
+        isOngoing: false,
+        totalOrders: orders.length,
+        totalSales,
+        totalCash,
+        totalCard,
+        productsByCategory,
       });
     } catch (error) {
-      res.status(500).json({ error: "فشل" });
+      console.error('[SHIFT] custom-range error:', error);
+      res.status(500).json({ error: 'فشل في جلب بيانات النطاق المخصص' });
+    }
+  });
+
+  // ─── Dates with orders (for historical navigation) ───────────────────────────
+  app.get("/api/shifts/order-dates", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = getTenantIdFromRequest(req) || 'demo-tenant';
+      const bizConfig = await BusinessConfigModel.findOne({ tenantId }).lean();
+      const tzOffset: number = Number((bizConfig as any)?.timezoneOffsetHours ?? 3);
+
+      // Get distinct dates from orders (last 365 days)
+      const since = new Date(Date.now() - 365 * 24 * 3600000);
+      const orders = await OrderModel.find({
+        tenantId,
+        createdAt: { $gte: since },
+        status: { $nin: ['cancelled', 'refunded'] },
+      }).select('createdAt').lean();
+
+      // Convert each order's createdAt to a local date string YYYY-MM-DD
+      const dateSet = new Set<string>();
+      for (const o of orders) {
+        const localDate = new Date((o as any).createdAt.getTime() + tzOffset * 3600000);
+        const dateStr = localDate.toISOString().slice(0, 10);
+        dateSet.add(dateStr);
+      }
+
+      // Return sorted desc
+      const dates = Array.from(dateSet).sort((a, b) => b.localeCompare(a));
+      res.json(dates);
+    } catch (error) {
+      res.status(500).json({ error: 'فشل في جلب التواريخ' });
     }
   });
 
   // Temporary test route for email
-
-  app.get("/api/pos/hardware-status", requireAuth, (req: AuthRequest, res) => {
-    try {
-      // In a real implementation, this would check actual hardware connections
-      res.json({
-        pos: posDeviceStatus,
-        printer: { connected: true, status: "ready" },
-        cashDrawer: { connected: true, status: "closed" },
-        scanner: { connected: true, status: "ready" }
-      });
-    } catch (error) {
-      res.status(500).json({ error: "Failed to get hardware status" });
-    }
-  });
 
   // FILE UPLOAD ROUTES
   
@@ -5210,6 +5513,21 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         }
 
         console.log(`[AUTH] Login successful: ${username} (${employee.role})`);
+        // Audit log for login
+        logAudit({
+          tenantId: employee.tenantId || 'demo-tenant',
+          branchId: employee.branchId,
+          action: 'employee.login',
+          entityType: 'employee',
+          entityId: employee.id || (employee._id as any)?.toString(),
+          entityLabel: employee.nameAr || employee.nameEn || username,
+          actorType: (employee.role === 'admin' || employee.role === 'owner') ? 'admin' : employee.role === 'manager' ? 'manager' : 'employee',
+          actorId: employee.id || (employee._id as any)?.toString(),
+          actorName: employee.nameAr || employee.nameEn || username,
+          actorRole: employee.role,
+          ipAddress: (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.socket?.remoteAddress,
+          details: { method: 'password' },
+        });
         // Don't send password back
         const employeeData = serializeDoc(employee);
         delete employeeData.password;
@@ -5834,7 +6152,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
   });
 
   // Reset employee password by username
-  app.post("/api/employees/reset-password-by-username", async (req, res) => {
+  app.post("/api/employees/reset-password-by-username", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
     try {
       const { username, newPassword } = req.body;
 
@@ -6065,7 +6383,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         if (!customerId) {
           return res.status(400).json({ 
             valid: false,
-            error: "يجب تسجيل الدخول لاستخدام خصم بطاقة مكان الشيف البخاري"
+            error: "يجب تسجيل الدخول لاستخدام خصم بطاقة مكان الشيف"
           });
         }
         
@@ -6391,6 +6709,18 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
     }
   });
 
+  // Customer logout - تسجيل خروج العميل
+  app.post("/api/customers/logout", (req, res) => {
+    if ((req.session as any).customer) {
+      delete (req.session as any).customer;
+    }
+    req.session.destroy((err) => {
+      if (err) console.error("[CUSTOMER_LOGOUT] Session destroy error:", err);
+      res.clearCookie('connect.sid');
+      res.json({ success: true });
+    });
+  });
+
   // Request password reset - طلب إعادة تعيين كلمة المرور
   app.post("/api/customers/forgot-password", async (req, res) => {
     try {
@@ -6704,7 +7034,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
   });
 
   // Get all customers (for admin/manager dashboard)
-  app.get("/api/customers", async (req, res) => {
+  app.get("/api/customers", requireAuth, async (req: AuthRequest, res) => {
     try {
       const customers = await storage.getCustomers();
       const serializedCustomers = customers.map(customer => {
@@ -7289,12 +7619,12 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         coffeeItemId: { $in: itemIds } 
       }).lean().exec() : [];
       
-      const rawItemIds = recipes.map((r: any) => r.rawItemId);
+      const rawItemIds = recipes.map((r: any) => r.rawItemId).filter(Boolean);
       const rawItems = rawItemIds.length > 0 ? await RawItemModel.find({ 
-        _id: { $in: rawItemIds } 
+        id: { $in: rawItemIds } 
       }).lean().exec() : [];
       
-      const rawItemMap = new Map(rawItems.map((r: any) => [r._id?.toString(), r]));
+      const rawItemMap = new Map(rawItems.map((r: any) => [r.id || r._id?.toString(), r]));
       const recipesByItem = new Map<string, any[]>();
       recipes.forEach((r: any) => {
         const itemId = r.coffeeItemId;
@@ -7356,6 +7686,9 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
           return publishedBranches.includes('*') || publishedBranches.length === 0 || publishedBranches.includes(requestedBranchId);
         });
       }
+
+      // Sort by salesCount descending so best-sellers appear first
+      finalItems.sort((a: any, b: any) => (b.salesCount || 0) - (a.salesCount || 0));
 
       // Store in memory cache for next requests (60 seconds)
       cache.set(ck, finalItems, CACHE_TTL.COFFEE_ITEMS);
@@ -7472,7 +7805,6 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       }
 
       // Create coffee item using MongoDB directly to ensure all fields including imageUrl, availableSizes, and addons are saved
-      const vd = validatedData as any;
       const newCoffeeItem = new CoffeeItemModel({
         id: validatedData.id,
         tenantId: tenantId,
@@ -7482,37 +7814,28 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         price: validatedData.price,
         oldPrice: validatedData.oldPrice,
         category: validatedData.category,
-        menuType: vd.menuType || 'drinks',
         imageUrl: validatedData.imageUrl,
-        imageUrls: vd.imageUrls || (validatedData.imageUrl ? [validatedData.imageUrl] : []),
+        imageUrls: (validatedData as any).imageUrls || (validatedData.imageUrl ? [validatedData.imageUrl] : []),
         isAvailable: validatedData.isAvailable ?? 1,
         availabilityStatus: validatedData.availabilityStatus || 'available',
         coffeeStrength: validatedData.coffeeStrength,
-        strengthLevel: vd.strengthLevel,
         isNewProduct: validatedData.isNewProduct,
-        sku: vd.sku,
-        sizeML: vd.sizeML,
-        groupId: vd.groupId,
         publishedBranches: validatedData.publishedBranches || [branchId],
         createdByEmployeeId: validatedData.createdByEmployeeId,
         createdByBranchId: validatedData.createdByBranchId,
         availableSizes: validatedData.availableSizes || [],
-        addons: vd.addons || [],
-        bundledItems: vd.bundledItems || [],
-        isReservation: vd.isReservation || false,
-        reservationPackages: vd.reservationPackages || [],
-        isGiftable: vd.isGiftable || false,
-        availableFrom: vd.availableFrom,
-        availableTo: vd.availableTo,
-        availableDays: vd.availableDays || [],
-        branchAvailability: vd.branchAvailability || (validatedData.publishedBranches || [branchId]).map((bId: string) => ({
+        addons: (validatedData as any).addons || [],
+        isGiftable: (validatedData as any).isGiftable || false,
+        bundledItems: (validatedData as any).bundledItems || [],
+        isReservation: (validatedData as any).isReservation || false,
+        reservationPackages: (validatedData as any).reservationPackages || [],
+        menuType: (validatedData as any).menuType || 'drinks',
+        branchAvailability: (validatedData.publishedBranches || [branchId]).map(bId => ({
           branchId: bId,
           isAvailable: 1
         })),
-        requiresRecipe: vd.requiresRecipe !== undefined ? vd.requiresRecipe : 1,
-        hasRecipe: vd.hasRecipe !== undefined ? vd.hasRecipe : 0,
-        recipeId: vd.recipeId,
-        salesCount: vd.salesCount || 0,
+        requiresRecipe: (validatedData as any).requiresRecipe !== undefined ? (validatedData as any).requiresRecipe : 1,
+        hasRecipe: (validatedData as any).hasRecipe !== undefined ? (validatedData as any).hasRecipe : 0,
         costOfGoods: 0,
         profitMargin: 0,
         updatedAt: new Date(),
@@ -7781,56 +8104,46 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
     }
   });
 
-  // Get cart items for session - OPTIMIZED
+  // Get cart items for session - BATCH OPTIMIZED (3 queries total regardless of cart size)
   app.get("/api/cart/:sessionId", async (req, res) => {
     try {
       const { sessionId } = req.params;
+
+      // Short-term cache to avoid redundant Atlas round-trips on rapid re-renders
+      const cartCk = cacheKey('cart-session', sessionId);
+      const cartCached = cache.get<any[]>(cartCk);
+      if (cartCached) return res.json(cartCached);
+
       const cartItems = await CartItemModel.find({ sessionId }).lean();
 
       if (!cartItems || cartItems.length === 0) {
+        cache.set(cartCk, [], CACHE_TTL.CART_SESSION);
         return res.json([]);
       }
 
-      // Enrich cart items with coffee details efficiently
-      const enrichedItems = await Promise.all(cartItems.map(async (cartItem: any) => {
-        try {
-          const coffeeItem = await CoffeeItemModel.findOne({ id: cartItem.coffeeItemId }).lean();
-          const doc = serializeDoc(cartItem);
-          
-          // Fetch addons to get their prices and names
-          // selectedAddons stores custom `id` fields (nanoid), not MongoDB _id
-          const addons = await Promise.all(
-            (cartItem.selectedAddons || []).map((addonId: string) =>
-              ProductAddonModel.findOne({ id: addonId }).lean()
-            )
-          );
-          
-          // CRITICAL: Force the ID to be the custom 'id' (composite) if available, otherwise use coffeeItemId
-          // This ensures the frontend ALWAYS receives an ID it can use for DELETE/PUT consistently
-          const finalId = cartItem.id || cartItem.coffeeItemId;
-          
-          // console.log(`[CART] Enriching item ${cartItem.coffeeItemId}: Found coffee=${!!coffeeItem}, addons=${addons.length}`);
-          
-          return {
-            ...doc,
-            id: finalId,
-            coffeeItem: coffeeItem ? serializeDoc(coffeeItem) : null,
-            enrichedAddons: addons.filter(Boolean).map(serializeDoc)
-          };
-        } catch (err) {
-          console.error(`Error enriching cart item:`, err);
-          return { 
-            ...serializeDoc(cartItem), 
-            id: cartItem.id || cartItem.coffeeItemId, 
-            coffeeItem: null,
-            enrichedAddons: []
-          };
-        }
-      }));
+      // Collect all unique IDs in one pass — then batch-fetch in parallel (2 queries instead of N×M)
+      const coffeeItemIds = [...new Set(cartItems.map((ci: any) => ci.coffeeItemId).filter(Boolean))];
+      const addonIds = [...new Set(cartItems.flatMap((ci: any) => ci.selectedAddons || []).filter(Boolean))];
 
-      // Filter out items where coffee details couldn't be found
-      // For debugging, we'll keep them but the UI might break if coffeeItem is null
-      // res.json(enrichedItems.filter(item => item && item.coffeeItem));
+      const [coffeeItemDocs, addonDocs] = await Promise.all([
+        coffeeItemIds.length > 0 ? CoffeeItemModel.find({ id: { $in: coffeeItemIds } }).lean() : Promise.resolve([]),
+        addonIds.length > 0 ? ProductAddonModel.find({ id: { $in: addonIds } }).lean() : Promise.resolve([]),
+      ]);
+
+      const coffeeItemMap = new Map<string, any>(coffeeItemDocs.map((d: any) => [d.id, serializeDoc(d)]));
+      const addonMap = new Map<string, any>(addonDocs.map((d: any) => [d.id, serializeDoc(d)]));
+
+      const enrichedItems = cartItems.map((cartItem: any) => {
+        const doc = serializeDoc(cartItem);
+        return {
+          ...doc,
+          id: cartItem.id || cartItem.coffeeItemId,
+          coffeeItem: coffeeItemMap.get(cartItem.coffeeItemId) || null,
+          enrichedAddons: (cartItem.selectedAddons || []).map((id: string) => addonMap.get(id)).filter(Boolean),
+        };
+      });
+
+      cache.set(cartCk, enrichedItems, CACHE_TTL.CART_SESSION);
       res.json(enrichedItems);
     } catch (error) {
       console.error("Fetch cart error:", error);
@@ -7881,6 +8194,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       
       const result = serializeDoc(cartItem);
       result.id = compositeId; // Ensure we always return the composite ID
+      cache.invalidateKey(cacheKey('cart-session', sessionId));
       res.status(201).json(result);
     } catch (error) {
       console.error("[CART] Post error:", error);
@@ -7908,6 +8222,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         if (deleteResult.deletedCount === 0 && mongoose.Types.ObjectId.isValid(cartItemId)) {
           deleteResult = await CartItemModel.deleteOne({ sessionId, _id: cartItemId });
         }
+        cache.invalidateKey(cacheKey('cart-session', sessionId));
         return res.json({ message: "Item removed" });
       }
 
@@ -7942,6 +8257,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       const result = serializeDoc(cartItem);
       // Ensure the returned ID matches what the client expects (the search key)
       result.id = cartItem.id || cartItem.coffeeItemId;
+      cache.invalidateKey(cacheKey('cart-session', sessionId));
       res.json(result);
     } catch (error) {
       console.error("[CART] Update error:", error);
@@ -7953,7 +8269,6 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
   app.delete("/api/cart/:sessionId/:cartItemId", async (req, res) => {
     try {
       const { sessionId, cartItemId } = req.params;
-      // console.log(`[CART] DELETE: session=${sessionId}, id=${cartItemId}`);
       
       // Try multiple deletion strategies
       let result = await CartItemModel.deleteOne({ sessionId, id: cartItemId });
@@ -7970,6 +8285,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         return res.status(404).json({ error: "Cart item not found" });
       }
 
+      cache.invalidateKey(cacheKey('cart-session', sessionId));
       res.json({ message: "Item removed" });
     } catch (error) {
       console.error("[CART] Delete error:", error);
@@ -7982,575 +8298,13 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
     try {
       const { sessionId } = req.params;
       await storage.clearCart(sessionId);
+      cache.invalidateKey(cacheKey('cart-session', sessionId));
       res.json({ message: "Cart cleared" });
     } catch (error) {
       res.status(500).json({ error: "Failed to clear cart" });
     }
   });
 
-  // DUPLICATE: This POST /api/orders handler is superseded by the one defined earlier (line ~573).
-  // Wrapped in a never-called function to prevent duplicate route registration.
-  const _unusedDuplicateOrderPost = () => { app.post("/api/orders-duplicate-disabled", async (req: AuthRequest, res) => {
-    try {
-      console.log("Creating order with body:", JSON.stringify(req.body, null, 2));
-      const { 
-        items, totalAmount, paymentMethod, paymentDetails, paymentReceiptUrl,
-        customerInfo, customerId, customerNotes, freeItemsDiscount, usedFreeDrinks, 
-        discountCode, discountPercentage,
-        deliveryType, deliveryAddress, deliveryFee, branchId,
-        tableNumber, tableId, orderType,
-        carType, carColor, plateNumber, carPlate, carInfo, carPickup, arrivalTime,
-        scheduledPickupTime,
-        pointsRedeemed, pointsValue, pointsVerificationToken
-      } = req.body;
-
-      // Validate required fields
-      if (!items || !Array.isArray(items) || items.length === 0) {
-        return res.status(400).json({ error: "Items are required" });
-      }
-
-      if (totalAmount === undefined || totalAmount === null || isNaN(parseFloat(totalAmount))) {
-        return res.status(400).json({ error: "Valid total amount is required" });
-      }
-
-      if (!paymentMethod) {
-        return res.status(400).json({ error: "Payment method is required" });
-      }
-
-      // Check for customerName either in root body or nested in customerInfo
-      const finalCustomerName = req.body.customerName || customerInfo?.customerName || req.body.customerPhone || "عميل";
-
-      // Determine branch ID from request body or employee session
-      const finalBranchId = branchId || req.employee?.branchId;
-
-      if (!finalCustomerName) {
-        console.error("Missing customer name in request. customerInfo:", JSON.stringify(customerInfo), "req.body:", JSON.stringify(req.body));
-        return res.status(400).json({ error: "Customer name is required" });
-      }
-
-      // Ensure items is always an array before processing
-      let processedItems = items;
-      if (typeof items === 'string') {
-        try {
-          processedItems = JSON.parse(items);
-        } catch (e) {
-          processedItems = [];
-        }
-      }
-
-      // Validate payment receipt for electronic payment methods
-      const electronicPaymentMethods = ['alinma', 'ur', 'barq', 'rajhi'];
-      if (electronicPaymentMethods.includes(paymentMethod) && !paymentReceiptUrl) {
-        return res.status(400).json({ error: "Payment receipt is required for electronic payment methods" });
-      }
-
-      // Validate delivery data when deliveryType is 'delivery'
-      if (deliveryType === 'delivery') {
-        if (!deliveryAddress || !deliveryAddress.fullAddress) {
-          return res.status(400).json({ error: "Delivery address is required for delivery orders" });
-        }
-      }
-
-      // Get or create customer if phone number provided
-      let finalCustomerId = customerId;
-
-      const phoneNumberForLookup = customerInfo?.phoneNumber || req.body.customerPhone;
-      if (phoneNumberForLookup && !customerId) {
-        try {
-          const existingCustomer = await storage.getCustomerByPhone(phoneNumberForLookup);
-          if (existingCustomer) {
-            finalCustomerId = existingCustomer.id;
-          }
-        } catch (error) {
-        }
-      }
-
-      // Determine initial status based on payment method
-      const isAutoConfirm = ['pos', 'apple_pay', 'pos-network', 'alinma', 'rajhi', 'ur', 'barq', 'cash', 'mada', 'stc-pay', 'online', 'neoleap', 'neoleap-apple-pay'].includes(paymentMethod);
-      // PAID orders go to 'payment_confirmed' (which notifies kitchen), others go to 'pending'
-      const initialStatus = isAutoConfirm ? 'payment_confirmed' : 'pending';
-      const tenantId = getTenantIdFromRequest(req) || 'demo-tenant';
-
-      console.log(`[ORDER] Payment method: ${paymentMethod}, Initial status: ${initialStatus}`);
-
-      if (discountCode) {
-        try {
-          const { DiscountCodeModel: DCModel } = await import("@shared/schema");
-          const coupon = await DCModel.findOne({ 
-            code: discountCode.toUpperCase(), 
-            isActive: 1 
-          });
-          if (coupon) {
-            coupon.usageCount = (coupon.usageCount || 0) + 1;
-            await coupon.save();
-            console.log(`[ORDER] Coupon ${discountCode} usage count updated to ${coupon.usageCount}`);
-          }
-        } catch (couponErr) {
-          console.error("[ORDER] Failed to update coupon usage count:", couponErr);
-        }
-      }
-
-      // Update or create order
-      let order;
-      if (tableId && (orderType === 'table' || orderType === 'dine-in')) {
-        // Look for an existing 'open' order for this table
-        const existingOrder = await OrderModel.findOne({ 
-          tableId, 
-          status: { $in: ['open', 'pending', 'payment_confirmed'] },
-          branchId: finalBranchId 
-        });
-
-        if (existingOrder) {
-          // Add new items to existing order
-          existingOrder.items = [...(existingOrder.items || []), ...processedItems];
-          existingOrder.totalAmount += Number(totalAmount);
-          existingOrder.updatedAt = new Date();
-          
-          // If the order was just "open", and this addition is "paid/confirmed", upgrade status
-          if (existingOrder.status === 'open' && initialStatus === 'payment_confirmed') {
-             existingOrder.status = 'payment_confirmed';
-          }
-          
-          order = await existingOrder.save();
-          
-          // Broadcast update to kitchen for additions
-          const serializedOrder = serializeDoc(order);
-          wsManager.broadcastOrderUpdate(serializedOrder);
-          if (order.status === 'payment_confirmed' || order.status === 'confirmed') {
-            wsManager.broadcastNewOrder(serializedOrder);
-          }
-        } else {
-          const isOpenTab = req.body.isOpenTab === true;
-          const tableOrderStatus = isOpenTab ? 'open' : initialStatus;
-          const orderData: any = {
-            orderNumber: `T-${nanoid(6).toUpperCase()}`,
-            items: processedItems,
-            totalAmount: Number(totalAmount),
-            paymentMethod: isOpenTab ? 'cash' : (paymentMethod || 'cash'),
-            status: tableOrderStatus,
-            tableStatus: isOpenTab ? 'open' : 'pending',
-            orderType: 'table',
-            tableId,
-            tableNumber,
-            branchId: finalBranchId,
-            tenantId,
-            employeeId: req.employee?.id || null,
-            customerInfo: customerInfo || { 
-              customerName: finalCustomerName, 
-              phoneNumber: req.body.customerPhone || "", 
-              customerEmail: req.body.customerEmail || "" 
-            },
-            createdAt: new Date(),
-            updatedAt: new Date()
-          };
-          order = await storage.createOrder(orderData);
-          
-          if (order) {
-            const serializedOrder = serializeDoc(order);
-            if (!isOpenTab) {
-              wsManager.broadcastNewOrder(serializedOrder);
-            }
-            wsManager.broadcastOrderUpdate(serializedOrder);
-          }
-          
-          // Update table status
-          await storage.updateTableOccupancy(tableId, true, order.id);
-        }
-      } else {
-        const orderData: any = {
-          customerId: finalCustomerId || null,
-          totalAmount: Number(totalAmount),
-          paymentMethod,
-          paymentDetails: paymentDetails || "",
-          paymentReceiptUrl: paymentReceiptUrl || null,
-          customerInfo: customerInfo || { 
-            customerName: finalCustomerName, 
-            phoneNumber: req.body.customerPhone || "", 
-            customerEmail: req.body.customerEmail || "" 
-          },
-          customerNotes: customerNotes || req.body.notes || "",
-          discountCode: discountCode || null,
-          discountPercentage: discountPercentage ? Number(discountPercentage) : 0,
-          deliveryType: deliveryType || null,
-          deliveryAddress: deliveryAddress || null,
-          deliveryFee: deliveryFee ? Number(deliveryFee) : 0,
-          carType: carType || carInfo?.carType || null,
-          carColor: carColor || carInfo?.carColor || null,
-          plateNumber: plateNumber || carPlate || carInfo?.plateNumber || null,
-          carPickup: carPickup || (deliveryType === 'curbside' || deliveryType === 'car_pickup' || deliveryType === 'car-pickup') || false,
-          carInfo: carInfo || (carType ? { carType, carColor, plateNumber: plateNumber || carPlate } : null),
-          arrivalTime: arrivalTime || null,
-          scheduledPickupTime: scheduledPickupTime || null,
-          preparationHoldUntil: (() => {
-            const pickupTime = scheduledPickupTime || (orderType === 'pickup' ? arrivalTime : null);
-            if (!pickupTime) return null;
-            try {
-              const totalItems = Array.isArray(processedItems)
-                ? processedItems.reduce((sum: number, item: any) => sum + (Number(item.quantity) || 1), 0)
-                : 1;
-              const holdMinutes = Math.max(10, 10 + (totalItems - 2) * 2);
-              const [hours, minutes] = pickupTime.split(':').map(Number);
-              const arrivalDate = new Date();
-              arrivalDate.setHours(hours, minutes, 0, 0);
-              const holdDate = new Date(arrivalDate.getTime() - holdMinutes * 60 * 1000);
-              return holdDate.toISOString();
-            } catch { return null; }
-          })(),
-          branchId: finalBranchId,
-          tenantId,
-          status: initialStatus,
-          employeeId: req.employee?.id || null,
-          createdBy: req.employee?.username || 'system',
-          tableNumber: tableNumber || null,
-          tableId: tableId || null,
-          orderType: orderType || (tableNumber || tableId ? 'dine-in' : 'regular'),
-          items: processedItems,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-        order = await storage.createOrder(orderData);
-
-        // Broadcast new order to WebSocket
-        if (order) {
-          const serializedOrder = serializeDoc(order);
-          wsManager.broadcastNewOrder(serializedOrder);
-          wsManager.broadcastOrderUpdate(serializedOrder);
-        }
-      }
-
-      // ===== Points Redemption: Deduct points from loyalty card =====
-      if (pointsRedeemed && Number(pointsRedeemed) > 0) {
-        try {
-          const redeemPoints = Number(pointsRedeemed);
-          const redeemValue = Number(pointsValue) || (redeemPoints / 100) * 5;
-          const phoneForPoints = req.body.customerPhone || customerInfo?.phoneNumber;
-          const cleanPhoneForPoints = phoneForPoints?.replace(/\D/g, '');
-
-          if (cleanPhoneForPoints) {
-            const entry = pointsVerificationCodes.get(cleanPhoneForPoints);
-            const bypassVerification = !!(req.body.bypassPointsVerification || req.employee || customerId);
-            const canProceed = (entry && entry.verified) || bypassVerification;
-            if (!canProceed) {
-              console.warn(`[POINTS] Verification not completed for ${cleanPhoneForPoints}. Points NOT deducted.`);
-            } else {
-              const loyaltyCard = await storage.getLoyaltyCardByPhone(cleanPhoneForPoints);
-              if (loyaltyCard) {
-                const currentPoints = Number(loyaltyCard.points) || 0;
-                if (currentPoints >= redeemPoints) {
-                  await storage.updateLoyaltyCard(loyaltyCard.id, {
-                    points: currentPoints - redeemPoints,
-                    lastUsedAt: new Date(),
-                  });
-
-                  const LoyaltyTransactionModel = mongoose.model('LoyaltyTransaction');
-                  await LoyaltyTransactionModel.create({
-                    cardId: loyaltyCard.id,
-                    type: 'points_redeemed',
-                    pointsChange: -redeemPoints,
-                    description: `استخدام ${redeemPoints} نقطة (${redeemValue.toFixed(2)} ريال) - طلب #${order.orderNumber}`,
-                    orderId: order.id,
-                    createdAt: new Date(),
-                  });
-
-                  await OrderModel.findByIdAndUpdate(order.id, {
-                    pointsRedeemed: redeemPoints,
-                    pointsValue: redeemValue,
-                  });
-
-                  if (entry) pointsVerificationCodes.delete(cleanPhoneForPoints);
-                  console.log(`[POINTS] Deducted ${redeemPoints} points (${redeemValue} SAR) from ${cleanPhoneForPoints} for order ${order.orderNumber}`);
-                } else {
-                  console.warn(`[POINTS] Insufficient points for ${cleanPhoneForPoints}: has ${currentPoints}, needs ${redeemPoints}`);
-                }
-              }
-            }
-          }
-        } catch (pointsError) {
-          console.error("[POINTS] Error deducting points:", pointsError);
-        }
-      }
-
-      // Send initial order email notification
-      const initialCustomerInfo = typeof order.customerInfo === 'string' ? JSON.parse(order.customerInfo) : order.customerInfo;
-      const customerEmail = initialCustomerInfo?.email;
-      const customerName = initialCustomerInfo?.name;
-
-      if (customerEmail) {
-        // Use setImmediate to send email asynchronously without blocking the response
-        setImmediate(async () => {
-          try {
-            console.log(`📧 Triggering INITIAL email for order ${order.orderNumber} to ${customerEmail}`);
-            const { sendOrderNotificationEmail } = await import("./mail-service");
-            const emailSent = await sendOrderNotificationEmail(
-              customerEmail,
-              customerName || 'عميل مكان الشيف البخاري',
-              order.orderNumber,
-              "pending",
-              parseFloat(order.totalAmount.toString())
-            );
-            console.log(`📧 INITIAL Email sent result for ${order.orderNumber}: ${emailSent}`);
-          } catch (emailError) {
-            console.error("❌ Error in initial order email trigger:", emailError);
-          }
-        });
-      }
-      
-      // Append to Google Sheets for tracking
-      try {
-        const { appendOrderToSheet } = await import("./google-sheets");
-        // Notify customer and Admin/Cashier
-        await appendOrderToSheet(order, 'NEW_ORDER');
-        await appendOrderToSheet(order, 'ADMIN_ALERT');
-        
-        // Note: Email notification is now handled by Google Apps Script within the sheet
-      } catch (err) {
-        console.error("Sheets Error:", err);
-      }
-
-      // Smart Inventory Deduction - deduct raw materials based on recipes
-      let deductionReport: {
-        success: boolean;
-        costOfGoods: number;
-        grossProfit: number;
-        deductionDetails: Array<{
-          rawItemId: string;
-          rawItemName: string;
-          quantity: number;
-          unit: string;
-          unitCost: number;
-          totalCost: number;
-          previousQuantity: number;
-          newQuantity: number;
-          status: string;
-          message: string;
-        }>;
-        shortages: Array<{
-          rawItemId: string;
-          rawItemName: string;
-          required: number;
-          available: number;
-          unit: string;
-        }>;
-        warnings: string[];
-        errors: string[];
-      } | null = null;
-
-      if (finalBranchId && items && items.length > 0) {
-        try {
-          // Extract order items with addon customizations for inventory deduction
-          const orderItems = items.map((item: any) => {
-            const orderItem: {
-              coffeeItemId: string;
-              quantity: number;
-              addons?: Array<{ rawItemId: string; quantity: number; unit: string }>;
-            } = {
-              coffeeItemId: item.id || item.coffeeItemId,
-              quantity: item.quantity || 1,
-            };
-
-            // Extract addon raw materials from customization selectedAddons
-            // Note: We calculate the FULL raw material quantity here (addon qty * quantityPerUnit * order item qty)
-            // so storage.deductInventoryForOrder does NOT multiply by item.quantity again for addons
-            if (item.customization?.selectedAddons && Array.isArray(item.customization.selectedAddons)) {
-              const itemQuantity = item.quantity || 1;
-              orderItem.addons = item.customization.selectedAddons
-                .filter((addon: any) => addon.rawItemId && addon.quantity > 0)
-                .map((addon: any) => ({
-                  rawItemId: addon.rawItemId,
-                  // Total raw material = addon selection qty * raw material per unit * order item qty
-                  quantity: (addon.quantity || 1) * (addon.quantityPerUnit || 1) * itemQuantity,
-                  unit: addon.unit || 'g',
-                }));
-            }
-
-            return orderItem;
-          });
-
-          deductionReport = await storage.deductInventoryForOrder(
-            order.id,
-            finalBranchId,
-            orderItems,
-            req.employee?.username || 'system'
-          );
-
-          if (deductionReport && !deductionReport.success) {
-            if (deductionReport.warnings && deductionReport.warnings.length > 0) {
-              console.warn(`[ORDER ${order.orderNumber}] Inventory warnings:`, deductionReport.warnings);
-            }
-            if (deductionReport.errors && deductionReport.errors.length > 0) {
-            }
-          }
-
-        } catch (error) {
-          // Continue with order - don't fail the order if inventory deduction fails
-        }
-      }
-
-      // Update table occupancy if this is a table order
-      if (tableId) {
-        try {
-          await storage.updateTableOccupancy(tableId, true, order.id);
-        } catch (error) {
-          // Continue anyway - order was created successfully
-        }
-      }
-
-      // Add stamps automatically if customer has phone number (works for guests and registered users)
-      let phoneForStamps = customerInfo?.phoneNumber || req.body.customerPhone;
-      
-      // FIX: Ensure phoneForStamps is normalized
-      if (phoneForStamps) {
-        phoneForStamps = phoneForStamps.toString().trim();
-      }
-
-      if (finalCustomerId) {
-        try {
-          const customer = await storage.getCustomer(finalCustomerId);
-          phoneForStamps = customer?.phone || phoneForStamps;
-        } catch (e) {}
-      }
-
-      console.log(`[LOYALTY] Attempting to add points for phone: ${phoneForStamps}`);
-
-      if (phoneForStamps) {
-        try {
-          let loyaltyCard = await storage.getLoyaltyCardByPhone(phoneForStamps);
-
-          // Create loyalty card if doesn't exist
-          if (!loyaltyCard) {
-            console.log(`[LOYALTY] Creating new card for ${phoneForStamps}`);
-            loyaltyCard = await storage.createLoyaltyCard({
-              customerName: finalCustomerName || customerInfo?.customerName || 'عميل',
-              phoneNumber: phoneForStamps,
-              isActive: 1,
-              stamps: 0,
-              freeCupsEarned: 0,
-              totalSpent: 0,
-              points: 0,
-              pendingPoints: 0,
-            } as any);
-          }
-
-          // Calculate points (10 points per drink)
-          const itemsToProcess = Array.isArray(processedItems) ? processedItems : 
-                                (Array.isArray(items) ? items : []);
-          
-          const drinksCount = itemsToProcess.reduce((sum: number, item: any) => sum + (Number(item.quantity) || 0), 0);
-          const pointsToAdd = drinksCount * 10; // 10 points per drink
-
-          console.log(`[LOYALTY] Points to add: ${pointsToAdd}, Drinks: ${drinksCount}, Current points: ${loyaltyCard.points || 0}`);
-
-          if (pointsToAdd > 0) {
-            const currentPoints = Number(loyaltyCard.points) || 0;
-            const currentPendingPoints = Number(loyaltyCard.pendingPoints) || 0;
-            const currentTotalSpent = parseFloat(loyaltyCard.totalSpent?.toString() || "0");
-            
-            // Add points as pending until order is completed
-            await storage.updateLoyaltyCard(loyaltyCard.id, {
-              pendingPoints: currentPendingPoints + pointsToAdd,
-              totalSpent: currentTotalSpent + parseFloat(totalAmount.toString()),
-              lastUsedAt: new Date()
-            });
-
-            console.log(`[LOYALTY] Updated card ${loyaltyCard.id}: Pending Points ${currentPendingPoints + pointsToAdd}`);
-
-            // Create loyalty transaction for pending points
-            await storage.createLoyaltyTransaction({
-              cardId: loyaltyCard.id,
-              type: 'points_pending',
-              pointsChange: pointsToAdd,
-              discountAmount: 0,
-              orderAmount: Number(totalAmount),
-              orderId: order.id,
-              description: `نقاط معلقة: ${pointsToAdd} نقطة من الطلب رقم ${order.orderNumber} (ستضاف عند اكتمال الطلب)`,
-            });
-          }
-        } catch (error) {
-          console.error("[LOYALTY] Error processing points:", error);
-        }
-      }
-
-      // Parse items from JSON string and serialize the order
-      const serializedOrder = serializeDoc(order);
-      if (serializedOrder.items && typeof serializedOrder.items === 'string') {
-        try {
-          serializedOrder.items = JSON.parse(serializedOrder.items);
-        } catch (e) {
-        }
-      }
-
-      // Broadcast new order via WebSocket
-      wsManager.broadcastNewOrder(serializedOrder);
-      
-      // Generate and send tax invoice if customer has email
-      if (customerInfo && customerInfo.customerEmail) {
-        try {
-          const taxRate = VAT_RATE;
-          const invoiceSubtotal = parseFloat(totalAmount.toString()) / (1 + taxRate);
-          const invoiceTax = invoiceSubtotal * taxRate;
-          const invoiceNumber = `INV-${Date.now()}-${nanoid(6)}`;
-          
-          const invoiceData = {
-            customerName: customerInfo.customerName,
-            customerPhone: customerInfo.phoneNumber,
-            items: Array.isArray(items) ? items : JSON.parse(items),
-            subtotal: invoiceSubtotal - (parseFloat(discountPercentage?.toString() || '0') / 100 * invoiceSubtotal),
-            discountAmount: parseFloat(discountPercentage?.toString() || '0') / 100 * invoiceSubtotal,
-            taxAmount: invoiceTax,
-            totalAmount: parseFloat(totalAmount.toString()),
-            paymentMethod: paymentMethod,
-            invoiceDate: new Date()
-          };
-          
-          const customerEmail = customerInfo.customerEmail;
-          if (customerEmail && customerEmail.includes('@')) {
-            await sendInvoiceEmail(customerEmail, invoiceNumber, invoiceData);
-          } else {
-          }
-          
-          // Store invoice in database
-          try {
-            await storage.createTaxInvoice({
-              orderId: order.id,
-              invoiceNumber: invoiceNumber,
-              customerName: customerInfo.customerName,
-              customerPhone: customerInfo.phoneNumber,
-              customerEmail: customerEmail,
-              items: invoiceData.items,
-              subtotal: invoiceData.subtotal,
-              discountAmount: invoiceData.discountAmount,
-              taxAmount: invoiceTax,
-              totalAmount: parseFloat(totalAmount.toString()),
-              paymentMethod: paymentMethod
-            });
-          } catch (storageError) {
-          }
-        } catch (invoiceError) {
-          // Don't fail order if invoice generation fails
-        }
-      } else {
-      }
-      
-      // Build response with deduction report included
-      const response = {
-        ...serializedOrder,
-        deductionReport: (deductionReport as any) ? {
-          success: (deductionReport as any).success,
-          costOfGoods: (deductionReport as any).costOfGoods,
-          grossProfit: (deductionReport as any).grossProfit,
-          deductionDetails: (deductionReport as any).deductionDetails,
-          shortages: (deductionReport as any).shortages,
-          warnings: (deductionReport as any).warnings,
-          errors: (deductionReport as any).errors,
-        } : null
-      };
-
-      res.status(201).json(response);
-    } catch (error) {
-      console.error("[ORDERS] Error creating order:", error);
-      res.status(500).json({ error: "Failed to create order", details: error instanceof Error ? error.message : String(error) });
-    }
-  }); };
 
   // Finalize (Pay) Open Table Order
   app.post("/api/orders/:id/finalize", requireAuth, async (req: AuthRequest, res) => {
@@ -8799,7 +8553,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         discountAmount: discountAmount,
         taxAmount: taxAmount,
         totalAmount: totalAmount,
-        paymentMethod: serializedOrder.paymentMethod || 'cash',
+        paymentMethod: serializedOrder.paymentMethod || 'unknown',
         invoiceDate: orderDate
       };
 
@@ -8844,6 +8598,229 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       res.status(500).json({ error: "فشل في جلب معلومات الطلب" });
     }
   });
+
+  // ─── Refund / Return Orders ────────────────────────────────────────────────
+
+  // Search order for refund (by order number or phone)
+  app.get("/api/refunds/search-order", async (req: any, res) => {
+    try {
+      const { q } = req.query as { q?: string };
+      if (!q) return res.status(400).json({ error: "يرجى إدخال رقم الطلب أو رقم الجوال" });
+
+      const tenantId = getTenantIdFromRequest(req) || 'demo-tenant';
+      const { OrderModel } = await import('@shared/schema');
+
+      let order: any = null;
+      const isPhone = /^\d{7,12}$/.test(q.replace(/\D/g, ""));
+
+      if (isPhone) {
+        const phone = q.replace(/\D/g, "");
+        const normalizedPhone = phone.startsWith('0') ? phone.slice(1) : phone;
+        order = await OrderModel.findOne({
+          $or: [{ 'customerInfo.phone': phone }, { 'customerInfo.phone': normalizedPhone }, { customerPhone: phone }, { customerPhone: normalizedPhone }],
+        }).sort({ createdAt: -1 });
+      } else {
+        const num = q.replace(/^#/, "");
+        const numAsNumber = parseInt(num, 10);
+        order = await OrderModel.findOne({
+          $or: [
+            { orderNumber: num },
+            ...(isNaN(numAsNumber) ? [] : [{ orderNumber: numAsNumber }, { dailyNumber: numAsNumber }]),
+          ],
+        });
+      }
+
+      if (!order) return res.status(404).json({ error: "لم يتم العثور على الطلب" });
+
+      const serialized = serializeDoc(order);
+      if (typeof serialized.items === 'string') {
+        try { serialized.items = JSON.parse(serialized.items); } catch { serialized.items = []; }
+      }
+      res.json(serialized);
+    } catch (error) {
+      console.error('[Refund Search]', error);
+      res.status(500).json({ error: "فشل البحث عن الطلب" });
+    }
+  });
+
+  // List all refunds (manager/admin)
+  app.get("/api/refunds", requireAuth, async (req: any, res) => {
+    try {
+      const { RefundOrderModel } = await import('@shared/schema');
+      const tenantId = getTenantIdFromRequest(req) || 'demo-tenant';
+      const { period, branchId, page = '1', limit: limitStr = '50' } = req.query as Record<string, string>;
+
+      const query: any = { tenantId };
+      if (branchId) query.branchId = branchId;
+      if (period) {
+        const now = new Date();
+        let startDate = new Date();
+        if (period === 'today') { startDate.setHours(0,0,0,0); }
+        else if (period === 'week') { startDate.setDate(now.getDate() - 7); }
+        else if (period === 'month') { startDate.setMonth(now.getMonth() - 1); }
+        query.createdAt = { $gte: startDate };
+      }
+
+      const limitNum = Math.min(parseInt(limitStr, 10) || 50, 200);
+      const skip = (parseInt(page, 10) - 1) * limitNum;
+      const [refunds, total] = await Promise.all([
+        RefundOrderModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(limitNum),
+        RefundOrderModel.countDocuments(query),
+      ]);
+
+      const totalAmount = await RefundOrderModel.aggregate([
+        { $match: query },
+        { $group: { _id: null, total: { $sum: '$refundAmount' } } },
+      ]);
+
+      res.json({
+        refunds: refunds.map(r => serializeDoc(r)),
+        total,
+        totalAmount: totalAmount[0]?.total || 0,
+        page: parseInt(page, 10),
+        limit: limitNum,
+      });
+    } catch (error) {
+      console.error('[Refunds List]', error);
+      res.status(500).json({ error: "فشل جلب الاسترجاعات" });
+    }
+  });
+
+  // Create a new refund
+  app.post("/api/refunds", requireAuth, async (req: any, res) => {
+    try {
+      const { RefundOrderModel } = await import('@shared/schema');
+      const { nanoid } = await import('nanoid');
+      const tenantId = getTenantIdFromRequest(req) || 'demo-tenant';
+
+      const {
+        originalOrderId, originalOrderNumber, branchId, employeeId, employeeName,
+        items, refundAmount, paymentMethod, cashAmount, cardAmount,
+        reason, notes, status,
+      } = req.body;
+
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ error: "يجب اختيار صنف واحد على الأقل" });
+      }
+      if (!reason || !reason.trim()) {
+        return res.status(400).json({ error: "سبب الاسترجاع مطلوب" });
+      }
+      if (!refundAmount || refundAmount <= 0) {
+        return res.status(400).json({ error: "مبلغ الاسترجاع يجب أن يكون أكبر من صفر" });
+      }
+      if (!['cash', 'card', 'split'].includes(paymentMethod)) {
+        return res.status(400).json({ error: "طريقة الدفع غير صحيحة" });
+      }
+
+      const refundDoc = new RefundOrderModel({
+        id: nanoid(),
+        tenantId,
+        originalOrderId: originalOrderId || undefined,
+        originalOrderNumber: originalOrderNumber || undefined,
+        branchId: branchId || undefined,
+        employeeId: employeeId || undefined,
+        employeeName: employeeName || undefined,
+        items: items.map((item: any) => ({
+          coffeeItemId: item.coffeeItemId || '',
+          nameAr: item.nameAr || 'صنف',
+          nameEn: item.nameEn,
+          quantity: Number(item.quantity) || 1,
+          unitPrice: Number(item.unitPrice) || 0,
+          subtotal: Number(item.subtotal) || 0,
+        })),
+        refundAmount: Number(refundAmount),
+        paymentMethod,
+        cashAmount: Number(cashAmount) || 0,
+        cardAmount: Number(cardAmount) || 0,
+        reason: reason.trim(),
+        notes: notes?.trim() || undefined,
+        status: status || 'completed',
+      });
+
+      await refundDoc.save();
+
+      // ── Update original order: mark as refunded ──────────────────────────────
+      if (originalOrderId) {
+        try {
+          const { OrderModel } = await import('@shared/schema');
+          const origOrder = await OrderModel.findOne({
+            $or: [{ id: originalOrderId }, { _id: originalOrderId.length === 24 ? originalOrderId : undefined }]
+          }).catch(() => null) || await OrderModel.findById(originalOrderId).catch(() => null);
+
+          if (origOrder) {
+            const prevRefunded = Number((origOrder as any).refundedAmount) || 0;
+            const newRefunded = prevRefunded + Number(refundAmount);
+            const orderTotal = Number((origOrder as any).totalAmount) || 0;
+            const isFullyRefunded = newRefunded >= orderTotal - 0.01;
+
+            const updateFields: any = {
+              refundedAmount: newRefunded,
+              refundedAt: new Date(),
+              isFullyRefunded,
+              updatedAt: new Date(),
+            };
+            if (isFullyRefunded) {
+              updateFields.status = 'refunded';
+              updateFields.paymentStatus = 'refunded';
+            }
+            await OrderModel.updateOne({ _id: (origOrder as any)._id }, { $set: updateFields });
+          }
+        } catch (err) {
+          console.error('[Refund] Failed to update original order:', err);
+        }
+      }
+
+      // ── Update active cashier shift totalRefunds ──────────────────────────────
+      if (employeeId) {
+        try {
+          const { CashierShiftModel } = await import('@shared/schema');
+          await CashierShiftModel.updateOne(
+            { employeeId, status: 'open' },
+            { $inc: { totalRefunds: Number(refundAmount) }, $set: { updatedAt: new Date() } }
+          );
+        } catch (err) {
+          console.error('[Refund] Failed to update shift totalRefunds:', err);
+        }
+      }
+
+      res.status(201).json(serializeDoc(refundDoc));
+    } catch (error) {
+      console.error('[Create Refund]', error);
+      res.status(500).json({ error: "فشل إنشاء الاسترجاع" });
+    }
+  });
+
+  // Get single refund
+  app.get("/api/refunds/:id", requireAuth, async (req: any, res) => {
+    try {
+      const { RefundOrderModel } = await import('@shared/schema');
+      const { id } = req.params;
+      const refund = await RefundOrderModel.findOne({ id });
+      if (!refund) return res.status(404).json({ error: "الاسترجاع غير موجود" });
+      res.json(serializeDoc(refund));
+    } catch (error) {
+      res.status(500).json({ error: "فشل جلب الاسترجاع" });
+    }
+  });
+
+  // Cancel a refund (admin only)
+  app.patch("/api/refunds/:id/cancel", requireAuth, async (req: any, res) => {
+    try {
+      const { RefundOrderModel } = await import('@shared/schema');
+      const { id } = req.params;
+      const refund = await RefundOrderModel.findOneAndUpdate(
+        { id },
+        { status: 'cancelled', updatedAt: new Date() },
+        { new: true }
+      );
+      if (!refund) return res.status(404).json({ error: "الاسترجاع غير موجود" });
+      res.json(serializeDoc(refund));
+    } catch (error) {
+      res.status(500).json({ error: "فشل إلغاء الاسترجاع" });
+    }
+  });
+
+  // ─── End Refund Routes ────────────────────────────────────────────────────
 
   // Public endpoint for Order Status Display - no authentication required
   app.get("/api/orders/active-display", async (req, res) => {
@@ -8908,7 +8885,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       const { OrderModel } = await import("@shared/schema");
       
       const query: any = {
-        status: { $in: ['pending', 'confirmed', 'payment_confirmed', 'in_progress', 'ready'] }
+        status: { $in: ['pending', 'confirmed', 'payment_confirmed', 'in_progress', 'ready', 'delivered', 'received', 'suspended'] }
       };
 
       // Apply branch filtering for all non-admin/owner roles
@@ -9002,7 +8979,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
     try {
       const { OrderModel } = await import("@shared/schema");
       const employee = req.session?.employee;
-      const tenantId = employee?.tenantId || getTenantIdFromRequest(req) || 'demo-tenant';
+      const tenantId = (employee as any)?.tenantId || getTenantIdFromRequest(req) || 'demo-tenant';
       const query: any = { tenantId, isProductReservation: true };
       if (employee?.branchId) query.branchId = employee.branchId;
       const orders = await OrderModel.find(query).sort({ createdAt: -1 }).limit(200).lean();
@@ -9036,41 +9013,18 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
   app.get("/api/orders", requireAuth, async (req: any, res) => {
     try {
       const { OrderModel } = await import("@shared/schema");
-      const { limit, offset, status, today, fromDate, period, branchId: qBranchId, orderType } = req.query;
+      const { limit, offset, status, today, fromDate, period, branchId: qBranchId } = req.query;
 
       const employee = req.session?.employee;
-      const tenantId = employee?.tenantId || getTenantIdFromRequest(req) || 'demo-tenant';
+      const tenantId = (employee as any)?.tenantId || getTenantIdFromRequest(req) || 'demo-tenant';
 
       const limitNum = limit ? parseInt(limit as string) : 300;
       const offsetNum = offset ? parseInt(offset as string) : 0;
 
       const query: any = { tenantId };
-      // Branch filter:
-      // - Elevated roles (owner/admin/branch_manager/manager) may pass any qBranchId or "all".
-      // - Non-elevated employees are LOCKED to their session.branchId; qBranchId is ignored
-      //   to prevent intra-tenant data leakage across branches.
-      // - In all bound cases we ALSO include legacy/customer orders that have no branchId
-      //   so the order history isn't blank for newly-migrated tenants.
-      const elevatedRoles = ['owner', 'admin', 'branch_manager', 'manager'];
-      const isElevated = !!(employee && elevatedRoles.includes(employee.role));
-      let effectiveBranch: string | null = null;
-      if (isElevated) {
-        effectiveBranch = (qBranchId && qBranchId !== 'all') ? (qBranchId as string) : null;
-      } else if (employee?.branchId) {
-        effectiveBranch = employee.branchId;
-      }
-      if (effectiveBranch) {
-        query.$or = [
-          { branchId: effectiveBranch },
-          { branchId: { $in: [null, ''] } },
-          { branchId: { $exists: false } },
-        ];
-      }
-
-      // Support orderType filter (dine_in, delivery, pickup, etc.)
-      if (orderType && orderType !== 'all') {
-        query.orderType = orderType as string;
-      }
+      // Branch filter: query param takes precedence for admins; session branch for employees
+      const resolvedBranch = (qBranchId && qBranchId !== 'all') ? (qBranchId as string) : (employee?.branchId || null);
+      if (resolvedBranch) query.branchId = resolvedBranch;
 
       // Support status filter (comma-separated)
       if (status && status !== 'all') {
@@ -9091,6 +9045,13 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       } else if (fromDate) {
         query.createdAt = { $gte: new Date(fromDate as string) };
       }
+
+      // Short-term cache key based on full query shape
+      const ordersCk = cacheKey('orders', tenantId, resolvedBranch || 'all', status as string || 'all',
+        today as string || '', period as string || '', fromDate as string || '',
+        String(limitNum), String(offsetNum));
+      const cachedOrders = cache.get<any[]>(ordersCk);
+      if (cachedOrders) return res.json(cachedOrders);
 
       const rawOrders = await OrderModel.find(query)
         .sort({ createdAt: -1 })
@@ -9114,6 +9075,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         };
       });
 
+      cache.set(ordersCk, enrichedOrders, CACHE_TTL.ORDERS);
       return res.json(enrichedOrders);
     } catch (error) {
       return res.status(500).json({ error: "Failed to fetch orders" });
@@ -9316,7 +9278,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       const { status, cancellationReason, estimatedPrepTimeInMinutes, paymentMethod: rawPaymentMethod } = req.body;
 
       // Valid statuses for order workflow
-      const validStatuses = ['pending', 'payment_confirmed', 'in_progress', 'ready', 'completed', 'cancelled'];
+      const validStatuses = ['pending', 'confirmed', 'payment_confirmed', 'in_progress', 'ready', 'delivered', 'received', 'completed', 'cancelled', 'suspended', 'refunded'];
       if (!validStatuses.includes(status)) {
         return res.status(400).json({ error: "Invalid status" });
       }
@@ -9449,7 +9411,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
                   customerName: updatedOrder.customerInfo?.customerName || 'عميل نقدي',
                   customerPhone: updatedOrder.customerInfo?.customerPhone || '',
                   items: invoiceItems,
-                  paymentMethod: updatedOrder.paymentMethod || 'cash',
+                  paymentMethod: updatedOrder.paymentMethod || 'unknown',
                   branchId: updatedOrder.branchId,
                   createdBy: req.employee?.id,
                   invoiceType: 'simplified'
@@ -10054,7 +10016,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       if (!loyaltyCard) return res.status(404).json({ error: "لم يتم العثور على بطاقة الولاء" });
 
       // Get real loyalty settings from business config
-      const businessConfig   = await storage.getBusinessConfig('demo-tenant').catch(() => null) as any;
+      const businessConfig   = await storage.getBusinessConfig((loyaltyCard as any)?.tenantId || getTenantIdFromRequest(req) || 'demo-tenant').catch(() => null) as any;
       const loyaltyConfig    = businessConfig?.loyaltyConfig || {};
       const pointsValueInSar = loyaltyConfig.pointsValueInSar ?? 0.02;
 
@@ -10068,72 +10030,148 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       const qrValue      = loyaltyCard.qrToken || loyaltyCard.cardNumber || rawDigits.slice(-9);
 
       const cardNumber = loyaltyCard.cardNumber || rawDigits.slice(-9);
+
+      // Tier display names + QIROX green accent shades per tier
+      const tierLabelsAr: Record<string, string> = {
+        bronze: "برونزي 🥉", silver: "فضي 🥈", gold: "ذهبي 🥇", platinum: "بلاتيني 💎"
+      };
+      const tierLabelsEn: Record<string, string> = {
+        bronze: "Bronze", silver: "Silver", gold: "Gold", platinum: "Platinum"
+      };
+
       const passJson = {
         formatVersion: 1,
         passTypeIdentifier: passTypeId,
-        serialNumber: `CHEFSPLACE-${rawDigits.slice(-9)}`,
+        serialNumber: `QIROX-${rawDigits.slice(-9)}-${Date.now().toString(36).toUpperCase()}`,
         teamIdentifier: teamId,
-        organizationName: "مكان الشيف البخاري",
-        description: "بطاقة ولاء - مكان الشيف البخاري",
-        logoText: "مكان الشيف البخاري",
-        backgroundColor: "rgb(17, 17, 17)",
-        foregroundColor: "rgb(255, 255, 255)",
-        labelColor: "rgb(196, 176, 138)",
+        organizationName: "QIROX Cafe",
+        description: `بطاقة ولاء QIROX`,
+        logoText: "",
+        backgroundColor: "rgb(13, 13, 13)",
+        foregroundColor: "rgb(245, 245, 245)",
+        labelColor: "rgb(45, 155, 110)",
         storeCard: {
           headerFields: [
-            { key: "tier", label: "المستوى", value: tierLabels[tier] || "برونزي", textAlignment: "PKTextAlignmentRight" }
+            {
+              key: "tier",
+              label: "المستوى",
+              value: tierLabelsAr[tier] || "برونزي",
+              textAlignment: "PKTextAlignmentRight"
+            }
           ],
           primaryFields: [
-            { key: "points", label: "نقاطك", value: String(points), textAlignment: "PKTextAlignmentNatural" }
+            {
+              key: "points",
+              label: "نقاط الولاء",
+              value: points.toLocaleString(),
+              changeMessage: "رصيدك تحدّث إلى %@ نقطة"
+            }
           ],
           secondaryFields: [
-            { key: "sar", label: "قيمة بالريال", value: `${sarValue} ر.س` },
-            { key: "name", label: "العميل", value: customerName }
-          ],
-          auxiliaryFields: [
-            { key: "card", label: "رقم البطاقة", value: cardNumber }
+            {
+              key: "sar",
+              label: "القيمة",
+              value: `${sarValue} ر.س`
+            },
+            {
+              key: "name",
+              label: "العميل",
+              value: customerName
+            }
           ],
           backFields: [
-            { key: "how", label: "كيف تستخدم نقاطك؟", value: "أخبر الكاشير باسمك أو رقم جوالك، أو أعرض رمز QR ليخصم النقاط تلقائياً." },
-            { key: "rate", label: "معدل النقاط", value: `كل 50 نقطة = 1 ريال خصم` },
-            { key: "min", label: "الحد الأدنى للاسترداد", value: "100 نقطة" },
-            { key: "website", label: "الموقع الإلكتروني", value: "chefsplace.online" },
-            { key: "phone", label: "رقم الجوال المسجل", value: rawDigits.slice(-9) },
+            {
+              key: "how_to_use",
+              label: "كيف تستخدم نقاطك؟",
+              value: "أعرض رمز QR للكاشير، أو أخبره باسمك أو رقم جوالك.\nالحد الأدنى للاسترداد: 100 نقطة."
+            },
+            {
+              key: "how_to_earn",
+              label: "كيف تكسب نقاطاً؟",
+              value: "تحصل على نقاط مع كل طلب تلقائياً.\nكلما زاد طلبك، زادت نقاطك وارتقيت في المستويات."
+            },
+            {
+              key: "balance_info",
+              label: "رصيدك الحالي",
+              value: `${points.toLocaleString()} نقطة  ≈  ${sarValue} ر.س`
+            },
+            {
+              key: "contact",
+              label: "تواصل معنا",
+              value: "qirox.cafe\n@qiroxcafe"
+            }
           ]
         },
         barcodes: [
-          { message: qrValue, format: "PKBarcodeFormatQR", messageEncoding: "iso-8859-1", altText: cardNumber }
-        ],
-        barcode: { message: qrValue, format: "PKBarcodeFormatQR", messageEncoding: "iso-8859-1", altText: cardNumber }
-      };
-
-      // Build pass files in a temp .pass directory (required by passkit-generator)
-      const os   = await import('os');
-      const { PNG } = await import('pngjs');
-
-      const makeSolidPng = (w: number, h: number, r: number, g: number, b: number): Buffer => {
-        const png = new PNG({ width: w, height: h });
-        for (let y = 0; y < h; y++) {
-          for (let x = 0; x < w; x++) {
-            const idx = (w * y + x) * 4;
-            png.data[idx] = r; png.data[idx+1] = g; png.data[idx+2] = b; png.data[idx+3] = 255;
+          {
+            message: qrValue,
+            format: "PKBarcodeFormatQR",
+            messageEncoding: "iso-8859-1",
+            altText: cardNumber
           }
+        ],
+        barcode: {
+          message: qrValue,
+          format: "PKBarcodeFormatQR",
+          messageEncoding: "iso-8859-1",
+          altText: cardNumber
         }
-        return PNG.sync.write(png);
       };
 
-      const passDir = path.join(os.tmpdir(), `chefsplace-${Date.now()}.pass`);
+      // Build pass images using sharp for proper QIROX branding
+      const os   = await import('os');
+      const sharpLib = await import('sharp');
+      const sharp = (sharpLib as any).default || sharpLib;
+
+      const logoSourcePath = path.join(process.cwd(), "attached_assets/qirox-logo-customer.png");
+      const logoExists = fs.existsSync(logoSourcePath);
+
+      const makeIconPng = async (size: number): Promise<Buffer> => {
+        const pad = Math.round(size * 0.16);
+        const inner = size - pad * 2;
+        if (logoExists) {
+          const logo = await sharp(logoSourcePath)
+            .resize(inner, inner, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+            .toBuffer();
+          return await sharp({ create: { width: size, height: size, channels: 4, background: { r: 13, g: 13, b: 13, alpha: 255 } } })
+            .composite([{ input: logo, gravity: "center" }])
+            .png()
+            .toBuffer();
+        }
+        // Fallback: solid green square
+        return await sharp({ create: { width: size, height: size, channels: 3, background: { r: 45, g: 155, b: 110 } } })
+          .png().toBuffer();
+      };
+
+      const makeLogoPng = async (w: number, h: number): Promise<Buffer> => {
+        const logoH = Math.round(h * 0.7);
+        const logoW = logoH;
+        if (logoExists) {
+          const logo = await sharp(logoSourcePath)
+            .resize(logoW, logoH, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+            .toBuffer();
+          return await sharp({ create: { width: w, height: h, channels: 4, background: { r: 13, g: 13, b: 13, alpha: 255 } } })
+            .composite([{ input: logo, left: Math.round((w - logoW) / 2), top: Math.round((h - logoH) / 2) }])
+            .png()
+            .toBuffer();
+        }
+        return await sharp({ create: { width: w, height: h, channels: 3, background: { r: 13, g: 13, b: 13 } } })
+          .png().toBuffer();
+      };
+
+      const passDir = path.join(os.tmpdir(), `qirox-${Date.now()}.pass`);
       fs.mkdirSync(passDir, { recursive: true });
 
       try {
-        // Write all pass files — directory must end with .pass
         fs.writeFileSync(path.join(passDir, 'pass.json'), JSON.stringify(passJson));
-        fs.writeFileSync(path.join(passDir, 'icon.png'),    makeSolidPng(29,  29,  17, 17, 17));
-        fs.writeFileSync(path.join(passDir, 'icon@2x.png'), makeSolidPng(58,  58,  17, 17, 17));
-        fs.writeFileSync(path.join(passDir, 'icon@3x.png'), makeSolidPng(87,  87,  17, 17, 17));
-        fs.writeFileSync(path.join(passDir, 'logo.png'),    makeSolidPng(160, 50,  17, 17, 17));
-        fs.writeFileSync(path.join(passDir, 'logo@2x.png'), makeSolidPng(320, 100, 17, 17, 17));
-        fs.writeFileSync(path.join(passDir, 'logo@3x.png'), makeSolidPng(480, 150, 17, 17, 17));
+
+        // Generate proper icon PNGs from QIROX logo
+        fs.writeFileSync(path.join(passDir, 'icon.png'),    await makeIconPng(29));
+        fs.writeFileSync(path.join(passDir, 'icon@2x.png'), await makeIconPng(58));
+        fs.writeFileSync(path.join(passDir, 'icon@3x.png'), await makeIconPng(87));
+        fs.writeFileSync(path.join(passDir, 'logo.png'),    await makeLogoPng(160, 50));
+        fs.writeFileSync(path.join(passDir, 'logo@2x.png'), await makeLogoPng(320, 100));
+        fs.writeFileSync(path.join(passDir, 'logo@3x.png'), await makeLogoPng(480, 150));
 
         const { PKPass } = await import("passkit-generator");
 
@@ -10152,7 +10190,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
 
         res.set({
           "Content-Type":        "application/vnd.apple.pkpass",
-          "Content-Disposition": `inline; filename="chefsplace-${safeName}.pkpass"`,
+          "Content-Disposition": `inline; filename="qirox-loyalty-${safeName}.pkpass"`,
           "Cache-Control":       "no-store",
           "Content-Length":      String(passBuffer.length),
         });
@@ -10538,7 +10576,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
 
       if ((card.points || 0) < pts) return res.status(400).json({ error: "رصيد النقاط غير كافٍ" });
 
-      const config = await storage.getBusinessConfig('demo-tenant');
+      const config = await storage.getBusinessConfig((card as any)?.tenantId || getTenantIdFromRequest(req) || 'demo-tenant');
       const pointsValueInSar = (config as any)?.loyaltyConfig?.pointsValueInSar ?? 0.05;
       const sarValue = pts * pointsValueInSar;
 
@@ -11124,7 +11162,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
     }
   });
 
-  app.post("/api/categories", async (req, res) => {
+  app.post("/api/categories", requireAuth, async (req: AuthRequest, res) => {
     try {
       const { insertCategorySchema } = await import("@shared/schema");
       const validatedData = insertCategorySchema.parse(req.body);
@@ -11138,7 +11176,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
     }
   });
 
-  app.put("/api/categories/:id", async (req, res) => {
+  app.put("/api/categories/:id", requireAuth, async (req: AuthRequest, res) => {
     try {
       const { id } = req.params;
       const category = await storage.updateCategory(id, req.body);
@@ -11151,7 +11189,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
     }
   });
 
-  app.delete("/api/categories/:id", async (req, res) => {
+  app.delete("/api/categories/:id", requireAuth, requireManager, async (req: AuthRequest, res) => {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteCategory(id);
@@ -11187,12 +11225,17 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
   });
 
   // TEMPORARY: Reset manager password
-  app.post("/api/reset-manager", async (req, res) => {
+  app.post("/api/reset-manager", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
     try {
+      const { newPassword } = req.body;
+      if (!newPassword || newPassword.length < 6) {
+        return res.status(400).json({ error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" });
+      }
       const manager = await storage.getEmployeeByUsername("manager");
       if (manager && manager._id) {
-        const hashedPassword = await bcrypt.hash("2030", 10);
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
         await storage.updateEmployee(manager._id.toString(), { password: hashedPassword });
+        logFromRequest(req, { action: 'employee.password_reset', entityType: 'employee', entityLabel: 'manager' });
         res.json({ message: "Manager password reset successfully" });
       } else {
         res.status(404).json({ error: "Manager not found" });
@@ -11257,8 +11300,8 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
 
   // TABLE MANAGEMENT ROUTES - إدارة الطاولات
 
-  // Cleanup: Clear all old table reservations (temporary endpoint)
-  app.post("/api/tables/cleanup-reservations", async (req, res) => {
+  // Cleanup: Clear all old table reservations
+  app.post("/api/tables/cleanup-reservations", requireAuth, requireManager, async (req: AuthRequest, res) => {
     try {
       const tenantId = getTenantIdFromRequest(req) || 'demo-tenant';
       const tables = await storage.getTables(undefined, tenantId);
@@ -12236,7 +12279,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
   });
 
   // Assign order to cashier (or accept pending order)
-  app.patch("/api/orders/:id/assign-cashier", async (req, res) => {
+  app.patch("/api/orders/:id/assign-cashier", requireAuth, async (req: AuthRequest, res) => {
     try {
       const { cashierId } = req.body;
       const { OrderModel } = await import("@shared/schema");
@@ -12476,7 +12519,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
     }
   });
 
-  app.delete("/api/admin/cashiers", async (req, res) => {
+  app.delete("/api/admin/cashiers", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
     try {
       const employees = await storage.getEmployees();
       const cashiers = employees.filter((e: any) => e.role === 'cashier');
@@ -12514,7 +12557,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
     };
 
   // Configure multer for employee image uploads
-  const employeeUploadsDir = getUploadsDir('employees');
+  const employeeUploadsDir = path.join(import.meta.dirname, '..', 'attached_assets', 'employees');
   const employeeStorage = multer.diskStorage({
     destination: function (req, file, cb) {
       cb(null, employeeUploadsDir);
@@ -12582,7 +12625,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
   });
 
   // Configure multer for drink image uploads
-  const drinksUploadsDir = getUploadsDir('drinks');
+  const drinksUploadsDir = path.resolve(__dirname, '..', 'attached_assets', 'drinks');
   const drinksStorage = multer.diskStorage({
     destination: function (req, file, cb) {
       if (!fs.existsSync(drinksUploadsDir)) {
@@ -12678,7 +12721,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
   });
 
   // Configure multer for size image uploads
-  const sizesUploadsDir = getUploadsDir('sizes');
+  const sizesUploadsDir = path.resolve(__dirname, '..', 'attached_assets', 'sizes');
   const sizesStorage = multer.diskStorage({
     destination: function (req, file, cb) {
       if (!fs.existsSync(sizesUploadsDir)) {
@@ -12720,7 +12763,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
   });
 
   // Configure multer for addon image uploads
-  const addonsUploadsDir = getUploadsDir('addons');
+  const addonsUploadsDir = path.resolve(__dirname, '..', 'attached_assets', 'addons');
   const addonsStorage = multer.diskStorage({
     destination: function (req, file, cb) {
       if (!fs.existsSync(addonsUploadsDir)) {
@@ -12774,7 +12817,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
   });
 
   // Configure multer for attendance photo uploads
-  const attendanceUploadsDir = getUploadsDir('attendance');
+  const attendanceUploadsDir = path.join(import.meta.dirname, '..', 'attached_assets', 'attendance');
   const attendanceStorage = multer.diskStorage({
     destination: function (req, file, cb) {
       cb(null, attendanceUploadsDir);
@@ -12817,6 +12860,273 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
     }
   });
 
+  // ============== ATTENDANCE KIOSK ROUTES ==============
+
+  // GET /api/attendance/kiosk-stats — today stats (no strict auth, for kiosk display)
+  app.get("/api/attendance/kiosk-stats", async (req: any, res) => {
+    try {
+      const { AttendanceModel, EmployeeModel } = await import("@shared/schema");
+      const tenantId = req.session?.employee?.tenantId || req.headers['x-tenant-id'] || 'demo-tenant';
+      const today = new Date(); today.setHours(0,0,0,0);
+      const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+
+      const [records, totalActive] = await Promise.all([
+        AttendanceModel.find({ tenantId: { $in: [tenantId, null, undefined] }, shiftDate: { $gte: today, $lt: tomorrow } }).lean(),
+        EmployeeModel.countDocuments({ isActive: 1 }),
+      ]);
+
+      const present = records.filter((r: any) => ['checked_in', 'checked_out'].includes(r.status)).length;
+      const late = records.filter((r: any) => r.isLate === 1).length;
+      const absent = Math.max(0, totalActive - present);
+
+      res.json({ present, late, absent, total: totalActive, checkedOut: records.filter((r: any) => r.status === 'checked_out').length });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // GET /api/attendance/recent-checkins — last 10 check-ins for kiosk display
+  app.get("/api/attendance/recent-checkins", async (req: any, res) => {
+    try {
+      const { AttendanceModel, EmployeeModel } = await import("@shared/schema");
+      const today = new Date(); today.setHours(0,0,0,0);
+      const records = await AttendanceModel.find({ shiftDate: { $gte: today } }).sort({ checkInTime: -1 }).limit(10).lean();
+      const empIds = [...new Set(records.map((r: any) => r.employeeId))];
+      const emps = await EmployeeModel.find({ id: { $in: empIds } }).select('id fullName role jobTitle imageUrl').lean();
+      const empMap = Object.fromEntries(emps.map((e: any) => [e.id, e]));
+      const result = records.map((r: any) => ({
+        employeeId: r.employeeId,
+        fullName: (empMap[r.employeeId] as any)?.fullName || 'موظف',
+        jobTitle: (empMap[r.employeeId] as any)?.jobTitle || '',
+        imageUrl: (empMap[r.employeeId] as any)?.imageUrl || null,
+        checkInTime: r.checkInTime,
+        isLate: r.isLate, lateMinutes: r.lateMinutes,
+        checkInMethod: r.checkInMethod || 'manual',
+        status: r.status,
+      }));
+      res.json(result);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // GET /api/attendance/face-employees — employees with face descriptors (for kiosk matching)
+  app.get("/api/attendance/face-employees", async (req: any, res) => {
+    try {
+      const { EmployeeModel } = await import("@shared/schema");
+      const emps = await EmployeeModel.find({ isActive: 1, faceDescriptors: { $exists: true, $not: { $size: 0 } } })
+        .select('id fullName role jobTitle branchId faceDescriptors imageUrl shiftStartTime shiftEndTime').lean();
+      res.json(emps.map((e: any) => ({
+        employeeId: e.id,
+        fullName: e.fullName,
+        role: e.role,
+        jobTitle: e.jobTitle,
+        branchId: e.branchId,
+        imageUrl: e.imageUrl,
+        shiftStartTime: e.shiftStartTime,
+        shiftEndTime: e.shiftEndTime,
+        descriptors: e.faceDescriptors || [],
+      })));
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // POST /api/attendance/face-checkin — check in via face recognition result
+  app.post("/api/attendance/face-checkin", async (req: any, res) => {
+    try {
+      const { AttendanceModel, EmployeeModel, BranchModel } = await import("@shared/schema");
+      const { employeeId, photoUrl, location, deviceFingerprint, confidence } = req.body;
+      if (!employeeId) return res.status(400).json({ error: "معرّف الموظف مطلوب" });
+
+      const employee = await EmployeeModel.findOne({ id: employeeId }).lean() as any;
+      if (!employee) return res.status(404).json({ error: "الموظف غير موجود" });
+
+      const today = new Date(); today.setHours(0,0,0,0);
+      const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+
+      // Check already checked in today
+      const existing = await AttendanceModel.findOne({ employeeId, shiftDate: { $gte: today, $lt: tomorrow } }).lean();
+      if (existing && (existing as any).status === 'checked_in') {
+        return res.status(400).json({ error: "تم تسجيل الحضور مسبقاً اليوم", existing });
+      }
+
+      const now = new Date();
+      const shiftStart = employee.shiftStartTime || '09:00';
+      const [sh, sm] = shiftStart.split(':').map(Number);
+      const shiftStartDate = new Date(now); shiftStartDate.setHours(sh, sm, 0, 0);
+      const diffMinutes = Math.floor((now.getTime() - shiftStartDate.getTime()) / 60000);
+      const isLate = diffMinutes > 5 ? 1 : 0;
+      const lateMinutes = isLate ? diffMinutes : 0;
+      const earlyMinutes = diffMinutes < -1 ? Math.abs(diffMinutes) : 0;
+
+      const safeLocation = location || { lat: 0, lng: 0 };
+      const record = await AttendanceModel.create({
+        employeeId, branchId: employee.branchId || '',
+        checkInTime: now, checkInPhoto: photoUrl || '',
+        checkInLocation: safeLocation,
+        status: isLate ? 'late' : 'checked_in',
+        shiftDate: today,
+        isLate, lateMinutes,
+        checkInMethod: 'face',
+        deviceFingerprint: deviceFingerprint || '',
+        isAtBranch: 1,
+        tenantId: employee.tenantId || 'demo-tenant',
+      });
+
+      res.status(201).json({
+        success: true, record,
+        employee: { fullName: employee.fullName, jobTitle: employee.jobTitle, role: employee.role, imageUrl: employee.imageUrl },
+        isLate, lateMinutes, earlyMinutes, shiftStart,
+        checkInTime: now.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }),
+        confidence: confidence || 0,
+      });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // GET /api/attendance/employee-qr/me — current employee's own QR
+  app.get("/api/attendance/employee-qr/me", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const { EmployeeModel } = await import("@shared/schema");
+      const employee = req.employee;
+      if (!employee?.id) return res.status(401).json({ error: "غير مصرح" });
+
+      const emp = await EmployeeModel.findOne({ id: employee.id }).lean() as any;
+      if (!emp) return res.status(404).json({ error: "الموظف غير موجود" });
+
+      const crypto = await import("crypto");
+      let secret = emp.kioskQrSecret;
+      if (!secret) {
+        secret = crypto.randomBytes(32).toString('hex');
+        await EmployeeModel.updateOne({ id: emp.id }, { kioskQrSecret: secret });
+      }
+
+      const now = Math.floor(Date.now() / 1000);
+      const window = Math.floor(now / 30);
+      const payload = `${emp.id}:${window}`;
+      const token = crypto.createHmac('sha256', secret).update(payload).digest('hex').slice(0, 16);
+      const expires = (window + 1) * 30;
+
+      res.json({
+        employeeId: emp.id,
+        token,
+        payload: JSON.stringify({ employeeId: emp.id, token, window, expires }),
+        expiresAt: new Date(expires * 1000).toISOString(),
+        expiresIn: expires - now,
+      });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // GET /api/attendance/employee-qr/:employeeId — generate expiring QR token
+  app.get("/api/attendance/employee-qr/:employeeId", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const { EmployeeModel } = await import("@shared/schema");
+      const employee = req.employee;
+      if (employee?.id !== req.params.employeeId && !['manager','admin','owner','branch_manager','supervisor'].includes(employee?.role || '')) {
+        return res.status(403).json({ error: "غير مصرح" });
+      }
+      const emp = await EmployeeModel.findOne({ id: req.params.employeeId }).lean() as any;
+      if (!emp) return res.status(404).json({ error: "الموظف غير موجود" });
+
+      const crypto = await import("crypto");
+      const secret = emp.kioskQrSecret || (() => {
+        const s = crypto.randomBytes(32).toString('hex');
+        EmployeeModel.updateOne({ id: emp.id }, { kioskQrSecret: s }).catch(() => {});
+        return s;
+      })();
+
+      const now = Math.floor(Date.now() / 1000);
+      const window = Math.floor(now / 30); // 30-second window
+      const payload = `${emp.id}:${window}`;
+      const token = crypto.createHmac('sha256', secret).update(payload).digest('hex').slice(0, 16);
+      const expires = (window + 1) * 30;
+
+      res.json({
+        employeeId: emp.id,
+        token,
+        payload: JSON.stringify({ employeeId: emp.id, token, window, expires }),
+        expiresAt: new Date(expires * 1000).toISOString(),
+        expiresIn: expires - now,
+      });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // POST /api/attendance/qr-checkin — verify QR token and check in
+  app.post("/api/attendance/qr-checkin", async (req: any, res) => {
+    try {
+      const { AttendanceModel, EmployeeModel } = await import("@shared/schema");
+      const { payload } = req.body;
+      let parsed: any;
+      try { parsed = JSON.parse(payload); } catch { return res.status(400).json({ error: "QR غير صالح" }); }
+      const { employeeId, token, window: qrWindow } = parsed;
+
+      const emp = await EmployeeModel.findOne({ id: employeeId }).lean() as any;
+      if (!emp) return res.status(404).json({ error: "الموظف غير موجود" });
+
+      const crypto = await import("crypto");
+      const secret = emp.kioskQrSecret;
+      if (!secret) return res.status(400).json({ error: "هذا الموظف لم يُفعّل QR الكيوسك بعد" });
+
+      const now = Math.floor(Date.now() / 1000);
+      const currentWindow = Math.floor(now / 30);
+      if (Math.abs(currentWindow - qrWindow) > 1) return res.status(400).json({ error: "انتهت صلاحية QR — اطلب QR جديداً" });
+
+      const expected = crypto.createHmac('sha256', secret).update(`${employeeId}:${qrWindow}`).digest('hex').slice(0, 16);
+      if (expected !== token) return res.status(400).json({ error: "QR غير صالح أو مزور" });
+
+      const today = new Date(); today.setHours(0,0,0,0);
+      const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+      const existing = await AttendanceModel.findOne({ employeeId, shiftDate: { $gte: today, $lt: tomorrow } }).lean();
+      if (existing && (existing as any).status === 'checked_in') {
+        return res.status(400).json({ error: "تم تسجيل الحضور مسبقاً اليوم", existing });
+      }
+
+      const shiftStart = emp.shiftStartTime || '09:00';
+      const [sh, sm] = shiftStart.split(':').map(Number);
+      const shiftStartDate = new Date(); shiftStartDate.setHours(sh, sm, 0, 0);
+      const diff = Math.floor((Date.now() - shiftStartDate.getTime()) / 60000);
+      const isLate = diff > 5 ? 1 : 0;
+
+      const record = await AttendanceModel.create({
+        employeeId, branchId: emp.branchId || '',
+        checkInTime: new Date(), checkInPhoto: emp.imageUrl || '',
+        checkInLocation: { lat: 0, lng: 0 },
+        status: isLate ? 'late' : 'checked_in',
+        shiftDate: today, isLate, lateMinutes: isLate ? diff : 0,
+        checkInMethod: 'qr',
+        tenantId: emp.tenantId || 'demo-tenant',
+      });
+
+      res.status(201).json({
+        success: true, record,
+        employee: { fullName: emp.fullName, jobTitle: emp.jobTitle, role: emp.role, imageUrl: emp.imageUrl },
+        isLate, lateMinutes: isLate ? diff : 0, shiftStart,
+        checkInTime: new Date().toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }),
+      });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // POST /api/employees/:id/enroll-face — save face descriptors
+  app.post("/api/employees/:id/enroll-face", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { EmployeeModel } = await import("@shared/schema");
+      const { descriptors, photoUrls } = req.body;
+      if (!descriptors || !Array.isArray(descriptors) || descriptors.length === 0) {
+        return res.status(400).json({ error: "بيانات البصمة مطلوبة (descriptors[])" });
+      }
+      const emp = await EmployeeModel.findOneAndUpdate(
+        { id: req.params.id },
+        { faceDescriptors: descriptors, facePhotos: photoUrls || [], faceEnrolledAt: new Date() },
+        { new: true }
+      ).select('id fullName faceEnrolledAt').lean();
+      if (!emp) return res.status(404).json({ error: "الموظف غير موجود" });
+      res.json({ success: true, employee: emp, descriptorsCount: descriptors.length });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // DELETE /api/employees/:id/face — remove face descriptors
+  app.delete("/api/employees/:id/face", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { EmployeeModel } = await import("@shared/schema");
+      await EmployeeModel.updateOne({ id: req.params.id }, { $unset: { faceDescriptors: 1, facePhotos: 1, faceEnrolledAt: 1 } });
+      res.json({ success: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
   // ============== ATTENDANCE ROUTES ==============
 
   // Check-in employee
@@ -12834,9 +13144,9 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         return res.status(400).json({ error: "الموقع مطلوب للتحضير" });
       }
 
-      // Selfie photo is REQUIRED for check-in
-      if (!photoUrl || typeof photoUrl !== 'string' || photoUrl.trim().length === 0) {
-        return res.status(400).json({ error: "صورة السلفي مطلوبة للتحضير. الرجاء التقاط صورة قبل تسجيل الحضور." });
+      // Photo is mandatory for check-in
+      if (!photoUrl) {
+        return res.status(400).json({ error: "صورة الحضور إلزامية — يجب التقاط صورة قبل التسجيل" });
       }
 
       // Get employee details
@@ -12955,6 +13265,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       });
 
       await attendance.save();
+      cache.invalidate('attendance:monthly:');
 
       res.json({
         success: true,
@@ -12983,7 +13294,10 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         return res.status(400).json({ error: "الموقع مطلوب للانصراف" });
       }
 
-      // photoUrl is optional — check-out is allowed without a photo
+      // Photo is mandatory for check-out
+      if (!photoUrl) {
+        return res.status(400).json({ error: "صورة الانصراف إلزامية — يجب التقاط صورة قبل تسجيل الانصراف" });
+      }
 
       // Get employee details
       const employee = await EmployeeModel.findOne({ 
@@ -13050,6 +13364,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       attendance.updatedAt = new Date();
 
       await attendance.save();
+      cache.invalidate('attendance:monthly:');
 
       res.json({
         success: true,
@@ -13399,10 +13714,22 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       const y = parseInt(year as string) || new Date().getFullYear();
       const m = parseInt(month as string) || (new Date().getMonth() + 1);
 
+      // Resolve effective branch scope before building cache key to prevent cross-branch leakage
+      const effectiveBranchId = (req.employee?.role === 'manager' && req.employee?.branchId)
+        ? req.employee.branchId
+        : (branchId as string || undefined);
+
+      const tenantId = getTenantIdFromRequest(req) || 'demo-tenant';
+      const ck = cacheKey('attendance:monthly', tenantId, y, m, employeeId as string || 'all', effectiveBranchId || 'all');
+      const cached = cache.get<any>(ck);
+      if (cached) return res.json(cached);
+
       // Saudi timezone offset: +3 hours
+      // Build both boundaries from explicit timezone strings to avoid UTC month-rollover bug
       const monthStart = new Date(`${y}-${String(m).padStart(2,'0')}-01T00:00:00+03:00`);
-      const monthEnd = new Date(monthStart);
-      monthEnd.setMonth(monthEnd.getMonth() + 1);
+      const nextMonthNum = m === 12 ? 1 : m + 1;
+      const nextYearNum  = m === 12 ? y + 1 : y;
+      const monthEnd = new Date(`${nextYearNum}-${String(nextMonthNum).padStart(2,'0')}-01T00:00:00+03:00`);
 
       const query: any = { shiftDate: { $gte: monthStart, $lt: monthEnd } };
 
@@ -13499,14 +13826,16 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       // Sort by attendance rate desc for "best employee"
       report.sort((a, b) => b.attendanceRate - a.attendanceRate || b.salesTotal - a.salesTotal);
 
-      res.json({
+      const result = {
         year: y,
         month: m,
         workDaysInMonth,
         totalEmployees: employees.length,
         report,
         bestEmployee: report[0] || null,
-      });
+      };
+      cache.set(ck, result, CACHE_TTL.REPORTS_ATTENDANCE);
+      res.json(result);
     } catch (error) {
       console.error("[ATTENDANCE REPORT]", error);
       res.status(500).json({ error: "فشل في إنشاء التقرير الشهري" });
@@ -13514,11 +13843,8 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
   });
 
   // Reset only operational data (orders, accounting) - keep products, employees, images
-  app.delete("/api/admin/reset-orders-only", requireAuth, async (req: AuthRequest, res) => {
+  app.delete("/api/admin/reset-orders-only", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
     try {
-      if (req.employee?.role !== 'owner' && req.employee?.role !== 'admin') {
-        return res.status(403).json({ error: "فقط المالك أو المدير العام يمكنه تصفير البيانات" });
-      }
       const tenantId = getTenantIdFromRequest(req) || 'demo-tenant';
       const { OrderModel, CartItemModel } = await import("@shared/schema");
       const DailyAccounting = mongoose.models['DailyAccounting'];
@@ -13612,7 +13938,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       const { LeaveRequestModel } = await import("@shared/schema-leave");
       const role = req.employee?.role;
 
-      if (role !== 'manager' && role !== 'admin' && role !== 'owner') {
+      if (role !== 'manager' && role !== 'branch_manager' && role !== 'admin' && role !== 'owner') {
         return res.status(403).json({ error: "صلاحيات غير كافية" });
       }
 
@@ -13629,12 +13955,12 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
     try {
       const { LeaveRequestModel } = await import("@shared/schema-leave");
 
-      if (req.employee?.role !== 'manager' && req.employee?.role !== 'admin' && req.employee?.role !== 'owner') {
+      if (req.employee?.role !== 'manager' && req.employee?.role !== 'branch_manager' && req.employee?.role !== 'admin' && req.employee?.role !== 'owner') {
         return res.status(403).json({ error: "صلاحيات غير كافية" });
       }
 
-      const request = await LeaveRequestModel.findByIdAndUpdate(
-        req.params.id,
+      let request = await LeaveRequestModel.findOneAndUpdate(
+        { id: req.params.id },
         {
           status: 'approved',
           approvedBy: req.employee.id,
@@ -13642,6 +13968,13 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         },
         { new: true }
       );
+      if (!request && req.params.id.match(/^[a-f\d]{24}$/i)) {
+        request = await LeaveRequestModel.findByIdAndUpdate(
+          req.params.id,
+          { status: 'approved', approvedBy: req.employee.id, approvalDate: new Date() },
+          { new: true }
+        );
+      }
 
       if (!request) {
         return res.status(404).json({ error: "الطلب غير موجود" });
@@ -13658,14 +13991,14 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
     try {
       const { LeaveRequestModel } = await import("@shared/schema-leave");
 
-      if (req.employee?.role !== 'manager' && req.employee?.role !== 'admin' && req.employee?.role !== 'owner') {
+      if (req.employee?.role !== 'manager' && req.employee?.role !== 'branch_manager' && req.employee?.role !== 'admin' && req.employee?.role !== 'owner') {
         return res.status(403).json({ error: "صلاحيات غير كافية" });
       }
 
       const { rejectionReason } = req.body;
 
-      const request = await LeaveRequestModel.findByIdAndUpdate(
-        req.params.id,
+      let request = await LeaveRequestModel.findOneAndUpdate(
+        { id: req.params.id },
         {
           status: 'rejected',
           approvedBy: req.employee.id,
@@ -13674,6 +14007,13 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         },
         { new: true }
       );
+      if (!request && req.params.id.match(/^[a-f\d]{24}$/i)) {
+        request = await LeaveRequestModel.findByIdAndUpdate(
+          req.params.id,
+          { status: 'rejected', approvedBy: req.employee.id, approvalDate: new Date(), rejectionReason },
+          { new: true }
+        );
+      }
 
       if (!request) {
         return res.status(404).json({ error: "الطلب غير موجود" });
@@ -13716,11 +14056,17 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         AttendanceModel, IngredientModel, CategoryModel, DeliveryZoneModel
       } = await import("@shared/schema");
 
+      // Optional query params: date=YYYY-MM-DD (Saudi local date), dayStartHour=0..23
+      const dayStartHour = parseInt(String(req.query.dayStartHour ?? '0'), 10) || 0;
+      const dateParam = req.query.date ? String(req.query.date) : '';
+      const targetDate = dateParam ? new Date(dateParam + 'T00:00:00Z') : new Date();
+      const { start: dayStart, end: dayEnd } = getBusinessDayBoundaries(targetDate, dayStartHour);
+
       const [
         ordersCount, customersCount, employeesCount, coffeeItemsCount,
         branchesCount, discountCodesCount, loyaltyCardsCount, tablesCount,
         attendanceCount, ingredientsCount, categoriesCount, deliveryZonesCount,
-        todayOrders, totalRevenue
+        dayOrders, dayRevenueAgg, totalRevenue
       ] = await Promise.all([
         OrderModel.countDocuments(),
         CustomerModel.countDocuments(),
@@ -13735,9 +14081,13 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         CategoryModel.countDocuments(),
         DeliveryZoneModel.countDocuments(),
         OrderModel.countDocuments({
-          createdAt: { $gte: getSaudiStartOfDay(), $lte: getSaudiEndOfDay() },
+          createdAt: { $gte: dayStart, $lte: dayEnd },
           status: { $ne: 'cancelled' }
         }),
+        OrderModel.aggregate([
+          { $match: { createdAt: { $gte: dayStart, $lte: dayEnd }, status: { $ne: 'cancelled' } } },
+          { $group: { _id: null, total: { $sum: '$totalAmount' } } }
+        ]),
         OrderModel.aggregate([
           { $match: { status: { $ne: 'cancelled' } } },
           { $group: { _id: null, total: { $sum: '$totalAmount' } } }
@@ -13760,11 +14110,17 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
           deliveryZones: { count: deliveryZonesCount, nameAr: 'مناطق التوصيل' }
         },
         summary: {
-          todayOrders,
-          totalRevenue: totalRevenue[0]?.total || 0
+          todayOrders: dayOrders,
+          dayOrders,
+          dayRevenue: dayRevenueAgg[0]?.total || 0,
+          totalRevenue: totalRevenue[0]?.total || 0,
+          dayStart: dayStart.toISOString(),
+          dayEnd: dayEnd.toISOString(),
+          dayStartHour,
         }
       });
     } catch (error) {
+      console.error("[GET /api/owner/database-stats] Error:", error);
       res.status(500).json({ error: "فشل جلب إحصائيات قاعدة البيانات" });
     }
   });
@@ -13913,11 +14269,8 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
   });
 
   // Reset all data (owner only)
-  app.post("/api/owner/reset-database", requireAuth, async (req: AuthRequest, res) => {
+  app.post("/api/owner/reset-database", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
     try {
-      if (req.employee?.role !== 'owner' && req.employee?.role !== 'admin') {
-        return res.status(403).json({ error: "فقط المالك أو المدير يمكنه إعادة تعيين قاعدة البيانات" });
-      }
 
       const { confirmPhrase } = req.body;
       
@@ -14243,7 +14596,10 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
   // Delete recipe item
   app.delete("/api/recipes/:id", requireAuth, requireManager, async (req: AuthRequest, res) => {
     try {
-      const result = await RecipeItemModel.findByIdAndDelete(req.params.id);
+      let result = await RecipeItemModel.findOneAndDelete({ id: req.params.id });
+      if (!result && req.params.id.match(/^[a-f\d]{24}$/i)) {
+        result = await RecipeItemModel.findByIdAndDelete(req.params.id);
+      }
       if (!result) {
         return res.status(404).json({ error: "الوصفة غير موجودة" });
       }
@@ -14615,7 +14971,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       // Auto-generate low stock alert
       try {
         const currentQty = (stock as any).currentQuantity || 0;
-        const rawItemDoc = await RawItemModel.findById(rawItemId);
+        const rawItemDoc = await RawItemModel.findOne({ id: rawItemId }) || await RawItemModel.findById(rawItemId).catch(() => null);
         const minLevel = (rawItemDoc as any)?.minStockLevel || 0;
         if (minLevel > 0 && currentQty <= minLevel) {
           const { StockAlertModel } = await import("@shared/schema");
@@ -14786,7 +15142,8 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       if (error?.name === 'ZodError') {
         return res.status(400).json({ error: "بيانات غير صالحة", details: error.errors });
       }
-      res.status(500).json({ error: "فشل في إنشاء التحويل" });
+      console.error("[transfers POST]", error?.message || error);
+      res.status(500).json({ error: "فشل في إنشاء التحويل", detail: error?.message });
     }
   });
 
@@ -14808,13 +15165,34 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
 
   app.put("/api/inventory/transfers/:id/complete", requireAuth, requireManager, async (req: AuthRequest, res) => {
     try {
-      const transfer = await storage.completeStockTransfer(
-        req.params.id,
-        req.employee?.id || 'system'
-      );
-      if (!transfer) {
-        return res.status(404).json({ error: "التحويل غير موجود أو لم تتم الموافقة عليه" });
-      }
+      const transfer = await storage.completeStockTransfer(req.params.id, req.employee?.id || 'system');
+      if (!transfer) return res.status(404).json({ error: "التحويل غير موجود أو لم تتم الموافقة عليه" });
+
+      // Auto accounting journal: DR Inventory dest branch / CR Inventory src branch
+      try {
+        const tenantId = (transfer as any).tenantId || 'demo-tenant';
+        const { JournalEntryModel } = await import("@shared/schema");
+        const exists = await JournalEntryModel.findOne({ tenantId, referenceType: 'stock_transfer', referenceId: (transfer as any).id });
+        if (!exists) {
+          const transferValue = ((transfer as any).items || []).reduce((s: number, it: any) => s + (it.quantity || 0) * (it.unitCost || 0), 0);
+          if (transferValue > 0) {
+            const srcInventory = await AccountModel.findOne({ tenantId, accountNumber: "1130" });
+            if (srcInventory) {
+              await ErpAccountingService.createJournalEntry({
+                tenantId, entryDate: new Date(),
+                description: `تحويل مخزون - ${(transfer as any).fromBranchName} ← ${(transfer as any).toBranchName}`,
+                lines: [
+                  { accountId: srcInventory.id, accountNumber: "1130", accountName: "مخزون (وجهة)", debit: transferValue, credit: 0, description: `استلام مخزون - ${(transfer as any).toBranchName}`, branchId: (transfer as any).toBranchId },
+                  { accountId: srcInventory.id, accountNumber: "1130", accountName: "مخزون (مصدر)", debit: 0, credit: transferValue, description: `إرسال مخزون - ${(transfer as any).fromBranchName}`, branchId: (transfer as any).fromBranchId },
+                ],
+                referenceType: 'stock_transfer', referenceId: (transfer as any).id,
+                createdBy: req.employee?.id || 'system', autoPost: true,
+              });
+            }
+          }
+        }
+      } catch (accErr) { console.error('[ACCOUNTING] Transfer journal failed:', accErr); }
+
       res.json(transfer);
     } catch (error) {
       res.status(500).json({ error: "فشل في إتمام التحويل" });
@@ -14911,10 +15289,10 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
   app.post("/api/inventory/purchases", requireAuth, requireManager, async (req: AuthRequest, res) => {
     try {
       const { insertPurchaseInvoiceSchema } = await import("@shared/schema");
-      const validatedData = insertPurchaseInvoiceSchema.parse({
-        ...req.body,
-        createdBy: req.employee?.id || 'system'
-      });
+      const body = { ...req.body, createdBy: req.employee?.id || 'system' };
+      if (!body.dueDate) delete body.dueDate;
+      if (!body.invoiceDate) delete body.invoiceDate;
+      const validatedData = insertPurchaseInvoiceSchema.parse(body);
       
       const invoice = await storage.createPurchaseInvoice(validatedData);
       res.status(201).json(invoice);
@@ -15145,10 +15523,16 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
   app.get("/api/inventory/alerts", requireAuth, requireManager, async (req: AuthRequest, res) => {
     try {
       const { branchId, resolved } = req.query;
+      const tenantId = getTenantIdFromRequest(req) || 'demo-tenant';
+      const ck = cacheKey('inventory:alerts', tenantId, branchId as string || 'all', resolved as string || 'all');
+      const cached = cache.get<any[]>(ck);
+      if (cached) return res.json(cached);
+
       const alerts = await storage.getStockAlerts(
         branchId as string | undefined,
         resolved === 'true' ? true : resolved === 'false' ? false : undefined
       );
+      cache.set(ck, alerts, CACHE_TTL.INVENTORY);
       res.json(alerts);
     } catch (error) {
       res.status(500).json({ error: "فشل في جلب التنبيهات" });
@@ -15162,6 +15546,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         return res.status(404).json({ error: "التنبيه غير موجود" });
       }
       wsManager.broadcastAlertResolved(alert.id, (alert as any).branchId);
+      cache.invalidate('inventory:alerts:');
       res.json(alert);
     } catch (error) {
       res.status(500).json({ error: "فشل في حل التنبيه" });
@@ -15174,6 +15559,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       if (!alert) {
         return res.status(404).json({ error: "التنبيه غير موجود" });
       }
+      cache.invalidate('inventory:alerts:');
       res.json(alert);
     } catch (error) {
       res.status(500).json({ error: "فشل في تحديث التنبيه" });
@@ -15227,11 +15613,15 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
     }
   });
 
-  // Inventory Dashboard Summary
+  // Inventory Dashboard Summary (COGS aggregate — cached)
   app.get("/api/inventory/dashboard", requireAuth, requireManager, async (req: AuthRequest, res) => {
     try {
       const { branchId } = req.query;
-      
+      const tenantId = getTenantIdFromRequest(req) || 'demo-tenant';
+      const ck = cacheKey('inventory:dashboard', tenantId, branchId as string || 'all');
+      const cached = cache.get<any>(ck);
+      if (cached) return res.json(cached);
+
       const [rawItems, suppliers, lowStock, alerts, transfers, purchases] = await Promise.all([
         storage.getRawItems(),
         storage.getSuppliers(),
@@ -15245,7 +15635,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       const pendingPurchases = purchases.filter(p => p.status === 'pending' || p.status === 'approved');
       const unpaidPurchases = purchases.filter(p => p.paymentStatus === 'unpaid' || p.paymentStatus === 'partial');
       
-      res.json({
+      const result = {
         summary: {
           totalRawItems: rawItems.length,
           totalSuppliers: suppliers.length,
@@ -15259,7 +15649,9 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         recentAlerts: alerts.slice(0, 5),
         pendingTransfers: pendingTransfers.slice(0, 5),
         pendingPurchases: pendingPurchases.slice(0, 5),
-      });
+      };
+      cache.set(ck, result, CACHE_TTL.COGS);
+      res.json(result);
     } catch (error) {
       res.status(500).json({ error: "فشل في جلب ملخص المخزون" });
     }
@@ -15520,6 +15912,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       });
       
       await expense.save();
+      cache.invalidate('accounting:');
       res.json(serializeDoc(expense));
     } catch (error) {
       res.status(500).json({ error: "فشل في إنشاء المصروف" });
@@ -15531,10 +15924,20 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
     try {
       const { ExpenseModel } = await import('@shared/schema');
       const { branchId, startDate, endDate, category, status, period, page = '1', limit = '50' } = req.query;
-      
+      const tenantId = getTenantIdFromRequest(req) || 'demo-tenant';
+
       const query: any = {};
       const isAdmin = req.employee?.role === 'admin' || req.employee?.role === 'owner';
       const finalBranchId = (branchId as string) || (isAdmin ? undefined : req.employee?.branchId);
+
+      // Build cache key using the resolved scope, not raw query params, to prevent cross-branch leakage
+      const ck = cacheKey('accounting:expenses', tenantId,
+        finalBranchId || 'all', period as string || '',
+        startDate as string || '', endDate as string || '',
+        category as string || '', status as string || '',
+        page as string, limit as string);
+      const cached = cache.get<any>(ck);
+      if (cached) return res.json(cached);
       
       if (finalBranchId) {
         query.branchId = finalBranchId;
@@ -15579,12 +15982,14 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         ExpenseModel.countDocuments(query),
       ]);
       
-      res.json({
+      const result = {
         expenses: expenses.map(serializeDoc),
         total,
         page: parseInt(page as string),
         pages: Math.ceil(total / parseInt(limit as string)),
-      });
+      };
+      cache.set(ck, result, CACHE_TTL.ACCOUNTING);
+      res.json(result);
     } catch (error) {
       res.status(500).json({ error: "فشل في جلب المصروفات" });
     }
@@ -15610,6 +16015,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         return res.status(404).json({ error: "المصروف غير موجود" });
       }
       
+      cache.invalidate('accounting:');
       res.json(serializeDoc(expense));
     } catch (error) {
       res.status(500).json({ error: "فشل في اعتماد المصروف" });
@@ -15639,6 +16045,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       });
       
       await revenue.save();
+      cache.invalidate('accounting:');
       res.json(serializeDoc(revenue));
     } catch (error) {
       res.status(500).json({ error: "فشل في تسجيل الإيراد" });
@@ -15650,10 +16057,20 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
     try {
       const { RevenueModel } = await import('@shared/schema');
       const { branchId, startDate, endDate, category, period, page = '1', limit = '50' } = req.query;
-      
+      const tenantId = getTenantIdFromRequest(req) || 'demo-tenant';
+
       const query: any = {};
       const isAdmin = req.employee?.role === 'admin' || req.employee?.role === 'owner';
       const finalBranchId = (branchId as string) || (isAdmin ? undefined : req.employee?.branchId);
+
+      // Build cache key using the resolved scope, not raw query params, to prevent cross-branch leakage
+      const ck = cacheKey('accounting:revenue', tenantId,
+        finalBranchId || 'all', period as string || '',
+        startDate as string || '', endDate as string || '',
+        category as string || '',
+        page as string, limit as string);
+      const cached = cache.get<any>(ck);
+      if (cached) return res.json(cached);
       
       if (finalBranchId) {
         query.branchId = finalBranchId;
@@ -15697,12 +16114,14 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         RevenueModel.countDocuments(query),
       ]);
       
-      res.json({
+      const result = {
         revenues: revenues.map(serializeDoc),
         total,
         page: parseInt(page as string),
         pages: Math.ceil(total / parseInt(limit as string)),
-      });
+      };
+      cache.set(ck, result, CACHE_TTL.ACCOUNTING);
+      res.json(result);
     } catch (error) {
       res.status(500).json({ error: "فشل في جلب الإيرادات" });
     }
@@ -15733,7 +16152,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         // Calculate summary from orders
         const orderQuery: any = {
           createdAt: { $gte: targetDate, $lt: nextDate },
-          status: { $ne: 'cancelled' },
+          status: { $nin: ['cancelled'] },
         };
         if (finalBranchId) orderQuery.branchId = finalBranchId;
         
@@ -15746,8 +16165,17 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         if (finalBranchId) expenseQuery.branchId = finalBranchId;
         
         const expenses = await ExpenseModel.find(expenseQuery);
-        
-        const totalRevenue = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+
+        // Subtract refunds for the same day
+        const { RefundOrderModel: DailyRefundModel } = await import('@shared/schema');
+        const tenantIdForSummary = getTenantIdFromRequest(req) || 'demo-tenant';
+        const dayRefundQuery: any = { tenantId: tenantIdForSummary, createdAt: { $gte: targetDate, $lt: nextDate }, status: 'completed' };
+        if (finalBranchId) dayRefundQuery.branchId = finalBranchId;
+        const dayRefunds = await DailyRefundModel.find(dayRefundQuery);
+        const totalDayRefunds = dayRefunds.reduce((s, r) => s + ((r as any).refundAmount || 0), 0);
+
+        const grossRevenue = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+        const totalRevenue = Math.max(0, grossRevenue - totalDayRefunds);
         const totalVat = totalRevenue * VAT_RATE / (1 + VAT_RATE);
         const cashRevenue = orders.filter(o => o.paymentMethod === 'cash').reduce((sum, o) => sum + (o.totalAmount || 0), 0);
         const cardRevenue = orders.filter(o => ['pos', 'stc', 'alinma', 'ur', 'barq', 'rajhi'].includes(o.paymentMethod)).reduce((sum, o) => sum + (o.totalAmount || 0), 0);
@@ -15859,25 +16287,29 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       };
       if (finalBranchId) allExpensesQuery.branchId = finalBranchId;
       
-      const [orders, expenses, invoices, allOrders, allExpenses] = await Promise.all([
+      const { RefundOrderModel } = await import('@shared/schema');
+      const refundQuery: any = {
+        tenantId: getTenantIdFromRequest(req) || 'demo-tenant',
+        createdAt: { $gte: startDate, $lte: endDate },
+        status: 'completed',
+      };
+      if (finalBranchId) refundQuery.branchId = finalBranchId;
+
+      const [orders, expenses, invoices, allOrders, allExpenses, refunds] = await Promise.all([
         OrderModel.find(orderQuery),
         ExpenseModel.find(expenseQuery),
         TaxInvoiceModel.find(invoiceQuery),
         OrderModel.find(allOrdersQuery),
         ExpenseModel.find(allExpensesQuery),
+        RefundOrderModel.find(refundQuery),
       ]);
       
-      // Fetch refunds for this period
-      const refundQuery: any = { createdAt: { $gte: startDate, $lte: endDate }, status: 'completed' };
-      if (finalBranchId) refundQuery.branchId = finalBranchId;
-      const refunds = await RefundModel.find(refundQuery);
-      const totalRefunds = refunds.reduce((sum, r) => sum + (r.refundAmount || 0), 0);
-
       const totalRevenue = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+      const totalRefunds = refunds.reduce((sum, r) => sum + ((r as any).refundAmount || 0), 0);
+      const netRevenue = Math.max(0, totalRevenue - totalRefunds);
       const totalVat = invoices.reduce((sum, i) => sum + (i.taxAmount || 0), 0);
       const totalExpenses = expenses.reduce((sum, e) => sum + e.totalAmount, 0);
       const totalCogs = orders.reduce((sum, o) => sum + (o.costOfGoods || 0), 0);
-      const netRevenue = totalRevenue - totalRefunds;
       const grossProfit = netRevenue - totalVat - totalCogs;
       const netProfit = grossProfit - totalExpenses;
       
@@ -15979,9 +16411,16 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
       
       const topSellingItems = Object.entries(itemSales)
         .filter(([id]) => id && id !== 'unknown')
-        .map(([id, data]) => ({ id, ...data }))
-        .sort((a, b) => b.revenue - a.revenue)
-        .slice(0, 10);
+        .map(([id, data]) => ({
+          id,
+          nameAr: data.name,
+          name: data.name,
+          totalQuantity: data.quantity,
+          quantity: data.quantity,
+          totalRevenue: data.revenue,
+          revenue: data.revenue,
+        }))
+        .sort((a, b) => b.totalRevenue - a.totalRevenue);
       
       res.json({
         period,
@@ -15996,8 +16435,8 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
           netProfit: Math.round(netProfit * 100) / 100,
           profitMargin: netRevenue > 0 ? Math.round((netProfit / netRevenue * 100) * 100) / 100 : 0,
           orderCount: orders.length,
-          refundCount: refunds.length,
           invoiceCount: invoices.length,
+          refundCount: refunds.length,
         },
         expensesByCategory,
         revenueByPayment,
@@ -16010,141 +16449,6 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
     }
   });
   
-  // ===================== REFUND / RETURN ROUTES =====================
-
-  // Create a new refund
-  app.post("/api/refunds", requireAuth, requireCashierAccess, async (req: AuthRequest, res) => {
-    try {
-      const { originalOrderId, items, refundMethod, cashAmount, cardAmount, reason, notes } = req.body;
-      if (!originalOrderId || !items?.length || !refundMethod || !reason) {
-        return res.status(400).json({ error: "بيانات الاسترجاع غير مكتملة" });
-      }
-      const order = await OrderModel.findById(originalOrderId);
-      if (!order) return res.status(404).json({ error: "الطلب الأصلي غير موجود" });
-      
-      const refundAmount = items.reduce((sum: number, i: any) => sum + (Number(i.totalPrice) || 0), 0);
-      if (refundAmount <= 0) return res.status(400).json({ error: "مبلغ الاسترجاع غير صحيح" });
-
-      if (refundMethod === 'split') {
-        const totalSplit = (Number(cashAmount) || 0) + (Number(cardAmount) || 0);
-        if (Math.abs(totalSplit - refundAmount) > 0.01) {
-          return res.status(400).json({ error: "مجموع المبالغ المنقسمة لا يساوي مبلغ الاسترجاع" });
-        }
-      }
-
-      // Generate refund number
-      const today = new Date();
-      const dateStr = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
-      const count = await RefundModel.countDocuments({ tenantId: req.employee?.tenantId || 'default' });
-      const refundNumber = `REF-${dateStr}-${String(count + 1).padStart(4, '0')}`;
-
-      const isFullRefund = items.reduce((sum: number, i: any) => sum + (Number(i.quantity) || 0), 0)
-        >= (order.items as any[]).reduce((sum: number, i: any) => sum + (Number(i.quantity) || 1), 0);
-
-      const refund = new RefundModel({
-        tenantId: req.employee?.tenantId || (order as any).tenantId || 'default',
-        branchId: req.employee?.branchId || (order as any).branchId,
-        refundNumber,
-        originalOrderId: originalOrderId,
-        originalOrderNumber: order.orderNumber,
-        items,
-        refundAmount,
-        refundType: isFullRefund ? 'full' : 'partial',
-        refundMethod,
-        cashAmount: refundMethod === 'cash' ? refundAmount : (refundMethod === 'split' ? (Number(cashAmount) || 0) : 0),
-        cardAmount: refundMethod === 'card' ? refundAmount : (refundMethod === 'split' ? (Number(cardAmount) || 0) : 0),
-        reason,
-        notes: notes || '',
-        status: 'completed',
-        processedBy: req.employee?.id || '',
-        processedByName: req.employee?.fullName || '',
-      });
-      await refund.save();
-
-      // Mark order paymentStatus as refunded if full refund
-      if (isFullRefund) {
-        await OrderModel.findByIdAndUpdate(originalOrderId, { paymentStatus: 'refunded' });
-      }
-
-      res.status(201).json({ success: true, refund: refund.toObject(), refundNumber });
-    } catch (error: any) {
-      console.error("Create refund error:", error);
-      res.status(500).json({ error: "فشل في إنشاء الاسترجاع" });
-    }
-  });
-
-  // Get all refunds (manager/admin)
-  app.get("/api/refunds", requireAuth, requireManager, async (req: AuthRequest, res) => {
-    try {
-      const { branchId, period, page = '1', limit = '50' } = req.query;
-      const isAdmin = req.employee?.role === 'admin' || req.employee?.role === 'owner';
-      const finalBranchId = (branchId as string) || (isAdmin ? undefined : req.employee?.branchId);
-
-      const query: any = { status: 'completed' };
-      if (finalBranchId) query.branchId = finalBranchId;
-      if (req.employee?.tenantId) query.tenantId = req.employee.tenantId;
-
-      if (period) {
-        const now = new Date();
-        let startDate = new Date();
-        if (period === 'today') { startDate = getSaudiStartOfDay(); }
-        else if (period === 'week') { startDate = new Date(now.getTime() - 7*24*60*60*1000); }
-        else if (period === 'month') { startDate = new Date(now.getFullYear(), now.getMonth(), 1); }
-        query.createdAt = { $gte: startDate };
-      }
-
-      const skip = (Number(page) - 1) * Number(limit);
-      const [refunds, total] = await Promise.all([
-        RefundModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
-        RefundModel.countDocuments(query),
-      ]);
-      res.json({ refunds: refunds.map(r => r.toObject()), total, page: Number(page), limit: Number(limit) });
-    } catch (error) {
-      res.status(500).json({ error: "فشل في جلب قائمة الاسترجاعات" });
-    }
-  });
-
-  // Get refunds for a specific order
-  app.get("/api/orders/:orderId/refunds", requireAuth, requireCashierAccess, async (req: AuthRequest, res) => {
-    try {
-      const refunds = await RefundModel.find({ originalOrderId: req.params.orderId }).sort({ createdAt: -1 });
-      res.json(refunds.map(r => r.toObject()));
-    } catch (error) {
-      res.status(500).json({ error: "فشل في جلب استرجاعات الطلب" });
-    }
-  });
-
-  // Search order by number for refund (POS lookup) — MUST come before /:id
-  app.get("/api/refunds/search-order/:orderNumber", requireAuth, requireCashierAccess, async (req: AuthRequest, res) => {
-    try {
-      const { orderNumber } = req.params;
-      const order = await OrderModel.findOne({ 
-        orderNumber: { $regex: orderNumber, $options: 'i' },
-        status: { $ne: 'cancelled' },
-      }).sort({ createdAt: -1 });
-      if (!order) return res.status(404).json({ error: "الطلب غير موجود" });
-      
-      const existingRefunds = await RefundModel.find({ originalOrderId: (order._id as any).toString() });
-      const totalRefunded = existingRefunds.reduce((s, r) => s + r.refundAmount, 0);
-      const maxRefundable = (order.totalAmount || 0) - totalRefunded;
-
-      res.json({ order: (order as any).toObject(), existingRefunds: existingRefunds.map(r => r.toObject()), totalRefunded, maxRefundable });
-    } catch (error) {
-      res.status(500).json({ error: "خطأ في البحث عن الطلب" });
-    }
-  });
-
-  // Get single refund by id — MUST come after /search-order/:orderNumber
-  app.get("/api/refunds/:id", requireAuth, requireCashierAccess, async (req: AuthRequest, res) => {
-    try {
-      const refund = await RefundModel.findById(req.params.id);
-      if (!refund) return res.status(404).json({ error: "الاسترجاع غير موجود" });
-      res.json(refund.toObject());
-    } catch (error) {
-      res.status(500).json({ error: "فشل في جلب الاسترجاع" });
-    }
-  });
-
   // ===================== KITCHEN DISPLAY ROUTES =====================
   
   // Get kitchen orders
@@ -17034,7 +17338,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
   });
 
   // Marketing Email Route for Staff
-  app.post("/api/admin/broadcast-email", requireAuth, async (req: AuthRequest, res) => {
+  app.post("/api/admin/broadcast-email", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
     try {
       const { subject, message, customerEmails } = req.body;
       
@@ -18172,6 +18476,20 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
     }
   });
 
+  app.get("/api/delivery/orders/unassigned", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = getTenantIdFromRequest(req) || "demo-tenant";
+      const orders = await DeliveryOrderModel.find({
+        tenantId,
+        status: "pending",
+        $or: [{ driverId: null }, { driverId: { $exists: false } }]
+      }).sort({ createdAt: 1 });
+      res.json({ success: true, orders: orders.map(serializeDoc) });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to fetch unassigned orders" });
+    }
+  });
+
   app.get("/api/delivery/orders/:id", requireAuth, async (req: AuthRequest, res) => {
     try {
       const order = await deliveryService.getDeliveryOrder(req.params.id);
@@ -18311,31 +18629,70 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
     }
   });
 
-  app.post("/api/webhooks/delivery/:provider", async (req, res) => {
+  // Driver logout
+  app.post("/api/delivery/drivers/logout", async (req, res) => {
     try {
-      const { provider } = req.params;
-      const signature = req.headers['x-webhook-signature'] || req.headers['x-signature'];
-
-      const integration = await DeliveryIntegrationModel.findOne({
-        providerName: { $regex: new RegExp(provider, 'i') },
-        isActive: 1
-      });
-
-      if (!integration) {
-        return res.status(404).json({ error: "Integration not found or inactive" });
+      const driverId = (req.session as any).driverId;
+      if (driverId) {
+        await deliveryService.updateDriverStatus(driverId, "offline");
+        delete (req.session as any).driverId;
       }
-
-      const tenantId = integration.tenantId;
-      const order = await deliveryService.processWebhookOrder(provider, req.body, tenantId);
-
-      if (integration.autoAcceptOrders || integration.autoAssignDriver) {
-        await deliveryService.autoAssignDriver(order.id, tenantId);
-      }
-
-      res.json({ success: true, orderId: order.id, status: 'received' });
+      res.json({ success: true, message: "تم تسجيل الخروج" });
     } catch (error: any) {
-      console.error(`Webhook error [${req.params.provider}]:`, error.message);
-      res.status(500).json({ error: "Webhook processing failed" });
+      res.status(500).json({ error: error.message || "فشل تسجيل الخروج" });
+    }
+  });
+
+  // Driver accept assigned order
+  app.post("/api/delivery/orders/:id/accept", requireAuth, requireDeliveryAccess, async (req: AuthRequest, res) => {
+    try {
+      const order = await deliveryService.updateOrderStatus(req.params.id, "picking_up");
+      if (!order) return res.status(404).json({ error: "الطلب غير موجود" });
+      res.json({ success: true, order: serializeDoc(order) });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || "فشل قبول الطلب" });
+    }
+  });
+
+  // Driver reject/unaccept order (sends it back to pending)
+  app.post("/api/delivery/orders/:id/reject", requireAuth, requireDeliveryAccess, async (req: AuthRequest, res) => {
+    try {
+      const order = await DeliveryOrderModel.findOneAndUpdate(
+        { id: req.params.id },
+        { status: "pending", driverId: null, driverName: null, driverPhone: null, updatedAt: new Date() },
+        { new: true }
+      );
+      if (!order) return res.status(404).json({ error: "الطلب غير موجود" });
+      // Free up the driver
+      if ((order as any).driverId) {
+        await deliveryService.updateDriverStatus((order as any).driverId, "available");
+      }
+      res.json({ success: true, order: serializeDoc(order) });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || "فشل رفض الطلب" });
+    }
+  });
+
+  // Driver rate order / customer rating
+  app.patch("/api/delivery/orders/:id/rate", async (req, res) => {
+    try {
+      const { rating, comment } = req.body;
+      if (!rating || rating < 1 || rating > 5) return res.status(400).json({ error: "تقييم غير صالح" });
+      const order = await DeliveryOrderModel.findOneAndUpdate(
+        { id: req.params.id },
+        { customerRating: rating, customerComment: comment, updatedAt: new Date() },
+        { new: true }
+      );
+      if (!order) return res.status(404).json({ error: "الطلب غير موجود" });
+      // Update driver rating average
+      if ((order as any).driverId) {
+        const driverOrders = await DeliveryOrderModel.find({ driverId: (order as any).driverId, customerRating: { $gt: 0 } });
+        const avgRating = driverOrders.reduce((sum, o) => sum + ((o as any).customerRating || 0), 0) / driverOrders.length;
+        await deliveryService.updateDriver((order as any).driverId, { rating: Math.round(avgRating * 10) / 10, ratingCount: driverOrders.length });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to rate order" });
     }
   });
 
@@ -18346,6 +18703,14 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
     try {
       const { period = 'today', branchId: qBranch } = req.query;
       const finalBranchId = qBranch || req.employee?.branchId;
+      const tenantId = getTenantIdFromRequest(req) || 'demo-tenant';
+
+      // ── Cache check ──────────────────────────────────────────────────────────
+      const ck = cacheKey('analytics:advanced', tenantId, String(period), String(finalBranchId || 'all'));
+      const cached = cache.get<any>(ck);
+      if (cached) return res.json(cached);
+      // ────────────────────────────────────────────────────────────────────────
+
       const { OrderModel, CoffeeItemModel, EmployeeModel } = await import("@shared/schema");
 
       let startDate: Date;
@@ -18492,7 +18857,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         paymentBreakdown[m] = (paymentBreakdown[m] || 0) + (Number(o.totalAmount) || 0);
       }
 
-      res.json({
+      const analyticsResult = {
         period,
         summary: {
           totalRevenue: Math.round(totalRevenue * 100) / 100,
@@ -18514,7 +18879,16 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
           amount: Math.round(amount * 100) / 100,
           percentage: totalRevenue > 0 ? Math.round((amount / totalRevenue) * 100) : 0
         }))
-      });
+      };
+
+      // Store in cache with period-aware TTL
+      const analyticsTtl = period === 'today' ? CACHE_TTL.ANALYTICS_TODAY
+        : period === 'week' ? CACHE_TTL.ANALYTICS_WEEK
+        : period === 'month' ? CACHE_TTL.ANALYTICS_MONTH
+        : CACHE_TTL.ANALYTICS_YEAR;
+      cache.set(ck, analyticsResult, analyticsTtl);
+
+      res.json(analyticsResult);
     } catch (error) {
       console.error("[ANALYTICS] Error:", error);
       res.status(500).json({ error: "Failed to fetch analytics" });
@@ -18524,6 +18898,15 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
   app.get("/api/reports/unified", requireAuth, requireManager, async (req: AuthRequest, res) => {
     try {
       const { period = 'today' } = req.query;
+      const tenantId = getTenantIdFromRequest(req) || 'demo-tenant';
+      const empBranchForKey = req.employee?.branchId || 'all';
+
+      // ── Cache check ──────────────────────────────────────────────────────────
+      const ck = cacheKey('reports:unified', tenantId, String(period), empBranchForKey);
+      const cached = cache.get<any>(ck);
+      if (cached) return res.json(cached);
+      // ────────────────────────────────────────────────────────────────────────
+
       const { OrderModel, CoffeeItemModel, EmployeeModel } = await import("@shared/schema");
       const { BranchModel } = await import("@shared/schema");
 
@@ -18592,10 +18975,11 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         totalRevenue += amount;
         totalOrders++;
 
-        const method = ((o.paymentMethod as string) || 'cash').toLowerCase();
+        const method = ((o.paymentMethod as string) || '').toLowerCase();
         if (method === 'cash') { b.cashSales += amount; totalCash += amount; }
-        else if (method === 'qahwa-card' || method === 'loyalty-card') { b.loyaltySales += amount; totalLoyalty += amount; }
-        else { b.cardSales += amount; totalCard += amount; }
+        else if (method === 'qahwa-card' || method === 'loyalty-card' || method === 'qirox-card') { b.loyaltySales += amount; totalLoyalty += amount; }
+        else if (method) { b.cardSales += amount; totalCard += amount; }
+        // empty method: counted in totalRevenue but not in payment-specific buckets
 
         const orderType = ((o as any).orderType || 'takeaway').toLowerCase();
         b.orderTypes[orderType] = (b.orderTypes[orderType] || 0) + 1;
@@ -18633,7 +19017,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
           .slice(0, 5),
       })).sort((a, b) => b.revenue - a.revenue);
 
-      res.json({
+      const unifiedResult = {
         period,
         totalBranches: branchReports.length,
         summary: {
@@ -18649,7 +19033,10 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         dailyRevenue: Object.entries(dailyRevenue).map(([date, amount]) => ({
           date, amount: Math.round(amount * 100) / 100
         })),
-      });
+      };
+
+      cache.set(ck, unifiedResult, CACHE_TTL.REPORTS_UNIFIED);
+      res.json(unifiedResult);
     } catch (error) {
       console.error("[UNIFIED REPORTS] Error:", error);
       res.status(500).json({ error: "Failed to fetch unified reports" });
@@ -18699,18 +19086,27 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         const vatRate = VAT_RATE;
         const vatAmount = Math.round((amount * vatRate / (1 + vatRate)) * 100) / 100;
         const netAmount = Math.round((amount - vatAmount) * 100) / 100;
-        const method = ((o.paymentMethod as string) || 'cash').toLowerCase();
+        const method = ((o.paymentMethod as string) || '').toLowerCase();
         const date = new Date(o.createdAt).toISOString().split('T')[0];
         const orderNum = (o as any).orderNumber || o.id || entryNum;
 
         let debitAccount = '1101';
         let debitAccountName = 'النقدية';
-        if (method === 'card' || method === 'mada') {
+        if (method === 'card' || method === 'network' || method === 'pos' || method === 'pos-network' ||
+            method === 'mada' || method === 'apple_pay' || method === 'paymob-apple-pay' ||
+            method === 'neoleap-apple-pay' || method === 'stc-pay' || method === 'geidea' ||
+            method === 'paymob-card' || method === 'paymob') {
           debitAccount = '1102';
-          debitAccountName = 'الشبكة/مدى';
-        } else if (method === 'qahwa-card' || method === 'loyalty-card') {
+          debitAccountName = 'الشبكة/المحافظ الرقمية';
+        } else if (method === 'qahwa-card' || method === 'loyalty-card' || method === 'qirox-card') {
           debitAccount = '1103';
-          debitAccountName = 'بطاقة مكان الشيف البخاري';
+          debitAccountName = 'بطاقة الولاء';
+        } else if (method === 'bank_transfer' || method === 'rajhi' || method === 'alinma') {
+          debitAccount = '1104';
+          debitAccountName = 'التحويل البنكي';
+        } else if (!method || method === 'unknown' || method === 'other') {
+          debitAccount = '1101';
+          debitAccountName = 'غير محدد';
         }
 
         journalEntries.push({
@@ -18728,7 +19124,7 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
           vatAmount,
           description: `مبيعات طلب #${orderNum}`,
           status: o.status === 'cancelled' ? 'ملغي' : 'مؤكد',
-          paymentMethod: method === 'cash' ? 'نقدي' : (method === 'card' || method === 'mada') ? 'شبكة' : 'بطاقة مكان الشيف البخاري',
+          paymentMethod: method === 'cash' ? 'نقدي' : (method === 'card' || method === 'mada') ? 'شبكة' : 'بطاقة مكان الشيف',
           customerName: (o.customerInfo as any)?.name || '',
           branchId: (o as any).branchId || '',
         });
@@ -19380,174 +19776,455 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
     }
   });
 
-  // ─── AI Chat with Business Context (Internal Engine — no external AI) ───────
+  // ─── AI Chat with Business Context ──────────────────────────────────────
   app.post("/api/ai/chat", requireAuth, requireManager, async (req: AuthRequest, res) => {
     try {
       const { message, history } = req.body;
       if (!message) return res.status(400).json({ error: "الرسالة مطلوبة" });
 
-      const { generateChatReply, generateInsights } = await import("./internal-ai");
+      // Gather business context
       const todayStart = getSaudiStartOfDay();
-      const weekStart  = new Date(todayStart.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const prevWeekStart = new Date(weekStart.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const weekStart = new Date(todayStart.getTime() - 7 * 24 * 60 * 60 * 1000);
 
       const aiTenantId = req.employee?.tenantId || 'demo-tenant';
+      let businessContext = "";
+      try {
+        const { OrderModel: AiOrderModel } = await import("@shared/schema");
+        const allOrders = await AiOrderModel.find({ tenantId: aiTenantId }).sort({ createdAt: -1 }).limit(500).lean();
+        const todayOrders = allOrders.filter((o: any) => new Date(o.createdAt) >= todayStart);
+        const weekOrders = allOrders.filter((o: any) => new Date(o.createdAt) >= weekStart);
 
-      // Collect live stats
-      const { OrderModel: AiOrderModel } = await import("@shared/schema");
-      const allOrders = await AiOrderModel.find({ tenantId: aiTenantId }).sort({ createdAt: -1 }).limit(500).lean();
-      const todayOrders    = allOrders.filter((o: any) => new Date(o.createdAt) >= todayStart);
-      const weekOrders     = allOrders.filter((o: any) => new Date(o.createdAt) >= weekStart);
-      const prevWeekOrders = allOrders.filter((o: any) => new Date(o.createdAt) >= prevWeekStart && new Date(o.createdAt) < weekStart);
+        const todayRevenue = todayOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
+        const weekRevenue = weekOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
 
-      const todayRevenue    = todayOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
-      const weekRevenue     = weekOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
-      const prevWeekRevenue = prevWeekOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
-      const growthPct       = prevWeekRevenue > 0 ? ((weekRevenue - prevWeekRevenue) / prevWeekRevenue * 100) : null;
-
-      const itemCounts: Record<string, { count: number; revenue: number }> = {};
-      weekOrders.forEach((o: any) => {
-        (o.items || []).forEach((item: any) => {
-          const name = item.nameAr || item.name || "بدون اسم";
-          if (!itemCounts[name]) itemCounts[name] = { count: 0, revenue: 0 };
-          itemCounts[name].count   += item.quantity || 1;
-          itemCounts[name].revenue += (item.price || 0) * (item.quantity || 1);
+        // Top selling items
+        const itemCounts: Record<string, { count: number; revenue: number }> = {};
+        weekOrders.forEach((o: any) => {
+          (o.items || []).forEach((item: any) => {
+            const name = item.nameAr || item.name || "بدون اسم";
+            if (!itemCounts[name]) itemCounts[name] = { count: 0, revenue: 0 };
+            itemCounts[name].count += item.quantity || 1;
+            itemCounts[name].revenue += (item.price || 0) * (item.quantity || 1);
+          });
         });
+        const topItems = Object.entries(itemCounts).sort((a, b) => b[1].count - a[1].count).slice(0, 5);
+
+        // Day performance
+        const dayRevenue: Record<string, number> = {};
+        weekOrders.forEach((o: any) => {
+          const day = new Date(o.createdAt).toLocaleDateString("ar-SA", { weekday: "long" });
+          dayRevenue[day] = (dayRevenue[day] || 0) + (o.totalAmount || 0);
+        });
+        const bestDay = Object.entries(dayRevenue).sort((a, b) => b[1] - a[1])[0];
+
+        const allEmployees = await storage.getEmployees();
+        const products = await getCachedCoffeeItems(aiTenantId);
+
+        businessContext = `
+معلومات الكافيه (محدثة الآن):
+- إجمالي مبيعات اليوم: ${todayRevenue.toFixed(2)} ريال (${todayOrders.length} طلب)
+- إجمالي مبيعات الأسبوع: ${weekRevenue.toFixed(2)} ريال (${weekOrders.length} طلب)
+- عدد الموظفين: ${allEmployees.length}
+- عدد المنتجات في المنيو: ${products.length}
+- متوسط قيمة الطلب (هذا الأسبوع): ${weekOrders.length > 0 ? (weekRevenue / weekOrders.length).toFixed(2) : 0} ريال
+- أفضل يوم هذا الأسبوع: ${bestDay ? `${bestDay[0]} (${bestDay[1].toFixed(2)} ريال)` : "غير متاح"}
+- أكثر 5 منتجات مبيعاً هذا الأسبوع:
+${topItems.map((item, i) => `  ${i + 1}. ${item[0]}: ${item[1].count} طلب (${item[1].revenue.toFixed(2)} ريال)`).join("\n") || "  لا بيانات"}
+`;
+      } catch {
+        businessContext = "لم تتوفر بيانات المبيعات الآن.";
+      }
+
+      const systemPrompt = `أنت مساعد ذكاء اصطناعي متخصص لإدارة المقاهي والمطاعم، تعمل لصالح مطعم مكان الشيف البخاري الأصيل في الرياض.
+أنت خبير في:
+- تحليل المبيعات والأرباح
+- تحسين قائمة الطعام والتسعير
+- إدارة الموظفين وجدولة الوردايات
+- استراتيجيات التسويق والعروض الترويجية
+- تحسين تجربة العملاء
+- إدارة المخزون والتكاليف
+
+${businessContext}
+
+قواعد الإجابة:
+- أجب دائماً بالعربية ما لم يسألك المستخدم بالإنجليزية
+- كن موجزاً ومفيداً وعملياً
+- استخدم الأرقام والبيانات المتاحة في إجاباتك
+- قدم توصيات قابلة للتنفيذ
+- استخدم الإيموجي لتحسين القراءة`;
+
+      const messages = [
+        { role: "system", content: systemPrompt },
+        ...(Array.isArray(history) ? history.slice(-10) : []),
+        { role: "user", content: message },
+      ];
+
+      const kimiKey = process.env.KIMI_API_KEY;
+      if (!kimiKey) return res.status(200).json({ response: "مساعد الذكاء الاصطناعي غير مفعّل — يرجى ضبط مفتاح KIMI_API_KEY.", configured: false });
+
+      const response = await fetch("https://api.moonshot.ai/v1/chat/completions", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${kimiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "moonshot-v1-32k", messages, max_tokens: 1000, temperature: 0.7 }),
       });
-      const topItems = Object.entries(itemCounts)
-        .sort((a, b) => b[1].count - a[1].count)
-        .slice(0, 5)
-        .map(([name, d]) => ({ name, count: d.count, revenue: d.revenue }));
 
-      const dayRevMap: Record<string, number> = {};
-      weekOrders.forEach((o: any) => {
-        const day = new Date(o.createdAt).toLocaleDateString("ar-SA", { weekday: "long" });
-        dayRevMap[day] = (dayRevMap[day] || 0) + (o.totalAmount || 0);
-      });
-      const bestDayEntry = Object.entries(dayRevMap).sort((a, b) => b[1] - a[1])[0];
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error("Kimi AI chat error:", errText);
+        return res.status(500).json({ error: "فشل الاتصال بـ Kimi AI" });
+      }
 
-      const hourMap: Record<number, number> = {};
-      weekOrders.forEach((o: any) => {
-        const h = new Date(o.createdAt).getHours();
-        hourMap[h] = (hourMap[h] || 0) + 1;
-      });
-      const peakHourEntry = Object.entries(hourMap).sort((a, b) => Number(b[1]) - Number(a[1]))[0];
-
-      const allEmployees = await storage.getEmployees();
-      const products     = await getCachedCoffeeItems(aiTenantId);
-      const pendingOrders = await AiOrderModel.countDocuments({ tenantId: aiTenantId, status: { $in: ['pending', 'preparing'] } });
-
-      const stats = {
-        todayRevenue,
-        todayOrders:    todayOrders.length,
-        weekRevenue,
-        weekOrders:     weekOrders.length,
-        prevWeekRevenue,
-        prevWeekOrders: prevWeekOrders.length,
-        topItems,
-        bestDay:        bestDayEntry ? { day: bestDayEntry[0], revenue: bestDayEntry[1] } : null,
-        peakHour:       peakHourEntry ? { hour: Number(peakHourEntry[0]), count: Number(peakHourEntry[1]) } : null,
-        employeeCount:  allEmployees.length,
-        productCount:   products.length,
-        avgOrderValue:  weekOrders.length > 0 ? weekRevenue / weekOrders.length : 0,
-        growthPct,
-        pendingOrders,
-      };
-
-      const reply = generateChatReply({ message, history: history || [], stats });
-      res.json({ reply, model: "qirox-internal-v1" });
+      const data = await response.json() as any;
+      const reply = data.choices?.[0]?.message?.content || "";
+      res.json({ reply, model: "kimi/moonshot-v1-32k" });
     } catch (error: any) {
       console.error("AI chat error:", error);
-      res.status(500).json({ error: error.message || "خطأ في محرك المساعد" });
+      res.status(500).json({ error: error.message || "خطأ في الذكاء الاصطناعي" });
     }
   });
 
-  // ─── AI Quick Insights (Internal Engine — no external AI) ───────────────
+  // ─── AI Quick Insights (auto-generated) ──────────────────────────────────
   app.get("/api/ai/insights", requireAuth, requireManager, async (req: AuthRequest, res) => {
     try {
-      const { generateInsights } = await import("./internal-ai");
+
       const insightsTenantId = req.employee?.tenantId || 'demo-tenant';
-      const todayStart    = getSaudiStartOfDay();
-      const weekStart     = new Date(todayStart.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const prevWeekStart = new Date(weekStart.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const todayStart = getSaudiStartOfDay();
+      const weekStart = new Date(todayStart.getTime() - 7 * 24 * 60 * 60 * 1000);
 
       const { OrderModel: InsightsOrderModel } = await import("@shared/schema");
-      const allOrders      = await InsightsOrderModel.find({ tenantId: insightsTenantId }).sort({ createdAt: -1 }).limit(500).lean();
-      const todayOrders    = allOrders.filter((o: any) => new Date(o.createdAt) >= todayStart);
-      const weekOrders     = allOrders.filter((o: any) => new Date(o.createdAt) >= weekStart);
+      const allOrders = await InsightsOrderModel.find({ tenantId: insightsTenantId }).sort({ createdAt: -1 }).limit(500).lean();
+      const todayOrders = allOrders.filter((o: any) => new Date(o.createdAt) >= todayStart);
+      const weekOrders = allOrders.filter((o: any) => new Date(o.createdAt) >= weekStart);
+      const prevWeekStart = new Date(weekStart.getTime() - 7 * 24 * 60 * 60 * 1000);
       const prevWeekOrders = allOrders.filter((o: any) => new Date(o.createdAt) >= prevWeekStart && new Date(o.createdAt) < weekStart);
 
-      const todayRevenue    = todayOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
-      const weekRevenue     = weekOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
+      const todayRevenue = todayOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
+      const weekRevenue = weekOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
       const prevWeekRevenue = prevWeekOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
-      const growthPct       = prevWeekRevenue > 0 ? ((weekRevenue - prevWeekRevenue) / prevWeekRevenue * 100) : null;
+      const growthPct = prevWeekRevenue > 0 ? ((weekRevenue - prevWeekRevenue) / prevWeekRevenue * 100).toFixed(1) : null;
 
-      const itemMap: Record<string, { count: number; revenue: number }> = {};
+      const itemCounts: Record<string, number> = {};
       weekOrders.forEach((o: any) => {
         (o.items || []).forEach((item: any) => {
           const name = item.nameAr || item.name || "؟";
-          if (!itemMap[name]) itemMap[name] = { count: 0, revenue: 0 };
-          itemMap[name].count   += item.quantity || 1;
-          itemMap[name].revenue += (item.price || 0) * (item.quantity || 1);
+          itemCounts[name] = (itemCounts[name] || 0) + (item.quantity || 1);
         });
       });
-      const topItems = Object.entries(itemMap)
-        .sort((a, b) => b[1].count - a[1].count)
-        .slice(0, 5)
-        .map(([name, d]) => ({ name, count: d.count, revenue: d.revenue }));
+      const topItems = Object.entries(itemCounts).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([n, c]) => `${n} (${c}x)`).join("، ");
 
-      const dayRevMap: Record<string, number> = {};
-      weekOrders.forEach((o: any) => {
-        const day = new Date(o.createdAt).toLocaleDateString("ar-SA", { weekday: "long" });
-        dayRevMap[day] = (dayRevMap[day] || 0) + (o.totalAmount || 0);
-      });
-      const bestDayEntry = Object.entries(dayRevMap).sort((a, b) => b[1] - a[1])[0];
-
-      const hourMap: Record<number, number> = {};
+      const hourCounts: Record<number, number> = {};
       weekOrders.forEach((o: any) => {
         const h = new Date(o.createdAt).getHours();
-        hourMap[h] = (hourMap[h] || 0) + 1;
+        hourCounts[h] = (hourCounts[h] || 0) + 1;
       });
-      const peakHourEntry = Object.entries(hourMap).sort((a, b) => Number(b[1]) - Number(a[1]))[0];
+      const peakHour = Object.entries(hourCounts).sort((a, b) => Number(b[1]) - Number(a[1]))[0];
 
-      const stats = {
-        todayRevenue,
-        todayOrders:    todayOrders.length,
-        weekRevenue,
-        weekOrders:     weekOrders.length,
-        prevWeekRevenue,
-        prevWeekOrders: prevWeekOrders.length,
-        topItems,
-        bestDay:   bestDayEntry  ? { day: bestDayEntry[0],              revenue: bestDayEntry[1] }                          : null,
-        peakHour:  peakHourEntry ? { hour: Number(peakHourEntry[0]),    count: Number(peakHourEntry[1]) }                   : null,
-        employeeCount: 0,
-        productCount:  0,
-        avgOrderValue: weekOrders.length > 0 ? weekRevenue / weekOrders.length : 0,
-        growthPct,
-      };
+      const prompt = `أنت مستشار أعمال لمقهى. حلل هذه البيانات وأعطني 4 رؤى استراتيجية قصيرة ومفيدة:
 
-      const insights = generateInsights(stats);
-      res.json({ insights, stats: { todayRevenue, todayOrders: todayOrders.length, weekRevenue, weekOrders: weekOrders.length, growthPct } });
+بيانات هذا الأسبوع:
+- المبيعات: ${weekRevenue.toFixed(0)} ريال (${weekOrders.length} طلب)
+${growthPct ? `- النمو مقارنة بالأسبوع الماضي: ${growthPct}%` : ""}
+- مبيعات اليوم: ${todayRevenue.toFixed(0)} ريال (${todayOrders.length} طلب)
+- أكثر المنتجات طلباً: ${topItems || "لا بيانات"}
+- وقت الذروة: ${peakHour ? `الساعة ${peakHour[0]}:00 (${peakHour[1]} طلب)` : "غير محدد"}
+
+أعطني 4 رؤى مختلفة بهذا الشكل (JSON array فقط):
+[
+  {"icon": "📈", "title": "عنوان قصير", "insight": "جملة واحدة مفيدة"},
+  ...
+]
+لا تضف أي نص خارج الـ JSON.`;
+
+      const insightsMsgs = [{ role: "user", content: prompt }];
+      const kimiKey = process.env.KIMI_API_KEY;
+      if (!kimiKey) {
+        return res.json({ insights: [], stats: { todayRevenue, todayOrders: todayOrders.length, weekRevenue, weekOrders: weekOrders.length, growthPct }, configured: false });
+      }
+
+      const response = await fetch("https://api.moonshot.ai/v1/chat/completions", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${kimiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "moonshot-v1-32k", messages: insightsMsgs, max_tokens: 500, temperature: 0.6 }),
+      });
+
+      if (!response.ok) return res.json({ insights: [], stats: { todayRevenue, todayOrders: todayOrders.length, weekRevenue, weekOrders: weekOrders.length, growthPct }, error: "فشل الاتصال بـ Kimi AI" });
+
+      const data = await response.json() as any;
+      const content = (data.choices?.[0]?.message?.content || "").trim();
+
+      try {
+        const jsonMatch = content.match(/\[[\s\S]*\]/);
+        const insights = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
+        res.json({ insights, stats: { todayRevenue, todayOrders: todayOrders.length, weekRevenue, weekOrders: weekOrders.length, growthPct } });
+      } catch {
+        res.json({ insights: [], stats: { todayRevenue, todayOrders: todayOrders.length, weekRevenue, weekOrders: weekOrders.length, growthPct } });
+      }
     } catch (error: any) {
-      res.status(500).json({ error: error.message || "خطأ في محرك الرؤى" });
+      res.status(500).json({ error: error.message || "خطأ في الذكاء الاصطناعي" });
     }
   });
 
-  // ─── AI Menu Assist (Internal Engine — no external AI) ──────────────────
+  // ─── AI Smart Report ───────────────────────────────────────────────────
+  app.post("/api/ai/smart-report", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { type, period } = req.body;
+      if (!type || !period) return res.status(400).json({ error: "type and period are required" });
+
+      const tenantId = req.employee?.tenantId || 'demo-tenant';
+      const todayStart = getSaudiStartOfDay();
+      const weekStart = new Date(todayStart.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const monthStart = new Date(todayStart.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+      const periodStart = period === 'today' ? todayStart : period === 'week' ? weekStart : monthStart;
+
+      const { OrderModel: SmartOrderModel } = await import("@shared/schema");
+      const orders = await SmartOrderModel.find({
+        tenantId,
+        createdAt: { $gte: periodStart }
+      }).lean();
+
+      const revenue = orders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
+      const avgOrder = orders.length > 0 ? revenue / orders.length : 0;
+
+      const itemCounts: Record<string, { count: number; revenue: number }> = {};
+      orders.forEach((o: any) => {
+        (o.items || []).forEach((item: any) => {
+          const name = item.nameAr || item.name || "؟";
+          if (!itemCounts[name]) itemCounts[name] = { count: 0, revenue: 0 };
+          itemCounts[name].count += item.quantity || 1;
+          itemCounts[name].revenue += (item.price || 0) * (item.quantity || 1);
+        });
+      });
+      const topItems = Object.entries(itemCounts).sort((a, b) => b[1].count - a[1].count).slice(0, 8);
+
+      const hourCounts: Record<number, number> = {};
+      orders.forEach((o: any) => {
+        const h = new Date(o.createdAt).getHours();
+        hourCounts[h] = (hourCounts[h] || 0) + 1;
+      });
+      const peakHour = Object.entries(hourCounts).sort((a, b) => Number(b[1]) - Number(a[1]))[0];
+
+      const employees = await storage.getEmployees();
+      const products = await getCachedCoffeeItems(tenantId);
+
+      const periodLabel = period === 'today' ? 'اليوم' : period === 'week' ? 'هذا الأسبوع' : 'هذا الشهر';
+
+      const contextData = `
+بيانات الكافيه للفترة (${periodLabel}):
+- إجمالي الطلبات: ${orders.length}
+- إجمالي الإيرادات: ${revenue.toFixed(2)} ريال
+- متوسط قيمة الطلب: ${avgOrder.toFixed(2)} ريال
+- وقت الذروة: ${peakHour ? `الساعة ${peakHour[0]}:00 (${peakHour[1]} طلب)` : "غير محدد"}
+- عدد الموظفين: ${employees.length}
+- عدد المنتجات: ${products.length}
+- أكثر المنتجات طلباً:
+${topItems.slice(0, 5).map((item, i) => `  ${i + 1}. ${item[0]}: ${item[1].count} طلب (${item[1].revenue.toFixed(0)} ريال)`).join("\n") || "  لا بيانات"}
+`;
+
+      const typePrompts: Record<string, string> = {
+        sales: "ركز على المبيعات والإيرادات والمنتجات والفترات الزمنية",
+        employees: "ركز على الموظفين والإنتاجية والأداء",
+        inventory: "ركز على المخزون والمنتجات والنقص المحتمل والهدر",
+        customers: "ركز على سلوك العملاء والولاء ومعدل التكرار",
+        full: "قدم تحليلاً شاملاً لجميع جوانب الكافيه",
+      };
+
+      const prompt = `أنت خبير تحليل أعمال لمقهى. ${typePrompts[type] || "قدم تحليلاً متكاملاً"}.
+
+${contextData}
+
+أنشئ تقريراً ذكياً منظماً بالتنسيق التالي (JSON فقط، لا تضف أي نص خارج الـ JSON):
+{
+  "summary": "ملخص تنفيذي من 2-3 جمل",
+  "kpis": [
+    {"label": "اسم المؤشر", "value": "القيمة مع الوحدة", "trend": "up|down|flat"},
+    ...
+  ],
+  "sections": [
+    {
+      "icon": "📊",
+      "title": "عنوان القسم",
+      "content": "فقرة تحليلية من 2-3 جمل",
+      "bullets": ["نقطة 1", "نقطة 2", "نقطة 3"],
+      "highlight": "أبرز إنجاز أو رقم في هذا القسم (اختياري)"
+    }
+  ],
+  "recommendations": ["توصية 1 قابلة للتنفيذ", "توصية 2", "توصية 3"],
+  "risks": ["خطر أو تحذير 1", "خطر أو تحذير 2"]
+}
+
+القواعد:
+- استخدم البيانات الحقيقية المتوفرة
+- اجعل التوصيات قابلة للتنفيذ وعملية
+- اذكر أرقاماً حقيقية من البيانات
+- 3-4 أقسام مناسبة لنوع التقرير
+- 3-4 مؤشرات KPI
+- JSON صحيح فقط`;
+
+      const kimiKey = process.env.KIMI_API_KEY;
+      if (!kimiKey) return res.status(200).json({ report: null, configured: false, error: "مفتاح Kimi AI غير مضبوط" });
+
+      const response = await fetch("https://api.moonshot.ai/v1/chat/completions", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${kimiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "moonshot-v1-32k",
+          messages: [{ role: "user", content: prompt }],
+          max_tokens: 1500,
+          temperature: 0.5,
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        console.error("Kimi AI smart-report error:", errText);
+        return res.status(500).json({ error: "فشل الاتصال بـ Kimi AI" });
+      }
+
+      const data = await response.json() as any;
+      const content = (data.choices?.[0]?.message?.content || "").trim();
+
+      try {
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        const report = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+        res.json({
+          ...report,
+          type,
+          period,
+          generatedAt: new Date().toISOString(),
+        });
+      } catch (parseErr) {
+        res.status(500).json({ error: "فشل تحليل رد AI" });
+      }
+    } catch (error: any) {
+      console.error("Smart report error:", error);
+      res.status(500).json({ error: error.message || "خطأ في توليد التقرير" });
+    }
+  });
+
+  // ─────────────────────────────────────────────────────────────────────────
   app.post("/api/ai/menu-assist", async (req, res) => {
     try {
       const { nameAr, nameEn, category, task, existingDescription, existingIngredients } = req.body;
+
       if (!nameAr && !nameEn) {
         return res.status(400).json({ error: "يرجى إدخال اسم المنتج أولاً" });
       }
-      const { generateMenuContent, generateStructuredAddons } = await import("./internal-ai");
-      const result = generateMenuContent({ nameAr, nameEn, category, task, existingDescription, existingIngredients });
-      // For addons task, also return structured data for direct form insertion
-      const structured = task === "addons" ? generateStructuredAddons(category || "default") : undefined;
-      res.json({ result, task, model: "qirox-internal-v1", ...(structured ? { structuredAddons: structured } : {}) });
+
+      const categoryLabels: Record<string, string> = {
+        hot: "مشروب ساخن / hot beverage",
+        cold: "مشروب بارد / cold beverage",
+        desserts: "حلويات وكيك / desserts & cakes",
+        bakery: "مخبوزات / bakery",
+        sandwiches: "ساندوتشات / sandwiches",
+        specialty: "مشروب متخصص / specialty drink",
+      };
+      const catLabel = categoryLabels[category] || category || "منتج كافيه";
+
+      const systemPrompt = `أنت خبير تسويق إبداعي متخصص في صناعة القهوة والمقاهي العالمية من مستوى Starbucks وBlue Bottle وPeet's Coffee.
+مهمتك توليد محتوى تسويقي إبداعي، شهي، وجذاب لمنيو المقاهي.
+يجب أن يكون المحتوى:
+- شاعرياً وجذاباً يستفز حواس القارئ
+- يستخدم مصطلحات قهوة عالمية دقيقة
+- مثالي للعرض في قائمة طعام راقية
+- يذكر النكهات، الأحاسيس، الرائحة عند الاقتضاء
+- باللغتين العربية والإنجليزية حسب المطلوب`;
+
+      const tasks: Record<string, string> = {
+        description_ar: `اكتب وصفاً إبداعياً وشهياً باللغة العربية الفصيحة للمنتج التالي:
+الاسم: ${nameAr}${nameEn ? ` / ${nameEn}` : ""}
+النوع: ${catLabel}
+${existingDescription ? `الوصف الحالي: ${existingDescription}` : ""}
+
+الوصف يجب أن يكون من 2-3 جمل، يصف النكهة والمكونات الرئيسية والإحساس عند تناوله. استخدم لغة راقية وشاعرية.
+أعطني الوصف مباشرة بدون مقدمات أو شرح.`,
+
+        description_en: `Write a creative, appetizing description in English for:
+Name: ${nameEn || nameAr}
+Type: ${catLabel}
+${existingDescription ? `Current description: ${existingDescription}` : ""}
+
+Write 2-3 poetic, sensory sentences describing the flavor, texture, aroma, and experience. Use premium café language like Starbucks/Blue Bottle.
+Return only the description, no intro or explanation.`,
+
+        description_both: `اكتب وصفاً مزدوجاً إبداعياً (عربي وإنجليزي) للمنتج التالي:
+الاسم: ${nameAr}${nameEn ? ` / ${nameEn}` : ""}
+النوع: ${catLabel}
+
+أعطني:
+🇸🇦 الوصف العربي: [وصف شاعري راقي 2-3 جمل]
+🇬🇧 English: [creative 2-3 sentences poetic description]
+
+لا تضف مقدمات أو شرح إضافي.`,
+
+        name_en: `Suggest 3 creative English names for this Arabic café item:
+Arabic name: ${nameAr}
+Type: ${catLabel}
+
+Requirements: Premium café naming style, memorable, brandable, can include poetic adjectives.
+Format: numbered list 1, 2, 3 — names only, no explanation.`,
+
+        ingredients: `أنت طاهٍ متخصص في صناعة القهوة والمشروبات. اقترح قائمة المكونات المفصلة لتحضير هذا المنتج:
+المنتج: ${nameAr}${nameEn ? ` / ${nameEn}` : ""}
+النوع: ${catLabel}
+${existingIngredients ? `المكونات الحالية: ${existingIngredients}` : ""}
+
+قدم القائمة بهذا الشكل:
+• [اسم المكون] — [الكمية المقترحة] [الوحدة]
+
+اذكر كل المكونات الأساسية مع الكميات النموذجية لكوب واحد. كن دقيقاً ومفصلاً.`,
+
+        addons: `اقترح إضافات وخيارات تخصيص احترافية لهذا المنتج في مقهى راقٍ:
+المنتج: ${nameAr}${nameEn ? ` / ${nameEn}` : ""}
+النوع: ${catLabel}
+
+قدم 5-8 إضافات متنوعة بهذا الشكل:
+• [اسم الإضافة] — [السعر المقترح بالريال]
+
+تشمل: الأحجام المختلفة، نوع الحليب، النكهات الإضافية، الإضافات الخاصة.`,
+
+        flavor_profile: `صِف ملف النكهة والحواس الكامل لهذا المنتج بأسلوب التقييم المهني:
+المنتج: ${nameAr}${nameEn ? ` / ${nameEn}` : ""}
+النوع: ${catLabel}
+
+اكتب بهذا الشكل:
+☕ النكهة الرئيسية: ...
+🌸 الرائحة: ...  
+🎨 اللون والمظهر: ...
+✨ الإحساس في الفم: ...
+💡 مقترح التقديم: ...
+
+استخدم لغة تذوق احترافية.`,
+      };
+
+      const userPrompt = tasks[task] || tasks.description_ar;
+
+      const menuMsgs = [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ];
+
+      const kimiKey = process.env.KIMI_API_KEY;
+      if (!kimiKey) return res.status(200).json({ message: "المساعد غير مفعّل حالياً. يرجى ضبط KIMI_API_KEY.", configured: false });
+
+      const menuResponse = await fetch("https://api.moonshot.ai/v1/chat/completions", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${kimiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "moonshot-v1-32k", messages: menuMsgs, max_tokens: 600, temperature: 0.85 }),
+      });
+
+      if (!menuResponse.ok) {
+        const errText = await menuResponse.text();
+        console.error("Groq menu error:", errText);
+        return res.status(500).json({ error: "فشل في الاتصال بـ Groq" });
+      }
+
+      const data = await menuResponse.json() as any;
+      const content = data.choices?.[0]?.message?.content || "";
+      res.json({ result: content, task, model: "kimi/moonshot-v1-32k" });
     } catch (error: any) {
       console.error("AI Menu Assist error:", error);
-      res.status(500).json({ error: error.message || "حدث خطأ في محرك المنيو" });
+      res.status(500).json({ error: error.message || "حدث خطأ في الذكاء الاصطناعي" });
     }
   });
 
@@ -19564,13 +20241,13 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
         headers: qiroxStudioHeaders(),
       });
       if (!response.ok) {
-        return res.status(response.status).json({ error: `مكان الشيف البخاري Studio API error: ${response.statusText}` });
+        return res.status(response.status).json({ error: `مكان الشيف Studio API error: ${response.statusText}` });
       }
       const data = await response.json();
       res.json(data);
     } catch (error: any) {
       console.error(`QIROX Studio proxy error (${endpoint}):`, error.message);
-      res.status(500).json({ error: "فشل الاتصال بـ مكان الشيف البخاري Studio API" });
+      res.status(500).json({ error: "فشل الاتصال بـ مكان الشيف Studio API" });
     }
   };
 
@@ -19648,12 +20325,2798 @@ export async function registerRoutes(app: Express, options: { skipWebSocket?: bo
   }
   // ─────────────────────────────────────────────────────────────────────────────
 
+  // ─── WASTAGE API ──────────────────────────────────────────────────────────
+  app.get("/api/inventory/wastage", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { WastageModel } = await import("@shared/schema");
+      const tenantId = req.employee?.tenantId || getTenantIdFromRequest(req) || 'demo-tenant';
+      const { limit = '100', rawItemId, reason } = req.query as any;
+      const query: any = { $or: [{ tenantId }, { tenantId: { $exists: false } }] };
+      if (rawItemId) query.rawItemId = rawItemId;
+      if (reason) query.reason = reason;
+      const records = await WastageModel.find(query).sort({ recordedAt: -1 }).limit(parseInt(limit)).lean();
+      res.json(records);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post("/api/inventory/wastage", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { WastageModel, RawItemModel } = await import("@shared/schema");
+      const { nanoid } = await import("nanoid");
+      const tenantId = req.employee?.tenantId || getTenantIdFromRequest(req) || 'demo-tenant';
+      const { rawItemId, quantity, reason, reasonNote } = req.body;
+      if (!rawItemId || !quantity || !reason) return res.status(400).json({ error: 'rawItemId, quantity, reason required' });
+      // Fetch raw item for cost + name
+      const rawItem = await RawItemModel.findOne({ id: rawItemId }).lean() as any;
+      const unitCost = rawItem?.unitCost || 0;
+      const totalCost = unitCost * Number(quantity);
+      const wastage = await WastageModel.create({
+        id: nanoid(),
+        tenantId,
+        rawItemId,
+        rawItemName: rawItem?.nameAr || rawItemId,
+        rawItemCode: rawItem?.code,
+        quantity: Number(quantity),
+        unit: rawItem?.unit || 'piece',
+        reason,
+        reasonNote,
+        unitCost,
+        totalCost,
+        recordedBy: req.employee?.fullName || req.employee?.username || 'manager',
+        recordedAt: new Date(),
+      });
+      // Deduct from stock
+      if (rawItem) {
+        await RawItemModel.updateOne({ id: rawItemId }, { $inc: { currentStock: -Number(quantity), currentStockLevel: -Number(quantity) } });
+      }
+      res.status(201).json(wastage);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.get("/api/inventory/wastage/summary", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { WastageModel } = await import("@shared/schema");
+      const tenantId = req.employee?.tenantId || getTenantIdFromRequest(req) || 'demo-tenant';
+      const since = new Date(); since.setDate(since.getDate() - 30);
+      const records = await WastageModel.find({
+        $or: [{ tenantId }, { tenantId: { $exists: false } }],
+        recordedAt: { $gte: since }
+      }).lean() as any[];
+      const totalCost = records.reduce((s: number, r: any) => s + (r.totalCost || 0), 0);
+      const byReason = records.reduce((acc: any, r: any) => {
+        acc[r.reason] = (acc[r.reason] || 0) + (r.totalCost || 0);
+        return acc;
+      }, {});
+      const byItem = records.reduce((acc: any, r: any) => {
+        if (!acc[r.rawItemId]) acc[r.rawItemId] = { name: r.rawItemName, qty: 0, cost: 0 };
+        acc[r.rawItemId].qty  += r.quantity || 0;
+        acc[r.rawItemId].cost += r.totalCost || 0;
+        return acc;
+      }, {});
+      res.json({ totalCost, count: records.length, byReason, byItem });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.delete("/api/inventory/wastage/:id", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { WastageModel } = await import("@shared/schema");
+      await WastageModel.deleteOne({ id: req.params.id });
+      res.json({ success: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ─── PRODUCTION API ────────────────────────────────────────────────────────
+  app.get("/api/inventory/production", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { ProductionModel } = await import("@shared/schema");
+      const tenantId = req.employee?.tenantId || getTenantIdFromRequest(req) || 'demo-tenant';
+      const { status, limit = '100' } = req.query as any;
+      const query: any = { $or: [{ tenantId }, { tenantId: { $exists: false } }] };
+      if (status) query.status = status;
+      const batches = await ProductionModel.find(query).sort({ plannedDate: -1 }).limit(parseInt(limit)).lean();
+      res.json(batches);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post("/api/inventory/production", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { ProductionModel } = await import("@shared/schema");
+      const { nanoid } = await import("nanoid");
+      const tenantId = req.employee?.tenantId || getTenantIdFromRequest(req) || 'demo-tenant';
+      const { productName, quantity, unit, ingredients = [], plannedDate, notes } = req.body;
+      if (!productName || !quantity || !plannedDate) return res.status(400).json({ error: 'productName, quantity, plannedDate required' });
+      const totalCost = (ingredients as any[]).reduce((s: number, i: any) => s + (i.totalCost || 0), 0);
+      const count = await ProductionModel.countDocuments({ $or: [{ tenantId }, { tenantId: { $exists: false } }] });
+      const batch = await ProductionModel.create({
+        id: nanoid(),
+        tenantId,
+        batchNumber: `PROD-${String(count + 1).padStart(4, '0')}`,
+        productName,
+        quantity: Number(quantity),
+        unit: unit || 'piece',
+        ingredients,
+        totalCost,
+        status: 'planned',
+        plannedDate: new Date(plannedDate),
+        notes,
+        producedBy: req.employee?.fullName || req.employee?.username || 'manager',
+      });
+      res.status(201).json(batch);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.put("/api/inventory/production/:id/status", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { ProductionModel, RawItemModel } = await import("@shared/schema");
+      const { status } = req.body;
+      const batch = await ProductionModel.findOne({ id: req.params.id }) as any;
+      if (!batch) return res.status(404).json({ error: 'Not found' });
+      batch.status = status;
+      if (status === 'completed') {
+        batch.completedDate = new Date();
+        // Deduct ingredients from stock
+        for (const ing of batch.ingredients || []) {
+          if (ing.rawItemId && ing.quantityUsed > 0) {
+            await RawItemModel.updateOne({ id: ing.rawItemId }, { $inc: { currentStock: -ing.quantityUsed, currentStockLevel: -ing.quantityUsed } });
+          }
+        }
+      }
+      await batch.save();
+      res.json(batch);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.delete("/api/inventory/production/:id", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { ProductionModel } = await import("@shared/schema");
+      await ProductionModel.deleteOne({ id: req.params.id });
+      res.json({ success: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ─── STOCK FORECASTING API ─────────────────────────────────────────────────
+  app.get("/api/inventory/forecast", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { RawItemModel, StockMovementModel, WastageModel } = await import("@shared/schema");
+      const tenantId = req.employee?.tenantId || getTenantIdFromRequest(req) || 'demo-tenant';
+      const since = new Date(); since.setDate(since.getDate() - 30);
+
+      const rawItems = await RawItemModel.find({
+        $or: [{ tenantId }, { tenantId: { $exists: false } }],
+        isActive: 1,
+      }).lean() as any[];
+
+      // Get stock movements (deductions) in last 30 days
+      const movements = await StockMovementModel.find({
+        $or: [{ tenantId }, { tenantId: { $exists: false } }],
+        type: { $in: ['deduction', 'sale', 'adjustment', 'deduct', 'use'] },
+        createdAt: { $gte: since },
+      }).lean() as any[];
+
+      // Get wastage in last 30 days
+      const wastageRecords = await WastageModel.find({
+        $or: [{ tenantId }, { tenantId: { $exists: false } }],
+        recordedAt: { $gte: since },
+      }).lean() as any[];
+
+      const forecast = rawItems.map((item: any) => {
+        // Sum deductions per item
+        const itemMovements = movements.filter((m: any) => m.rawItemId === item.id || m.itemId === item.id);
+        const itemWastage = wastageRecords.filter((w: any) => w.rawItemId === item.id);
+        const totalDeducted = itemMovements.reduce((s: number, m: any) => s + Math.abs(m.quantity || 0), 0);
+        const totalWasted   = itemWastage.reduce((s: number, w: any) => s + (w.quantity || 0), 0);
+        const totalConsumed = totalDeducted + totalWasted;
+        const avgDailyUsage = totalConsumed / 30;
+        const currentStock  = item.currentStock || item.currentStockLevel || 0;
+        const daysUntilStockout = avgDailyUsage > 0 ? Math.floor(currentStock / avgDailyUsage) : 999;
+        const suggestedReorder  = Math.max(0, (item.maxStockLevel || item.minStockLevel * 3) - currentStock);
+        const stockoutRisk = daysUntilStockout < 3 ? 'critical' : daysUntilStockout < 7 ? 'high' : daysUntilStockout < 14 ? 'medium' : 'low';
+
+        return {
+          id: item.id,
+          nameAr: item.nameAr,
+          nameEn: item.nameEn,
+          unit: item.unit,
+          currentStock,
+          minStockLevel: item.minStockLevel,
+          maxStockLevel: item.maxStockLevel,
+          unitCost: item.unitCost || 0,
+          totalDeducted,
+          totalWasted,
+          avgDailyUsage: Math.round(avgDailyUsage * 100) / 100,
+          daysUntilStockout,
+          suggestedReorder: Math.round(suggestedReorder * 100) / 100,
+          stockoutRisk,
+          reorderCost: Math.round(suggestedReorder * (item.unitCost || 0) * 100) / 100,
+        };
+      });
+
+      // Sort: critical first, then high, then medium, then low
+      const riskOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+      forecast.sort((a: any, b: any) => (riskOrder[a.stockoutRisk as keyof typeof riskOrder] || 3) - (riskOrder[b.stockoutRisk as keyof typeof riskOrder] || 3));
+
+      const summary = {
+        critical: forecast.filter((f: any) => f.stockoutRisk === 'critical').length,
+        high: forecast.filter((f: any) => f.stockoutRisk === 'high').length,
+        medium: forecast.filter((f: any) => f.stockoutRisk === 'medium').length,
+        low: forecast.filter((f: any) => f.stockoutRisk === 'low').length,
+        totalReorderCost: forecast.reduce((s: number, f: any) => s + (f.reorderCost || 0), 0),
+      };
+
+      res.json({ items: forecast, summary });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // EMPLOYEE TASKS API
+  // ═══════════════════════════════════════════════════════════════════════════
+  app.get("/api/employee-tasks", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const { EmployeeTaskModel } = await import("@shared/schema");
+      const tenantId = req.employee?.tenantId || getTenantIdFromRequest(req) || 'demo-tenant';
+      const { status, assignedTo, priority, limit = '200' } = req.query as any;
+      const query: any = { $or: [{ tenantId }, { tenantId: { $exists: false } }] };
+      if (status) query.status = status;
+      if (assignedTo) query.assignedTo = assignedTo;
+      if (priority) query.priority = priority;
+      const tasks = await EmployeeTaskModel.find(query).sort({ createdAt: -1 }).limit(parseInt(limit)).lean();
+      res.json(tasks);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post("/api/employee-tasks", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { EmployeeTaskModel } = await import("@shared/schema");
+      const { nanoid } = await import("nanoid");
+      const tenantId = req.employee?.tenantId || getTenantIdFromRequest(req) || 'demo-tenant';
+      const { title, description, assignedTo, priority, dueDate, category, notes } = req.body;
+      if (!title || !assignedTo) return res.status(400).json({ error: 'title, assignedTo required' });
+      const task = await EmployeeTaskModel.create({
+        id: nanoid(), tenantId, title, description, assignedTo,
+        assignedBy: req.employee?.fullName || req.employee?.username || 'manager',
+        priority: priority || 'normal',
+        dueDate: dueDate ? new Date(dueDate) : undefined,
+        category: category || 'other', notes,
+      });
+      res.status(201).json(task);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.put("/api/employee-tasks/:id", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const { EmployeeTaskModel } = await import("@shared/schema");
+      const update: any = { ...req.body };
+      if (update.status === 'completed' && !update.completedAt) update.completedAt = new Date();
+      const task = await EmployeeTaskModel.findOneAndUpdate({ id: req.params.id }, update, { new: true });
+      res.json(task);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.delete("/api/employee-tasks/:id", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { EmployeeTaskModel } = await import("@shared/schema");
+      await EmployeeTaskModel.deleteOne({ id: req.params.id });
+      res.json({ success: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // EMPLOYEE VIOLATIONS API
+  // ═══════════════════════════════════════════════════════════════════════════
+  app.get("/api/employee-violations", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { EmployeeViolationModel } = await import("@shared/schema");
+      const tenantId = req.employee?.tenantId || getTenantIdFromRequest(req) || 'demo-tenant';
+      const { employeeId, severity, status, limit = '200' } = req.query as any;
+      const query: any = { $or: [{ tenantId }, { tenantId: { $exists: false } }] };
+      if (employeeId) query.employeeId = employeeId;
+      if (severity) query.severity = severity;
+      if (status) query.status = status;
+      const violations = await EmployeeViolationModel.find(query).sort({ occurredAt: -1 }).limit(parseInt(limit)).lean();
+      res.json(violations);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post("/api/employee-violations", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { EmployeeViolationModel, EmployeeModel } = await import("@shared/schema");
+      const { nanoid } = await import("nanoid");
+      const tenantId = req.employee?.tenantId || getTenantIdFromRequest(req) || 'demo-tenant';
+      const { employeeId, type, severity, description, penaltyAmount, penaltyPoints, occurredAt } = req.body;
+      if (!employeeId || !type || !description) return res.status(400).json({ error: 'employeeId, type, description required' });
+      const emp = await EmployeeModel.findOne({ id: employeeId }).lean() as any;
+      const violation = await EmployeeViolationModel.create({
+        id: nanoid(), tenantId,
+        employeeId, employeeName: emp?.fullName || employeeId,
+        type, severity: severity || 'minor', description,
+        penaltyAmount: Number(penaltyAmount || 0),
+        penaltyPoints: Number(penaltyPoints || 0),
+        reportedBy: req.employee?.fullName || req.employee?.username || 'manager',
+        occurredAt: occurredAt ? new Date(occurredAt) : new Date(),
+      });
+      res.status(201).json(violation);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.put("/api/employee-violations/:id", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { EmployeeViolationModel } = await import("@shared/schema");
+      const v = await EmployeeViolationModel.findOneAndUpdate({ id: req.params.id }, req.body, { new: true });
+      res.json(v);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.delete("/api/employee-violations/:id", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { EmployeeViolationModel } = await import("@shared/schema");
+      await EmployeeViolationModel.deleteOne({ id: req.params.id });
+      res.json({ success: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // EMPLOYEE BREAKS API
+  // ═══════════════════════════════════════════════════════════════════════════
+  app.get("/api/employee-breaks", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const { EmployeeBreakModel } = await import("@shared/schema");
+      const tenantId = req.employee?.tenantId || getTenantIdFromRequest(req) || 'demo-tenant';
+      const { employeeId, active, limit = '100' } = req.query as any;
+      const query: any = { $or: [{ tenantId }, { tenantId: { $exists: false } }] };
+      if (employeeId) query.employeeId = employeeId;
+      if (active === 'true') query.endedAt = { $exists: false };
+      const breaks = await EmployeeBreakModel.find(query).sort({ startedAt: -1 }).limit(parseInt(limit)).lean();
+      res.json(breaks);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post("/api/employee-breaks/start", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const { EmployeeBreakModel, EmployeeModel } = await import("@shared/schema");
+      const { nanoid } = await import("nanoid");
+      const tenantId = req.employee?.tenantId || getTenantIdFromRequest(req) || 'demo-tenant';
+      const employeeId = req.body.employeeId || req.employee?.id;
+      const { type, notes, attendanceId } = req.body;
+      if (!employeeId) return res.status(400).json({ error: 'employeeId required' });
+      // Check for active break
+      const active = await EmployeeBreakModel.findOne({ employeeId, endedAt: { $exists: false } });
+      if (active) return res.status(400).json({ error: 'Already on a break', active });
+      const emp = await EmployeeModel.findOne({ id: employeeId }).lean() as any;
+      const brk = await EmployeeBreakModel.create({
+        id: nanoid(), tenantId, employeeId,
+        employeeName: emp?.fullName || employeeId,
+        type: type || 'rest', notes, attendanceId,
+        startedAt: new Date(),
+      });
+      res.status(201).json(brk);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post("/api/employee-breaks/:id/end", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const { EmployeeBreakModel } = await import("@shared/schema");
+      const brk = await EmployeeBreakModel.findOne({ id: req.params.id }) as any;
+      if (!brk) return res.status(404).json({ error: 'Not found' });
+      const endedAt = new Date();
+      brk.endedAt = endedAt;
+      brk.durationMinutes = Math.round((endedAt.getTime() - brk.startedAt.getTime()) / 60000);
+      await brk.save();
+      res.json(brk);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // EMPLOYEE LIVE STATUS (overview)
+  // ═══════════════════════════════════════════════════════════════════════════
+  app.get("/api/employees/live-status", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { EmployeeModel, AttendanceModel, EmployeeBreakModel } = await import("@shared/schema");
+      const tenantId = req.employee?.tenantId || getTenantIdFromRequest(req) || 'demo-tenant';
+      const employees = await EmployeeModel.find({ $or: [{ tenantId }, { tenantId: { $exists: false } }], isActive: 1 }).lean() as any[];
+      const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+      const attendance = await AttendanceModel.find({ shiftDate: { $gte: todayStart }, status: 'checked_in' }).lean() as any[];
+      const activeBreaks = await EmployeeBreakModel.find({ endedAt: { $exists: false } }).lean() as any[];
+      const onShiftIds = new Set(attendance.map((a: any) => a.employeeId));
+      const onBreakIds = new Set(activeBreaks.map((b: any) => b.employeeId));
+      const status = employees.map((e: any) => {
+        let s: 'on_shift' | 'on_break' | 'off_duty' = 'off_duty';
+        if (onBreakIds.has(e.id)) s = 'on_break';
+        else if (onShiftIds.has(e.id)) s = 'on_shift';
+        const att = attendance.find((a: any) => a.employeeId === e.id);
+        const brk = activeBreaks.find((b: any) => b.employeeId === e.id);
+        return {
+          id: e.id, fullName: e.fullName, role: e.role, jobTitle: e.jobTitle,
+          imageUrl: e.imageUrl, branchId: e.branchId,
+          status: s,
+          checkInTime: att?.checkInTime,
+          breakStartedAt: brk?.startedAt,
+          breakType: brk?.type,
+          isLate: att?.isLate || 0,
+          lateMinutes: att?.lateMinutes || 0,
+        };
+      });
+      res.json({
+        employees: status,
+        summary: {
+          total: employees.length,
+          onShift: status.filter(s => s.status === 'on_shift').length,
+          onBreak: status.filter(s => s.status === 'on_break').length,
+          offDuty: status.filter(s => s.status === 'off_duty').length,
+          late: status.filter(s => s.isLate === 1).length,
+        }
+      });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PERFORMANCE SCORING + LEADERBOARD
+  // ═══════════════════════════════════════════════════════════════════════════
+  app.get("/api/employees/performance", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { EmployeeModel, AttendanceModel, EmployeeViolationModel, EmployeeTaskModel, OrderModel } = await import("@shared/schema");
+      const tenantId = req.employee?.tenantId || getTenantIdFromRequest(req) || 'demo-tenant';
+      const { period = 'month' } = req.query as any;
+      const since = new Date();
+      if (period === 'week') since.setDate(since.getDate() - 7);
+      else if (period === 'month') since.setDate(since.getDate() - 30);
+      else if (period === 'year') since.setDate(since.getDate() - 365);
+
+      const employees = await EmployeeModel.find({ $or: [{ tenantId }, { tenantId: { $exists: false } }], isActive: 1 }).lean() as any[];
+
+      const [attendance, violations, tasks, orders] = await Promise.all([
+        AttendanceModel.find({ shiftDate: { $gte: since } }).lean() as any,
+        EmployeeViolationModel.find({ $or: [{ tenantId }, { tenantId: { $exists: false } }], occurredAt: { $gte: since } }).lean() as any,
+        EmployeeTaskModel.find({ $or: [{ tenantId }, { tenantId: { $exists: false } }], createdAt: { $gte: since } }).lean() as any,
+        OrderModel.find({ createdAt: { $gte: since }, paymentStatus: 'paid' }).lean() as any,
+      ]);
+
+      const performance = employees.map((emp: any) => {
+        const empAttendance = (attendance as any[]).filter((a: any) => a.employeeId === emp.id);
+        const empViolations = (violations as any[]).filter((v: any) => v.employeeId === emp.id);
+        const empTasks = (tasks as any[]).filter((t: any) => t.assignedTo === emp.id);
+        const empOrders = (orders as any[]).filter((o: any) => o.assignedCashierId === emp.id || o.employeeId === emp.id);
+
+        const lateCount = empAttendance.filter((a: any) => a.isLate === 1).length;
+        const lateMinutes = empAttendance.reduce((s: number, a: any) => s + (a.lateMinutes || 0), 0);
+        const presentDays = empAttendance.length;
+        const completedTasks = empTasks.filter((t: any) => t.status === 'completed').length;
+        const totalTasks = empTasks.length;
+        const taskCompletionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 100;
+        const totalSales = empOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
+        const orderCount = empOrders.length;
+        const violationPoints = empViolations.reduce((s: number, v: any) => {
+          const sevPts = v.severity === 'critical' ? 25 : v.severity === 'major' ? 15 : v.severity === 'moderate' ? 8 : 3;
+          return s + sevPts + (v.penaltyPoints || 0);
+        }, 0);
+        const totalPenalty = empViolations.reduce((s: number, v: any) => s + (v.penaltyAmount || 0), 0);
+
+        // Composite score: attendance(40) + tasks(30) + sales(20) - violations(weighted)
+        let score = 0;
+        const attendanceScore = Math.max(0, 40 - (lateCount * 4) - (lateMinutes * 0.1));
+        const taskScore = (taskCompletionRate / 100) * 30;
+        const salesScore = orderCount > 0 ? Math.min(20, orderCount / 10) : 0;
+        const violationDeduction = Math.min(40, violationPoints);
+        score = Math.max(0, Math.round(attendanceScore + taskScore + salesScore + 10 - violationDeduction));
+
+        const rating = score >= 85 ? 'excellent' : score >= 70 ? 'good' : score >= 50 ? 'average' : 'needs_improvement';
+
+        return {
+          id: emp.id, fullName: emp.fullName, role: emp.role, jobTitle: emp.jobTitle, imageUrl: emp.imageUrl,
+          score, rating,
+          attendance: { presentDays, lateCount, lateMinutes, score: Math.round(attendanceScore) },
+          tasks: { completed: completedTasks, total: totalTasks, completionRate: taskCompletionRate, score: Math.round(taskScore) },
+          sales: { totalSales: Math.round(totalSales * 100) / 100, orderCount, score: Math.round(salesScore) },
+          violations: { count: empViolations.length, points: violationPoints, totalPenalty },
+        };
+      });
+
+      performance.sort((a: any, b: any) => b.score - a.score);
+      res.json({ period, employees: performance });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.get("/api/employees/leaderboard", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { OrderModel, EmployeeModel } = await import("@shared/schema");
+      const { period = 'month', limit = '20' } = req.query as any;
+      const since = new Date();
+      if (period === 'today') since.setHours(0, 0, 0, 0);
+      else if (period === 'week') since.setDate(since.getDate() - 7);
+      else if (period === 'month') since.setDate(since.getDate() - 30);
+      const orders = await OrderModel.find({ createdAt: { $gte: since }, paymentStatus: 'paid' }).lean() as any[];
+      const byEmp: Record<string, { sales: number; count: number }> = {};
+      for (const o of orders) {
+        const eid = o.assignedCashierId || o.employeeId;
+        if (!eid) continue;
+        if (!byEmp[eid]) byEmp[eid] = { sales: 0, count: 0 };
+        byEmp[eid].sales += o.totalAmount || 0;
+        byEmp[eid].count += 1;
+      }
+      const empIds = Object.keys(byEmp);
+      const emps = await EmployeeModel.find({ id: { $in: empIds } }).lean() as any[];
+      const board = emps.map((e: any) => ({
+        id: e.id, fullName: e.fullName, role: e.role, jobTitle: e.jobTitle, imageUrl: e.imageUrl,
+        sales: Math.round((byEmp[e.id]?.sales || 0) * 100) / 100,
+        orderCount: byEmp[e.id]?.count || 0,
+        avgOrderValue: byEmp[e.id]?.count > 0 ? Math.round((byEmp[e.id].sales / byEmp[e.id].count) * 100) / 100 : 0,
+      })).sort((a: any, b: any) => b.sales - a.sales).slice(0, parseInt(limit));
+      res.json({ period, leaderboard: board });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PAYROLL EXPORT
+  // ═══════════════════════════════════════════════════════════════════════════
+  app.get("/api/employees/payroll-export", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { EmployeeModel, AttendanceModel, EmployeeViolationModel, OrderModel } = await import("@shared/schema");
+      const tenantId = req.employee?.tenantId || getTenantIdFromRequest(req) || 'demo-tenant';
+      const { month, year, format = 'json' } = req.query as any;
+      const now = new Date();
+      const m = parseInt(month || (now.getMonth() + 1).toString());
+      const y = parseInt(year || now.getFullYear().toString());
+      const start = new Date(y, m - 1, 1);
+      const end = new Date(y, m, 0, 23, 59, 59);
+
+      const employees = await EmployeeModel.find({ $or: [{ tenantId }, { tenantId: { $exists: false } }], isActive: 1 }).lean() as any[];
+      const [attendance, violations, orders] = await Promise.all([
+        AttendanceModel.find({ shiftDate: { $gte: start, $lte: end } }).lean(),
+        EmployeeViolationModel.find({ occurredAt: { $gte: start, $lte: end } }).lean(),
+        OrderModel.find({ createdAt: { $gte: start, $lte: end }, paymentStatus: 'paid' }).lean(),
+      ]);
+
+      const rows = employees.map((e: any) => {
+        const empAtt = (attendance as any[]).filter((a: any) => a.employeeId === e.id);
+        const empViol = (violations as any[]).filter((v: any) => v.employeeId === e.id);
+        const empOrders = (orders as any[]).filter((o: any) => o.assignedCashierId === e.id || o.employeeId === e.id);
+        const presentDays = empAtt.length;
+        const lateMinutes = empAtt.reduce((s: number, a: any) => s + (a.lateMinutes || 0), 0);
+        const totalHours = empAtt.reduce((s: number, a: any) => {
+          if (!a.checkOutTime) return s;
+          return s + ((new Date(a.checkOutTime).getTime() - new Date(a.checkInTime).getTime()) / 3600000);
+        }, 0);
+        const totalSales = empOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
+        const baseSalary = e.salary || 0;
+        const commission = e.commissionPercentage ? (totalSales * e.commissionPercentage / 100) : 0;
+        const deductions = empViol.reduce((s: number, v: any) => s + (v.penaltyAmount || 0), 0);
+        const netPay = baseSalary + commission - deductions;
+        return {
+          employeeId: e.id, employmentNumber: e.employmentNumber || '',
+          fullName: e.fullName, role: e.role, jobTitle: e.jobTitle, phone: e.phone,
+          presentDays, lateMinutes, totalHours: Math.round(totalHours * 100) / 100,
+          orderCount: empOrders.length, totalSales: Math.round(totalSales * 100) / 100,
+          baseSalary, commissionPct: e.commissionPercentage || 0,
+          commission: Math.round(commission * 100) / 100,
+          violationsCount: empViol.length,
+          deductions: Math.round(deductions * 100) / 100,
+          netPay: Math.round(netPay * 100) / 100,
+        };
+      });
+
+      if (format === 'csv') {
+        const headers = ['ID','Emp #','Full Name','Role','Job','Phone','Present Days','Late Min','Hours','Orders','Sales SAR','Base SAR','Commission %','Commission SAR','Violations','Deductions SAR','Net Pay SAR'];
+        const lines = ['\uFEFF' + headers.join(',')];
+        for (const r of rows) {
+          lines.push([r.employeeId, r.employmentNumber, `"${r.fullName}"`, r.role, `"${r.jobTitle}"`, r.phone, r.presentDays, r.lateMinutes, r.totalHours, r.orderCount, r.totalSales, r.baseSalary, r.commissionPct, r.commission, r.violationsCount, r.deductions, r.netPay].join(','));
+        }
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="payroll-${y}-${String(m).padStart(2,'0')}.csv"`);
+        return res.send(lines.join('\n'));
+      }
+
+      res.json({ month: m, year: y, rows, totals: {
+        totalNet: rows.reduce((s, r) => s + r.netPay, 0),
+        totalSales: rows.reduce((s, r) => s + r.totalSales, 0),
+        totalDeductions: rows.reduce((s, r) => s + r.deductions, 0),
+      } });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PERMISSIONS MATRIX
+  // ═══════════════════════════════════════════════════════════════════════════
+  app.get("/api/employees/permissions-matrix", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { PermissionsEngine } = await import("./permissions-engine");
+      const roles = ['cleaner','driver','accountant','cashier','barista','supervisor','branch_manager','owner','admin'];
+      const matrix = roles.map(r => ({
+        role: r,
+        roleNameAr: PermissionsEngine.getRoleNameAr(r as any),
+        permissions: PermissionsEngine.getPermissions(r),
+        accessiblePages: PermissionsEngine.getAccessiblePages(r),
+      }));
+      res.json({ roles: matrix });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ─── AUDIT LOGS API ───────────────────────────────────────────────────────
+  app.get("/api/audit-logs", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const { AuditLogModel } = await import("@shared/schema");
+      const employee = req.employee;
+      const tenantId = (employee as any)?.tenantId || getTenantIdFromRequest(req) || 'demo-tenant';
+      const { action, actorType, search, limit = '50', offset = '0' } = req.query as any;
+
+      const query: any = { tenantId };
+      if (action && action !== 'all') query.action = action;
+      if (actorType && actorType !== 'all') query.actorType = actorType;
+      if (search) {
+        query.$or = [
+          { actorName: { $regex: search, $options: 'i' } },
+          { entityLabel: { $regex: search, $options: 'i' } },
+          { entityId: { $regex: search, $options: 'i' } },
+        ];
+      }
+
+      const [logs, total] = await Promise.all([
+        AuditLogModel.find(query).sort({ createdAt: -1 }).skip(parseInt(offset)).limit(parseInt(limit)).lean(),
+        AuditLogModel.countDocuments(query),
+      ]);
+
+      res.json({ logs: logs.map(serializeDoc), total });
+    } catch (error) {
+      console.error("[AUDIT_LOGS] Error:", error);
+      res.status(500).json({ error: "Failed to fetch audit logs" });
+    }
+  });
+
+  // ════════════════════════════════════════════════════════════════════════
+  //  RELIABILITY SYSTEM (Phase 5)
+  // ════════════════════════════════════════════════════════════════════════
+
+  // ─── CRASH RECOVERY ─────────────────────────────────────────────────────
+  app.post("/api/crash-sessions/save", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const { CrashSessionModel } = await import("@shared/schema");
+      const employee = req.employee!;
+      const { page, sessionData, deviceId } = req.body || {};
+      if (!page || !sessionData) return res.status(400).json({ error: "page and sessionData required" });
+      const id = `crash-${employee.id}-${page}`;
+      await CrashSessionModel.findOneAndUpdate(
+        { id },
+        {
+          id,
+          tenantId: employee.tenantId || 'demo-tenant',
+          branchId: employee.branchId,
+          ownerId: employee.id,
+          ownerName: (employee as any).fullName || (employee as any).username,
+          deviceId,
+          page,
+          sessionData,
+          recovered: false,
+          updatedAt: new Date(),
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+      res.json({ success: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.get("/api/crash-sessions/mine", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const { CrashSessionModel } = await import("@shared/schema");
+      const employee = req.employee!;
+      const list = await CrashSessionModel.find({ ownerId: employee.id, recovered: false }).sort({ updatedAt: -1 }).limit(20).lean();
+      res.json(list.map(serializeDoc));
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post("/api/crash-sessions/:id/recover", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const { CrashSessionModel } = await import("@shared/schema");
+      const employee = req.employee!;
+      const session = await CrashSessionModel.findOne({ id: req.params.id, ownerId: employee.id }).lean() as any;
+      if (!session) return res.status(404).json({ error: "Not found" });
+      await CrashSessionModel.updateOne({ id: req.params.id }, { $set: { recovered: true } });
+      res.json(serializeDoc(session));
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.delete("/api/crash-sessions/:id", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const { CrashSessionModel } = await import("@shared/schema");
+      const employee = req.employee!;
+      await CrashSessionModel.deleteOne({ id: req.params.id, ownerId: employee.id });
+      res.json({ success: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.get("/api/crash-sessions/all", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { CrashSessionModel } = await import("@shared/schema");
+      const tenantId = req.employee?.tenantId || 'demo-tenant';
+      const list = await CrashSessionModel.find({
+        $or: [{ tenantId }, { tenantId: { $exists: false } }],
+        recovered: false,
+      }).sort({ updatedAt: -1 }).limit(100).lean();
+      res.json(list.map(serializeDoc));
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ─── QUEUE JOBS ─────────────────────────────────────────────────────────
+  app.post("/api/queue-jobs", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const { QueueJobModel } = await import("@shared/schema");
+      const employee = req.employee!;
+      const { type, payload, priority, deviceId, targetEntity, maxAttempts } = req.body || {};
+      if (!type) return res.status(400).json({ error: "type required" });
+      const job = await QueueJobModel.create({
+        id: nanoid(),
+        tenantId: employee.tenantId || 'demo-tenant',
+        branchId: employee.branchId,
+        type,
+        status: 'pending',
+        priority: priority || 3,
+        payload: payload || {},
+        attempts: 0,
+        maxAttempts: maxAttempts || 3,
+        deviceId,
+        targetEntity,
+        createdAt: new Date(),
+      });
+      res.status(201).json(serializeDoc(job.toObject()));
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.get("/api/queue-jobs", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { QueueJobModel } = await import("@shared/schema");
+      const tenantId = req.employee?.tenantId || 'demo-tenant';
+      const { type, status, limit = '100' } = req.query as any;
+      const q: any = { $or: [{ tenantId }, { tenantId: { $exists: false } }] };
+      if (type && type !== 'all') q.type = type;
+      if (status && status !== 'all') q.status = status;
+      const jobs = await QueueJobModel.find(q).sort({ createdAt: -1 }).limit(parseInt(limit)).lean();
+      res.json(jobs.map(serializeDoc));
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.get("/api/queue-jobs/stats", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { QueueJobModel } = await import("@shared/schema");
+      const tenantId = req.employee?.tenantId || 'demo-tenant';
+      const since = new Date(Date.now() - 24 * 3600 * 1000);
+      const all = await QueueJobModel.find({
+        $or: [{ tenantId }, { tenantId: { $exists: false } }],
+        createdAt: { $gte: since },
+      }).lean() as any[];
+      const byType: Record<string, any> = {};
+      const byStatus: Record<string, number> = { pending: 0, processing: 0, completed: 0, failed: 0, retrying: 0 };
+      for (const j of all) {
+        if (!byType[j.type]) byType[j.type] = { total: 0, pending: 0, completed: 0, failed: 0, avgDuration: 0, durations: [] };
+        byType[j.type].total++;
+        if (j.status === 'pending' || j.status === 'retrying') byType[j.type].pending++;
+        if (j.status === 'completed') {
+          byType[j.type].completed++;
+          if (j.durationMs) byType[j.type].durations.push(j.durationMs);
+        }
+        if (j.status === 'failed') byType[j.type].failed++;
+        byStatus[j.status] = (byStatus[j.status] || 0) + 1;
+      }
+      for (const k of Object.keys(byType)) {
+        const ds = byType[k].durations;
+        byType[k].avgDuration = ds.length ? Math.round(ds.reduce((a: number, b: number) => a + b, 0) / ds.length) : 0;
+        delete byType[k].durations;
+      }
+      res.json({ byType, byStatus, total: all.length, period: '24h' });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post("/api/queue-jobs/:id/retry", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { QueueJobModel } = await import("@shared/schema");
+      const job = await QueueJobModel.findOneAndUpdate(
+        { id: req.params.id },
+        { $set: { status: 'pending', lastError: null }, $inc: { attempts: 0 } },
+        { new: true }
+      ).lean() as any;
+      if (!job) return res.status(404).json({ error: "Not found" });
+      res.json(serializeDoc(job));
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.delete("/api/queue-jobs/:id", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { QueueJobModel } = await import("@shared/schema");
+      await QueueJobModel.deleteOne({ id: req.params.id });
+      res.json({ success: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.patch("/api/queue-jobs/:id/status", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const { QueueJobModel } = await import("@shared/schema");
+      const { status, lastError, durationMs } = req.body || {};
+      const update: any = { status };
+      if (status === 'processing') update.startedAt = new Date();
+      if (status === 'completed' || status === 'failed') update.completedAt = new Date();
+      if (lastError) update.lastError = lastError;
+      if (durationMs) update.durationMs = durationMs;
+      const inc: any = {};
+      if (status === 'processing' || status === 'failed') inc.attempts = 1;
+      const job = await QueueJobModel.findOneAndUpdate({ id: req.params.id }, { $set: update, $inc: inc }, { new: true }).lean() as any;
+      if (!job) return res.status(404).json({ error: "Not found" });
+      res.json(serializeDoc(job));
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ─── SYSTEM HEALTH & MONITORING ─────────────────────────────────────────
+  app.get("/api/system/health", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { ApiMetricModel, QueueJobModel, CrashSessionModel } = await import("@shared/schema");
+      const since = new Date(Date.now() - 60 * 60 * 1000);
+      const [metrics, failedQueue, activeCrashes] = await Promise.all([
+        ApiMetricModel.find({ createdAt: { $gte: since } }).lean() as any,
+        QueueJobModel.countDocuments({ status: 'failed', createdAt: { $gte: since } }),
+        CrashSessionModel.countDocuments({ recovered: false }),
+      ]);
+
+      const total = metrics.length || 1;
+      const errors = metrics.filter((m: any) => m.isError).length;
+      const errorRate = (errors / total) * 100;
+      const avgLatency = total ? Math.round(metrics.reduce((s: number, m: any) => s + m.durationMs, 0) / total) : 0;
+      const sortedDurations = metrics.map((m: any) => m.durationMs).sort((a: number, b: number) => a - b);
+      const p95 = sortedDurations[Math.floor(sortedDurations.length * 0.95)] || 0;
+      const p99 = sortedDurations[Math.floor(sortedDurations.length * 0.99)] || 0;
+
+      const memUsage = process.memoryUsage();
+      const uptimeHours = Math.round((process.uptime() / 3600) * 10) / 10;
+
+      const status = errorRate > 5 || p95 > 3000 ? 'critical'
+                   : errorRate > 1 || p95 > 1500 || failedQueue > 5 ? 'warning'
+                   : 'healthy';
+
+      // Import queue stats
+      let queueStats = null;
+      try {
+        const { queue: jobQueue } = await import("./queue");
+        queueStats = jobQueue.stats();
+      } catch {}
+
+      res.json({
+        status,
+        errorRate: Math.round(errorRate * 100) / 100,
+        avgLatency,
+        p95Latency: p95,
+        p99Latency: p99,
+        totalRequests: total,
+        totalErrors: errors,
+        failedQueueJobs: failedQueue,
+        activeCrashSessions: activeCrashes,
+        memory: {
+          heapUsedMB: Math.round(memUsage.heapUsed / 1024 / 1024),
+          heapTotalMB: Math.round(memUsage.heapTotal / 1024 / 1024),
+          rssMB: Math.round(memUsage.rss / 1024 / 1024),
+        },
+        uptimeHours,
+        period: '1h',
+        cache: cache.stats(),
+        queue: queueStats,
+      });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ── Queue monitoring endpoint ─────────────────────────────────────────────
+  app.get("/api/system/queue", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { queue: jobQueue } = await import("./queue");
+      res.json({
+        stats: jobQueue.stats(),
+        pending: jobQueue.pendingJobs(),
+        cache: cache.stats(),
+      });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ── Cache control endpoint ────────────────────────────────────────────────
+  app.delete("/api/system/cache", requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+    const { pattern } = req.query;
+    if (pattern) {
+      cache.invalidate(String(pattern));
+      res.json({ message: `Invalidated cache keys matching: ${pattern}` });
+    } else {
+      // Full cache flush — use sparingly
+      const statsBefore = cache.stats();
+      cache.invalidate(''); // invalidate all (empty string matches everything in includes check)
+      res.json({ message: 'Full cache flushed', keysFlushed: statsBefore.size });
+    }
+  });
+
+  app.get("/api/system/api-performance", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { ApiMetricModel } = await import("@shared/schema");
+      const hours = parseInt((req.query.hours as string) || '24');
+      const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+      const metrics = await ApiMetricModel.find({ createdAt: { $gte: since } }).lean() as any[];
+
+      // Group by path
+      const byPath: Record<string, any> = {};
+      for (const m of metrics) {
+        const k = `${m.method} ${m.path}`;
+        if (!byPath[k]) byPath[k] = { route: k, count: 0, errors: 0, durations: [] };
+        byPath[k].count++;
+        if (m.isError) byPath[k].errors++;
+        byPath[k].durations.push(m.durationMs);
+      }
+      const rows = Object.values(byPath).map((r: any) => {
+        const ds = r.durations.sort((a: number, b: number) => a - b);
+        return {
+          route: r.route,
+          count: r.count,
+          errors: r.errors,
+          errorRate: Math.round((r.errors / r.count) * 10000) / 100,
+          avgMs: Math.round(ds.reduce((s: number, d: number) => s + d, 0) / ds.length),
+          p95Ms: ds[Math.floor(ds.length * 0.95)] || 0,
+          maxMs: ds[ds.length - 1] || 0,
+        };
+      });
+      rows.sort((a: any, b: any) => b.avgMs - a.avgMs);
+      res.json({ rows: rows.slice(0, 100), period: `${hours}h`, totalRequests: metrics.length });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.get("/api/system/devices", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { ApiMetricModel } = await import("@shared/schema");
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const metrics = await ApiMetricModel.find({ createdAt: { $gte: since }, userId: { $exists: true, $ne: null } }).lean() as any[];
+      const byDevice: Record<string, any> = {};
+      for (const m of metrics) {
+        const k = `${m.userId}::${m.ipAddress || 'unknown'}`;
+        if (!byDevice[k]) byDevice[k] = { userId: m.userId, ipAddress: m.ipAddress, userAgent: m.userAgent, count: 0, errors: 0, lastSeen: m.createdAt };
+        byDevice[k].count++;
+        if (m.isError) byDevice[k].errors++;
+        if (new Date(m.createdAt) > new Date(byDevice[k].lastSeen)) byDevice[k].lastSeen = m.createdAt;
+      }
+      const rows = Object.values(byDevice).map((d: any) => ({
+        ...d,
+        errorRate: Math.round((d.errors / d.count) * 10000) / 100,
+        healthy: (d.errors / d.count) < 0.05,
+      }));
+      rows.sort((a: any, b: any) => b.errors - a.errors);
+      res.json({ rows: rows.slice(0, 50), period: '24h' });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.get("/api/system/recent-errors", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { ApiMetricModel } = await import("@shared/schema");
+      const errors = await ApiMetricModel.find({ isError: true }).sort({ createdAt: -1 }).limit(50).lean();
+      res.json(errors.map(serializeDoc));
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ════════════════════════════════════════════════════════════════════════
+  //  PHASE 6 — AI + AUTOMATION
+  //  Smart Suggestions · AI Reports · Inventory Forecasting
+  // ════════════════════════════════════════════════════════════════════════
+
+  // Helper: call Groq for natural-language generation
+  async function callGroq(systemPrompt: string, userPrompt: string, maxTokens = 600): Promise<string | null> {
+    const kimiKey = process.env.KIMI_API_KEY;
+    if (!kimiKey) return null;
+    try {
+      const r = await fetch("https://api.moonshot.ai/v1/chat/completions", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${kimiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "moonshot-v1-32k",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          temperature: 0.5,
+          max_tokens: maxTokens,
+        }),
+      });
+      const data = await r.json();
+      return data.choices?.[0]?.message?.content || null;
+    } catch (e) { return null; }
+  }
+
+  // ─── SMART SUGGESTIONS (Pattern detection — 5 categories) ───────────────
+  app.get("/api/ai/smart-suggestions", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { OrderModel, RawItemModel, EmployeeModel, ApiMetricModel, AuditLogModel } = await import("@shared/schema");
+      const tenantId = req.employee?.tenantId || 'demo-tenant';
+      const todayStart = getSaudiStartOfDay();
+      const weekStart = new Date(todayStart.getTime() - 7 * 24 * 3600 * 1000);
+      const monthStart = new Date(todayStart.getTime() - 30 * 24 * 3600 * 1000);
+
+      const [orders, rawItems, employees, apiErrors, audits] = await Promise.all([
+        OrderModel.find({ tenantId, createdAt: { $gte: monthStart } }).lean() as any,
+        RawItemModel.find({ $or: [{ tenantId }, { tenantId: { $exists: false } }], isActive: 1 }).lean() as any,
+        EmployeeModel.find({ $or: [{ tenantId }, { tenantId: { $exists: false } }] }).lean() as any,
+        ApiMetricModel.find({ isError: true, createdAt: { $gte: new Date(Date.now() - 24 * 3600 * 1000) } }).lean() as any,
+        AuditLogModel.find({ tenantId, action: { $in: ['cancel', 'discount', 'void', 'refund'] }, createdAt: { $gte: weekStart } }).lean() as any,
+      ]);
+
+      const suggestions: any[] = [];
+
+      // ── 1) MISSING/LOW PRODUCTS ──
+      const lowStock = rawItems.filter((r: any) => (r.currentStock || 0) <= r.minStockLevel);
+      const outStock = rawItems.filter((r: any) => (r.currentStock || 0) === 0);
+      if (outStock.length > 0) {
+        suggestions.push({
+          id: 'out-stock',
+          type: 'critical',
+          category: 'inventory',
+          icon: 'package',
+          title: `${outStock.length} منتج نافد كلياً`,
+          message: `المنتجات: ${outStock.slice(0, 3).map((i: any) => i.nameAr).join('، ')}${outStock.length > 3 ? '...' : ''}. اطلبها فوراً لتجنب توقف العمل.`,
+          action: 'اذهب للمشتريات',
+          actionLink: '/manager/inventory/purchases',
+          impact: 'high',
+        });
+      }
+      if (lowStock.length > outStock.length) {
+        const justLow = lowStock.filter((i: any) => (i.currentStock || 0) > 0).slice(0, 5);
+        suggestions.push({
+          id: 'low-stock',
+          type: 'warning',
+          category: 'inventory',
+          icon: 'alert-triangle',
+          title: `${justLow.length} منتج اقترب من النفاد`,
+          message: `${justLow.map((i: any) => `${i.nameAr} (${i.currentStock} ${i.unit})`).join('، ')}`,
+          action: 'مراجعة المخزون',
+          actionLink: '/manager/inventory/raw-items',
+          impact: 'medium',
+        });
+      }
+
+      // ── 2) BEST EMPLOYEE SHIFT TIMES (correlation analysis) ──
+      const empSales: Record<string, { hours: Record<number, number>, totalSales: number }> = {};
+      for (const o of orders) {
+        const eid = o.assignedCashierId || o.employeeId;
+        if (!eid) continue;
+        const hr = new Date(o.createdAt).getHours();
+        if (!empSales[eid]) empSales[eid] = { hours: {}, totalSales: 0 };
+        empSales[eid].hours[hr] = (empSales[eid].hours[hr] || 0) + (o.totalAmount || 0);
+        empSales[eid].totalSales += o.totalAmount || 0;
+      }
+      const topPerformers: any[] = [];
+      for (const [eid, data] of Object.entries(empSales)) {
+        const emp = employees.find((e: any) => e.id === eid);
+        if (!emp || data.totalSales < 100) continue;
+        const peakHour = Object.entries(data.hours).sort((a, b) => Number(b[1]) - Number(a[1]))[0];
+        if (peakHour) {
+          topPerformers.push({
+            name: emp.fullName || emp.username,
+            peakHour: parseInt(peakHour[0]),
+            peakSales: Number(peakHour[1]),
+          });
+        }
+      }
+      topPerformers.sort((a, b) => b.peakSales - a.peakSales);
+      if (topPerformers.length > 0) {
+        const top = topPerformers.slice(0, 3);
+        suggestions.push({
+          id: 'best-shifts',
+          type: 'info',
+          category: 'employees',
+          icon: 'users',
+          title: 'أفضل أوقات لكل موظف',
+          message: top.map((p: any) =>
+            `${p.name}: ${p.peakHour}:00 (${Math.round(p.peakSales)} ر.س)`
+          ).join(' · '),
+          action: 'إدارة الورديات',
+          actionLink: '/manager/employees/hub',
+          impact: 'medium',
+          extra: { performers: top },
+        });
+      }
+
+      // ── 3) SALES PREDICTION (next 7 days) ──
+      const dailyRev: Record<string, number> = {};
+      const dowRev: Record<number, { sum: number, count: number }> = {};
+      for (const o of orders) {
+        const d = new Date(o.createdAt);
+        const key = d.toISOString().slice(0, 10);
+        dailyRev[key] = (dailyRev[key] || 0) + (o.totalAmount || 0);
+        const dow = d.getDay();
+        if (!dowRev[dow]) dowRev[dow] = { sum: 0, count: 0 };
+      }
+      for (const [key, rev] of Object.entries(dailyRev)) {
+        const dow = new Date(key).getDay();
+        dowRev[dow].sum += rev;
+        dowRev[dow].count++;
+      }
+      const dowAvg: Record<number, number> = {};
+      for (const [dow, v] of Object.entries(dowRev)) {
+        dowAvg[parseInt(dow)] = v.count > 0 ? v.sum / v.count : 0;
+      }
+      const next7: any[] = [];
+      const dayNames = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+      for (let i = 1; i <= 7; i++) {
+        const d = new Date();
+        d.setDate(d.getDate() + i);
+        const dow = d.getDay();
+        next7.push({
+          date: d.toISOString().slice(0, 10),
+          dayName: dayNames[dow],
+          predictedRevenue: Math.round(dowAvg[dow] || 0),
+        });
+      }
+      const totalPredicted = next7.reduce((s, d) => s + d.predictedRevenue, 0);
+      const lastWeekRev = Object.entries(dailyRev)
+        .filter(([k]) => new Date(k) >= weekStart)
+        .reduce((s, [, v]) => s + v, 0);
+      const trend = lastWeekRev > 0 ? ((totalPredicted - lastWeekRev) / lastWeekRev) * 100 : 0;
+
+      if (orders.length > 10) {
+        suggestions.push({
+          id: 'sales-forecast',
+          type: trend < -5 ? 'warning' : 'success',
+          category: 'sales',
+          icon: 'trending-up',
+          title: `توقع المبيعات للأسبوع القادم: ${Math.round(totalPredicted).toLocaleString()} ر.س`,
+          message: trend > 0
+            ? `متوقع نمو ${Math.abs(trend).toFixed(0)}% مقارنة بالأسبوع الماضي`
+            : trend < -5
+            ? `تحذير: انخفاض متوقع ${Math.abs(trend).toFixed(0)}% — راجع العروض والتسويق`
+            : `المبيعات مستقرة بمعدل ${Math.round(totalPredicted / 7).toLocaleString()} ر.س يومياً`,
+          action: 'عرض التحليلات',
+          actionLink: '/manager/bi-analytics',
+          impact: trend < -10 ? 'high' : 'medium',
+          extra: { next7, trend: Math.round(trend) },
+        });
+      }
+
+      // ── 4) THEFT/FRAUD DETECTION ──
+      const cancelByEmp: Record<string, number> = {};
+      const discountByEmp: Record<string, number> = {};
+      for (const a of audits) {
+        if (!a.actorId) continue;
+        if (a.action === 'cancel' || a.action === 'void') cancelByEmp[a.actorId] = (cancelByEmp[a.actorId] || 0) + 1;
+        if (a.action === 'discount' || a.action === 'refund') discountByEmp[a.actorId] = (discountByEmp[a.actorId] || 0) + 1;
+      }
+      const suspiciousEmps: any[] = [];
+      for (const [eid, count] of Object.entries(cancelByEmp)) {
+        if (count >= 5) {
+          const emp = employees.find((e: any) => e.id === eid);
+          suspiciousEmps.push({
+            name: emp?.fullName || emp?.username || eid,
+            cancels: count,
+            discounts: discountByEmp[eid] || 0,
+            reason: count >= 10 ? 'إلغاءات كثيرة جداً' : 'إلغاءات أعلى من المعدل',
+          });
+        }
+      }
+      if (suspiciousEmps.length > 0) {
+        suggestions.push({
+          id: 'theft-alert',
+          type: 'critical',
+          category: 'security',
+          icon: 'shield-alert',
+          title: `${suspiciousEmps.length} نشاط مشبوه يستحق المراجعة`,
+          message: suspiciousEmps.slice(0, 3).map((e: any) =>
+            `${e.name}: ${e.cancels} إلغاء${e.discounts > 0 ? ` + ${e.discounts} خصم` : ''}`
+          ).join(' · '),
+          action: 'مراجعة سجل التدقيق',
+          actionLink: '/manager/reliability',
+          impact: 'high',
+          extra: { suspicious: suspiciousEmps },
+        });
+      }
+
+      // ── 5) ERROR/PERFORMANCE DETECTION ──
+      if (apiErrors.length >= 10) {
+        const byPath: Record<string, number> = {};
+        for (const e of apiErrors) byPath[e.path] = (byPath[e.path] || 0) + 1;
+        const topPath = Object.entries(byPath).sort((a, b) => b[1] - a[1])[0];
+        suggestions.push({
+          id: 'system-errors',
+          type: apiErrors.length >= 50 ? 'critical' : 'warning',
+          category: 'system',
+          icon: 'alert-circle',
+          title: `${apiErrors.length} خطأ في النظام آخر 24 ساعة`,
+          message: topPath ? `أكثر مسار يفشل: ${topPath[0]} (${topPath[1]} مرة)` : 'يحتاج لمراجعة',
+          action: 'مراجعة الموثوقية',
+          actionLink: '/manager/reliability',
+          impact: 'high',
+        });
+      }
+
+      // ── 6) DEAD HOURS DETECTION ──
+      const hourCounts: Record<number, number> = {};
+      const recentOrders = orders.filter((o: any) => new Date(o.createdAt) >= weekStart);
+      for (const o of recentOrders) {
+        const h = new Date(o.createdAt).getHours();
+        hourCounts[h] = (hourCounts[h] || 0) + 1;
+      }
+      const businessHours = Array.from({ length: 17 }, (_, i) => i + 7); // 7am-11pm
+      const deadHours = businessHours.filter(h => (hourCounts[h] || 0) <= 1);
+      if (deadHours.length >= 3) {
+        suggestions.push({
+          id: 'dead-hours',
+          type: 'info',
+          category: 'sales',
+          icon: 'clock',
+          title: `${deadHours.length} ساعات ميتة في اليوم`,
+          message: `الساعات: ${deadHours.slice(0, 5).map(h => `${h}:00`).join('، ')}. فكّر في عروض خاصة لهذه الفترات.`,
+          action: 'إنشاء عرض ترويجي',
+          actionLink: '/manager/promotions',
+          impact: 'medium',
+        });
+      }
+
+      // Sort by impact
+      const impactOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
+      suggestions.sort((a: any, b: any) => impactOrder[a.impact] - impactOrder[b.impact]);
+
+      res.json({
+        suggestions,
+        summary: {
+          total: suggestions.length,
+          critical: suggestions.filter(s => s.type === 'critical').length,
+          warning: suggestions.filter(s => s.type === 'warning').length,
+          info: suggestions.filter(s => s.type === 'info' || s.type === 'success').length,
+        },
+        generatedAt: new Date(),
+      });
+    } catch (e: any) {
+      console.error("[smart-suggestions]", e);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // ─── AI NARRATIVE REPORT (Natural-language story instead of tables) ─────
+  app.post("/api/ai/narrative-report", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { OrderModel } = await import("@shared/schema");
+      const tenantId = req.employee?.tenantId || 'demo-tenant';
+      const period = (req.body.period || 'week') as 'today' | 'week' | 'month';
+      const todayStart = getSaudiStartOfDay();
+      const since = new Date(todayStart.getTime() - (period === 'today' ? 0 : period === 'week' ? 7 : 30) * 24 * 3600 * 1000);
+      const prevSince = new Date(since.getTime() - (period === 'today' ? 1 : period === 'week' ? 7 : 30) * 24 * 3600 * 1000);
+
+      const [current, previous] = await Promise.all([
+        OrderModel.find({ tenantId, createdAt: { $gte: since } }).lean() as any,
+        OrderModel.find({ tenantId, createdAt: { $gte: prevSince, $lt: since } }).lean() as any,
+      ]);
+
+      const sumRev = (arr: any[]) => arr.reduce((s, o) => s + (o.totalAmount || 0), 0);
+      const curRev = sumRev(current);
+      const prevRev = sumRev(previous);
+      const growthPct = prevRev > 0 ? ((curRev - prevRev) / prevRev) * 100 : 0;
+
+      // Hour analysis
+      const hourBuckets = { morning: 0, afternoon: 0, evening: 0, night: 0 };
+      for (const o of current) {
+        const h = new Date(o.createdAt).getHours();
+        if (h < 12) hourBuckets.morning += o.totalAmount || 0;
+        else if (h < 17) hourBuckets.afternoon += o.totalAmount || 0;
+        else if (h < 21) hourBuckets.evening += o.totalAmount || 0;
+        else hourBuckets.night += o.totalAmount || 0;
+      }
+      const prevHours = { morning: 0, afternoon: 0, evening: 0, night: 0 };
+      for (const o of previous) {
+        const h = new Date(o.createdAt).getHours();
+        if (h < 12) prevHours.morning += o.totalAmount || 0;
+        else if (h < 17) prevHours.afternoon += o.totalAmount || 0;
+        else if (h < 21) prevHours.evening += o.totalAmount || 0;
+        else prevHours.night += o.totalAmount || 0;
+      }
+
+      // Top items
+      const itemCounts: Record<string, number> = {};
+      for (const o of current) {
+        for (const it of (o.items || [])) {
+          const n = it.nameAr || it.name || '؟';
+          itemCounts[n] = (itemCounts[n] || 0) + (it.quantity || 1);
+        }
+      }
+      const topItems = Object.entries(itemCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+      const stats = {
+        period,
+        currentRevenue: Math.round(curRev),
+        previousRevenue: Math.round(prevRev),
+        growthPct: Math.round(growthPct * 10) / 10,
+        currentOrders: current.length,
+        previousOrders: previous.length,
+        avgOrder: current.length ? Math.round(curRev / current.length) : 0,
+        hourBuckets: Object.fromEntries(Object.entries(hourBuckets).map(([k, v]) => [k, Math.round(v as number)])),
+        prevHours: Object.fromEntries(Object.entries(prevHours).map(([k, v]) => [k, Math.round(v as number)])),
+        topItems,
+      };
+
+      // Try Groq for natural narrative; otherwise rule-based
+      const periodLabel = period === 'today' ? 'اليوم' : period === 'week' ? 'هذا الأسبوع' : 'هذا الشهر';
+      const sys = `أنت محلل أعمال محترف لمقاهي. اكتب تقريراً سرديّاً بالعربية الفصحى (2-3 فقرات قصيرة) يشرح أداء المبيعات بشكل واضح وعملي. ركّز على: السبب الجذري لأي تغيّر، فترات اليوم الأقوى/الأضعف، توصيات محددة وقابلة للتنفيذ. تجنّب الأرقام الجافة وحدها — اشرحها.`;
+      const usr = `بيانات الفترة (${periodLabel}):\n${JSON.stringify(stats, null, 2)}`;
+      const narrative = await callGroq(sys, usr, 700);
+
+      // Fallback: rule-based narrative
+      let fallback = '';
+      if (!narrative) {
+        const direction = growthPct > 5 ? 'ارتفعت' : growthPct < -5 ? 'انخفضت' : 'استقرت';
+        const reasons: string[] = [];
+        for (const k of ['morning', 'afternoon', 'evening', 'night'] as const) {
+          const cur = hourBuckets[k]; const prv = prevHours[k];
+          if (prv > 0) {
+            const ch = ((cur - prv) / prv) * 100;
+            const labelMap = { morning: 'الصباح', afternoon: 'العصر', evening: 'المساء', night: 'الليل' };
+            if (Math.abs(ch) > 15) {
+              reasons.push(`${ch > 0 ? 'ارتفاع' : 'ضعف'} فترة ${labelMap[k]} بنسبة ${Math.abs(Math.round(ch))}%`);
+            }
+          }
+        }
+        fallback = `مبيعاتك ${direction} ${Math.abs(stats.growthPct)}% خلال ${periodLabel} لتصل إلى ${stats.currentRevenue.toLocaleString()} ر.س عبر ${stats.currentOrders} طلب بمتوسط ${stats.avgOrder} ر.س.\n\n${reasons.length ? `السبب الرئيسي: ${reasons.join('، ')}.` : ''}\n\nأكثر المنتجات مبيعاً: ${topItems.map(([n, c]) => `${n} (${c})`).join('، ')}.`;
+      }
+
+      res.json({
+        narrative: narrative || fallback,
+        source: narrative ? 'ai' : 'rule-based',
+        stats,
+        generatedAt: new Date(),
+      });
+    } catch (e: any) {
+      console.error("[narrative-report]", e);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // ─── SMART INVENTORY FORECASTING ────────────────────────────────────────
+  app.get("/api/ai/inventory-forecast", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { OrderModel, RawItemModel, RecipeModel, CoffeeItemModel } = await import("@shared/schema");
+      const tenantId = req.employee?.tenantId || 'demo-tenant';
+      const since = new Date(Date.now() - 30 * 24 * 3600 * 1000);
+
+      const [orders, rawItems, recipes, products] = await Promise.all([
+        OrderModel.find({ tenantId, createdAt: { $gte: since } }).lean() as any,
+        RawItemModel.find({ $or: [{ tenantId }, { tenantId: { $exists: false } }], isActive: 1 }).lean() as any,
+        RecipeModel.find({}).lean() as any,
+        CoffeeItemModel.find({}).lean() as any,
+      ]);
+
+      // Calculate consumption per raw item from orders × recipes
+      const productNameToId: Record<string, string> = {};
+      for (const p of products) productNameToId[p.nameAr] = p.id || p._id?.toString();
+
+      // Total qty sold per product
+      const productSold: Record<string, number> = {};
+      for (const o of orders) {
+        for (const it of (o.items || [])) {
+          const pid = it.coffeeItemId || it.itemId || productNameToId[it.nameAr];
+          if (pid) productSold[pid] = (productSold[pid] || 0) + (it.quantity || 1);
+        }
+      }
+
+      // Consumption per raw item
+      const consumption: Record<string, number> = {};
+      for (const r of recipes) {
+        const sold = productSold[r.coffeeItemId] || 0;
+        if (sold === 0) continue;
+        for (const ing of (r.ingredients || r.items || [])) {
+          const ridv = ing.rawItemId;
+          const qty = (ing.quantity || ing.qty || 0) * sold;
+          if (ridv) consumption[ridv] = (consumption[ridv] || 0) + qty;
+        }
+      }
+
+      const forecast = rawItems.map((r: any) => {
+        const consumed30 = consumption[r.id] || 0;
+        const dailyConsumption = consumed30 / 30;
+        const currentStock = r.currentStock || 0;
+        const daysRemaining = dailyConsumption > 0 ? currentStock / dailyConsumption : null;
+        const reorderDate = daysRemaining != null ? new Date(Date.now() + daysRemaining * 24 * 3600 * 1000) : null;
+        const recommendedOrderQty = Math.ceil(dailyConsumption * 14); // 2 weeks supply
+
+        let urgency: 'critical' | 'high' | 'medium' | 'low' | 'ok' = 'ok';
+        if (currentStock === 0) urgency = 'critical';
+        else if (daysRemaining != null && daysRemaining <= 3) urgency = 'critical';
+        else if (daysRemaining != null && daysRemaining <= 7) urgency = 'high';
+        else if (daysRemaining != null && daysRemaining <= 14) urgency = 'medium';
+        else if (currentStock <= r.minStockLevel) urgency = 'medium';
+        else if (daysRemaining != null && daysRemaining <= 30) urgency = 'low';
+
+        return {
+          id: r.id,
+          code: r.code,
+          nameAr: r.nameAr,
+          unit: r.unit,
+          currentStock,
+          minStockLevel: r.minStockLevel,
+          consumed30Days: Math.round(consumed30 * 100) / 100,
+          dailyConsumption: Math.round(dailyConsumption * 100) / 100,
+          daysRemaining: daysRemaining != null ? Math.round(daysRemaining) : null,
+          reorderDate,
+          recommendedOrderQty,
+          estimatedCost: Math.round(recommendedOrderQty * (r.unitCost || 0) * 100) / 100,
+          urgency,
+        };
+      });
+
+      // Sort: critical first
+      const order: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3, ok: 4 };
+      forecast.sort((a: any, b: any) => order[a.urgency] - order[b.urgency]);
+
+      const summary = {
+        totalItems: forecast.length,
+        critical: forecast.filter((f: any) => f.urgency === 'critical').length,
+        high: forecast.filter((f: any) => f.urgency === 'high').length,
+        medium: forecast.filter((f: any) => f.urgency === 'medium').length,
+        totalReorderCost: forecast
+          .filter((f: any) => f.urgency === 'critical' || f.urgency === 'high')
+          .reduce((s: number, f: any) => s + f.estimatedCost, 0),
+      };
+
+      res.json({ forecast, summary, generatedAt: new Date() });
+    } catch (e: any) {
+      console.error("[inventory-forecast]", e);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // ════════════════════════════════════════════════════════════════════════
+  //  PHASE 7 — ECOSYSTEM (Open APIs · Webhooks · Integrations)
+  // ════════════════════════════════════════════════════════════════════════
+  const { requireApiKey, generateApiKey, hashKey, publishEvent, INTEGRATION_CATALOG, ECOSYSTEM_EVENTS, API_SCOPES } = await import("./ecosystem");
+
+  // ─── API KEYS MANAGEMENT (manager) ──────────────────────────────────────
+  app.get("/api/ecosystem/api-keys", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { ApiKeyModel } = await import("@shared/schema");
+      const tenantId = req.employee?.tenantId || 'demo-tenant';
+      const keys = await ApiKeyModel.find({ $or: [{ tenantId }, { tenantId: { $exists: false } }] }).sort({ createdAt: -1 }).lean();
+      res.json(keys.map((k: any) => ({ ...k, keyHash: undefined })));
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post("/api/ecosystem/api-keys", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { ApiKeyModel } = await import("@shared/schema");
+      const { name, scopes, environment = 'live', rateLimit = 100, expiresAt } = req.body;
+      if (!name || !Array.isArray(scopes) || scopes.length === 0) return res.status(400).json({ error: "name and scopes required" });
+      const tenantId = req.employee?.tenantId || 'demo-tenant';
+      const { plain, prefix, hash } = generateApiKey(environment);
+      const key = await ApiKeyModel.create({
+        id: nanoid(), tenantId, name, keyHash: hash, keyPrefix: prefix,
+        scopes, environment, rateLimit, expiresAt: expiresAt ? new Date(expiresAt) : undefined,
+        createdBy: req.employee?.id, isActive: true,
+      });
+      res.json({ ...key.toObject(), keyHash: undefined, plainKey: plain });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.patch("/api/ecosystem/api-keys/:id", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { ApiKeyModel } = await import("@shared/schema");
+      const updated = await ApiKeyModel.findOneAndUpdate({ id: req.params.id }, { $set: req.body }, { new: true }).lean();
+      res.json(updated);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.delete("/api/ecosystem/api-keys/:id", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { ApiKeyModel } = await import("@shared/schema");
+      await ApiKeyModel.deleteOne({ id: req.params.id });
+      res.json({ success: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ─── WEBHOOKS MANAGEMENT ────────────────────────────────────────────────
+  app.get("/api/ecosystem/webhooks", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { WebhookModel } = await import("@shared/schema");
+      const tenantId = req.employee?.tenantId || 'demo-tenant';
+      const hooks = await WebhookModel.find({ $or: [{ tenantId }, { tenantId: { $exists: false } }] }).sort({ createdAt: -1 }).lean();
+      res.json(hooks);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post("/api/ecosystem/webhooks", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { WebhookModel } = await import("@shared/schema");
+      const { name, url, events, secret } = req.body;
+      if (!name || !url || !Array.isArray(events) || !events.length) return res.status(400).json({ error: "name, url, events required" });
+      const tenantId = req.employee?.tenantId || 'demo-tenant';
+      const webhookSecret = secret || crypto.randomBytes(24).toString("hex");
+      const hook = await WebhookModel.create({
+        id: nanoid(), tenantId, name, url, events, secret: webhookSecret, isActive: true, failureCount: 0,
+      });
+      res.json(hook);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.patch("/api/ecosystem/webhooks/:id", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { WebhookModel } = await import("@shared/schema");
+      const updated = await WebhookModel.findOneAndUpdate({ id: req.params.id }, { $set: req.body }, { new: true }).lean();
+      res.json(updated);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.delete("/api/ecosystem/webhooks/:id", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { WebhookModel } = await import("@shared/schema");
+      await WebhookModel.deleteOne({ id: req.params.id });
+      res.json({ success: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post("/api/ecosystem/webhooks/:id/test", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { WebhookModel } = await import("@shared/schema");
+      const hook: any = await WebhookModel.findOne({ id: req.params.id }).lean();
+      if (!hook) return res.status(404).json({ error: "Webhook not found" });
+      await publishEvent("webhook.test", { message: "This is a test event from QIROX", timestamp: new Date().toISOString() }, hook.tenantId);
+      res.json({ success: true, message: "Test event dispatched" });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.get("/api/ecosystem/webhooks/:id/deliveries", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { WebhookDeliveryModel } = await import("@shared/schema");
+      const deliveries = await WebhookDeliveryModel.find({ webhookId: req.params.id }).sort({ createdAt: -1 }).limit(50).lean();
+      res.json(deliveries);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ─── INTEGRATIONS CATALOG + CRUD ────────────────────────────────────────
+  app.get("/api/ecosystem/catalog", requireAuth, requireManager, async (_req, res) => {
+    res.json({ integrations: INTEGRATION_CATALOG, events: ECOSYSTEM_EVENTS, scopes: API_SCOPES });
+  });
+
+  app.get("/api/ecosystem/integrations", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { EcosystemIntegrationModel } = await import("@shared/schema");
+      const tenantId = req.employee?.tenantId || 'demo-tenant';
+      const items = await EcosystemIntegrationModel.find({ $or: [{ tenantId }, { tenantId: { $exists: false } }] }).sort({ createdAt: -1 }).lean();
+      // Mask sensitive config values
+      const masked = items.map((it: any) => {
+        const masked = { ...it };
+        if (it.config && typeof it.config === 'object') {
+          masked.config = Object.fromEntries(Object.entries(it.config).map(([k, v]: any) => {
+            const sensitive = /key|secret|token|password/i.test(k);
+            return [k, sensitive && typeof v === 'string' && v.length > 6 ? v.slice(0, 4) + '••••' + v.slice(-3) : v];
+          }));
+        }
+        return masked;
+      });
+      res.json(masked);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post("/api/ecosystem/integrations", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { EcosystemIntegrationModel } = await import("@shared/schema");
+      const { type, name, config = {} } = req.body;
+      const meta = INTEGRATION_CATALOG.find(i => i.type === type);
+      if (!meta) return res.status(400).json({ error: "Unknown integration type" });
+      const tenantId = req.employee?.tenantId || 'demo-tenant';
+      const item = await EcosystemIntegrationModel.create({
+        id: nanoid(), tenantId, type, name: name || meta.nameAr, category: meta.category,
+        config, status: 'pending', isActive: true,
+      });
+      res.json(item);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.patch("/api/ecosystem/integrations/:id", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { EcosystemIntegrationModel } = await import("@shared/schema");
+      const updated = await EcosystemIntegrationModel.findOneAndUpdate(
+        { id: req.params.id }, { $set: { ...req.body, updatedAt: new Date() } }, { new: true }
+      ).lean();
+      res.json(updated);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.delete("/api/ecosystem/integrations/:id", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { EcosystemIntegrationModel } = await import("@shared/schema");
+      await EcosystemIntegrationModel.deleteOne({ id: req.params.id });
+      res.json({ success: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post("/api/ecosystem/integrations/:id/test", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { EcosystemIntegrationModel } = await import("@shared/schema");
+      const it: any = await EcosystemIntegrationModel.findOne({ id: req.params.id }).lean();
+      if (!it) return res.status(404).json({ error: "Integration not found" });
+      // Lightweight ping: try the URL-like config field if present
+      const url = it.config?.url || it.config?.shopUrl || it.config?.apiUrl;
+      let status = 'connected';
+      let lastError: string | null = null;
+      if (url) {
+        try {
+          const ctrl = new AbortController();
+          const t = setTimeout(() => ctrl.abort(), 5000);
+          const r = await fetch(url, { method: "HEAD", signal: ctrl.signal });
+          clearTimeout(t);
+          if (!r.ok && r.status !== 405) { status = 'error'; lastError = `HTTP ${r.status}`; }
+        } catch (e: any) { status = 'error'; lastError = e.message; }
+      }
+      await EcosystemIntegrationModel.updateOne({ id: req.params.id }, { $set: { status, lastError, lastSyncAt: new Date(), updatedAt: new Date() } });
+      res.json({ status, lastError });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.get("/api/ecosystem/stats", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { ApiKeyModel, WebhookModel, WebhookDeliveryModel, EcosystemIntegrationModel, ApiMetricModel } = await import("@shared/schema");
+      const tenantId = req.employee?.tenantId || 'demo-tenant';
+      const since = new Date(Date.now() - 24 * 3600 * 1000);
+      const tFilter: any = { $or: [{ tenantId }, { tenantId: { $exists: false } }] };
+      const [apiKeysActive, webhooksActive, integrationsConnected, deliveries24h, deliveriesFailed, apiCalls24h] = await Promise.all([
+        ApiKeyModel.countDocuments({ ...tFilter, isActive: true }),
+        WebhookModel.countDocuments({ ...tFilter, isActive: true }),
+        EcosystemIntegrationModel.countDocuments({ ...tFilter, status: 'connected' }),
+        WebhookDeliveryModel.countDocuments({ ...tFilter, createdAt: { $gte: since } }),
+        WebhookDeliveryModel.countDocuments({ ...tFilter, createdAt: { $gte: since }, success: false }),
+        ApiMetricModel.countDocuments({ path: { $regex: '^/api/v1/' }, createdAt: { $gte: since } }),
+      ]);
+      res.json({ apiKeysActive, webhooksActive, integrationsConnected, deliveries24h, deliveriesFailed, apiCalls24h });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ─── AUTOMATION RULES ────────────────────────────────────────────────────────
+  app.get("/api/ecosystem/automations", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { AutomationRuleModel } = await import("@shared/schema");
+      const tenantId = req.employee?.tenantId || 'demo-tenant';
+      const rules = await AutomationRuleModel.find({ $or: [{ tenantId }, { tenantId: { $exists: false } }] }).sort({ createdAt: -1 }).lean();
+      res.json(rules);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post("/api/ecosystem/automations", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { AutomationRuleModel } = await import("@shared/schema");
+      const { name, trigger, conditions = [], actions = [] } = req.body;
+      if (!name || !trigger) return res.status(400).json({ error: "name and trigger are required" });
+      if (!actions.length) return res.status(400).json({ error: "at least one action is required" });
+      const tenantId = req.employee?.tenantId || 'demo-tenant';
+      const rule = await AutomationRuleModel.create({
+        id: nanoid(), tenantId, name, trigger, conditions, actions, isActive: true, runCount: 0,
+      });
+      res.json(rule);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.patch("/api/ecosystem/automations/:id", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { AutomationRuleModel } = await import("@shared/schema");
+      const updated = await AutomationRuleModel.findOneAndUpdate(
+        { id: req.params.id }, { $set: req.body }, { new: true }
+      ).lean();
+      res.json(updated);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.delete("/api/ecosystem/automations/:id", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { AutomationRuleModel } = await import("@shared/schema");
+      await AutomationRuleModel.deleteOne({ id: req.params.id });
+      res.json({ success: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  app.post("/api/ecosystem/automations/:id/test", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { publishEvent } = await import("./ecosystem");
+      const tenantId = req.employee?.tenantId || 'demo-tenant';
+      await publishEvent("webhook.test", { message: "Automation test run", triggeredBy: req.employee?.name }, tenantId);
+      res.json({ success: true, message: "Test event dispatched" });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ─── EVENT LOG ────────────────────────────────────────────────────────────────
+  app.get("/api/ecosystem/events/recent", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { EventLogModel } = await import("@shared/schema");
+      const tenantId = req.employee?.tenantId || 'demo-tenant';
+      const limit = Math.min(parseInt(req.query.limit as string || '100'), 200);
+      const events = await EventLogModel.find({ $or: [{ tenantId }, { tenantId: { $exists: false } }] })
+        .sort({ createdAt: -1 }).limit(limit).lean();
+      res.json(events);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ─── AUTOMATION CATALOG ───────────────────────────────────────────────────────
+  app.get("/api/ecosystem/automation-types", requireAuth, requireManager, async (_req, res) => {
+    const { AUTOMATION_ACTION_TYPES } = await import("./ecosystem");
+    res.json(AUTOMATION_ACTION_TYPES);
+  });
+
+  // ════════════════════════════════════════════════════════════════════════
+  //  PHASE 8 — PERFORMANCE MONITORING
+  // ════════════════════════════════════════════════════════════════════════
+
+  app.get("/api/performance/stats", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = req.employee?.tenantId || 'demo-tenant';
+      const role = req.employee?.role;
+      const isSuperAdmin = role === 'owner' || role === 'admin';
+      // Tenant scope: super-admins see system-wide, managers see only their tenant
+      const tScope: any = isSuperAdmin ? {} : { $or: [{ tenantId }, { tenantId: { $exists: false } }] };
+
+      // Server-side cache to absorb dashboard polling load (30s TTL)
+      const statsKey = cacheKey('perf-stats', isSuperAdmin ? 'super' : tenantId);
+      const cached = cache.get<any>(statsKey);
+      if (cached) return res.json(cached);
+
+      const { ApiMetricModel } = await import("@shared/schema");
+      const since = new Date(Date.now() - 60 * 60 * 1000); // last hour
+      const since24 = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+      const [overall, slowest, mostCalled, errorPaths, totals] = await Promise.all([
+        ApiMetricModel.aggregate([
+          { $match: { ...tScope, createdAt: { $gte: since } } },
+          { $group: {
+              _id: null,
+              count: { $sum: 1 },
+              avgMs: { $avg: "$durationMs" },
+              maxMs: { $max: "$durationMs" },
+              errors: { $sum: { $cond: ["$isError", 1, 0] } },
+          }},
+        ]),
+        ApiMetricModel.aggregate([
+          { $match: { ...tScope, createdAt: { $gte: since } } },
+          { $group: { _id: "$path", avgMs: { $avg: "$durationMs" }, maxMs: { $max: "$durationMs" }, count: { $sum: 1 } } },
+          { $sort: { avgMs: -1 } },
+          { $limit: 10 },
+        ]),
+        ApiMetricModel.aggregate([
+          { $match: { ...tScope, createdAt: { $gte: since } } },
+          { $group: { _id: "$path", count: { $sum: 1 }, avgMs: { $avg: "$durationMs" } } },
+          { $sort: { count: -1 } },
+          { $limit: 10 },
+        ]),
+        ApiMetricModel.aggregate([
+          { $match: { ...tScope, createdAt: { $gte: since24 }, isError: true } },
+          { $group: { _id: "$path", count: { $sum: 1 } } },
+          { $sort: { count: -1 } },
+          { $limit: 10 },
+        ]),
+        ApiMetricModel.countDocuments({ ...tScope, createdAt: { $gte: since24 } }),
+      ]);
+
+      const o = overall[0] || { count: 0, avgMs: 0, maxMs: 0, errors: 0 };
+      const cacheStats = cache.stats();
+      const memUsage = process.memoryUsage();
+
+      const payload = {
+        lastHour: {
+          requests: o.count,
+          avgMs: Math.round(o.avgMs || 0),
+          maxMs: o.maxMs || 0,
+          errors: o.errors,
+          errorRate: o.count ? Math.round((o.errors / o.count) * 100) : 0,
+        },
+        last24h: { requests: totals },
+        slowest: slowest.map((s: any) => ({ path: s._id, avgMs: Math.round(s.avgMs), maxMs: s.maxMs, count: s.count })),
+        mostCalled: mostCalled.map((s: any) => ({ path: s._id, count: s.count, avgMs: Math.round(s.avgMs) })),
+        errorPaths: errorPaths.map((s: any) => ({ path: s._id, count: s.count })),
+        cache: {
+          size: cacheStats.size,
+          maxEntries: cacheStats.maxEntries,
+          totalHits: cacheStats.totalHits,
+          totalMisses: cacheStats.totalMisses,
+          totalSets: cacheStats.totalSets,
+          totalInvalidations: cacheStats.totalInvalidations,
+          hitRate: cacheStats.hitRate,
+          topKeys: cache.topKeys(10),
+        },
+        memory: {
+          rssMB: Math.round(memUsage.rss / 1024 / 1024),
+          heapUsedMB: Math.round(memUsage.heapUsed / 1024 / 1024),
+          heapTotalMB: Math.round(memUsage.heapTotal / 1024 / 1024),
+          externalMB: Math.round(memUsage.external / 1024 / 1024),
+        },
+        uptime: { seconds: Math.round(process.uptime()) },
+        scope: isSuperAdmin ? 'system' : 'tenant',
+      };
+      cache.set(statsKey, payload, 30);
+      res.json(payload);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // Clear cache (manager only)
+  app.post("/api/performance/cache/clear", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const pattern = (req.body?.pattern as string) || '';
+      if (pattern) cache.invalidate(pattern);
+      else {
+        const keys = cache.stats().keys;
+        keys.forEach(k => cache.invalidateKey(k));
+      }
+      res.json({ ok: true, cleared: pattern || 'all' });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ════════════════════════════════════════════════════════════════════════
+  //  PHASE 9 — CODE QUALITY
+  // ════════════════════════════════════════════════════════════════════════
+  app.get("/api/code-quality/stats", requireAuth, async (req: AuthRequest, res) => {
+    const role = req.employee?.role;
+    if (role !== 'owner' && role !== 'admin') {
+      return res.status(403).json({ error: 'Forbidden — owner/admin only' });
+    }
+    try {
+      const ck = cacheKey('code-quality-stats', role);
+      const cached = cache.get<any>(ck);
+      if (cached) return res.json(cached);
+
+      const fs = await import("fs/promises");
+      const path = await import("path");
+      const { bus } = await import("./core/event-bus");
+
+      const ROOT = process.cwd();
+      const SCAN_DIRS = ["server", "client/src", "shared"];
+      const SKIP_DIRS = new Set(["node_modules", "dist", ".git", ".cache", "build", "coverage"]);
+      const FILE_EXT = /\.(ts|tsx|js|jsx)$/;
+
+      const files: { path: string; lines: number; bytes: number; todos: number; isTest: boolean }[] = [];
+      let totalLines = 0, totalBytes = 0, totalTodos = 0;
+
+      async function walk(dir: string) {
+        let entries: any[];
+        try { entries = await fs.readdir(dir, { withFileTypes: true }); }
+        catch { return; }
+        for (const e of entries) {
+          if (SKIP_DIRS.has(e.name) || e.name.startsWith(".")) continue;
+          const full = path.join(dir, e.name);
+          if (e.isDirectory()) await walk(full);
+          else if (e.isFile() && FILE_EXT.test(e.name)) {
+            try {
+              const content = await fs.readFile(full, "utf8");
+              const lines = content.split("\n").length;
+              const bytes = Buffer.byteLength(content, "utf8");
+              const todos = (content.match(/\b(TODO|FIXME|HACK|XXX)\b/g) || []).length;
+              const rel = path.relative(ROOT, full);
+              files.push({
+                path: rel,
+                lines,
+                bytes,
+                todos,
+                isTest: /\.(test|spec)\./.test(e.name) || rel.startsWith("tests/"),
+              });
+              totalLines += lines;
+              totalBytes += bytes;
+              totalTodos += todos;
+            } catch {}
+          }
+        }
+      }
+
+      await Promise.all(SCAN_DIRS.map(d => walk(path.join(ROOT, d))));
+
+      const largest = [...files].sort((a, b) => b.lines - a.lines).slice(0, 15);
+      const todoFiles = files.filter(f => f.todos > 0).sort((a, b) => b.todos - a.todos).slice(0, 15);
+      const testFiles = files.filter(f => f.isTest);
+      const oversized = files.filter(f => f.lines > 800);
+
+      // Module scoring
+      const moduleStats: Record<string, { files: number; lines: number; tests: number }> = {};
+      for (const f of files) {
+        const top = f.path.split(path.sep).slice(0, 2).join("/");
+        if (!moduleStats[top]) moduleStats[top] = { files: 0, lines: 0, tests: 0 };
+        moduleStats[top].files++;
+        moduleStats[top].lines += f.lines;
+        if (f.isTest) moduleStats[top].tests++;
+      }
+
+      // Health score (0-100). Lower is worse.
+      // -1 for each oversized file (capped at -30), -1 per 5 TODOs (cap -20), +20 if tests exist
+      const oversizedPenalty = Math.min(30, oversized.length);
+      const todoPenalty = Math.min(20, Math.floor(totalTodos / 5));
+      const testsBonus = testFiles.length > 0 ? 20 : 0;
+      const eventBonus = bus.listSubscriptions().length > 0 ? 10 : 0;
+      const healthScore = Math.max(0, Math.min(100, 70 - oversizedPenalty - todoPenalty + testsBonus + eventBonus));
+
+      const busStats = bus.getStats();
+      const subscriptions = bus.listSubscriptions();
+
+      const payload = {
+        summary: {
+          totalFiles: files.length,
+          totalLines,
+          totalBytes,
+          totalTodos,
+          testFiles: testFiles.length,
+          oversizedFiles: oversized.length,
+          avgLinesPerFile: files.length ? Math.round(totalLines / files.length) : 0,
+          healthScore,
+        },
+        largest: largest.map(f => ({ path: f.path, lines: f.lines, kb: Math.round(f.bytes / 1024) })),
+        todoFiles: todoFiles.map(f => ({ path: f.path, todos: f.todos })),
+        oversized: oversized.slice(0, 20).map(f => ({ path: f.path, lines: f.lines })),
+        modules: Object.entries(moduleStats)
+          .map(([k, v]) => ({ name: k, ...v, coverage: v.tests > 0 ? Math.round((v.tests / v.files) * 100) : 0 }))
+          .sort((a, b) => b.lines - a.lines)
+          .slice(0, 12),
+        tests: testFiles.map(f => f.path),
+        eventBus: {
+          totalEmitted: busStats.totalEmitted,
+          totalHandled: busStats.totalHandled,
+          totalErrors: busStats.totalErrors,
+          subscriptions,
+          topEvents: Object.entries(busStats.byEvent)
+            .map(([name, s]) => ({ name, ...s }))
+            .sort((a, b) => b.emitted - a.emitted)
+            .slice(0, 10),
+        },
+      };
+
+      cache.set(ck, payload, 60);
+      res.json(payload);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // Run core tests on demand (owner/admin only, single-flight, 60s timeout, dev only)
+  let _testsRunning: Promise<any> | null = null;
+  app.post("/api/code-quality/run-tests", requireAuth, async (req: AuthRequest, res) => {
+    const role = req.employee?.role;
+    if (role !== 'owner' && role !== 'admin') {
+      return res.status(403).json({ error: 'Forbidden — owner/admin only' });
+    }
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(503).json({ error: 'Test runner disabled in production' });
+    }
+    if (_testsRunning) {
+      return res.status(409).json({ error: 'Tests already running — wait for current run to finish' });
+    }
+    _testsRunning = (async () => {
+      const { spawn } = await import("child_process");
+      const child = spawn("node_modules/.bin/tsx", ["tests/core.test.ts"], { cwd: process.cwd() });
+      let out = "", err = "", killed = false;
+      const timer = setTimeout(() => { killed = true; try { child.kill('SIGKILL'); } catch {} }, 60000);
+      child.stdout.on("data", (d) => { out += d.toString(); });
+      child.stderr.on("data", (d) => { err += d.toString(); });
+      const code: number = await new Promise((r) => child.on("close", r));
+      clearTimeout(timer);
+      const passMatch = out.match(/(\d+)\s+passed/);
+      const failMatch = out.match(/(\d+)\s+failed/);
+      return {
+        exitCode: code,
+        timeout: killed,
+        passed: passMatch ? parseInt(passMatch[1]) : 0,
+        failed: failMatch ? parseInt(failMatch[1]) : 0,
+        ok: code === 0 && !killed,
+        output: (out + (err ? "\n[stderr]\n" + err : "")).slice(-4000),
+      };
+    })();
+    try {
+      const result = await _testsRunning;
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    } finally {
+      _testsRunning = null;
+    }
+  });
+
+  // ════════════════════════════════════════════════════════════════════════
+  //  PUBLIC OPEN API v1  (Authentication: Bearer qrx_live_... or qrx_test_...)
+  // ════════════════════════════════════════════════════════════════════════
+
+  // Tenant filter helper: limit to caller's tenant; if no tenantId, include legacy docs without tenantId
+  const tFilter = (tenantId?: string) => tenantId ? { $or: [{ tenantId }, { tenantId: { $exists: false } }] } : {};
+
+  // GET /api/v1/menu — list products
+  app.get("/api/v1/menu", requireApiKey("menu:read"), async (req: any, res) => {
+    try {
+      const { CoffeeItemModel } = await import("@shared/schema");
+      const items = await CoffeeItemModel.find({ ...tFilter(req.tenantId), isAvailable: 1 }).limit(500).lean();
+      res.json({ data: items, count: items.length });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // GET /api/v1/menu/:id
+  app.get("/api/v1/menu/:id", requireApiKey("menu:read"), async (req: any, res) => {
+    try {
+      const { CoffeeItemModel } = await import("@shared/schema");
+      const item = await CoffeeItemModel.findOne({ ...tFilter(req.tenantId), id: req.params.id }).lean();
+      if (!item) return res.status(404).json({ error: "Not found" });
+      res.json({ data: item });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // GET /api/v1/orders
+  app.get("/api/v1/orders", requireApiKey("orders:read"), async (req: any, res) => {
+    try {
+      const { OrderModel } = await import("@shared/schema");
+      const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+      const status = req.query.status;
+      const since = req.query.since ? new Date(req.query.since) : undefined;
+      const filter: any = tFilter(req.tenantId);
+      if (status) filter.status = status;
+      if (since) filter.createdAt = { $gte: since };
+      const orders = await OrderModel.find(filter).sort({ createdAt: -1 }).limit(limit).lean();
+      res.json({ data: orders, count: orders.length });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // GET /api/v1/orders/:id
+  app.get("/api/v1/orders/:id", requireApiKey("orders:read"), async (req: any, res) => {
+    try {
+      const { OrderModel } = await import("@shared/schema");
+      const baseFilter = tFilter(req.tenantId);
+      const order = await OrderModel.findOne({ ...baseFilter, $or: [{ id: req.params.id }, { orderNumber: req.params.id }] }).lean();
+      if (!order) return res.status(404).json({ error: "Not found" });
+      res.json({ data: order });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // POST /api/v1/orders — create order from external source (Shopify/TikTok/etc.)
+  app.post("/api/v1/orders", requireApiKey("orders:write"), async (req: any, res) => {
+    try {
+      const { OrderModel } = await import("@shared/schema");
+      const orderData = req.body;
+      if (!orderData.items || !Array.isArray(orderData.items) || !orderData.items.length) {
+        return res.status(400).json({ error: "items array required" });
+      }
+      const orderNumber = `EXT-${Date.now().toString().slice(-6)}`;
+      // branchId is required by schema — derive from body or fall back to tenant's "main" branch
+      let branchId = orderData.branchId;
+      if (!branchId) {
+        try {
+          const { BranchModel } = await import("@shared/schema");
+          const branch: any = await BranchModel.findOne(tFilter(req.tenantId)).lean();
+          branchId = branch?.id || 'main';
+        } catch { branchId = 'main'; }
+      }
+      const order = await OrderModel.create({
+        id: nanoid(),
+        orderNumber,
+        tenantId: req.tenantId || 'demo-tenant',
+        branchId,
+        items: orderData.items,
+        totalAmount: orderData.totalAmount || orderData.items.reduce((s: number, i: any) => s + (i.price || 0) * (i.quantity || 1), 0),
+        customerName: orderData.customerName || 'External',
+        customerPhone: orderData.customerPhone || '',
+        status: 'pending',
+        orderType: orderData.orderType || 'pickup',
+        source: orderData.source || `api:${req.apiKey?.name || 'external'}`,
+        paymentMethod: orderData.paymentMethod || 'external',
+        deliveryMode: orderData.deliveryMode || 'delivery',
+        createdAt: new Date(),
+      });
+      publishEvent("order.created", { orderId: order.id, orderNumber, source: (order as any).source }, req.tenantId);
+      res.status(201).json({ data: order });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // GET /api/v1/customers
+  app.get("/api/v1/customers", requireApiKey("customers:read"), async (req: any, res) => {
+    try {
+      const { CustomerModel } = await import("@shared/schema");
+      const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+      const phone = req.query.phone;
+      const filter: any = tFilter(req.tenantId);
+      if (phone) filter.phone = phone;
+      const customers = await CustomerModel.find(filter).limit(limit).select("-password -walletPin").lean();
+      res.json({ data: customers, count: customers.length });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // GET /api/v1/loyalty/cards/:phone
+  app.get("/api/v1/loyalty/cards/:phone", requireApiKey("loyalty:read"), async (req: any, res) => {
+    try {
+      const { LoyaltyCardModel } = await import("@shared/schema");
+      const card = await LoyaltyCardModel.findOne({ ...tFilter(req.tenantId), phoneNumber: req.params.phone }).lean();
+      if (!card) return res.status(404).json({ error: "Not found" });
+      res.json({ data: card });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // POST /api/v1/loyalty/cards/:phone/points  { points, reason }
+  app.post("/api/v1/loyalty/cards/:phone/points", requireApiKey("loyalty:write"), async (req: any, res) => {
+    try {
+      const { LoyaltyCardModel } = await import("@shared/schema");
+      const { points, reason } = req.body;
+      if (typeof points !== 'number') return res.status(400).json({ error: "points (number) required" });
+      const card = await LoyaltyCardModel.findOneAndUpdate(
+        { ...tFilter(req.tenantId), phoneNumber: req.params.phone },
+        { $inc: { points: points }, $set: { updatedAt: new Date() } },
+        { new: true }
+      ).lean();
+      if (!card) return res.status(404).json({ error: "Card not found" });
+      publishEvent(points > 0 ? "loyalty.points_added" : "loyalty.points_redeemed", { phoneNumber: req.params.phone, points, reason, card }, req.tenantId);
+      res.json({ data: card });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // GET /api/v1/inventory
+  app.get("/api/v1/inventory", requireApiKey("inventory:read"), async (req: any, res) => {
+    try {
+      const { RawItemModel } = await import("@shared/schema");
+      const items = await RawItemModel.find({ ...tFilter(req.tenantId), isActive: 1 }).limit(500).lean();
+      res.json({ data: items, count: items.length });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // PATCH /api/v1/inventory/:id   { currentStock }
+  app.patch("/api/v1/inventory/:id", requireApiKey("inventory:write"), async (req: any, res) => {
+    try {
+      const { RawItemModel } = await import("@shared/schema");
+      const { currentStock } = req.body;
+      if (typeof currentStock !== 'number') return res.status(400).json({ error: "currentStock (number) required" });
+      const item = await RawItemModel.findOneAndUpdate({ ...tFilter(req.tenantId), id: req.params.id }, { $set: { currentStock, updatedAt: new Date() } }, { new: true }).lean();
+      if (!item) return res.status(404).json({ error: "Not found" });
+      publishEvent("inventory.updated", { rawItemId: item.id, currentStock }, req.tenantId);
+      res.json({ data: item });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ─── عاشراً: STOCKTAKING (Smart Inventory Count) ────────────────────────────
+
+  // GET /api/stocktake — list sessions
+  app.get("/api/stocktake", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = (req as any).tenantId || "demo-tenant";
+      const sessions = await StocktakeSessionModel.find({ tenantId }).sort({ createdAt: -1 }).limit(50).lean();
+      res.json(sessions);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // POST /api/stocktake/start — start a new session with expected quantities from BranchStock
+  app.post("/api/stocktake/start", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = (req as any).tenantId || "demo-tenant";
+      const { branchId } = req.body;
+      const branchFilter = branchId ? { branchId } : {};
+      const stocks = await BranchStockModel.find({ tenantId, ...branchFilter }).lean();
+      const rawItemIds = stocks.map((s: any) => s.rawItemId);
+      const rawItems = await RawItemModel.find({ tenantId, id: { $in: rawItemIds } }).lean();
+      const rawMap = Object.fromEntries(rawItems.map((r: any) => [r.id, r]));
+      const branch = branchId ? await BranchModel.findById(branchId).lean() : null;
+      const items = stocks.map((s: any) => {
+        const raw = rawMap[s.rawItemId] || {};
+        return {
+          rawItemId: s.rawItemId,
+          rawItemName: (raw as any).nameAr || s.rawItemId,
+          unit: (raw as any).unit || 'unit',
+          expectedQty: s.currentQuantity || 0,
+          actualQty: 0,
+          difference: 0,
+          adjustmentReason: '',
+          unitCost: (raw as any).lastCost || (raw as any).unitCost || 0,
+          adjustmentValue: 0,
+        };
+      });
+      const session = await StocktakeSessionModel.create({
+        tenantId, branchId, branchName: (branch as any)?.nameAr || branchId || 'الفرع الرئيسي',
+        status: 'draft', items, createdBy: req.employee?.id || 'manager',
+        notes: '', totalAdjustmentValue: 0,
+      });
+      res.status(201).json(session);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // GET /api/stocktake/:id — get single session
+  app.get("/api/stocktake/:id", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = (req as any).tenantId || "demo-tenant";
+      const session = await StocktakeSessionModel.findOne({ tenantId, id: req.params.id }).lean()
+        || await StocktakeSessionModel.findById(req.params.id).lean();
+      if (!session) return res.status(404).json({ error: "جلسة الجرد غير موجودة" });
+      res.json(session);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // PATCH /api/stocktake/:id/items — update actual counts
+  app.patch("/api/stocktake/:id/items", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = (req as any).tenantId || "demo-tenant";
+      const { items } = req.body; // Array<{ rawItemId, actualQty, adjustmentReason }>
+      const session = await StocktakeSessionModel.findOne({ tenantId, id: req.params.id })
+        || await StocktakeSessionModel.findById(req.params.id);
+      if (!session) return res.status(404).json({ error: "جلسة الجرد غير موجودة" });
+      if (session.status !== 'draft') return res.status(400).json({ error: "يمكن تعديل الجلسات المسودة فقط" });
+      let totalAdjVal = 0;
+      for (const upd of items) {
+        const item = session.items.find((it: any) => it.rawItemId === upd.rawItemId);
+        if (!item) continue;
+        (item as any).actualQty = upd.actualQty ?? (item as any).actualQty;
+        (item as any).adjustmentReason = upd.adjustmentReason ?? (item as any).adjustmentReason;
+        (item as any).difference = (item as any).actualQty - (item as any).expectedQty;
+        (item as any).adjustmentValue = (item as any).difference * ((item as any).unitCost || 0);
+        totalAdjVal += (item as any).adjustmentValue;
+      }
+      session.totalAdjustmentValue = totalAdjVal;
+      await session.save();
+      res.json(session);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // POST /api/stocktake/:id/submit — submit for approval
+  app.post("/api/stocktake/:id/submit", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = (req as any).tenantId || "demo-tenant";
+      const session = await StocktakeSessionModel.findOne({ tenantId, id: req.params.id })
+        || await StocktakeSessionModel.findById(req.params.id);
+      if (!session) return res.status(404).json({ error: "جلسة الجرد غير موجودة" });
+      session.status = 'submitted';
+      session.submittedBy = req.employee?.id || 'manager';
+      (session as any).submittedAt = new Date();
+      if (req.body.notes) session.notes = req.body.notes;
+      await session.save();
+      res.json(session);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // POST /api/stocktake/:id/approve — approve & apply adjustments to BranchStock
+  app.post("/api/stocktake/:id/approve", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = (req as any).tenantId || "demo-tenant";
+      const session = await StocktakeSessionModel.findOne({ tenantId, id: req.params.id })
+        || await StocktakeSessionModel.findById(req.params.id);
+      if (!session) return res.status(404).json({ error: "جلسة الجرد غير موجودة" });
+      if (session.status !== 'submitted') return res.status(400).json({ error: "يجب تقديم الجلسة أولاً" });
+
+      // Apply adjustments to BranchStock & create StockMovements
+      for (const item of session.items as any[]) {
+        if (item.difference === 0) continue;
+        await BranchStockModel.findOneAndUpdate(
+          { tenantId, branchId: session.branchId, rawItemId: item.rawItemId },
+          { $set: { currentQuantity: item.actualQty, lastUpdated: new Date() } }
+        );
+        await StockMovementModel.create({
+          id: (Math.random().toString(36).slice(2)), tenantId,
+          branchId: session.branchId, rawItemId: item.rawItemId,
+          rawItemName: item.rawItemName, movementType: 'adjustment',
+          quantity: item.difference, unit: item.unit,
+          reason: item.adjustmentReason || 'جرد دوري',
+          reference: session.id, createdBy: req.employee?.id || 'manager',
+          createdAt: new Date(),
+        });
+      }
+
+      // Accounting: inventory adjustment journal
+      try {
+        const adjLoss = session.items.filter((it: any) => it.difference < 0).reduce((s: number, it: any) => s + Math.abs(it.adjustmentValue || 0), 0);
+        if (adjLoss > 0) {
+          const invAcc = await AccountModel.findOne({ tenantId, accountNumber: "1130" });
+          const adjAcc = await AccountModel.findOne({ tenantId, accountNumber: "5200" }) || invAcc;
+          if (invAcc && adjAcc) {
+            await ErpAccountingService.createJournalEntry({
+              tenantId, entryDate: new Date(),
+              description: `فروقات جرد مخزون - ${session.branchName}`,
+              lines: [
+                { accountId: adjAcc.id, accountNumber: adjAcc.accountNumber, accountName: "فروقات جرد", debit: adjLoss, credit: 0, description: 'خسائر جرد', branchId: session.branchId },
+                { accountId: invAcc.id, accountNumber: "1130", accountName: "مخزون", debit: 0, credit: adjLoss, description: 'تعديل جرد', branchId: session.branchId },
+              ],
+              referenceType: 'stocktake', referenceId: session.id,
+              createdBy: req.employee?.id || 'system', autoPost: true,
+            });
+          }
+        }
+      } catch (accErr) { console.error('[STOCKTAKE] Accounting error:', accErr); }
+
+      session.status = 'approved';
+      session.approvedBy = req.employee?.id || 'manager';
+      (session as any).approvedAt = new Date();
+      await session.save();
+      res.json(session);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // POST /api/stocktake/:id/reject
+  app.post("/api/stocktake/:id/reject", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = (req as any).tenantId || "demo-tenant";
+      const session = await StocktakeSessionModel.findOne({ tenantId, id: req.params.id })
+        || await StocktakeSessionModel.findById(req.params.id);
+      if (!session) return res.status(404).json({ error: "جلسة غير موجودة" });
+      session.status = 'rejected';
+      session.rejectionReason = req.body.reason || '';
+      await session.save();
+      res.json(session);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ─── الحادي عشر: AI INVENTORY INSIGHTS ─────────────────────────────────────
+
+  app.post("/api/ai/inventory-insights", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = (req as any).tenantId || "demo-tenant";
+      const tF = { tenantId };
+      const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const since7d  = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+      const [rawItems, branchStocks, wastage, movements, recentStocktakes, recipes] = await Promise.all([
+        RawItemModel.find(tF).lean(),
+        BranchStockModel.find(tF).lean(),
+        WastageModel.find({ ...tF, recordedAt: { $gte: since30d } }).lean(),
+        StockMovementModel.find({ ...tF, createdAt: { $gte: since30d } }).lean(),
+        StocktakeSessionModel.find({ ...tF, status: 'approved', createdAt: { $gte: since30d } }).lean(),
+        RecipeItemModel.find(tF).lean(),
+      ]);
+
+      // Build context
+      const stockSummary = rawItems.map((r: any) => {
+        const stock = (branchStocks as any[]).filter((b: any) => b.rawItemId === r.id);
+        const totalQty = stock.reduce((s: number, b: any) => s + (b.currentQuantity || 0), 0);
+        const itemMovements = (movements as any[]).filter((m: any) => m.rawItemId === r.id);
+        const totalConsumed = itemMovements.filter((m: any) => m.movementType === 'sale').reduce((s: number, m: any) => s + Math.abs(m.quantity), 0);
+        const totalWaste = (wastage as any[]).filter((w: any) => w.rawItemId === r.id).reduce((s: number, w: any) => s + Math.abs(w.quantity), 0);
+        const expectedFromRecipes = (recipes as any[]).filter((rec: any) => rec.rawItemId === r.id).length;
+        return `${r.nameAr}: مخزون=${totalQty.toFixed(1)}${r.unit} | مستهلك(30ي)=${totalConsumed.toFixed(1)} | هدر=${totalWaste.toFixed(1)} | مرتبط بـ${expectedFromRecipes} وصفة`;
+      }).join('\n');
+
+      const stocktakeDiffs = (recentStocktakes as any[]).flatMap((s: any) =>
+        (s.items || []).filter((it: any) => it.difference !== 0).map((it: any) =>
+          `${it.rawItemName}: فرق ${it.difference > 0 ? '+' : ''}${it.difference.toFixed(1)}${it.unit} (${it.adjustmentReason || 'بدون سبب'})`
+        )
+      ).slice(0, 20).join('\n');
+
+      const systemPrompt = `أنت محلل مخزون ذكي لنظام QIROX لإدارة المطاعم والكافيهات. 
+مهمتك تحليل بيانات المخزون واكتشاف: الهدر غير الطبيعي، السرقة المحتملة، نفاد المواد، والمشتريات الموصى بها.
+كن دقيقاً وعملياً. قدم أرقاماً واضحة وتوصيات قابلة للتنفيذ.`;
+
+      const userMessage = (req.body.question || `حلل بيانات المخزون التالية وأعطني:
+1. كشف الهدر: هل هناك مواد بها هدر غير طبيعي؟
+2. كشف السرقة: مقارنة المبيعات بالاستهلاك — هل هناك فروقات مريبة؟
+3. توقع النفاد: أي المواد ستنفد خلال أسبوع؟
+4. توصيات الشراء: ماذا يجب شراؤه الآن؟`) + `\n\n📦 بيانات المخزون:\n${stockSummary}\n\n🔍 فروقات آخر جرد:\n${stocktakeDiffs || 'لا يوجد جرد حديث'}`;
+
+      const apiKey = process.env.KIMI_API_KEY;
+      if (!apiKey) return res.status(500).json({ error: "KIMI_API_KEY not configured" });
+
+      const history = req.body.history || [];
+      const response = await fetch("https://api.moonshot.ai/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model: "moonshot-v1-32k",
+          messages: [{ role: "system", content: systemPrompt }, ...history, { role: "user", content: userMessage }],
+          temperature: 0.3, max_tokens: 2000,
+        }),
+      });
+      const data: any = await response.json();
+      res.json({ answer: data.choices?.[0]?.message?.content || "لا يوجد رد" });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ─── الثالث عشر: CEO AI — Enhanced Manager AI with full business context ───
+
+  app.post("/api/ai/ceo-chat", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = (req as any).tenantId || "demo-tenant";
+      const tF = { tenantId };
+      const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+      const [orders30d, orders7d, branchStocks, rawItems, expenses] = await Promise.all([
+        OrderModel.find({ ...tF, status: { $in: ['completed', 'payment_confirmed'] }, createdAt: { $gte: since30d } })
+          .select("totalAmount costOfGoods paymentMethod branchId items createdAt").lean(),
+        OrderModel.find({ ...tF, status: { $in: ['completed', 'payment_confirmed'] }, createdAt: { $gte: since7d } })
+          .select("totalAmount costOfGoods items createdAt").lean(),
+        BranchStockModel.find(tF).lean(),
+        RawItemModel.find(tF).lean(),
+        ExpenseErpModel ? ExpenseErpModel.find({ ...tF, date: { $gte: since30d } }).lean().catch(() => []) : Promise.resolve([]),
+      ]);
+
+      const rev30 = (orders30d as any[]).reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
+      const cogs30 = (orders30d as any[]).reduce((s: number, o: any) => s + (o.costOfGoods || 0), 0);
+      const rev7 = (orders7d as any[]).reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
+      const grossMargin = rev30 > 0 ? ((rev30 - cogs30) / rev30 * 100).toFixed(1) : 0;
+      const expTotal = (expenses as any[]).reduce((s: number, e: any) => s + (e.amount || 0), 0);
+      const netProfit = rev30 - cogs30 - expTotal;
+
+      const lowStockItems = rawItems.filter((r: any) => {
+        const stock = (branchStocks as any[]).filter((b: any) => b.rawItemId === r.id);
+        const qty = stock.reduce((s: number, b: any) => s + (b.currentQuantity || 0), 0);
+        return qty <= (r.minStock || r.reorderPoint || 0);
+      }).map((r: any) => r.nameAr).slice(0, 5).join('، ');
+
+      const contextData = `📊 ملخص الأعمال (آخر 30 يوم):
+- إجمالي الإيراد: ${rev30.toFixed(0)} ريال | آخر 7 أيام: ${rev7.toFixed(0)} ريال
+- تكلفة البضاعة (COGS): ${cogs30.toFixed(0)} ريال
+- هامش الربح الإجمالي: ${grossMargin}%
+- إجمالي المصروفات: ${expTotal.toFixed(0)} ريال
+- صافي الربح: ${netProfit.toFixed(0)} ريال
+- عدد الطلبات (30ي): ${orders30d.length} | (7ي): ${orders7d.length}
+- مواد منخفضة المخزون: ${lowStockItems || 'لا يوجد'}`;
+
+      const systemPrompt = `أنت مستشار أعمال ذكي (CEO AI) لنظام QIROX. تحلل بيانات الكافيه وتجيب على أسئلة المدير بدقة ووضوح.
+استخدم الأرقام والبيانات المقدمة لك. كن عملياً وحاسماً في توصياتك.`;
+
+      const history = req.body.history || [];
+      const question = req.body.question || "حلل وضع الأعمال الحالي";
+      const fullMessage = `${contextData}\n\n❓ السؤال: ${question}`;
+
+      const apiKey = process.env.KIMI_API_KEY;
+      if (!apiKey) return res.status(500).json({ error: "KIMI_API_KEY not configured" });
+
+      const response = await fetch("https://api.moonshot.ai/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model: "moonshot-v1-32k",
+          messages: [{ role: "system", content: systemPrompt }, ...history, { role: "user", content: fullMessage }],
+          temperature: 0.4, max_tokens: 2000,
+        }),
+      });
+      const data: any = await response.json();
+      res.json({ answer: data.choices?.[0]?.message?.content || "لا يوجد رد" });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ─── الخامس عشر: DIGITAL TWIN — Per-branch snapshot ───────────────────────
+
+  app.get("/api/digital-twin", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = (req as any).tenantId || "demo-tenant";
+      const tF = { tenantId };
+      const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const since7d  = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+      const [branches, allOrders, branchStocks, rawItems, employees] = await Promise.all([
+        BranchModel.find({ isActive: 1 }).lean(),
+        OrderModel.find({ ...tF, status: { $in: ['completed', 'payment_confirmed'] }, createdAt: { $gte: since30d } })
+          .select("totalAmount costOfGoods branchId createdAt").lean(),
+        BranchStockModel.find(tF).lean(),
+        RawItemModel.find(tF).lean(),
+        EmployeeModel ? EmployeeModel.find({ ...tF, isActive: true }).select("branchId role").lean().catch(() => []) : Promise.resolve([]),
+      ]);
+
+      const branchTwins = (branches as any[]).map((branch: any) => {
+        const bid = branch._id.toString();
+        const bOrders30 = (allOrders as any[]).filter((o: any) => o.branchId === bid);
+        const bOrders24h = bOrders30.filter((o: any) => new Date(o.createdAt) >= since24h);
+        const bOrders7d  = bOrders30.filter((o: any) => new Date(o.createdAt) >= since7d);
+        const rev30 = bOrders30.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
+        const rev24h = bOrders24h.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
+        const rev7d = bOrders7d.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
+        const cogs30 = bOrders30.reduce((s: number, o: any) => s + (o.costOfGoods || 0), 0);
+        const margin = rev30 > 0 ? ((rev30 - cogs30) / rev30 * 100) : 0;
+        const stocks = (branchStocks as any[]).filter((s: any) => s.branchId === bid);
+        const lowStock = stocks.filter((s: any) => {
+          const raw = rawItems.find((r: any) => r.id === s.rawItemId) as any;
+          return s.currentQuantity <= (raw?.minStock || raw?.reorderPoint || 0);
+        }).length;
+        const empCount = (employees as any[]).filter((e: any) => e.branchId === bid).length;
+        const dailyAvg = rev30 / 30;
+        const forecast7d = dailyAvg * 7;
+        const healthScore = Math.min(100, Math.max(0,
+          (margin > 40 ? 30 : margin > 20 ? 15 : 0) +
+          (bOrders24h.length > 10 ? 30 : bOrders24h.length > 5 ? 15 : 0) +
+          (lowStock === 0 ? 25 : lowStock < 3 ? 10 : 0) +
+          (empCount > 0 ? 15 : 0)
+        ));
+        return {
+          branchId: bid,
+          branchName: branch.nameAr || branch.name,
+          kpis: {
+            revenue24h: parseFloat(rev24h.toFixed(2)),
+            revenue7d: parseFloat(rev7d.toFixed(2)),
+            revenue30d: parseFloat(rev30.toFixed(2)),
+            orders24h: bOrders24h.length,
+            orders7d: bOrders7d.length,
+            orders30d: bOrders30.length,
+            grossMargin: parseFloat(margin.toFixed(1)),
+            cogs30d: parseFloat(cogs30.toFixed(2)),
+            lowStockAlerts: lowStock,
+            employeeCount: empCount,
+          },
+          forecast: {
+            next7dRevenue: parseFloat(forecast7d.toFixed(2)),
+            dailyAvgRevenue: parseFloat(dailyAvg.toFixed(2)),
+          },
+          healthScore,
+          risks: [
+            ...(lowStock > 2 ? [`⚠️ ${lowStock} مادة أقل من الحد الأدنى`] : []),
+            ...(margin < 20 ? [`📉 هامش ربح منخفض (${margin.toFixed(1)}%)`] : []),
+            ...(bOrders24h.length === 0 ? ['🚨 لا توجد طلبات خلال 24 ساعة'] : []),
+          ],
+          opportunities: [
+            ...(rev7d > rev30 / 4 ? ['📈 أداء هذا الأسبوع أفضل من المتوسط'] : ['💡 فرصة لتحسين أداء المبيعات']),
+          ],
+        };
+      });
+
+      res.json({ branches: branchTwins, generatedAt: new Date() });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ─── INVENTORY CYCLE STATUS ─────────────────────────────────────────────────
+
+  // GET /api/inventory/cycle-status — full POS→Accounting automation status
+  app.get("/api/inventory/cycle-status", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = (req as any).tenantId || "demo-tenant";
+      const tF = tFilter(tenantId);
+      const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const since7d  = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+      const [
+        allProducts,
+        allRecipes,
+        allRawItems,
+        branchStocks,
+        recentOrders,
+        recentMovements,
+      ] = await Promise.all([
+        CoffeeItemModel.find({ ...tF, isActive: true }).select("id nameAr nameEn price costOfGoods category").lean(),
+        RecipeItemModel.find({ ...tF }).lean(),
+        RawItemModel.find({ ...tF, isActive: 1 }).select("id nameAr unit currentStock minStock reorderPoint lastCost unitCost").lean(),
+        BranchStockModel.find({ ...tF }).lean(),
+        OrderModel.find({ ...tF, status: { $in: ["completed", "payment_confirmed"] }, createdAt: { $gte: since24h } })
+          .select("orderNumber totalAmount costOfGoods inventoryDeducted items paymentMethod createdAt branchId")
+          .sort({ createdAt: -1 }).limit(50).lean(),
+        StockMovementModel.find({ ...tF, createdAt: { $gte: since7d }, movementType: "sale" })
+          .select("rawItemId quantity createdAt").lean(),
+      ]);
+
+      // Products with / without recipes
+      const linkedProductIds = new Set(allRecipes.map((r: any) => r.coffeeItemId));
+      const productsWithRecipe = (allProducts as any[]).filter((p: any) => linkedProductIds.has(p.id));
+      const productsWithoutRecipe = (allProducts as any[]).filter((p: any) => !linkedProductIds.has(p.id));
+
+      // COGS today
+      const cogsToday = recentOrders.reduce((s: number, o: any) => s + (o.costOfGoods || 0), 0);
+      const revenueToday = recentOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
+      const deductedCount = recentOrders.filter((o: any) => o.inventoryDeducted >= 1).length;
+      const notDeductedCount = recentOrders.filter((o: any) => !o.inventoryDeducted).length;
+
+      // Stock levels with consumption rate & days remaining
+      const movementsByItem: Record<string, number> = {};
+      for (const mv of recentMovements as any[]) {
+        movementsByItem[mv.rawItemId] = (movementsByItem[mv.rawItemId] || 0) + Math.abs(mv.quantity);
+      }
+
+      const stockLevels = (allRawItems as any[]).map((item: any) => {
+        const branchStock = (branchStocks as any[]).filter((bs: any) => bs.rawItemId === item.id);
+        const totalStock = branchStock.reduce((s: number, bs: any) => s + (bs.currentQuantity || 0), 0);
+        const weeklyConsumption = movementsByItem[item.id] || 0;
+        const dailyRate = weeklyConsumption / 7;
+        const daysRemaining = dailyRate > 0 ? Math.floor(totalStock / dailyRate) : null;
+        const isLow = totalStock <= (item.minStock || item.reorderPoint || 0);
+        return {
+          id: item.id,
+          nameAr: item.nameAr,
+          unit: item.unit,
+          currentStock: totalStock,
+          minStock: item.minStock || item.reorderPoint || 0,
+          dailyConsumption: parseFloat(dailyRate.toFixed(3)),
+          daysRemaining,
+          isLow,
+          unitCost: item.lastCost || item.unitCost || 0,
+        };
+      }).sort((a: any, b: any) => (a.daysRemaining ?? 9999) - (b.daysRemaining ?? 9999));
+
+      const lowStockItems = stockLevels.filter((s: any) => s.isLow);
+
+      // Top COGS consuming raw items (by recipe usage × recent sales)
+      const productSaleCount: Record<string, number> = {};
+      for (const order of recentOrders as any[]) {
+        const items = typeof order.items === "string" ? JSON.parse(order.items || "[]") : (order.items || []);
+        for (const item of items) {
+          const pid = item.coffeeItemId || item.id;
+          productSaleCount[pid] = (productSaleCount[pid] || 0) + (item.quantity || 1);
+        }
+      }
+
+      const rawItemCost: Array<{ id: string; nameAr: string; estimatedDailyCost: number }> = [];
+      for (const recipe of allRecipes as any[]) {
+        const salesQty = productSaleCount[recipe.coffeeItemId] || 0;
+        const raw = (allRawItems as any[]).find((r: any) => r.id === recipe.rawItemId);
+        if (!raw) continue;
+        const cost = (raw.lastCost || raw.unitCost || 0) * recipe.quantity * salesQty;
+        const existing = rawItemCost.find(x => x.id === recipe.rawItemId);
+        if (existing) { existing.estimatedDailyCost += cost; }
+        else { rawItemCost.push({ id: recipe.rawItemId, nameAr: raw.nameAr, estimatedDailyCost: cost }); }
+      }
+      rawItemCost.sort((a, b) => b.estimatedDailyCost - a.estimatedDailyCost);
+
+      res.json({
+        summary: {
+          totalProducts: allProducts.length,
+          productsWithRecipe: productsWithRecipe.length,
+          productsWithoutRecipe: productsWithoutRecipe.length,
+          recipeCompletionRate: allProducts.length > 0 ? Math.round((productsWithRecipe.length / allProducts.length) * 100) : 0,
+          ordersToday: recentOrders.length,
+          deductedOrders: deductedCount,
+          notDeductedOrders: notDeductedCount,
+          cogsToday: parseFloat(cogsToday.toFixed(2)),
+          revenueToday: parseFloat(revenueToday.toFixed(2)),
+          grossMarginToday: revenueToday > 0 ? parseFloat(((1 - cogsToday / revenueToday) * 100).toFixed(1)) : 0,
+          lowStockCount: lowStockItems.length,
+        },
+        productsWithoutRecipe: productsWithoutRecipe.slice(0, 20).map((p: any) => ({
+          id: p.id, nameAr: p.nameAr, price: p.price, category: p.category,
+        })),
+        stockLevels: stockLevels.slice(0, 30),
+        lowStockItems: lowStockItems.slice(0, 20),
+        topCogsItems: rawItemCost.slice(0, 10),
+        recentOrders: recentOrders.slice(0, 10).map((o: any) => ({
+          orderNumber: o.orderNumber,
+          totalAmount: o.totalAmount,
+          costOfGoods: o.costOfGoods,
+          inventoryDeducted: o.inventoryDeducted,
+          paymentMethod: o.paymentMethod,
+          createdAt: o.createdAt,
+        })),
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // ─── BRAND AI ENDPOINTS ────────────────────────────────────────────────────
+
+  // POST /api/ai/brand-chat — employee brand AI assistant (Kimi AI)
+  app.post("/api/ai/brand-chat", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const kimiKey = process.env.KIMI_API_KEY;
+      if (!kimiKey) return res.status(503).json({ error: "AI not configured" });
+
+      const { message, history = [] } = req.body;
+      if (!message) return res.status(400).json({ error: "message required" });
+
+      const tenantId = (req as any).tenantId || "demo-tenant";
+      const tF = tFilter(tenantId);
+
+      const [items, categories, config] = await Promise.all([
+        CoffeeItemModel.find({ ...tF, isActive: true }).select("nameAr nameEn description price").limit(60).lean(),
+        MenuCategoryModel.find({ ...tF }).select("nameAr nameEn").lean(),
+        BusinessConfigModel.findOne({ tenantId }).lean(),
+      ]);
+
+      const businessName = (config as any)?.businessName || "QIROX Cafe";
+      const systemPrompt = `أنت مساعد ذكي للموظفين في ${businessName}. اسمك "مساعد ${businessName} الذكي".
+
+المنتجات المتاحة (${items.length} منتج):
+${items.map((i: any) => `• ${i.nameAr}${i.nameEn ? ` (${i.nameEn})` : ""}: ${i.description || "—"} | السعر: ${i.price} ريال`).join("\n")}
+
+الفئات: ${categories.map((c: any) => c.nameAr).join("، ")}
+
+مهامك:
+- مساعدة الموظفين في التشغيل اليومي والأسئلة العامة
+- شرح المنتجات والمكونات والأسعار
+- الإجابة على أسئلة السياسات والإجراءات
+- تقديم نصائح لخدمة العملاء
+- المساعدة في حل مشكلات الطلبات
+
+أجب دائماً بالعربية بأسلوب ودي ومهني ومختصر. للأسئلة خارج النطاق اعتذر بلطف.`;
+
+      const messages = [
+        { role: "system", content: systemPrompt },
+        ...history.slice(-12),
+        { role: "user", content: message },
+      ];
+
+      const aiRes = await fetch("https://api.moonshot.ai/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${kimiKey}` },
+        body: JSON.stringify({ model: "moonshot-v1-8k", messages, max_tokens: 800, temperature: 0.7 }),
+      });
+
+      if (!aiRes.ok) {
+        const errText = await aiRes.text();
+        console.error("[Kimi AI brand-chat error]", errText);
+        return res.status(502).json({ error: "AI service unavailable" });
+      }
+
+      const aiData = await aiRes.json() as any;
+      const reply = aiData.choices?.[0]?.message?.content || "عذراً، لم أتمكن من الإجابة الآن.";
+      res.json({ reply });
+    } catch (e: any) {
+      console.error("[Brand AI]", e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // POST /api/ai/accounting-audit — manager accounting AI (Kimi AI)
+  app.post("/api/ai/accounting-audit", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const kimiKey = process.env.KIMI_API_KEY;
+      if (!kimiKey) return res.status(503).json({ error: "AI not configured" });
+
+      const { question, period = "month" } = req.body;
+      const tenantId = (req as any).tenantId || "demo-tenant";
+      const tF = tFilter(tenantId);
+
+      const { ExpenseModel, RevenueModel } = await import("@shared/schema");
+      const [expenses, revenues, orders] = await Promise.all([
+        ExpenseModel.find({ ...tF }).sort({ createdAt: -1 }).limit(100).lean(),
+        RevenueModel.find({ ...tF }).sort({ createdAt: -1 }).limit(100).lean(),
+        OrderModel.find({ ...tF, status: "completed" }).sort({ createdAt: -1 }).limit(50)
+          .select("orderNumber totalAmount paymentMethod createdAt").lean(),
+      ]);
+
+      const totalRev = revenues.reduce((s: number, r: any) => s + (r.totalAmount || 0), 0);
+      const totalExp = expenses.reduce((s: number, e: any) => s + (e.totalAmount || 0), 0);
+      const netProfit = totalRev - totalExp;
+
+      const expenseLines = expenses.slice(0, 30).map((e: any) =>
+        `${new Date(e.createdAt).toLocaleDateString("ar-SA")} | ${e.category} | ${e.description} | ${e.totalAmount?.toFixed(2)} ر | ${e.status} | ${e.paymentMethod || "—"}`
+      ).join("\n");
+
+      const revenueLines = revenues.slice(0, 30).map((r: any) =>
+        `${new Date(r.createdAt).toLocaleDateString("ar-SA")} | ${r.category} | ${r.description} | ${r.totalAmount?.toFixed(2)} ر | ${r.paymentMethod}`
+      ).join("\n");
+
+      const expByCat: Record<string, number> = {};
+      for (const e of expenses as any[]) { expByCat[e.category] = (expByCat[e.category] || 0) + (e.totalAmount || 0); }
+
+      const systemPrompt = `أنت مدقق حسابات قانوني ومستشار مالي محترف لنظام QIROX Cafe.
+
+ملخص البيانات المالية:
+━━━━━━━━━━━━━━━━━━━━━━
+• إجمالي الإيرادات: ${totalRev.toFixed(2)} ريال (${revenues.length} سجل)
+• إجمالي المصروفات: ${totalExp.toFixed(2)} ريال (${expenses.length} سجل)
+• صافي الربح: ${netProfit.toFixed(2)} ريال
+• هامش الربح: ${totalRev > 0 ? ((netProfit / totalRev) * 100).toFixed(1) : 0}%
+• عدد الطلبات المكتملة: ${orders.length}
+
+المصروفات حسب الفئة:
+${Object.entries(expByCat).map(([k, v]) => `  - ${k}: ${(v as number).toFixed(2)} ريال`).join("\n")}
+
+تفاصيل المصروفات (آخر 30):
+${expenseLines}
+
+تفاصيل الإيرادات (آخر 30):
+${revenueLines}
+
+أجب بتقرير منظم بالعربية يشمل:
+1. ملخص الوضع المالي
+2. الملاحظات والتحذيرات
+3. الأخطاء أو التلاعب المحتمل
+4. المصروفات الشاذة أو المكررة
+5. العمليات المشبوهة
+6. التوصيات والتصحيحات المقترحة`;
+
+      const userMsg = question || "راجع حساباتي وأعطني تقرير تدقيق شامل مع كشف أي تلاعب أو أخطاء أو مصروفات شاذة";
+
+      const aiRes = await fetch("https://api.moonshot.ai/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${kimiKey}` },
+        body: JSON.stringify({
+          model: "moonshot-v1-32k",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userMsg },
+          ],
+          max_tokens: 2500,
+          temperature: 0.2,
+        }),
+      });
+
+      if (!aiRes.ok) {
+        const errText = await aiRes.text();
+        console.error("[Kimi AI accounting-audit error]", errText);
+        return res.status(502).json({ error: "AI service unavailable" });
+      }
+
+      const aiData = await aiRes.json() as any;
+      const report = aiData.choices?.[0]?.message?.content || "لم أتمكن من إنشاء التقرير.";
+      res.json({ report });
+    } catch (e: any) {
+      console.error("[Accounting AI]", e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // GET /api/v1 — discovery endpoint (no auth)
+  app.get("/api/v1", (_req, res) => {
+    res.json({
+      name: "QIROX Open API",
+      version: "1.0",
+      authentication: "Bearer qrx_live_... or qrx_test_...",
+      docs: "/manager/ecosystem",
+      endpoints: [
+        "GET /api/v1/menu", "GET /api/v1/menu/:id",
+        "GET /api/v1/orders", "GET /api/v1/orders/:id", "POST /api/v1/orders",
+        "GET /api/v1/customers",
+        "GET /api/v1/loyalty/cards/:phone", "POST /api/v1/loyalty/cards/:phone/points",
+        "GET /api/v1/inventory", "PATCH /api/v1/inventory/:id",
+      ],
+    });
+  });
+
   const httpServer = createServer(app);
   
-  // Setup WebSocket for real-time order updates (not supported on Vercel serverless)
-  if (!options.skipWebSocket) {
-    wsManager.setup(httpServer);
-  }
+  // Setup WebSocket for real-time order updates
+  wsManager.setup(httpServer);
   
   return httpServer;
 }

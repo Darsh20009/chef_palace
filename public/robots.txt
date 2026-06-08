@@ -1,37 +1,15 @@
 User-agent: *
 Allow: /
 Allow: /menu
-Allow: /auth
-Allow: /profile
-Allow: /orders
-Allow: /loyalty
-Allow: /sitemap.xml
+Allow: /track/
+Allow: /kiosk
 
-# Block admin/staff areas from indexing
-Disallow: /manager/
-Disallow: /admin/
-Disallow: /owner/
-Disallow: /employee/
-Disallow: /kitchen/
-Disallow: /pos/
-Disallow: /cashier/
-Disallow: /qirox/
+Disallow: /admin
+Disallow: /manager
+Disallow: /employee
+Disallow: /qirox
 Disallow: /api/
+Disallow: /checkout
+Disallow: /payment
 
-Sitemap: https://www.chefsplace.online/sitemap.xml
-Host: www.chefsplace.online
-
-# Allow major bots
-User-agent: Googlebot
-Allow: /
-Crawl-delay: 0
-
-User-agent: Bingbot
-Allow: /
-Crawl-delay: 1
-
-User-agent: facebot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
+Sitemap: https://qiroxstudio.online/sitemap.xml

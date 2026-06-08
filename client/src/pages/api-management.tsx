@@ -136,7 +136,7 @@ export default function ApiManagement() {
 
   return (
     <PlanGate feature="apiAccess">
-    <div className="p-6 space-y-6" dir="rtl">
+    <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => setLocation("/admin/dashboard")} data-testid="btn-back">
@@ -303,7 +303,7 @@ const order = await fetch('${baseUrl}/api/orders', {
 
       {/* Create Key Dialog */}
       <Dialog open={showCreateKey} onOpenChange={setShowCreateKey}>
-        <DialogContent className="max-w-sm" dir="rtl">
+        <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>إنشاء مفتاح API جديد</DialogTitle>
           </DialogHeader>

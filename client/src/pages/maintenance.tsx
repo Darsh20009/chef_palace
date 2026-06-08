@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { useTranslate } from "@/lib/useTranslate";
 import { Coffee, Settings, Wrench, Clock } from "lucide-react";
-const chefsplaceLogo = "/logo.png";
+import qiroxLogo from "@assets/qirox-logo-customer.png";
 
 export default function MaintenancePage({ reason = "maintenance" }: { reason?: string }) {
   const tc = useTranslate();
@@ -9,14 +9,14 @@ export default function MaintenancePage({ reason = "maintenance" }: { reason?: s
   const isUpdate = reason === "update" || reason === tc("تحديث", "update");
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 text-center" dir="rtl">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 text-center">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="max-w-md w-full space-y-8"
       >
         <div className="relative inline-block">
-          <img src={chefsplaceLogo} alt="مكان الشيف البخاري" className="w-24 h-24 mx-auto rounded-3xl shadow-xl mb-6" />
+          <img src={qiroxLogo} alt="مكان الشيف البخاري" className="w-24 h-24 mx-auto rounded-3xl shadow-xl mb-6" />
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
@@ -50,7 +50,7 @@ export default function MaintenancePage({ reason = "maintenance" }: { reason?: s
 
         <div className="pt-6 border-t border-border">
           <p className="text-sm text-muted-foreground italic">
-            نعود قريباً بأشهى البخاري... 🍛
+            استمتع برائحة القهوة ريثما نعود... ☕
           </p>
         </div>
       </motion.div>

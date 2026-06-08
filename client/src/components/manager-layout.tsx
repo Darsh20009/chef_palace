@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { ManagerSidebar, MobileBottomNav } from "./manager-sidebar";
+import { ManagerNotificationCenter } from "./manager-notification-center";
 
 interface ManagerLayoutProps {
   children: ReactNode;
@@ -19,7 +20,7 @@ export function ManagerLayout({ children }: ManagerLayoutProps) {
 
   const handleLogout = async () => {
     await fetch("/api/employees/logout", { method: "POST" });
-    localStorage.removeItem("chefsplace-restore-key");
+    localStorage.removeItem("qirox-restore-key");
     navigate("/manager/login");
   };
 
@@ -30,7 +31,10 @@ export function ManagerLayout({ children }: ManagerLayoutProps) {
         onLogout={handleLogout}
         role={role}
       />
-      <main className="flex-1 overflow-auto pb-16 lg:pb-0">
+      <main className="flex-1 overflow-auto pb-16 lg:pb-0 relative">
+        <div className="absolute top-3 left-3 z-30">
+          <ManagerNotificationCenter />
+        </div>
         {children}
       </main>
       <MobileBottomNav manager={manager} />

@@ -1,30 +1,30 @@
-// Cleaned Menu Data — مكان الشيف البخاري
+// Cleaned Coffee Data - All old references removed
 // Using simple placeholders until proper images are added
 
 export const defaultCoffeeMenu = [
-  // Placeholder entries - populated from API
+  // Placeholder entries - to be populated from API
 ];
 
 export const coffeeCategories = [
-  { id: "cat-bukhari" as const, nameAr: "أرز بخاري", nameEn: "Bukhari Rice", menuType: "food" as const },
-  { id: "cat-mandi" as const, nameAr: "مندي وزربيان", nameEn: "Mandi", menuType: "food" as const },
-  { id: "cat-grills" as const, nameAr: "مشاوي", nameEn: "Grills", menuType: "food" as const },
-  { id: "cat-soup" as const, nameAr: "شوربة", nameEn: "Soups", menuType: "food" as const },
-  { id: "cat-appetizers" as const, nameAr: "مقبلات", nameEn: "Appetizers", menuType: "food" as const },
-  { id: "cat-drinks" as const, nameAr: "مشروبات", nameEn: "Beverages", menuType: "drinks" as const },
-  { id: "cat-desserts" as const, nameAr: "حلويات", nameEn: "Desserts", menuType: "food" as const },
+  { id: "basic" as const, nameAr: "قهوة أساسية", nameEn: "Basic Coffee", menuType: "drinks" as const },
+  { id: "hot" as const, nameAr: "قهوة ساخنة", nameEn: "Hot Coffee", menuType: "drinks" as const },
+  { id: "cold" as const, nameAr: "قهوة باردة", nameEn: "Cold Coffee", menuType: "drinks" as const },
+  { id: "specialty" as const, nameAr: "المشروبات الإضافية", nameEn: "Specialty Drinks", menuType: "drinks" as const },
+  { id: "desserts" as const, nameAr: "الحلويات", nameEn: "Desserts", menuType: "drinks" as const },
 ];
 
 export const foodCategories = [
-  { id: "cat-bukhari" as const, nameAr: "أرز بخاري", nameEn: "Bukhari Rice", menuType: "food" as const },
-  { id: "cat-mandi" as const, nameAr: "مندي وزربيان", nameEn: "Mandi", menuType: "food" as const },
-  { id: "cat-grills" as const, nameAr: "مشاوي", nameEn: "Grills", menuType: "food" as const },
-  { id: "cat-appetizers" as const, nameAr: "مقبلات", nameEn: "Appetizers", menuType: "food" as const },
-  { id: "cat-desserts" as const, nameAr: "حلويات", nameEn: "Desserts", menuType: "food" as const },
+  { id: "appetizers" as const, nameAr: "المقبلات", nameEn: "Appetizers", menuType: "food" as const },
+  { id: "main_courses" as const, nameAr: "الأطباق الرئيسية", nameEn: "Main Courses", menuType: "food" as const },
+  { id: "sandwiches" as const, nameAr: "السندويشات", nameEn: "Sandwiches", menuType: "food" as const },
+  { id: "salads" as const, nameAr: "السلطات", nameEn: "Salads", menuType: "food" as const },
+  { id: "breakfast" as const, nameAr: "الإفطار", nameEn: "Breakfast", menuType: "food" as const },
+  { id: "pastries" as const, nameAr: "المعجنات", nameEn: "Pastries", menuType: "food" as const },
 ];
 
-export const allCategories = [...coffeeCategories];
+export const allCategories = [...coffeeCategories, ...foodCategories];
 
 export function getCoffeeImage(coffeeId: string): string {
+  // Return مكان الشيف logo as placeholder for all images
   return "/logo.png";
 }

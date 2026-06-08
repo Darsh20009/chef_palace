@@ -1,49 +1,41 @@
 import QRCode from "qrcode";
 import { VAT_RATE } from "@/lib/constants";
-import { brand } from "@/lib/brand";
 
-// ── Logo cache ────────────────────────────────────────────────────────────────
-// Embed the logo as a Base64 data URL so it renders immediately in the print
-// popup/iframe without waiting for a network request (fixes missing logo issue).
-let _cachedLogoBase64: string = '';
+// ── ZATCA QR pre-generation cache ────────────────────────────────────────────
+// Key: `zatca:${orderNumber}:${total}` → SVG string
+// Populated by prewarmZatcaQr() when an order is created, so printing is instant.
+const _zatcaQrCache = new Map<string, string>();
 
-// Candidate logo paths — tries each in order until one succeeds
-const LOGO_PATHS = [
-  '/logo.png',
-  '/logo-192.png',
-  '/logo-512.png',
-];
-
-async function _fetchImageAsBase64(url: string): Promise<string> {
-  const res = await fetch(url, { cache: 'no-store' });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const blob = await res.blob();
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(new Error('FileReader failed'));
-    reader.readAsDataURL(blob);
+/**
+ * Pre-generates the ZATCA QR code in the background as soon as an order is
+ * created. By the time the cashier clicks "Print", the QR is already cached
+ * and buildReceiptPreviewHtml() returns instantly.
+ */
+export function prewarmZatcaQr(data: {
+  orderNumber: string | number;
+  total: string | number;
+  date?: string;
+  vatNumber?: string;
+}): void {
+  const totalAmount = typeof data.total === 'number' ? data.total : parseFloat(String(data.total).replace(/[^0-9.-]/g, '')) || 0;
+  const subtotalBeforeVat = totalAmount / (1 + VAT_RATE);
+  const vat = totalAmount - subtotalBeforeVat;
+  const invoiceTs = data.date ? new Date(data.date).toISOString() : new Date().toISOString();
+  const cacheKey = `zatca:${data.orderNumber}:${totalAmount.toFixed(2)}`;
+  if (_zatcaQrCache.has(cacheKey)) return;
+  const zatcaPayload = generateZATCAQRCode({
+    sellerName: COMPANY_NAME,
+    vatNumber: data.vatNumber || VAT_NUMBER,
+    timestamp: invoiceTs,
+    totalWithVat: totalAmount.toFixed(2),
+    vatAmount: vat.toFixed(2),
   });
-}
-
-async function fetchLogoBase64(): Promise<string> {
-  if (_cachedLogoBase64) return _cachedLogoBase64;
-  for (const path of LOGO_PATHS) {
-    try {
-      const b64 = await _fetchImageAsBase64(path);
-      if (b64 && b64.startsWith('data:image')) {
-        _cachedLogoBase64 = b64;
-        return _cachedLogoBase64;
-      }
-    } catch {
-      // try next path
-    }
-  }
-  return '';
-}
-// Pre-warm the cache on module load so it's ready by the time a receipt is printed
-if (typeof window !== 'undefined') {
-  fetchLogoBase64().catch(() => {});
+  QRCode.toString(zatcaPayload, { type: 'svg', width: 100, margin: 1, errorCorrectionLevel: 'M' })
+    .then(svgStr => {
+      const svg = svgStr.replace(/<\?xml[^?]*\?>/g, '').replace(/width="\d+"/, 'width="100"').replace(/height="\d+"/, 'height="100"');
+      _zatcaQrCache.set(cacheKey, svg);
+    })
+    .catch(() => {});
 }
 
 /**
@@ -65,11 +57,36 @@ interface OrderItem {
     price: string;
   };
   quantity: number;
+  selectedSize?: string;
   itemDiscount?: number;
   customization?: {
     selectedItemAddons?: Array<{ nameAr: string; nameEn?: string; price?: number }>;
     [key: string]: any;
   };
+}
+
+/** Returns the correct unit price for an order item.
+ *  Prefers a top-level `price` field (stored in DB after our fix),
+ *  falls back to coffeeItem.price so old orders still display correctly. */
+function getItemUnitPrice(item: OrderItem): number {
+  const stored = parseNumber((item as any).price ?? (item as any).unitPrice);
+  if (stored > 0) return stored;
+  return parseNumber(item.coffeeItem.price);
+}
+
+/** Returns the selected size label from top-level or inside customization (employee-cashier compat). */
+function getItemSelectedSize(item: OrderItem): string | undefined {
+  return item.selectedSize ?? (item as any).customization?.selectedSize ?? undefined;
+}
+
+/** Returns the addons array, checking both selectedItemAddons and legacy addons array. */
+function getItemAddons(item: OrderItem): Array<{ nameAr: string }> {
+  if (item.customization?.selectedItemAddons?.length) return item.customization.selectedItemAddons;
+  const legacyAddons = (item as any).customization?.addons;
+  if (Array.isArray(legacyAddons) && legacyAddons.length) {
+    return legacyAddons.map((a: any) => ({ nameAr: a.nameAr || a.name || String(a) }));
+  }
+  return [];
 }
 
 interface TaxInvoiceData {
@@ -88,15 +105,20 @@ interface TaxInvoiceData {
   total: string;
   paymentMethod: string;
   splitPayment?: { cash: number; card: number };
+  cashReceived?: number;
   employeeName: string;
   tableNumber?: string;
-  orderType?: 'dine_in' | 'takeaway' | 'delivery';
+  orderType?: string;
   orderTypeName?: string;
   date: string;
   branchName?: string;
   branchAddress?: string;
   crNumber?: string;
   vatNumber?: string;
+  carInfo?: { carType?: string; carColor?: string; plateNumber?: string };
+  carColor?: string;
+  plateNumber?: string;
+  notes?: string;
 }
 
 interface PrintConfig {
@@ -125,91 +147,40 @@ interface KitchenOrderData {
   timestamp: string;
 }
 
-// ── Unified item-display extractor ───────────────────────────────────────────
-// Pulls size + addons + notes out of any cart/order item shape so receipts
-// always render the same regardless of source (live cart, saved order, etc).
-function _extractItemDisplay(item: any): { size: string; addons: Array<{ nameAr: string; price?: number }>; notes: string } {
-  const cz = item?.customization || {};
-  // ── size ────────────────────────────────────────────────────────────────
-  let size = '';
-  const rawSize = item?.selectedSize || cz.selectedSize || cz.size;
-  if (rawSize && rawSize !== 'default' && String(rawSize).trim()) {
-    size = String(rawSize).trim();
-  } else if (item?.coffeeItem?.availableSizes && item?.selectedSize) {
-    const found = item.coffeeItem.availableSizes.find((s: any) => s.nameAr === item.selectedSize || s.id === item.selectedSize);
-    if (found) size = found.nameAr;
-  }
-
-  // ── addons (try every known shape, dedupe by name) ──────────────────────
-  const addonMap = new Map<string, { nameAr: string; price?: number }>();
-  const sources: any[] = [
-    cz.selectedAddons,        // saved-order shape: [{addonId,nameAr,price,...}]
-    cz.selectedItemAddons,    // legacy
-    item?.selectedItemAddons, // live cart inline addons
-  ];
-  for (const src of sources) {
-    if (!Array.isArray(src)) continue;
-    for (const a of src) {
-      if (!a) continue;
-      const nameAr = a.nameAr || a.name || a.nameEn;
-      if (!nameAr) continue;
-      const key = String(nameAr).trim();
-      if (!addonMap.has(key)) {
-        addonMap.set(key, { nameAr: key, price: typeof a.price === 'number' ? a.price : (a.price ? Number(a.price) : undefined) });
-      }
-    }
-  }
-  // string-id addons enriched via item.enrichedAddons
-  if (Array.isArray(item?.selectedAddons) && Array.isArray(item?.enrichedAddons)) {
-    for (const id of item.selectedAddons) {
-      const a = item.enrichedAddons.find((x: any) => x?.id === id || x?._id === id);
-      if (a?.nameAr && !addonMap.has(a.nameAr)) {
-        addonMap.set(a.nameAr, { nameAr: a.nameAr, price: typeof a.price === 'number' ? a.price : undefined });
-      }
-    }
-  }
-  const addons = Array.from(addonMap.values());
-
-  const notes = (cz.notes || item?.notes || '').toString().trim();
-  return { size, addons, notes };
-}
-
-function _renderItemExtras(item: any, opts: { fontSize?: number; color?: string; showPrices?: boolean } = {}): string {
-  const { size, addons, notes } = _extractItemDisplay(item);
-  if (!size && addons.length === 0 && !notes) return '';
-  const fs = opts.fontSize ?? 14;
-  const color = opts.color ?? '#444';
-  const lines: string[] = [];
-  if (size) {
-    lines.push(`<div style="font-size:${fs}px;color:${color};margin-top:5px;">📏 الحجم: <strong>${size}</strong></div>`);
-  }
-  if (addons.length > 0) {
-    const addonLines = addons.map(a => {
-      const priceStr = (opts.showPrices && a.price && a.price > 0) ? ` <span style="color:#888;">(+${a.price.toFixed(2)})</span>` : '';
-      return `<div style="font-size:${fs}px;color:${color};margin-top:3px;padding-right:10px;">+ ${a.nameAr}${priceStr}</div>`;
-    }).join('');
-    lines.push(`<div style="margin-top:5px;">${addonLines}</div>`);
-  }
-  if (notes) {
-    lines.push(`<div style="font-size:${fs}px;color:#666;margin-top:5px;font-style:italic;">📝 ${notes}</div>`);
-  }
-  return lines.join('');
-}
-
 // ── iframe-based print queue (never touches the main page DOM during print) ──
 let _printQueue: Array<{ html: string; paperWidth: string; isFullDoc: boolean }> = [];
 let _isPrinting = false;
+let _printWatchdog: ReturnType<typeof setTimeout> | null = null;
+
+function _armPrintWatchdog() {
+  if (_printWatchdog) clearTimeout(_printWatchdog);
+  _printWatchdog = setTimeout(() => {
+    if (_isPrinting) {
+      console.warn('[Print] Watchdog: print job stuck >20s — resetting queue');
+      _isPrinting = false;
+      _printWatchdog = null;
+      if (_printQueue.length > 0) setTimeout(_drainPrintQueue, 300);
+    }
+  }, 20000);
+}
+
+function _clearPrintWatchdog() {
+  if (_printWatchdog) { clearTimeout(_printWatchdog); _printWatchdog = null; }
+}
+
+// Arabic-compatible font stack — works without network (system fonts)
+const PRINT_FONT_STACK = "'Segoe UI', Tahoma, Arial, 'Helvetica Neue', sans-serif";
 
 function _buildFullDoc(html: string, paperWidth: string): string {
   return `<!DOCTYPE html><html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
     @page { size: ${paperWidth} auto; margin: 0; }
     * { box-sizing: border-box; }
-    body { margin: 0; padding: 0; font-family: 'Cairo', Arial, sans-serif; direction: rtl; color: #000; background: #fff; }
+    body { margin: 0; padding: 4px; font-family: ${PRINT_FONT_STACK}; direction: rtl; color: #000; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .no-print { display: none !important; }
+    img { max-width: 100%; }
   </style>
 </head>
 <body>${html}</body>
@@ -217,122 +188,24 @@ function _buildFullDoc(html: string, paperWidth: string): string {
 }
 
 /**
- * Render HTML to an image using html2canvas, then print the image.
- * This fixes Arabic text encoding issues on thermal printers — the image
- * is pixel-perfect regardless of printer code page or font support.
+ * Direct HTML iframe print — fast, accurate, no image conversion.
+ * Uses browser's native rendering engine — Arabic text renders perfectly.
  */
-async function _printViaImageAsync(html: string, paperWidth: string, isFullDoc: boolean): Promise<void> {
-  // Paper widths in pixels at 96 DPI: 58mm ≈ 220px, 80mm ≈ 302px
-  const renderWidth = paperWidth === '58mm' ? 220 : 302;
+async function _printDirectAsync(html: string, paperWidth: string, isFullDoc: boolean): Promise<void> {
   const fullHtml = isFullDoc ? html : _buildFullDoc(html, paperWidth);
 
-  // ── Step 1: Render HTML in a hidden iframe ────────────────────────────────
-  const renderFrame = document.createElement('iframe');
-  renderFrame.setAttribute('aria-hidden', 'true');
-  renderFrame.style.cssText = `position:fixed;top:-99999px;left:-99999px;width:${renderWidth}px;height:3000px;border:none;opacity:0;pointer-events:none;`;
-  document.body.appendChild(renderFrame);
-
-  const iframeDoc = renderFrame.contentDocument || renderFrame.contentWindow?.document;
-  if (!iframeDoc) {
-    renderFrame.remove();
-    _isPrinting = false;
-    setTimeout(_drainPrintQueue, 500);
-    return;
-  }
-
-  iframeDoc.open();
-  iframeDoc.write(fullHtml);
-  iframeDoc.close();
-
-  // Wait for fonts and QR images to load
-  await new Promise(r => setTimeout(r, 900));
-  try { await (iframeDoc as any).fonts?.ready; } catch {}
-
-  let imgDataUrl = '';
-  try {
-    const html2canvas = (await import('html2canvas')).default;
-    const captureEl = iframeDoc.body;
-    const canvas = await html2canvas(captureEl, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: '#ffffff',
-      width: renderWidth,
-      windowWidth: renderWidth,
-      logging: false,
-    });
-    imgDataUrl = canvas.toDataURL('image/png');
-  } catch (err) {
-    console.warn('[Print] html2canvas failed, falling back to direct HTML print:', err);
-    renderFrame.remove();
-    // Fallback: direct HTML print (original method)
-    _printDirectHtml(fullHtml, paperWidth);
-    return;
-  }
-
-  renderFrame.remove();
-
-  // ── Step 2: Print the captured image ─────────────────────────────────────
-  const printFrame = document.createElement('iframe');
-  printFrame.setAttribute('aria-hidden', 'true');
-  printFrame.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none;opacity:0;pointer-events:none;';
-  document.body.appendChild(printFrame);
-
-  const printDoc = printFrame.contentDocument || printFrame.contentWindow?.document;
-  if (!printDoc) {
-    printFrame.remove();
-    _isPrinting = false;
-    setTimeout(_drainPrintQueue, 500);
-    return;
-  }
-
-  printDoc.open();
-  printDoc.write(`<!DOCTYPE html><html><head><style>
-    @page { size: ${paperWidth} auto; margin: 0; }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { margin: 0; padding: 0; background: #fff; }
-    img { width: 100%; display: block; }
-  </style></head><body><img src="${imgDataUrl}" /></body></html>`);
-  printDoc.close();
-
-  await new Promise(r => setTimeout(r, 300));
-
-  const printWin = printFrame.contentWindow;
-  if (!printWin) {
-    printFrame.remove();
-    _isPrinting = false;
-    setTimeout(_drainPrintQueue, 500);
-    return;
-  }
-
-  let cleanupDone = false;
-  const cleanup = () => {
-    if (cleanupDone) return;
-    cleanupDone = true;
-    setTimeout(() => {
-      try { printFrame.remove(); } catch {}
-      _isPrinting = false;
-      setTimeout(_drainPrintQueue, 800);
-    }, 150);
-  };
-
-  printWin.addEventListener('afterprint', cleanup, { once: true });
-  try { printWin.print(); } catch {}
-  setTimeout(cleanup, 8000);
-}
-
-/** Original direct-HTML iframe print — used as fallback when html2canvas fails */
-function _printDirectHtml(fullHtml: string, paperWidth: string): void {
   const iframe = document.createElement('iframe');
   iframe.setAttribute('aria-hidden', 'true');
-  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none;opacity:0;pointer-events:none;';
+  // Give it a realistic width so layout matches paper — hidden off-screen
+  const renderWidth = paperWidth === '58mm' ? 220 : 302;
+  iframe.style.cssText = `position:fixed;top:-9999px;left:-9999px;width:${renderWidth}px;height:1px;border:none;visibility:hidden;pointer-events:none;`;
   document.body.appendChild(iframe);
 
   const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
   if (!iframeDoc) {
-    iframe.remove();
+    try { iframe.remove(); } catch {}
     _isPrinting = false;
-    setTimeout(_drainPrintQueue, 500);
+    setTimeout(_drainPrintQueue, 300);
     return;
   }
 
@@ -342,38 +215,46 @@ function _printDirectHtml(fullHtml: string, paperWidth: string): void {
 
   const iframeWin = iframe.contentWindow;
   if (!iframeWin) {
-    iframe.remove();
+    try { iframe.remove(); } catch {}
     _isPrinting = false;
-    setTimeout(_drainPrintQueue, 500);
+    setTimeout(_drainPrintQueue, 300);
     return;
   }
 
-  let cleanupDone = false;
-  const cleanup = () => {
-    if (cleanupDone) return;
-    cleanupDone = true;
-    setTimeout(() => {
-      try { iframe.remove(); } catch {}
-      _isPrinting = false;
-      setTimeout(_drainPrintQueue, 800);
-    }, 150);
-  };
+  // No image waiting — receipts are image-free (SVG inline, text logo)
+  // Brief layout settle only
+  await new Promise(r => setTimeout(r, 20));
 
-  iframeWin.addEventListener('afterprint', cleanup, { once: true });
-  setTimeout(() => {
-    try { iframeWin.print(); } catch {}
-    setTimeout(cleanup, 6000);
-  }, 500);
+  return new Promise<void>(resolve => {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      setTimeout(() => {
+        try { iframe.remove(); } catch {}
+        resolve();
+      }, 200);
+    };
+
+    iframeWin.addEventListener('afterprint', finish, { once: true });
+    setTimeout(finish, 10000); // safety fallback
+
+    try { iframeWin.focus(); iframeWin.print(); } catch { finish(); }
+  });
 }
 
 function _drainPrintQueue() {
   if (_isPrinting || _printQueue.length === 0) return;
   _isPrinting = true;
+  _armPrintWatchdog();
   const { html, paperWidth, isFullDoc } = _printQueue.shift()!;
-  _printViaImageAsync(html, paperWidth, isFullDoc).catch(() => {
-    _isPrinting = false;
-    setTimeout(_drainPrintQueue, 500);
-  });
+  _printDirectAsync(html, paperWidth, isFullDoc)
+    .catch(err => console.warn('[Print] Error:', err))
+    .finally(() => {
+      _clearPrintWatchdog();
+      _isPrinting = false;
+      if (_printQueue.length > 0) setTimeout(_drainPrintQueue, 80);
+    });
 }
 
 /**
@@ -446,16 +327,165 @@ export function printHtmlInPage(html: string, paperWidth: string = '80mm'): void
   _drainPrintQueue();
 }
 
+/**
+ * Print a canvas PNG via a hidden iframe — same pipeline used by printTaxInvoice.
+ * Shared helper for shift reports and refund receipts.
+ */
+function _printCanvasImage(imgSrc: string, paperWidth: '58mm' | '80mm' = '80mm'): void {
+  const printFrame = document.createElement('iframe');
+  printFrame.setAttribute('aria-hidden', 'true');
+  printFrame.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none;opacity:0;pointer-events:none;';
+  document.body.appendChild(printFrame);
+  const pdoc = printFrame.contentDocument || printFrame.contentWindow?.document;
+  if (!pdoc) { try { printFrame.remove(); } catch {} return; }
+  pdoc.open();
+  pdoc.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+    @page { size: ${paperWidth} auto; margin: 0; }
+    html,body { margin:0; padding:0; background:#fff; }
+    img { width: ${paperWidth}; display: block; margin: 0; padding: 0; }
+  </style></head><body><img src="${imgSrc}" /></body></html>`);
+  pdoc.close();
+  const img = pdoc.querySelector('img') as HTMLImageElement | null;
+  let done = false;
+  const finish = () => { if (done) return; done = true; setTimeout(() => { try { printFrame.remove(); } catch {} }, 200); };
+  const doPrint = () => {
+    try { printFrame.contentWindow?.focus(); printFrame.contentWindow?.print(); } catch {}
+    printFrame.contentWindow?.addEventListener('afterprint', finish, { once: true });
+    setTimeout(finish, 5000);
+  };
+  if (img && !img.complete) {
+    img.onload = () => setTimeout(doPrint, 100);
+    img.onerror = () => setTimeout(doPrint, 100);
+  } else {
+    setTimeout(doPrint, 200);
+  }
+}
+
+/**
+ * Print a shift / Z-report to the configured thermal printer.
+ * Falls back to browser print (PDF dialog) only when mode='browser'.
+ * `p` is the period/shift object from the shift bar or Z-report.
+ */
+export async function printShiftThermal(p: {
+  periodLabel?: string;
+  isOngoing?: boolean;
+  windowStart?: string;
+  windowEnd?: string;
+  totalOrders: number;
+  totalSales: number;
+  totalCash?: number;
+  totalCard?: number;
+  totalCashSales?: number;
+  totalCardSales?: number;
+  paymentBreakdown?: Record<string, number>;
+  productsByCategory?: Array<{ categoryNameAr: string; items: Array<{ nameAr: string; quantity: number }> }>;
+  // Z-report / manual shift fields
+  shiftNumber?: string;
+  employeeName?: string;
+  openedAt?: string;
+  closedAt?: string;
+  reportTitle?: string;
+}, bizName = 'مكان الشيف البخاري'): Promise<void> {
+  const { loadPrinterSettings, buildShiftReportEscPos, buildShiftReportCanvas, thermalPrint } = await import('./thermal-printer');
+  const ps = loadPrinterSettings();
+
+  const fmtT = (iso?: string) => iso ? new Date(iso).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) : '';
+  const fmtD = (iso?: string) => iso ? new Date(iso).toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' }) : '';
+
+  const startIso = p.openedAt || p.windowStart;
+  const endIso   = p.closedAt  || p.windowEnd;
+  const totalCash = p.totalCash ?? p.totalCashSales ?? (p.paymentBreakdown?.cash ?? 0);
+  const totalCard = p.totalCard ?? p.totalCardSales ?? ((p.paymentBreakdown?.card ?? 0) + (p.paymentBreakdown?.network ?? 0));
+  const totalLoyalty = p.paymentBreakdown?.loyalty ?? 0;
+
+  const opts = {
+    shopName: bizName,
+    reportTitle: p.reportTitle ?? (p.shiftNumber ? 'تقرير Z — إغلاق الوردية' : (p.isOngoing ? 'تقرير وردية جارية' : 'تقرير وردية مكتملة')),
+    shiftNumber: p.shiftNumber,
+    dateLabel: fmtD(startIso),
+    periodLabel: p.periodLabel,
+    fromTime: fmtT(startIso),
+    toTime: p.isOngoing ? 'جارية...' : fmtT(endIso),
+    cashierName: p.employeeName,
+    totalOrders: p.totalOrders || 0,
+    totalSales: p.totalSales || 0,
+    totalCash,
+    totalCard,
+    totalLoyalty,
+    productsByCategory: p.productsByCategory,
+    paperWidth: ps.paperWidth as '58mm' | '80mm',
+  };
+
+  const escData = await buildShiftReportEscPos(opts);
+  const result = await thermalPrint(escData, '', ps.paperWidth as '58mm' | '80mm');
+
+  if (!result.success) {
+    // Thermal failed — fall back: Canvas → PNG → iframe (same pipeline as receipts)
+    const canvas = await buildShiftReportCanvas(opts);
+    const imgSrc = canvas.toDataURL('image/png');
+    _printCanvasImage(imgSrc, ps.paperWidth as '58mm' | '80mm');
+  }
+}
+
+/**
+ * Print a refund / credit-note receipt to the configured thermal printer.
+ * Falls back to browser print (Canvas → PNG → iframe) when thermal is unavailable.
+ */
+export async function printRefundThermal(opts: {
+  shopName?: string;
+  refundId: string;
+  originalOrderNumber: string | number;
+  items: Array<{ nameAr: string; nameEn?: string; quantity: number; unitPrice: number; subtotal: number }>;
+  refundAmount: number;
+  paymentMethod: 'cash' | 'card' | 'split';
+  cashAmount?: number;
+  cardAmount?: number;
+  reason: string;
+  employeeName?: string;
+  date: string;
+  originalPaymentMethod?: string;
+}): Promise<void> {
+  const { loadPrinterSettings, buildRefundEscPos, buildRefundCanvas, thermalPrint } = await import('./thermal-printer');
+  const ps = loadPrinterSettings();
+
+  const refundOpts = {
+    shopName: opts.shopName || COMPANY_NAME,
+    refundId: opts.refundId,
+    originalOrderNumber: opts.originalOrderNumber,
+    items: opts.items,
+    refundAmount: opts.refundAmount,
+    paymentMethod: opts.paymentMethod,
+    cashAmount: opts.cashAmount,
+    cardAmount: opts.cardAmount,
+    reason: opts.reason,
+    employeeName: opts.employeeName,
+    date: opts.date,
+    originalPaymentMethod: opts.originalPaymentMethod,
+    paperWidth: ps.paperWidth as '58mm' | '80mm',
+  };
+
+  // Try hardware thermal first
+  if (ps.enabled && ps.mode !== 'browser') {
+    try {
+      const escData = await buildRefundEscPos(refundOpts);
+      const result = await thermalPrint(escData, '', ps.paperWidth as '58mm' | '80mm');
+      if (result.success) return;
+    } catch (e) {
+      console.warn('[printRefundThermal] Hardware print failed:', e);
+    }
+  }
+
+  // Browser print fallback: Canvas → PNG → iframe
+  const canvas = await buildRefundCanvas(refundOpts);
+  _printCanvasImage(canvas.toDataURL('image/png'), ps.paperWidth as '58mm' | '80mm');
+}
+
 export async function printEmployeeCard(data: EmployeePrintData): Promise<void> {
-  let qrCodeUrl = "";
+  let qrCodeSvg = "";
   if (data.qrCode) {
     try {
-      qrCodeUrl = await QRCode.toDataURL(data.qrCode, {
-        width: 120,
-        margin: 1,
-        color: { dark: '#000000', light: '#FFFFFF' },
-        errorCorrectionLevel: 'M'
-      });
+      const svgStr = await QRCode.toString(data.qrCode, { type: 'svg', width: 100, margin: 1, errorCorrectionLevel: 'M' });
+      qrCodeSvg = svgStr.replace(/<\?xml[^?]*\?>/g, '').replace(/width="\d+"/, 'width="100"').replace(/height="\d+"/, 'height="100"');
     } catch (error) {
       console.error("Error generating QR code:", error);
     }
@@ -468,9 +498,8 @@ export async function printEmployeeCard(data: EmployeePrintData): Promise<void> 
   <meta charset="UTF-8">
   <title>بطاقة الموظف - ${data.employeeName}</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Cairo', sans-serif; background: #fff; color: #000; direction: rtl; }
+    body { font-family: Tahoma, Arial, 'Segoe UI', sans-serif; background: #fff; color: #000; direction: rtl; }
     .card { margin: 20px auto; padding: 24px; border: 2px solid #333; border-radius: 12px; }
     .header { text-align: center; border-bottom: 2px dashed #333; padding-bottom: 16px; margin-bottom: 16px; }
     .company-name { font-size: 20px; font-weight: 700; color: #b45309; }
@@ -496,9 +525,9 @@ export async function printEmployeeCard(data: EmployeePrintData): Promise<void> 
     <div class="info-row"><span class="info-label">المنصب:</span><span class="info-value">${data.role}</span></div>
     <div class="info-row"><span class="info-label">الجوال:</span><span class="info-value">${data.phone}</span></div>
     ${data.branchName ? `<div class="info-row"><span class="info-label">الفرع:</span><span class="info-value">${data.branchName}</span></div>` : ''}
-    ${qrCodeUrl ? `
+    ${qrCodeSvg ? `
     <div class="qr-section">
-      <img src="${qrCodeUrl}" alt="QR Code" />
+      ${qrCodeSvg}
       <div class="qr-note">امسح للتسجيل السريع</div>
     </div>
     ` : ''}
@@ -526,9 +555,8 @@ export async function printKitchenOrder(data: KitchenOrderData): Promise<void> {
   <meta charset="UTF-8">
   <title>طلب المطبخ - ${data.orderNumber}</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Cairo', sans-serif; background: #fff; color: #000; direction: rtl; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { font-family: Tahoma, Arial, 'Segoe UI', sans-serif; background: #fff; color: #000; direction: rtl; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .ticket { margin: 0 auto; padding: 16px; }
     .header { text-align: center; border-bottom: 3px solid #000; padding-bottom: 12px; margin-bottom: 12px; }
     .order-number { font-size: 28px; font-weight: 700; }
@@ -559,13 +587,13 @@ export async function printKitchenOrder(data: KitchenOrderData): Promise<void> {
   openPrintWindow(html, `طلب المطبخ - ${data.orderNumber}`, { paperWidth: '80mm', autoPrint: true, autoClose: true, showPrintButton: false });
 }
 
-const VAT_NUMBER = brand.taxNumber;
-const COMPANY_NAME = brand.nameAr;
-const COMPANY_NAME_EN = brand.nameEn;
-const COMPANY_CR = brand.commercialRegister;
-const COMPANY_WEBSITE = brand.website?.replace(/^https?:\/\//, '').replace(/^www\./, '') || '';
-const DEFAULT_BRANCH = "الفرع الرئيسي - الرياض";
-const DEFAULT_ADDRESS = brand.locationDisplay || "الرياض، المملكة العربية السعودية";
+const VAT_NUMBER = "312718675800003";
+const COMPANY_NAME = "مكان الشيف البخاري";
+const COMPANY_NAME_EN = "مكان الشيف البخاري";
+const COMPANY_CR = "7025559423";
+const COMPANY_WEBSITE = "chefsplace.online";
+const DEFAULT_BRANCH = "فرع المروج، ينبع";
+const DEFAULT_ADDRESS = "ينبع، المملكة العربية السعودية";
 
 function generateZATCAQRCode(data: {
   sellerName: string;
@@ -631,6 +659,298 @@ export async function printUnifiedReceipt(data: TaxInvoiceData): Promise<void> {
   await printTaxInvoice(data, { autoPrint: true });
 }
 
+/**
+ * Fast Canvas 2D receipt → ESC/POS bytes.
+ * Same engine as kitchen tickets — no html2canvas, no PNG conversion, instant.
+ * QR codes generated in parallel before rendering begins.
+ */
+async function _buildFastCustomerEscPos(
+  data: TaxInvoiceData,
+  orderTypeThermal: string,
+  paperWidth: '58mm' | '80mm',
+  feedLines: number,
+): Promise<Uint8Array> {
+  const { buildReceiptBitmapEscPos } = await import('./thermal-printer');
+
+  const totalAmount = parseNumber(data.total);
+  const subtotalBeforeVat = totalAmount / (1 + VAT_RATE);
+  const vatAmount = totalAmount - subtotalBeforeVat;
+  const disc = data.invoiceDiscount ? parseNumber(data.invoiceDiscount) : 0;
+
+  const invoiceTs = data.date ? new Date(data.date).toISOString() : new Date().toISOString();
+  const { date: fmtDate, time: fmtTime } = formatDate(data.date);
+
+  const zatcaPayload = generateZATCAQRCode({
+    sellerName: COMPANY_NAME,
+    vatNumber: data.vatNumber || VAT_NUMBER,
+    timestamp: invoiceTs,
+    totalWithVat: totalAmount.toFixed(2),
+    vatAmount: vatAmount.toFixed(2),
+  });
+
+  // Generate both QR codes in parallel — ~50ms total
+  // Use plain daily-number in tracking URL so the QR has no %23 encoding issues
+  const trackingNum = String(data.orderNumber).replace(/\D/g, '') || String(data.orderNumber);
+  const [trackingQr, zatcaQr] = await Promise.all([
+    (async () => {
+      try {
+        const url = `${window.location.origin}/track/${trackingNum}`;
+        return await QRCode.toDataURL(url, { width: 180, margin: 1, errorCorrectionLevel: 'M' });
+      } catch { return ''; }
+    })(),
+    (async () => {
+      try {
+        return await QRCode.toDataURL(zatcaPayload, { width: 140, margin: 1, errorCorrectionLevel: 'M' });
+      } catch { return ''; }
+    })(),
+  ]);
+
+  const payLabel = (() => {
+    const m = (data.paymentMethod || '').toLowerCase();
+    if (m === 'cash') return 'نقدي';
+    if (m === 'apple_pay' || m === 'paymob-apple-pay' || m === 'neoleap-apple-pay') return 'Apple Pay';
+    if (m === 'stc-pay' || m === 'stc_pay') return 'STC Pay';
+    if (m === 'mada') return 'مدى';
+    if (m === 'card' || m === 'network' || m === 'pos' || m === 'pos-network') return 'شبكة';
+    if (m === 'loyalty' || m.includes('qirox') || m.includes('qahwa') || m === 'loyalty-card') return 'بطاقة ولاء';
+    if (m === 'geidea' || m === 'paymob-card' || m === 'paymob') return 'بطاقة ائتمان';
+    if (m === 'bank_transfer' || m === 'rajhi' || m === 'alinma') return 'تحويل بنكي';
+    if (m === 'split') return 'نقدي + شبكة';
+    return data.paymentMethod || 'غير محدد';
+  })();
+
+  return buildReceiptBitmapEscPos({
+    shopName: COMPANY_NAME,
+    vatNumber: data.vatNumber || VAT_NUMBER,
+    branchName: data.branchName || DEFAULT_BRANCH,
+    orderNumber: data.orderNumber,
+    orderDate: `${fmtDate} · ${fmtTime}`,
+    cashierName: data.employeeName || '—',
+    customerName: data.customerName && data.customerName !== 'عميل نقدي' ? data.customerName : undefined,
+    tableNumber: data.tableNumber,
+    orderType: orderTypeThermal || undefined,
+    items: data.items.map(item => ({
+      name: item.coffeeItem.nameAr,
+      nameEn: (item.coffeeItem as any).nameEn || '',
+      qty: item.quantity,
+      price: getItemUnitPrice(item),
+      addons: [
+        ...(getItemSelectedSize(item) ? [`الحجم: ${getItemSelectedSize(item)}`] : []),
+        ...getItemAddons(item).map((a: any) => a.nameAr),
+      ].filter(Boolean),
+    })),
+    subtotal: subtotalBeforeVat,
+    vat: vatAmount,
+    total: totalAmount,
+    discount: disc > 0 ? disc : undefined,
+    splitPayment: data.splitPayment,
+    paymentMethod: payLabel,
+    ...(data.cashReceived ? { cashReceived: data.cashReceived } : {}),
+    logoDataUrl: '/logo.png',
+    trackingQrDataUrl: trackingQr || undefined,
+    zatcaQrDataUrl: zatcaQr || undefined,
+    paperWidth,
+    feedLines,
+  });
+}
+
+/**
+ * Fast section-specific print: customer receipt only, kitchen ticket only, or both.
+ * Routes through thermal printer when configured — falls back to browser HTML print.
+ */
+export async function printReceiptSection(
+  data: TaxInvoiceData,
+  section: 'customer' | 'kitchen' | 'both' = 'customer',
+): Promise<void> {
+  // ── Try thermal path first (ESC/POS) ─────────────────────────────────────
+  try {
+    const {
+      loadPrinterSettings, thermalPrint,
+      buildEscPosKitchenTicketBitmap, getProfilesForRole, thermalPrintWithProfile,
+    } = await import('./thermal-printer');
+    const ps = loadPrinterSettings();
+
+    if (ps.enabled && ps.mode !== 'browser') {
+      const orderTypeStr = (data.orderTypeName || (data.orderType as string) || '');
+      const orderTypeThermal =
+        orderTypeStr === 'dine_in'    || orderTypeStr === 'dine-in'   ? 'محلي' :
+        orderTypeStr === 'takeaway'   || orderTypeStr === 'pickup'    ? 'سفري' :
+        orderTypeStr === 'delivery'                                    ? 'توصيل' :
+        orderTypeStr === 'car_pickup' || orderTypeStr === 'car-pickup' ? 'استلام بالسيارة' :
+        orderTypeStr || 'محلي';
+
+      const carNote = (orderTypeStr === 'car_pickup' || orderTypeStr === 'car-pickup')
+        ? [
+            data.carInfo?.carType,
+            data.carInfo?.carColor || data.carColor,
+            (data.carInfo?.plateNumber || data.plateNumber) ? `لوحة: ${data.carInfo?.plateNumber || data.plateNumber}` : '',
+          ].filter(Boolean).join(' | ')
+        : undefined;
+
+      const receiptProfiles = getProfilesForRole('receipt');
+      const kitchenProfiles = getProfilesForRole('kitchen');
+
+      // ── Customer copy — Canvas 2D bitmap (instant, same engine as kitchen tickets) ──
+      if (section === 'customer' || section === 'both') {
+        const escData = await _buildFastCustomerEscPos(data, orderTypeThermal, ps.paperWidth as '58mm' | '80mm', ps.feedLines ?? 4);
+
+        if (receiptProfiles.length > 0) {
+          for (const profile of receiptProfiles) {
+            await thermalPrintWithProfile(escData, profile);
+          }
+        } else {
+          await thermalPrint(escData, '', ps.paperWidth);
+        }
+      }
+
+      // ── Kitchen ticket ────────────────────────────────────────────────────
+      if (section === 'kitchen' || section === 'both') {
+        if (section === 'both') await new Promise(r => setTimeout(r, 1200));
+        const kitchenEsc = await buildEscPosKitchenTicketBitmap({
+          orderNumber: data.orderNumber,
+          tableNumber: data.tableNumber,
+          orderType: orderTypeThermal,
+          cashierName: data.employeeName || '—',
+          items: data.items.map(item => ({
+            name: item.coffeeItem.nameAr,
+            nameEn: (item.coffeeItem as any).nameEn || '',
+            qty: item.quantity,
+            addons: [
+              ...(getItemSelectedSize(item) ? [`الحجم: ${getItemSelectedSize(item)}`] : []),
+              ...getItemAddons(item).map((a: any) => a.nameAr),
+            ],
+          })),
+          notes: [carNote, data.notes].filter(Boolean).join(' | ') || undefined,
+          paperWidth: ps.paperWidth,
+        });
+
+        if (kitchenProfiles.length > 0) {
+          for (const profile of kitchenProfiles) {
+            await thermalPrintWithProfile(kitchenEsc, profile);
+          }
+        } else {
+          await thermalPrint(kitchenEsc, '', ps.paperWidth);
+        }
+      }
+
+      return; // thermal done ✓
+    }
+  } catch (e) {
+    console.warn('[printReceiptSection] Thermal error, falling back to browser:', e);
+  }
+
+  // ── Browser HTML fallback ─────────────────────────────────────────────────
+  if (section === 'customer' || section === 'both') {
+    const customerHtml = await buildReceiptPreviewHtml(data);
+    _printQueue.push({ html: customerHtml, paperWidth: '80mm', isFullDoc: true });
+  }
+  if (section === 'kitchen' || section === 'both') {
+    const kitchenHtml = buildEmployeeReceiptPreviewHtml(data);
+    _printQueue.push({ html: kitchenHtml, paperWidth: '80mm', isFullDoc: true });
+  }
+  _drainPrintQueue();
+}
+
+/**
+ * Opens a side-by-side preview window with Customer + Kitchen receipts,
+ * each with its own "Print" button. No auto-print — purely for review.
+ */
+export async function openReceiptPreviewWindow(data: TaxInvoiceData): Promise<void> {
+  const customerHtml = await buildReceiptPreviewHtml(data);
+  const kitchenHtml = buildEmployeeReceiptPreviewHtml(data);
+  const orderNumDisplay = fmtOrderNum(data.orderNumber);
+
+  const win = window.open('', '_blank', 'width=900,height=900,scrollbars=yes,resizable=yes');
+  if (!win) {
+    // Popup blocked — fall back to printing both
+    await printReceiptSection(data, 'both');
+    return;
+  }
+  // HTML-escape the order number for safe interpolation in the static shell.
+  const safeOrderNum = String(orderNumDisplay).replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string
+  ));
+
+  // Static shell — contains ZERO untrusted data. Receipt HTML is injected
+  // into iframe `srcdoc` from the opener side (no inline script needed).
+  const wrapperHtml = `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">
+<title>معاينة فواتير الطلب #${safeOrderNum}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Cairo',Tahoma,Arial,sans-serif;background:#e8e8e8;padding:18px;text-align:center;color:#222;}
+  .topbar{margin-bottom:18px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;align-items:center;}
+  h2{font-size:18px;font-weight:900;margin-left:auto;margin-right:auto;color:#111;}
+  .btn{padding:11px 22px;font-size:13px;border:none;border-radius:10px;cursor:pointer;font-weight:800;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 6px rgba(0,0,0,.1);}
+  .btn-cust{background:#1e40af;color:#fff;}
+  .btn-kit{background:#b45309;color:#fff;}
+  .btn-both{background:#111;color:#fff;}
+  .btn-close{background:#6b7280;color:#fff;}
+  .frames{display:flex;gap:24px;flex-wrap:wrap;justify-content:center;align-items:flex-start;}
+  .col{display:flex;flex-direction:column;align-items:center;gap:10px;}
+  .label{font-size:13px;font-weight:800;color:#222;background:#fff;padding:6px 18px;border-radius:20px;border:2px solid #ccc;}
+  iframe{border:none;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.18);background:#fff;}
+  @media print{
+    body{background:#fff;padding:0;}
+    .topbar,.label{display:none!important;}
+    .frames{display:block;}
+    .col{display:block;page-break-after:always;}
+    .col:last-child{page-break-after:auto;}
+    iframe{box-shadow:none;border-radius:0;width:80mm!important;height:auto!important;}
+    @page{size:80mm auto;margin:0;}
+  }
+</style></head><body>
+<div class="topbar">
+  <h2>📄 معاينة فواتير الطلب #${safeOrderNum}</h2>
+  <button class="btn btn-cust" id="btn-cust">🖨️ طباعة فاتورة العميل</button>
+  <button class="btn btn-kit"  id="btn-kit">🍳 طباعة المطبخ</button>
+  <button class="btn btn-both" id="btn-both">🖨️ طباعة الكل</button>
+  <button class="btn btn-close" id="btn-close">✕ إغلاق</button>
+</div>
+<div class="frames">
+  <div class="col">
+    <div class="label">📄 نسخة العميل</div>
+    <iframe id="cust" width="340" height="760" sandbox="allow-same-origin allow-modals"></iframe>
+  </div>
+  <div class="col">
+    <div class="label">🍳 نسخة المطبخ</div>
+    <iframe id="kit"  width="340" height="760" sandbox="allow-same-origin allow-modals"></iframe>
+  </div>
+</div>
+</body></html>`;
+
+  win.document.open();
+  win.document.write(wrapperHtml);
+  win.document.close();
+
+  // Inject receipt HTML safely via srcdoc (no script-context interpolation),
+  // and wire buttons from this side — no untrusted text touches inline JS.
+  const wireUp = () => {
+    try {
+      const doc = win.document;
+      const custEl = doc.getElementById('cust') as HTMLIFrameElement | null;
+      const kitEl  = doc.getElementById('kit')  as HTMLIFrameElement | null;
+      if (custEl) custEl.srcdoc = customerHtml;
+      if (kitEl)  kitEl.srcdoc  = kitchenHtml;
+      doc.getElementById('btn-cust')?.addEventListener('click', () => {
+        try { custEl?.contentWindow?.focus(); custEl?.contentWindow?.print(); } catch {}
+      });
+      doc.getElementById('btn-kit')?.addEventListener('click', () => {
+        try { kitEl?.contentWindow?.focus(); kitEl?.contentWindow?.print(); } catch {}
+      });
+      doc.getElementById('btn-both')?.addEventListener('click', () => {
+        try { win.focus(); win.print(); } catch {}
+      });
+      doc.getElementById('btn-close')?.addEventListener('click', () => {
+        try { win.close(); } catch {}
+      });
+    } catch (e) {
+      console.warn('[openReceiptPreviewWindow] wireUp error:', e);
+    }
+  };
+  // Run after document.write settles
+  setTimeout(wireUp, 30);
+}
+
 export async function printBulkEmployeeInvoices(orders: any[]): Promise<void> {
   const html = `
 <!DOCTYPE html>
@@ -638,8 +958,7 @@ export async function printBulkEmployeeInvoices(orders: any[]): Promise<void> {
 <head>
   <meta charset="UTF-8">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
-    body { font-family: 'Cairo', sans-serif; direction: rtl; }
+    body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; }
     .invoice-page { width: 80mm; padding: 10px; border-bottom: 2px dashed #000; page-break-after: always; }
     .header { text-align: center; border-bottom: 1px solid #000; padding-bottom: 10px; }
     .content { margin-top: 10px; }
@@ -695,25 +1014,25 @@ function formatDate(dateStr: string): { date: string; time: string } {
   }
 }
 
-/** Build a visual HTML receipt for preview — matches Canvas 2D printer output exactly */
+/** Build a visual HTML receipt for preview — image-free, instant print */
 export async function buildReceiptPreviewHtml(data: TaxInvoiceData): Promise<string> {
   const totalAmount = parseNumber(data.total);
-  const subtotal = totalAmount / (1 + VAT_RATE);
-  const vat = totalAmount - subtotal;
+  const subtotalBeforeVat = totalAmount / (1 + VAT_RATE);
+  const vat = totalAmount - subtotalBeforeVat;
   const disc = data.invoiceDiscount ? parseNumber(data.invoiceDiscount) : 0;
   const { date: fmtDate, time: fmtTime } = formatDate(data.date);
   const orderNumDisplay = String(data.orderNumber).replace(/\D/g, '').padStart(4, '0') || data.orderNumber;
-  const TAGLINE = brand.taglineAr;
 
   const orderTypeStr = (data.orderTypeName || (data.orderType as string) || '');
   const orderTypeLabel =
-    orderTypeStr === 'dine_in' || orderTypeStr === 'dine-in' ? 'محلي' :
-    orderTypeStr === 'takeaway' || orderTypeStr === 'pickup' ? 'سفري' :
-    orderTypeStr === 'delivery' ? 'توصيل' :
-    orderTypeStr === 'car_pickup' || orderTypeStr === 'car-pickup' ? 'سيارة' :
+    orderTypeStr === 'dine_in'   || orderTypeStr === 'dine-in'   ? 'محلي' :
+    orderTypeStr === 'takeaway'  || orderTypeStr === 'pickup'     ? 'سفري' :
+    orderTypeStr === 'delivery'                                   ? 'توصيل' :
+    orderTypeStr === 'car_pickup'|| orderTypeStr === 'car-pickup' ? '🚗 سيارة' :
     orderTypeStr;
 
-  // ZATCA QR
+    // ZATCA QR — inline SVG (zero network, zero image-load wait)
+  // Uses pre-warmed cache if available (generated in background when order was created)
   const invoiceTs = data.date ? new Date(data.date).toISOString() : new Date().toISOString();
   const zatcaPayload = generateZATCAQRCode({
     sellerName: COMPANY_NAME,
@@ -722,159 +1041,170 @@ export async function buildReceiptPreviewHtml(data: TaxInvoiceData): Promise<str
     totalWithVat: totalAmount.toFixed(2),
     vatAmount: vat.toFixed(2),
   });
-  let zatcaQrUrl = '';
-  try { zatcaQrUrl = await QRCode.toDataURL(zatcaPayload, { width: 220, margin: 1, errorCorrectionLevel: 'M' }); } catch {}
+  const cacheKey = `zatca:${data.orderNumber}:${totalAmount.toFixed(2)}`;
+  let zatcaQrSvg = _zatcaQrCache.get(cacheKey) || '';
+  if (!zatcaQrSvg) {
+    try {
+      const svgStr = await QRCode.toString(zatcaPayload, { type: 'svg', width: 100, margin: 1, errorCorrectionLevel: 'M' });
+      zatcaQrSvg = svgStr.replace(/<\?xml[^?]*\?>/g, '').replace(/width="\d+"/, 'width="100"').replace(/height="\d+"/, 'height="100"');
+      _zatcaQrCache.set(cacheKey, zatcaQrSvg);
+    } catch {}
+  }
 
-  // Tracking QR
-  const trackingUrl = `${window.location.origin}/track/${data.orderNumber}`;
-  let trackingQrUrl = '';
-  try { trackingQrUrl = await QRCode.toDataURL(trackingUrl, { width: 160, margin: 1, errorCorrectionLevel: 'M' }); } catch {}
+  const totalQty = data.items.reduce((s, i) => s + (i.quantity || 1), 0);
 
-  // Logo — embed as base64 so print popups render it correctly (no cross-origin issues)
-  const logoB64 = await fetchLogoBase64().catch(() => '');
-  const logoSrc = logoB64 || '/logo.png';
+  const solidLine = `<div style="border-top:2px solid #111;margin:0 10px;"></div>`;
+  const dashLine  = `<div style="border-top:1px dashed #bbb;margin:8px 10px;"></div>`;
 
-  const itemsHtml = data.items.map((item, idx) => {
-    const up = parseNumber(item.coffeeItem.price);
+  // Items — name RIGHT, price LEFT, separator after each item
+  const itemsHtml = data.items.map(item => {
+    const up = getItemUnitPrice(item);
     const itemDisc = parseNumber(item.itemDiscount);
     const lineTotal = item.quantity * up - itemDisc;
-    const extras = _renderItemExtras(item, { fontSize: 15, color: '#444', showPrices: true });
-    const sep = idx > 0 ? 'border-top:1px dashed #ccc;' : '';
+    const addons = getItemAddons(item).map((a: any) => a.nameAr).join('، ');
+    const sz = getItemSelectedSize(item);
+    const extra = [sz ? `الحجم: ${sz}` : '', addons ? `+ ${addons}` : ''].filter(Boolean).join(' · ');
     return `
-      <div style="padding:14px 0;${sep}">
-        <div style="font-weight:700;font-size:19px;line-height:1.5;">${item.coffeeItem.nameAr}${itemDisc > 0 ? ` <span style="font-size:14px;color:#16a34a;">(-${itemDisc.toFixed(2)})</span>` : ''}</div>
-        ${extras}
-        <table style="width:100%;margin-top:8px;border-collapse:collapse;border:0;"><tr>
-          <td style="font-size:17px;color:#222;border:0;">${item.quantity} × ${up.toFixed(2)} ر.س</td>
-          <td style="text-align:left;font-size:17px;font-weight:700;border:0;">${lineTotal.toFixed(2)} ر.س</td>
-        </tr></table>
-      </div>`;
+      <div style="padding:6px 10px 0;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;font-size:13px;line-height:1.7;">
+          <span style="direction:ltr;flex-shrink:0;white-space:nowrap;font-weight:600;">﷼ ${lineTotal.toFixed(2)}</span>
+          <span style="text-align:right;">
+            ${item.coffeeItem.nameAr} &times;${item.quantity}
+            ${extra ? `<br/><span style="font-size:11px;color:#666;">${extra}</span>` : ''}
+            ${itemDisc > 0 ? `<br/><span style="font-size:11px;color:#16a34a;">خصم -﷼${itemDisc.toFixed(2)}</span>` : ''}
+          </span>
+        </div>
+      </div>
+      <div style="border-top:1px dashed #bbb;margin:6px 10px 0;"></div>`;
   }).join('');
+
+  // Car info row (if car pickup)
+  const isCarPickup = orderTypeStr === 'car_pickup' || orderTypeStr === 'car-pickup';
+  const carInfoHtml = isCarPickup ? (() => {
+    const carType  = data.carInfo?.carType  || '';
+    const carColor = data.carInfo?.carColor || data.carColor || '';
+    const plate    = data.carInfo?.plateNumber || data.plateNumber || '';
+    const parts = [carColor, carType, plate ? `لوحة: ${plate}` : ''].filter(Boolean);
+    return parts.length ? `
+    <div style="margin:0 10px 4px;background:#fef9c3;border:1px solid #fbbf24;border-radius:6px;padding:7px 10px;font-size:12px;font-weight:700;text-align:center;">
+      🚗 ${parts.join(' | ')}
+    </div>` : '';
+  })() : '';
 
   return `<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
 <style>
-*{margin:0;padding:0;box-sizing:border-box;border:0;border-color:transparent;}
-hr{display:none!important;}
-table,tr,td,th,thead,tbody{border:0!important;border-collapse:collapse!important;}
-/* ── Screen: paper tape look ─────────────────────────────── */
-body{font-family:'Cairo',Tahoma,Arial,sans-serif;direction:rtl;background:#e8e6e0;display:flex;justify-content:center;align-items:flex-start;padding:24px 10px;min-height:100vh;}
-.paper{background:#fff;width:320px;box-shadow:0 4px 20px rgba(0,0,0,.2);}
-.tape{height:14px;background:repeating-linear-gradient(90deg,#fff 0,#fff 12px,#e8e6e0 12px,#e8e6e0 24px);}
-.body{padding:16px 14px;}
-.c{text-align:center;}
-.gap{height:8px;}
-.tbl{width:100%;table-layout:fixed;}
-.tbl td{padding:4px 0;font-size:18px;vertical-align:middle;word-break:break-word;}
-.tbl td:first-child{width:55%;white-space:nowrap;}
-.tbl td:last-child{text-align:left;width:45%;}
-/* ── Print: clean thermal layout ────────────────────────── */
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:Tahoma,Arial,'Segoe UI',sans-serif;direction:rtl;background:#e0ddd8;display:flex;justify-content:center;align-items:flex-start;padding:20px 10px;min-height:100vh;}
+.paper{background:#fff;width:300px;box-shadow:0 4px 24px rgba(0,0,0,.22);font-size:13px;color:#111;line-height:1.5;padding-bottom:16px;}
 @media print{
   @page{size:80mm auto;margin:0;}
-  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;border:0!important;}
-  hr{display:none!important;}
-  body{display:block!important;background:#fff!important;padding:0!important;min-height:0!important;}
-  .paper{width:76mm!important;max-width:76mm!important;margin:0!important;box-shadow:none!important;}
-  .tape{display:none!important;}
-  .body{padding:5px 4px 10px!important;}
+  body{background:#fff!important;padding:0!important;}
+  .paper{width:80mm!important;box-shadow:none!important;}
 }
 </style></head><body><div class="paper">
-<div class="tape"></div>
-<div class="body">
 
-  <!-- Header -->
-  <div class="c" style="padding-bottom:6px;">
-    <img src="${logoSrc}" style="width:80px;height:80px;object-fit:contain;display:block;margin:0 auto 8px;"
-      onerror="this.style.display='none'" />
-    <div style="font-size:24px;font-weight:900;letter-spacing:1px;">${COMPANY_NAME}</div>
-    ${data.branchName ? `<div style="font-size:16px;color:#333;margin-top:2px;">${data.branchName}</div>` : ''}
-    <div style="font-size:14px;color:#444;margin-top:3px;font-style:italic;">${TAGLINE}</div>
-    <div style="font-size:14px;color:#333;margin-top:3px;">VAT: ${data.vatNumber || VAT_NUMBER}</div>
+  <!-- ① مسافة علوية -->
+  <div style="height:16px;"></div>
+
+  <!-- ② رقم الطلب -->
+  <div style="text-align:center;font-weight:900;font-size:26px;letter-spacing:3px;padding:6px 0 2px;">#${orderNumDisplay}</div>
+
+  <!-- ③ اسم المنشأة + بيانات -->
+  <div style="text-align:center;font-size:12px;line-height:1.9;padding:4px 10px 6px;">
+    <div style="font-weight:900;font-size:16px;letter-spacing:1px;">${COMPANY_NAME}</div>
+    <div style="font-size:11px;color:#555;">ينبع، المملكة العربية السعودية</div>
+    <div style="direction:ltr;font-size:11px;color:#555;">${data.vatNumber || VAT_NUMBER}</div>
+    <div style="direction:ltr;font-size:11px;">${fmtDate} · ${fmtTime}</div>
   </div>
 
-  <div class="gap"></div>
+  ${solidLine}
 
-  <!-- Invoice label + Order number (3-line gap between them) -->
-  <div class="c" style="font-size:18px;font-weight:700;">فاتورة ضريبية مبسطة</div>
-  <div style="height:54px;"></div>
-  <div class="c" style="font-size:48px;font-weight:900;letter-spacing:5px;line-height:1.1;">#${orderNumDisplay}</div>
+  <!-- ④ نوع الطلب -->
+  <div style="text-align:center;font-size:13px;font-weight:700;padding:6px 0;">
+    ${orderTypeLabel || 'طلب'}${data.tableNumber ? ` — طاولة ${data.tableNumber}` : ''}
+  </div>
 
-  <!-- Decorative separator between order number and date (3-line gap above & below) -->
-  <div style="height:54px;"></div>
-  <div style="border-top:2px solid #111;width:100%;height:0;"></div>
-  <div style="height:54px;"></div>
+  ${solidLine}
 
-  <!-- Info rows -->
-  <table class="tbl">
-    <tr><td>التاريخ:</td><td>${fmtDate} ${fmtTime}</td></tr>
-    <tr><td>الكاشير:</td><td>${data.employeeName || '—'}</td></tr>
-    ${data.customerName && data.customerName !== 'عميل نقدي' ? `<tr><td>العميل:</td><td>${data.customerName}</td></tr>` : ''}
-    ${data.tableNumber ? `<tr><td>الطاولة:</td><td>${data.tableNumber}</td></tr>` : ''}
-    ${orderTypeLabel ? `<tr><td>نوع الطلب:</td><td>${orderTypeLabel}</td></tr>` : ''}
-  </table>
+  <!-- ⑤ عنوان الأصناف -->
+  <div style="display:flex;justify-content:space-between;font-size:11px;color:#666;font-weight:700;padding:5px 10px 3px;">
+    <span>السعر</span><span>الصنف</span>
+  </div>
+  ${dashLine}
 
-  <div class="gap"></div>
-
-  <!-- Items -->
+  <!-- ⑥ المنتجات -->
   ${itemsHtml}
 
-  <div class="gap"></div>
+  <!-- ⑦ عدد المنتجات -->
+  <div style="text-align:center;font-size:12px;color:#444;padding:6px 0 4px;">عدد المنتجات: ${totalQty}</div>
+  ${solidLine}
 
-  <!-- Totals -->
-  <table class="tbl">
-    <tr><td>قبل الضريبة:</td><td>${subtotal.toFixed(2)} ر.س</td></tr>
-    <tr><td>ضريبة القيمة المضافة 15%:</td><td>${vat.toFixed(2)} ر.س</td></tr>
-    ${disc > 0 ? `<tr><td style="color:#16a34a;">الخصم:</td><td style="color:#16a34a;">-${disc.toFixed(2)} ر.س</td></tr>` : ''}
-  </table>
-
-  <div class="gap"></div>
-
-  <!-- Total -->
-  <table class="tbl">
-    <tr>
-      <td style="font-size:24px;font-weight:900;">الإجمالي:</td>
-      <td style="font-size:24px;font-weight:900;text-align:left;">${totalAmount.toFixed(2)} ر.س</td>
-    </tr>
-  </table>
-
-  <div class="gap"></div>
-
-  <!-- Payment -->
-  <table class="tbl">
-    <tr><td>طريقة الدفع:</td><td>${data.paymentMethod}</td></tr>
+  <!-- ⑧ الحساب -->
+  <div style="padding:6px 10px 4px;">
+    <div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;color:#555;">
+      <span style="direction:ltr;">﷼ ${subtotalBeforeVat.toFixed(2)}</span>
+      <span>المجموع قبل الضريبة</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;color:#555;">
+      <span style="direction:ltr;">﷼ ${vat.toFixed(2)}</span>
+      <span>ضريبة القيمة المضافة 15%</span>
+    </div>
+    ${disc > 0 ? `<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;color:#16a34a;">
+      <span style="direction:ltr;">-﷼ ${disc.toFixed(2)}</span><span>الخصم</span>
+    </div>` : ''}
+    <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:900;padding:7px 0 4px;border-top:2px solid #111;margin-top:6px;">
+      <span style="direction:ltr;">﷼ ${totalAmount.toFixed(2)}</span>
+      <span>الإجمالي</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;">
+      <span style="font-weight:700;">${data.paymentMethod}</span>
+      <span style="color:#555;">طريقة الدفع</span>
+    </div>
     ${data.splitPayment ? `
-    <tr><td style="padding-right:6px;font-size:16px;">نقدي:</td><td style="font-size:16px;">${data.splitPayment.cash.toFixed(2)} ر.س</td></tr>
-    <tr><td style="padding-right:6px;font-size:16px;">شبكة:</td><td style="font-size:16px;">${data.splitPayment.card.toFixed(2)} ر.س</td></tr>` : ''}
-  </table>
+    <div style="border-top:1px dashed #ccc;margin:4px 0 2px;"></div>
+    ${data.splitPayment.cash > 0 ? `<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;padding:2px 0;">
+      <span style="direction:ltr;">﷼ ${data.splitPayment.cash.toFixed(2)}</span><span>💵 نقدي</span>
+    </div>` : ''}
+    ${data.splitPayment.card > 0 ? `<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:600;padding:2px 0;">
+      <span style="direction:ltr;">﷼ ${data.splitPayment.card.toFixed(2)}</span><span>💳 شبكة</span>
+    </div>` : ''}
+    <div style="border-top:1px dashed #ccc;margin:2px 0;"></div>` : ''}
+    ${(data.cashReceived && data.cashReceived > 0 && !data.splitPayment) ? `
+    <div style="border-top:1px dashed #ccc;margin:4px 0 2px;"></div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:#555;padding:2px 0;">
+      <span style="direction:ltr;font-weight:600;">﷼ ${data.cashReceived.toFixed(2)}</span><span>المبلغ المستلم</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:#16a34a;padding:2px 0;font-weight:700;">
+      <span style="direction:ltr;">﷼ ${Math.max(0, data.cashReceived - totalAmount).toFixed(2)}</span><span>↩ الباقي للعميل</span>
+    </div>
+    <div style="border-top:1px dashed #ccc;margin:2px 0;"></div>` : ''}
+  </div>
 
-  <!-- Decorative separator after payment (3-line gap above & below) -->
-  <div style="height:54px;"></div>
-  <div style="border-top:2px solid #111!important;width:100%;height:0;"></div>
-  <div style="height:54px;"></div>
+  ${solidLine}
 
-  ${trackingQrUrl ? `
-  <div class="gap"></div>
-  <div class="c" style="padding:6px 0;">
-    <img src="${trackingQrUrl}" style="width:140px;height:140px;display:block;margin:0 auto;" />
-    <div style="font-size:14px;color:#333;margin-top:4px;">امسح للتتبع وتسجيل النقاط</div>
+  <!-- بيانات السيارة (إن وُجدت) -->
+  ${carInfoHtml}
+
+  <!-- ملاحظات العميل -->
+  ${(data as any).notes ? `
+  <div style="margin:6px 10px 0;background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:8px 12px;font-size:12px;line-height:1.7;">
+    <span style="font-weight:700;color:#92400e;">ملاحظات: </span><span>${(data as any).notes}</span>
   </div>` : ''}
 
-  <div class="gap"></div>
+  <!-- الكاشير + شعار -->
+  <div style="padding:8px 10px 4px;text-align:center;">
+    ${data.employeeName ? `<div style="font-size:12px;color:#555;">تمت خدمتك من قبل: <strong>${data.employeeName}</strong></div>` : ''}
+    <div style="font-size:12px;font-weight:800;padding:4px 0;">"قهوة تُقال .. وورد يُهدى"</div>
+  </div>
 
-  <!-- Footer -->
-  <div class="c" style="font-size:20px;font-weight:700;margin:6px 0;">** شكراً لزيارتكم **</div>
-  <div class="c" style="font-size:14px;color:#333;">الأسعار شاملة ضريبة القيمة المضافة 15%</div>
-  <div class="c" style="font-size:14px;color:#444;font-style:italic;margin-top:3px;">${TAGLINE}</div>
-  <div class="c" style="font-size:18px;font-weight:700;margin-top:4px;">${COMPANY_NAME}</div>
+  ${dashLine}
 
-  ${zatcaQrUrl ? `
-  <div class="gap"></div>
-  <div class="c" style="padding:8px 0;">
-    <img src="${zatcaQrUrl}" style="width:180px;height:180px;display:block;margin:0 auto;" />
-    <div style="font-size:14px;color:#444;margin-top:4px;">ZATCA · باركود الضريبة</div>
-  </div>` : ''}
+  <!-- Powered by -->
+  <div style="text-align:center;font-size:11px;color:#aaa;padding:4px 0 6px;">
+    Powered by <strong style="color:#2D9B6E;">QIROX STUDIO</strong>
+  </div>
 
-</div>
-<div class="tape"></div>
+
 </div></body></html>`;
 }
 
@@ -885,25 +1215,31 @@ export function buildEmployeeReceiptPreviewHtml(data: TaxInvoiceData): string {
 
   const orderTypeStr = (data.orderTypeName || (data.orderType as string) || '');
   const orderTypeLabel =
-    orderTypeStr === 'dine_in' || orderTypeStr === 'dine-in' ? 'محلي' :
-    orderTypeStr === 'takeaway' || orderTypeStr === 'pickup' ? 'سفري' :
-    orderTypeStr === 'delivery' ? 'توصيل' :
-    orderTypeStr === 'car_pickup' || orderTypeStr === 'car-pickup' ? 'سيارة' :
-    orderTypeStr;
+    orderTypeStr === 'dine_in' || orderTypeStr === 'dine-in'
+      ? (data.tableNumber ? `محلي — طاولة رقم ${data.tableNumber}` : 'محلي')
+      : orderTypeStr === 'takeaway' || orderTypeStr === 'pickup' ? 'سفري'
+      : orderTypeStr === 'delivery' ? 'توصيل'
+      : orderTypeStr === 'car_pickup' || orderTypeStr === 'car-pickup' ? 'استلام بالسيارة'
+      : orderTypeStr;
+
+  const orderTypeBg =
+    orderTypeStr === 'car_pickup' || orderTypeStr === 'car-pickup' ? '#dc2626' :
+    orderTypeStr === 'delivery' ? '#2563eb' :
+    orderTypeStr === 'dine_in' || orderTypeStr === 'dine-in' ? '#7c3aed' : '#111';
 
   const itemsHtml = data.items.map((item, idx) => {
-    const extras = _renderItemExtras(item, { fontSize: 16, color: '#333', showPrices: false });
-    const sep = idx > 0 ? 'border-top:1px dashed #ccc;' : '';
+    const addons = getItemAddons(item).map((a: any) => a.nameAr).join('، ');
+    const sz2 = getItemSelectedSize(item);
     return `
-      <div style="padding:14px 0;${sep}">
-        <div style="font-size:22px;font-weight:800;line-height:1.5;">${item.quantity} × ${item.coffeeItem.nameAr}</div>
-        ${extras}
+      <div style="padding:16px 0 12px 0;${idx > 0 ? 'border-top:2px dashed #bbb;margin-top:4px;' : ''}">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;">
+          <div style="font-size:20px;font-weight:800;line-height:1.6;flex:1;">${item.coffeeItem.nameAr}</div>
+          <div style="font-size:28px;font-weight:900;background:#111;color:#fff;padding:4px 14px;border-radius:8px;flex-shrink:0;">×${item.quantity}</div>
+        </div>
+        ${sz2 ? `<div style="font-size:16px;color:#2563eb;margin-top:8px;margin-bottom:6px;padding-right:6px;line-height:1.8;">▸ الحجم: ${sz2}</div>` : ''}
+        ${addons ? `<div style="font-size:16px;color:#444;margin-top:8px;padding-right:6px;line-height:1.8;">▸ إضافات: ${addons}</div>` : ''}
       </div>`;
   }).join('');
-
-  const orderTypeRow = orderTypeLabel
-    ? `<div class="c" style="font-size:18px;font-weight:700;background:#f3f4f6;padding:6px 0;margin:6px 0 10px;">نوع الطلب: ${orderTypeLabel}</div>`
-    : '';
 
   return `<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
 <style>
@@ -915,6 +1251,7 @@ body{font-family:'Cairo',Tahoma,Arial,sans-serif;direction:rtl;background:#e8e6e
 .body{padding:18px 16px;}
 .c{text-align:center;}
 .gap{height:10px;}
+.row{display:flex;justify-content:space-between;padding:10px 0;font-size:16px;border-bottom:1px solid #eee;line-height:1.8;}
 @media print{
   @page{size:80mm auto;margin:0;}
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;border:0!important;}
@@ -927,12 +1264,45 @@ body{font-family:'Cairo',Tahoma,Arial,sans-serif;direction:rtl;background:#e8e6e
 </style></head><body><div class="paper">
 <div class="tape"></div>
 <div class="body">
-  <div class="c" style="font-size:24px;font-weight:900;">نسخة الموظف</div>
+
+  <!-- 2 blank lines at start of every invoice -->
+  <div style="height:36px;"></div>
+
+  <!-- Header -->
+  <div class="c" style="font-size:20px;font-weight:900;padding-bottom:8px;border-bottom:3px double #000;">📋 نسخة الموظف / المطبخ</div>
   <div class="gap"></div>
-  <div class="c" style="font-size:48px;font-weight:900;letter-spacing:4px;">#${orderNumDisplay}</div>
-  ${orderTypeRow}
-  <div class="gap"></div>
+  <div class="c" style="font-size:54px;font-weight:900;letter-spacing:4px;margin:6px 0;">#${orderNumDisplay}</div>
+
+  <!-- Order type badge -->
+  ${orderTypeLabel ? `<div class="c" style="margin:6px 0;"><span style="display:inline-block;background:${orderTypeBg};color:#fff;font-size:16px;font-weight:700;padding:5px 18px;border-radius:20px;">${orderTypeLabel}</span></div>` : ''}
+
+  <div style="height:18px;"></div>
+  <div style="border-top:2px solid #000;width:100%;height:0;"></div>
+  <div style="height:18px;"></div>
+
+  <!-- Info rows -->
+  <div class="row"><span style="color:#666;">الوقت:</span><span style="font-weight:700;">${fmtTime} — ${fmtDate}</span></div>
+  ${data.employeeName ? `<div class="row"><span style="color:#666;">الكاشير:</span><span style="font-weight:700;">${data.employeeName}</span></div>` : ''}
+  ${data.tableNumber && !(orderTypeStr === 'dine_in' || orderTypeStr === 'dine-in') ? `<div class="row"><span style="color:#666;">الطاولة:</span><span style="font-weight:900;font-size:18px;">رقم ${data.tableNumber}</span></div>` : ''}
+
+  <div style="height:18px;"></div>
+  <div style="border-top:2px solid #000;width:100%;height:0;"></div>
+  <div style="height:18px;"></div>
+
+  <!-- Items -->
+  <div style="font-size:15px;font-weight:700;color:#666;margin-bottom:4px;">الأصناف (${data.items.length} صنف):</div>
   ${itemsHtml}
+
+  <!-- ملاحظات الطلب -->
+  ${(data as any).notes ? `
+  <div style="height:18px;"></div>
+  <div style="border-top:2px solid #000;width:100%;height:0;"></div>
+  <div style="height:14px;"></div>
+  <div style="background:#fef3c7;border:2px solid #f59e0b;border-radius:8px;padding:12px 14px;font-size:16px;line-height:1.8;">
+    <div style="font-weight:900;color:#92400e;font-size:15px;margin-bottom:4px;">⚠ ملاحظات العميل:</div>
+    <div style="font-weight:700;">${(data as any).notes}</div>
+  </div>` : ''}
+
 </div>
 <div class="tape"></div>
 </div></body></html>`;
@@ -941,93 +1311,67 @@ body{font-family:'Cairo',Tahoma,Arial,sans-serif;direction:rtl;background:#e8e6e
 export async function printTaxInvoice(data: TaxInvoiceData, config: PrintConfig = {}): Promise<void> {
   const shouldAutoPrint = config.autoPrint !== undefined ? config.autoPrint : true;
 
-  // ── ESC/POS Thermal printing — Canvas 2D bitmap (Arabic-safe, matches preview) ──
+  // ── ESC/POS Thermal printing — Canvas 2D bitmap (instant, same engine as kitchen tickets) ──
   if (shouldAutoPrint) {
     try {
-      const { loadPrinterSettings, buildReceiptBitmapEscPos, buildEscPosKitchenTicketBitmap, thermalPrint } = await import('./thermal-printer');
+      const { loadPrinterSettings, buildEscPosKitchenTicketBitmap, thermalPrint } = await import('./thermal-printer');
       const printerSettings = loadPrinterSettings();
 
       if (printerSettings.enabled && printerSettings.mode !== 'browser') {
-        const totalAmountThermal = parseNumber(data.total);
-        const subtotalThermal = totalAmountThermal / (1 + VAT_RATE);
-        const vatThermal = totalAmountThermal - subtotalThermal;
-        const { date: fmtDate, time: fmtTime } = formatDate(data.date);
+
+        // ── Order type label for kitchen ticket ───────────────────────────────
         const orderTypeStr = (data.orderTypeName || (data.orderType as string) || '');
         const orderTypeThermal =
           orderTypeStr === 'dine_in' || orderTypeStr === 'dine-in' ? 'محلي' :
           orderTypeStr === 'takeaway' || orderTypeStr === 'pickup' ? 'سفري' :
           orderTypeStr === 'delivery' ? 'توصيل' :
-          orderTypeStr === 'car_pickup' || orderTypeStr === 'car-pickup' ? 'سيارة' :
-          orderTypeStr;
-        const discThermal = data.invoiceDiscount ? parseNumber(data.invoiceDiscount) : 0;
+          orderTypeStr === 'car_pickup' || orderTypeStr === 'car-pickup' ? 'استلام بالسيارة' :
+          orderTypeStr || 'محلي';
 
-        // ── Generate ZATCA QR ──────────────────────────────────────────────────
-        const invoiceTs = data.date ? new Date(data.date).toISOString() : new Date().toISOString();
-        const zatcaPayload = generateZATCAQRCode({
-          sellerName: COMPANY_NAME,
-          vatNumber: data.vatNumber || VAT_NUMBER,
-          timestamp: invoiceTs,
-          totalWithVat: totalAmountThermal.toFixed(2),
-          vatAmount: vatThermal.toFixed(2),
-        });
-        let zatcaQrDataUrl = '';
-        try { zatcaQrDataUrl = await QRCode.toDataURL(zatcaPayload, { width: 250, margin: 1, errorCorrectionLevel: 'M' }); } catch {}
+        // ── Car info note for kitchen ticket (car pickup) ─────────────────────
+        const carType    = data.carInfo?.carType    || '';
+        const carColor   = data.carInfo?.carColor   || data.carColor   || '';
+        const carPlate   = data.carInfo?.plateNumber || data.plateNumber || '';
+        const carNote = (orderTypeStr === 'car_pickup' || orderTypeStr === 'car-pickup')
+          ? [carType, carColor, carPlate ? `لوحة: ${carPlate}` : ''].filter(Boolean).join(' | ')
+          : undefined;
 
-        // ── Generate tracking QR (public /track/:orderNumber URL) ─────────────
-        // IMPORTANT: orderNumber may contain '#' (e.g. "ORD#0042") which would be
-        // interpreted as a URL fragment by browsers and break the route lookup.
-        // Always URL-encode the segment.
-        const trackingBase = (printerSettings.publicBaseUrl?.replace(/\/+$/, '')) || window.location.origin;
-        const trackingUrl = `${trackingBase}/track/${encodeURIComponent(String(data.orderNumber))}`;
-        let trackingQrDataUrl = '';
-        try { trackingQrDataUrl = await QRCode.toDataURL(trackingUrl, { width: 400, margin: 1, errorCorrectionLevel: 'H' }); } catch {}
-
-        // ── Logo (cached base64) ───────────────────────────────────────────────
-        const logoDataUrl = await fetchLogoBase64().catch(() => '');
-
-        // ── Build raster receipt via Canvas 2D ────────────────────────────────
-        const escData = await buildReceiptBitmapEscPos({
-          shopName: COMPANY_NAME,
-          vatNumber: data.vatNumber || VAT_NUMBER,
-          branchName: data.branchName,
-          tagline: brand.taglineAr,
-          orderNumber: data.orderNumber,
-          orderDate: `${fmtDate} ${fmtTime}`,
-          cashierName: data.employeeName || '—',
-          customerName: data.customerName,
-          tableNumber: data.tableNumber,
-          orderType: orderTypeThermal,
-          items: data.items.map(item => ({
-            name: item.coffeeItem.nameAr,
-            qty: item.quantity,
-            price: parseNumber(item.coffeeItem.price),
-            addons: (item.customization?.selectedItemAddons || []).map((a: any) => a.nameAr),
-          })),
-          subtotal: subtotalThermal,
-          vat: vatThermal,
-          total: totalAmountThermal,
-          discount: discThermal,
-          splitPayment: data.splitPayment,
-          paymentMethod: data.paymentMethod,
-          logoDataUrl: logoDataUrl || undefined,
-          trackingQrDataUrl: trackingQrDataUrl || undefined,
-          zatcaQrDataUrl: zatcaQrDataUrl || undefined,
-          paperWidth: printerSettings.paperWidth,
-          feedLines: printerSettings.feedLines ?? 4,
-        });
+        // ── Build receipt via Canvas 2D (instant — same engine as kitchen tickets) ──
+        const escData = await _buildFastCustomerEscPos(
+          data,
+          orderTypeThermal,
+          printerSettings.paperWidth as '58mm' | '80mm',
+          printerSettings.feedLines ?? 4,
+        );
 
         const customerCopies = Math.max(1, Math.min(5, printerSettings.customerCopies || 1));
         const kitchenCopies = Math.max(1, Math.min(5, printerSettings.kitchenCopies || 1));
 
-        let result = await thermalPrint(escData, '', printerSettings.paperWidth);
-        // طباعة نسخ إضافية لفاتورة العميل
-        for (let i = 1; i < customerCopies && result.success; i++) {
-          await new Promise(r => setTimeout(r, 1400));
+        // ── Multi-printer profile routing ──────────────────────────────────────
+        const { getProfilesForRole, thermalPrintWithProfile } = await import('./thermal-printer');
+        const receiptProfiles = getProfilesForRole('receipt');
+        const kitchenProfiles = getProfilesForRole('kitchen');
+
+        // Print customer receipt — use role-specific profiles if configured, else fallback to primary
+        let result = { success: false, mode: 'error', error: '' } as any;
+        if (receiptProfiles.length > 0) {
+          for (const profile of receiptProfiles) {
+            for (let i = 0; i < customerCopies; i++) {
+              if (i > 0) await new Promise(r => setTimeout(r, 1200));
+              result = await thermalPrintWithProfile(escData, profile);
+            }
+          }
+          result.success = true; // at least one profile attempted
+        } else {
           result = await thermalPrint(escData, '', printerSettings.paperWidth);
+          for (let i = 1; i < customerCopies && result.success; i++) {
+            await new Promise(r => setTimeout(r, 1200));
+            result = await thermalPrint(escData, '', printerSettings.paperWidth);
+          }
         }
 
-        if (result.success) {
-          if (printerSettings.autoKitchenCopy) {
+        if (result.success || receiptProfiles.length > 0) {
+          if (printerSettings.autoKitchenCopy || kitchenProfiles.length > 0) {
             const kitchenEsc = await buildEscPosKitchenTicketBitmap({
               orderNumber: data.orderNumber,
               tableNumber: data.tableNumber,
@@ -1035,15 +1379,31 @@ export async function printTaxInvoice(data: TaxInvoiceData, config: PrintConfig 
               cashierName: data.employeeName || '—',
               items: data.items.map(item => ({
                 name: item.coffeeItem.nameAr,
+                nameEn: (item.coffeeItem as any).nameEn || '',
                 qty: item.quantity,
-                addons: (item.customization?.selectedItemAddons || []).map((a: any) => a.nameAr),
+                addons: [
+                  ...(getItemSelectedSize(item) ? [`الحجم: ${getItemSelectedSize(item)}`] : []),
+                  ...getItemAddons(item).map((a: any) => a.nameAr),
+                ],
               })),
-              notes: undefined,
+              notes: [carNote, data.notes].filter(Boolean).join(' | ') || undefined,
               paperWidth: printerSettings.paperWidth,
             });
-            for (let i = 0; i < kitchenCopies; i++) {
-              await new Promise(r => setTimeout(r, 1400));
-              await thermalPrint(kitchenEsc, '', printerSettings.paperWidth);
+            await new Promise(r => setTimeout(r, 1200));
+            if (kitchenProfiles.length > 0) {
+              // Route kitchen copies to kitchen-role printers
+              for (const profile of kitchenProfiles) {
+                for (let i = 0; i < kitchenCopies; i++) {
+                  if (i > 0) await new Promise(r => setTimeout(r, 1200));
+                  await thermalPrintWithProfile(kitchenEsc, profile);
+                }
+              }
+            } else if (printerSettings.autoKitchenCopy) {
+              // Fallback: kitchen copies to primary printer
+              for (let i = 0; i < kitchenCopies; i++) {
+                if (i > 0) await new Promise(r => setTimeout(r, 1400));
+                await thermalPrint(kitchenEsc, '', printerSettings.paperWidth);
+              }
             }
           }
           return;
@@ -1063,184 +1423,88 @@ export async function printTaxInvoice(data: TaxInvoiceData, config: PrintConfig 
     }
   }
 
-  const totalAmount = parseNumber(data.total);
   const displayInvoiceNumber = fmtOrderNum(data.orderNumber);
-  const orderTypeLabel = data.orderTypeName || (
-    (data.orderType as string) === 'dine_in' || (data.orderType as string) === 'dine-in' ? 'محلي' :
-    (data.orderType as string) === 'takeaway' || (data.orderType as string) === 'pickup' ? 'سفري' :
-    (data.orderType as string) === 'delivery' ? 'توصيل' :
-    (data.orderType as string) === 'car_pickup' || (data.orderType as string) === 'car-pickup' ? 'سيارة' :
-    (data.orderType as string) === 'online' ? 'أونلاين' :
-    (data.orderType as string) === 'drive_thru' ? 'درايف ثرو' : ''
-  );
 
-  // ══════════════════════════════════════════════════════════════════════════
-  //  PURE CANVAS 2D RENDERING — لا HTML, لا html2canvas, لا تكسير عربي
-  //  نفس مولّد الصورة المستخدم للطابعة الحرارية → صورة واحدة → طباعة واحدة
-  //  حل جذري: لا يوجد أي مسار يرسل HTML للطابعة، إطلاقاً.
-  // ══════════════════════════════════════════════════════════════════════════
-  const subtotalAmt = totalAmount / (1 + VAT_RATE);
-  const vatAmt = totalAmount - subtotalAmt;
-  const discAmt = data.invoiceDiscount ? parseNumber(data.invoiceDiscount) : 0;
-  const { date: fmtDate, time: fmtTime } = formatDate(data.date);
+  // ── Build HTML receipts (fast, no image conversion) ───────────────────────
+  const customerHtml = await buildReceiptPreviewHtml(data);
+  const employeeHtml = buildEmployeeReceiptPreviewHtml(data);
 
-  // QR codes
-  const invoiceTs = data.date ? new Date(data.date).toISOString() : new Date().toISOString();
-  const zatcaPayload = generateZATCAQRCode({
-    sellerName: COMPANY_NAME,
-    vatNumber: data.vatNumber || VAT_NUMBER,
-    timestamp: invoiceTs,
-    totalWithVat: totalAmount.toFixed(2),
-    vatAmount: vatAmt.toFixed(2),
-  });
-  let zatcaQrDataUrl = '';
-  try { zatcaQrDataUrl = await QRCode.toDataURL(zatcaPayload, { width: 250, margin: 1, errorCorrectionLevel: 'M' }); } catch {}
-
-  const ps2 = (await import('./thermal-printer')).loadPrinterSettings();
-  const trackingBase2 = (ps2.publicBaseUrl?.replace(/\/+$/, '')) || window.location.origin;
-  const trackingUrl = `${trackingBase2}/track/${encodeURIComponent(String(data.orderNumber))}`;
-  let trackingQrDataUrl = '';
-  try { trackingQrDataUrl = await QRCode.toDataURL(trackingUrl, { width: 400, margin: 1, errorCorrectionLevel: 'H' }); } catch {}
-
-  const logoDataUrl = await fetchLogoBase64().catch(() => '');
-
-  const { buildEmployeeCopyCanvas } = await import('./thermal-printer');
-  const { renderReceiptPreviewToPng } = await import('./render-receipt-preview');
-
-  // ── فاتورة العميل = نفس مكوّن المعاينة بالظبط (rendered → captured) ──
-  const receiptPng = await renderReceiptPreviewToPng({
-    orderNumber: data.orderNumber,
-    createdAt: new Date(),
-    tableNumber: data.tableNumber,
-    totalAmount: totalAmount,
-    items: data.items.map(item => ({
-      nameAr: item.coffeeItem.nameAr,
-      nameEn: (item.coffeeItem as any).nameEn,
-      quantity: item.quantity,
-      price: parseNumber(item.coffeeItem.price),
-      customization: item.customization,
-    })),
-  });
-
-  // ── نسخة الموظف — Canvas منفصل (نفس الأنبوب الآمن، بلا HTML) ──
-  const employeeCanvas = await buildEmployeeCopyCanvas({
-    orderNumber: data.orderNumber,
-    tableNumber: data.tableNumber,
-    orderType: orderTypeLabel,
-    cashierName: data.employeeName || '—',
-    items: data.items.map(item => ({
-      name: item.coffeeItem.nameAr,
-      qty: item.quantity,
-      addons: (item.customization?.selectedItemAddons || []).map((a: any) => a.nameAr),
-    })),
-    total: totalAmount,
-    orderDate: `${fmtDate} ${fmtTime}`,
-    paperWidth: '80mm',
-  });
-  const employeePng = employeeCanvas.toDataURL('image/png');
-
-  // ── طباعة صورة في iframe واحد ──
-  const printOneImage = (imgSrc: string): Promise<void> => new Promise(resolve => {
-    const printFrame = document.createElement('iframe');
-    printFrame.setAttribute('aria-hidden', 'true');
-    printFrame.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none;opacity:0;pointer-events:none;';
-    document.body.appendChild(printFrame);
-    const pdoc = printFrame.contentDocument || printFrame.contentWindow?.document;
-    if (!pdoc) { try { printFrame.remove(); } catch {} ; resolve(); return; }
-    pdoc.open();
-    pdoc.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
-      @page { size: 80mm auto; margin: 0; }
-      html,body { margin:0; padding:0; background:#fff; }
-      img { width: 80mm; display: block; margin: 0; padding: 0; }
-    </style></head><body><img src="${imgSrc}" /></body></html>`);
-    pdoc.close();
-    const img = pdoc.querySelector('img') as HTMLImageElement | null;
-    let done = false;
-    const finish = () => {
-      if (done) return; done = true;
-      setTimeout(() => { try { printFrame.remove(); } catch {} ; resolve(); }, 200);
-    };
-    const doPrint = () => {
-      try { printFrame.contentWindow?.focus(); printFrame.contentWindow?.print(); } catch {}
-      printFrame.contentWindow?.addEventListener('afterprint', finish, { once: true });
-      setTimeout(finish, 5000);
-    };
-    if (img && !img.complete) {
-      img.onload = () => setTimeout(doPrint, 100);
-      img.onerror = () => setTimeout(doPrint, 100);
-    } else {
-      setTimeout(doPrint, 200);
-    }
-  });
+  // ── Helper: print one HTML document via a hidden iframe ───────────────────
+  const printOneHtml = (html: string): Promise<void> => _printDirectAsync(html, '80mm', true);
 
   if (shouldAutoPrint) {
-    // قراءة عدد النسخ من الإعدادات (يعمل أيضاً في وضع المتصفح)
     const { loadPrinterSettings } = await import('./thermal-printer');
     const ps = loadPrinterSettings();
     const customerCopies = Math.max(1, Math.min(5, ps.customerCopies || 1));
-    const kitchenCopies = ps.autoKitchenCopy ? Math.max(1, Math.min(5, ps.kitchenCopies || 1)) : 0;
+    const kitchenCopies  = ps.autoKitchenCopy ? Math.max(1, Math.min(5, ps.kitchenCopies || 1)) : 0;
 
-    // طباعة فاتورة العميل N مرة
+    // Print customer copies as HTML — fast, accurate, no image conversion
     for (let i = 0; i < customerCopies; i++) {
-      if (i > 0) await new Promise(r => setTimeout(r, 800));
-      await printOneImage(receiptPng);
+      if (i > 0) await new Promise(r => setTimeout(r, 150));
+      await printOneHtml(customerHtml);
     }
-    // ثم نسخة الموظف N مرة
+    // Print kitchen copies as HTML (different design for kitchen staff)
     for (let i = 0; i < kitchenCopies; i++) {
-      await new Promise(r => setTimeout(r, 800));
-      await printOneImage(employeePng);
+      await new Promise(r => setTimeout(r, 150));
+      await printOneHtml(employeeHtml);
     }
   } else {
-    // وضع المعاينة: نافذة تعرض النسختين جنباً إلى جنب مع أزرار طباعة
+    // Manual preview window — shows both receipts side by side
     const win = window.open('', '_blank', 'width=820,height=860,scrollbars=yes,resizable=yes');
     if (win) {
       win.document.open();
-      win.document.write(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>فواتير الطلب - ${displayInvoiceNumber}</title><style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: Tahoma, Arial, sans-serif; background: #e8e8e8; padding: 16px; min-height: 100vh; text-align: center; }
-        .toolbar { margin-bottom: 16px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-        .btn { padding: 12px 24px; font-size: 14px; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; }
-        .btn-print { background: #1a1a1a; color: #fff; }
-        .btn-cust { background: #1e40af; color: #fff; }
-        .btn-emp { background: #b45309; color: #fff; }
-        .btn-close { background: #6b7280; color: #fff; }
-        .frames { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
-        .col { display: flex; flex-direction: column; align-items: center; }
-        h3 { font-size: 12px; font-weight: 700; color: #333; margin-bottom: 8px; background: #fff; padding: 4px 14px; border-radius: 20px; border: 1px solid #ccc; }
-        .receipt { display: inline-block; background: #fff; border-radius: 6px; box-shadow: 0 4px 16px rgba(0,0,0,.15); }
-        .receipt img { display: block; width: 320px; height: auto; }
-        @media print {
-          body { background: #fff; padding: 0; margin: 0; }
-          .toolbar, .no-print, h3 { display: none !important; }
-          .frames { display: block; }
-          .col { display: block; page-break-after: always; }
-          .col:last-child { page-break-after: auto; }
-          .receipt { box-shadow: none; border-radius: 0; }
-          .receipt img { width: 80mm; }
-          @page { size: 80mm auto; margin: 0; }
-        }
-      </style></head><body>
-        <div class="toolbar no-print">
-          <button class="btn btn-print" onclick="window.print()">🖨️ طباعة النسختين</button>
-          <button class="btn btn-cust" onclick="printOne('cust')">🧾 العميل فقط</button>
-          <button class="btn btn-emp" onclick="printOne('emp')">📋 الموظف فقط</button>
-          <button class="btn btn-close" onclick="window.close()">✕ إغلاق</button>
-        </div>
-        <div class="frames">
-          <div class="col" id="col-cust"><h3>🧾 فاتورة العميل</h3><div class="receipt"><img src="${receiptPng}" alt="فاتورة العميل" /></div></div>
-          <div class="col" id="col-emp"><h3>📋 نسخة الموظف</h3><div class="receipt"><img src="${employeePng}" alt="نسخة الموظف" /></div></div>
-        </div>
-        <script>
-          function printOne(which) {
-            var hideId = which === 'cust' ? 'col-emp' : 'col-cust';
-            var el = document.getElementById(hideId);
-            var prev = el.style.display;
-            el.style.display = 'none';
-            window.print();
-            setTimeout(function(){ el.style.display = prev; }, 500);
-          }
-        </script>
-      </body></html>`);
+      win.document.write(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">
+<title>فواتير الطلب - ${displayInvoiceNumber}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:Tahoma,Arial,sans-serif;background:#e8e8e8;padding:16px;text-align:center;}
+  .toolbar{margin-bottom:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+  .btn{padding:10px 22px;font-size:14px;border:none;border-radius:8px;cursor:pointer;font-weight:700;}
+  .btn-print{background:#1a1a1a;color:#fff;}
+  .btn-cust{background:#1e40af;color:#fff;}
+  .btn-emp{background:#b45309;color:#fff;}
+  .btn-close{background:#6b7280;color:#fff;}
+  .frames{display:flex;gap:20px;flex-wrap:wrap;justify-content:center;align-items:flex-start;}
+  .col{display:flex;flex-direction:column;align-items:center;}
+  h3{font-size:12px;font-weight:700;color:#333;margin-bottom:8px;background:#fff;padding:4px 14px;border-radius:20px;border:1px solid #ccc;}
+  iframe{border:none;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.15);}
+  @media print{
+    body{background:#fff;padding:0;}
+    .toolbar,.no-print,h3{display:none!important;}
+    .frames{display:block;}
+    .col{display:block;page-break-after:always;}
+    .col:last-child{page-break-after:auto;}
+    iframe{box-shadow:none;border-radius:0;width:80mm!important;}
+    @page{size:80mm auto;margin:0;}
+  }
+</style></head><body>
+  <div class="toolbar no-print">
+    <button class="btn btn-print" onclick="window.print()">طباعة النسختين</button>
+    <button class="btn btn-cust" onclick="printOne('cust')">فاتورة العميل فقط</button>
+    <button class="btn btn-emp" onclick="printOne('emp')">نسخة الموظف فقط</button>
+    <button class="btn btn-close" onclick="window.close()">اغلاق</button>
+  </div>
+  <div class="frames">
+    <div class="col" id="col-cust">
+      <h3>فاتورة العميل</h3>
+      <iframe id="fr-cust" width="320" height="700" srcdoc="${customerHtml.replace(/"/g, '&quot;').replace(/'/g, '&#39;')}"></iframe>
+    </div>
+    <div class="col" id="col-emp">
+      <h3>نسخة الموظف</h3>
+      <iframe id="fr-emp" width="320" height="700" srcdoc="${employeeHtml.replace(/"/g, '&quot;').replace(/'/g, '&#39;')}"></iframe>
+    </div>
+  </div>
+  <script>
+    function printOne(which){
+      var hideId=which==='cust'?'col-emp':'col-cust';
+      var el=document.getElementById(hideId);
+      var prev=el.style.display;
+      el.style.display='none';
+      window.print();
+      setTimeout(function(){el.style.display=prev;},500);
+    }
+  </script>
+</body></html>`);
       win.document.close();
     }
     return;
@@ -1248,22 +1512,19 @@ export async function printTaxInvoice(data: TaxInvoiceData, config: PrintConfig 
 }
 
 export async function printCustomerPickupReceipt(data: TaxInvoiceData & { deliveryType?: string; deliveryTypeAr?: string }): Promise<void> {
-  const orderTrackingUrl = `${window.location.origin}/order/${data.orderNumber}`;
+  const _trackNum = String(data.orderNumber).replace(/\D/g, '') || String(data.orderNumber);
+  const orderTrackingUrl = `${window.location.origin}/track/${_trackNum}`;
   
-  let qrCodeUrl = "";
+  let qrCodeSvg = "";
   try {
-    qrCodeUrl = await QRCode.toDataURL(orderTrackingUrl, {
-      width: 150,
-      margin: 1,
-      color: { dark: '#000000', light: '#FFFFFF' },
-      errorCorrectionLevel: 'M'
-    });
+    const svgStr = await QRCode.toString(orderTrackingUrl, { type: 'svg', width: 100, margin: 1, errorCorrectionLevel: 'M' });
+    qrCodeSvg = svgStr.replace(/<\?xml[^?]*\?>/g, '').replace(/width="\d+"/, 'width="100"').replace(/height="\d+"/, 'height="100"');
   } catch (error) {
     console.error("Error generating order tracking QR:", error);
   }
 
   const { date: formattedDate, time: formattedTime } = formatDate(data.date);
-  const deliveryTypeAr = data.deliveryTypeAr || (data.deliveryType === 'dine-in' ? 'في المطعم' : data.deliveryType === 'delivery' ? 'توصيل' : 'استلام');
+  const deliveryTypeAr = data.deliveryTypeAr || (data.deliveryType === 'dine-in' ? 'في الكافيه' : data.deliveryType === 'delivery' ? 'توصيل' : 'استلام');
 
   const receiptHtml = `
 <!DOCTYPE html>
@@ -1272,9 +1533,8 @@ export async function printCustomerPickupReceipt(data: TaxInvoiceData & { delive
   <meta charset="UTF-8">
   <title>إيصال استلام - ${data.orderNumber}</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Cairo', sans-serif; background: #fff; color: #000; direction: rtl; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background: #fff; color: #000; direction: rtl; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .receipt { max-width: 80mm; margin: 0 auto; padding: 16px; }
     .header { text-align: center; border-bottom: 3px solid #b45309; padding-bottom: 16px; margin-bottom: 16px; }
     .company-name { font-size: 28px; font-weight: 700; color: #b45309; }
@@ -1327,14 +1587,13 @@ export async function printCustomerPickupReceipt(data: TaxInvoiceData & { delive
     </div>
 
     <div class="items-section">
-      ${data.items.map((item, idx) => {
-        const extras = _renderItemExtras(item, { fontSize: 12, color: '#92400e', showPrices: false });
-        const sep = idx > 0 ? 'border-top:1px dashed #ddd;padding-top:10px;' : '';
+      ${data.items.map(item => {
+        const addons = getItemAddons(item).map((a: any) => a.nameAr).join('، ');
         return `
-        <div class="item-row" style="align-items:flex-start;padding:10px 0;${sep}">
+        <div class="item-row" style="align-items:flex-start;">
           <div class="item-name" style="flex:1;">
             ${renderItemName(item.coffeeItem.nameAr, item.coffeeItem.nameEn)}
-            ${extras}
+            ${addons ? `<div style="font-size:11px;color:#92400e;margin-top:2px;">+ ${addons}</div>` : ''}
           </div>
           <span class="item-qty">x${item.quantity}</span>
         </div>`;
@@ -1345,12 +1604,6 @@ export async function printCustomerPickupReceipt(data: TaxInvoiceData & { delive
       <p style="font-size: 14px; color: #92400e;">الإجمالي المدفوع</p>
       <p class="total-amount">${data.total} ر.س</p>
       <p style="font-size: 12px; color: #666; margin-top: 4px;">${data.paymentMethod}</p>
-    </div>
-
-    <div class="qr-section">
-      <p class="qr-title">امسح لتتبع طلبك</p>
-      ${qrCodeUrl ? `<div class="qr-container"><img src="${qrCodeUrl}" alt="Order Tracking QR" /></div>` : ''}
-      <p class="qr-note">أو زر الرابط: chefsplace.online/order/${data.orderNumber}</p>
     </div>
 
     <div class="footer">
@@ -1368,7 +1621,7 @@ export async function printCustomerPickupReceipt(data: TaxInvoiceData & { delive
 
 export async function printCashierReceipt(data: TaxInvoiceData & { deliveryType?: string; deliveryTypeAr?: string }): Promise<void> {
   const { date: formattedDate, time: formattedTime } = formatDate(data.date);
-  const deliveryTypeAr = data.deliveryTypeAr || (data.deliveryType === 'dine-in' ? 'في المطعم' : data.deliveryType === 'delivery' ? 'توصيل' : 'استلام');
+  const deliveryTypeAr = data.deliveryTypeAr || (data.deliveryType === 'dine-in' ? 'في الكافيه' : data.deliveryType === 'delivery' ? 'توصيل' : 'استلام');
   const totalAmount = parseNumber(data.total);
 
   const receiptHtml = `
@@ -1378,9 +1631,8 @@ export async function printCashierReceipt(data: TaxInvoiceData & { deliveryType?
   <meta charset="UTF-8">
   <title>نسخة الكاشير - ${data.orderNumber}</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Cairo', sans-serif; background: #fff; color: #000; direction: rtl; }
+    body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background: #fff; color: #000; direction: rtl; }
     .receipt { max-width: 80mm; margin: 0 auto; padding: 12px; }
     .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 12px; margin-bottom: 12px; }
     .title { font-size: 14px; font-weight: 700; background: #000; color: #fff; padding: 4px 12px; display: inline-block; margin-bottom: 8px; }
@@ -1417,15 +1669,14 @@ export async function printCashierReceipt(data: TaxInvoiceData & { deliveryType?
     </div>
 
     <div class="items">
-      ${data.items.map((item, idx) => {
+      ${data.items.map(item => {
         const price = parseNumber(item.coffeeItem.price);
-        const extras = _renderItemExtras(item, { fontSize: 11, color: '#555', showPrices: true });
-        const sep = idx > 0 ? 'border-top:1px dashed #ddd;' : '';
+        const addons = getItemAddons(item).map((a: any) => a.nameAr).join('، ');
         return `
-        <div class="item-row" style="align-items:flex-start;padding:10px 0;${sep}">
+        <div class="item-row" style="align-items:flex-start;">
           <div style="flex:1;">
             ${renderItemName(item.coffeeItem.nameAr, item.coffeeItem.nameEn)}<span style="font-size:11px;color:#555;"> x${item.quantity}</span>
-            ${extras}
+            ${addons ? `<div style="font-size:10px;color:#777;margin-top:2px;">+ ${addons}</div>` : ''}
           </div>
           <span style="flex-shrink:0;">${(price * item.quantity).toFixed(2)}</span>
         </div>
@@ -1439,8 +1690,11 @@ export async function printCashierReceipt(data: TaxInvoiceData & { deliveryType?
       <div class="total-row total-grand"><span>الإجمالي:</span><span>${totalAmount.toFixed(2)} ر.س</span></div>
       <div class="total-row"><span>طريقة الدفع:</span><span>${data.paymentMethod}</span></div>
       ${data.splitPayment ? `
-      <div class="total-row" style="font-size:11px;"><span>نقدي:</span><span>${data.splitPayment.cash.toFixed(2)} ر.س</span></div>
-      <div class="total-row" style="font-size:11px;"><span>شبكة:</span><span>${data.splitPayment.card.toFixed(2)} ر.س</span></div>` : ''}
+      ${data.splitPayment.cash > 0 ? `<div class="total-row" style="font-size:11px;font-weight:600;"><span>💵 نقدي:</span><span>${data.splitPayment.cash.toFixed(2)} ر.س</span></div>` : ''}
+      ${data.splitPayment.card > 0 ? `<div class="total-row" style="font-size:11px;font-weight:600;"><span>💳 شبكة:</span><span>${data.splitPayment.card.toFixed(2)} ر.س</span></div>` : ''}` : ''}
+      ${(data.cashReceived && data.cashReceived > 0 && !data.splitPayment) ? `
+      <div class="total-row" style="font-size:11px;"><span>المبلغ المستلم:</span><span>${data.cashReceived.toFixed(2)} ر.س</span></div>
+      <div class="total-row" style="font-size:11px;color:#16a34a;font-weight:700;"><span>↩ الباقي:</span><span>${Math.max(0, data.cashReceived - totalAmount).toFixed(2)} ر.س</span></div>` : ''}
     </div>
 
     <div class="signature">
@@ -1473,8 +1727,6 @@ export async function printAllReceipts(data: TaxInvoiceData & { deliveryType?: s
       const vatAmount = totalAmount - subtotalBeforeTax;
 
       const orderTypeLabel = data.orderTypeName || (data.orderType === 'dine_in' ? 'محلي' : data.orderType === 'takeaway' ? 'سفري' : data.orderType === 'delivery' ? 'توصيل' : data.deliveryTypeAr || '');
-      // Ensure browser fallback (printUnifiedReceipt) also sees the label
-      if (!data.orderTypeName && orderTypeLabel) (data as any).orderTypeName = orderTypeLabel;
 
       // Build ESC/POS receipt
       const escData = buildEscPosReceipt({
@@ -1492,7 +1744,7 @@ export async function printAllReceipts(data: TaxInvoiceData & { deliveryType?: s
           name: item.coffeeItem.nameAr,
           qty: item.quantity,
           price: parseNumber(item.coffeeItem.price),
-          addons: (item.customization?.selectedItemAddons || []).map((a: any) => a.nameAr),
+          addons: getItemAddons(item).map((a: any) => a.nameAr),
         })),
         subtotal: subtotalBeforeTax,
         vat: vatAmount,
@@ -1520,8 +1772,9 @@ export async function printAllReceipts(data: TaxInvoiceData & { deliveryType?: s
             items: data.items.map(item => ({
               name: item.coffeeItem.nameAr,
               qty: item.quantity,
-              addons: (item.customization?.selectedItemAddons || []).map((a: any) => a.nameAr),
+              addons: getItemAddons(item).map((a: any) => a.nameAr),
             })),
+            notes: data.notes || undefined,
             paperWidth: printerSettings.paperWidth,
           });
           const { thermalPrint: tp2 } = await import('./thermal-printer');
@@ -1543,12 +1796,12 @@ export async function printSimpleReceipt(data: TaxInvoiceData): Promise<void> {
   const itemsHtml = data.items.map(item => {
     const unitPrice = parseNumber(item.coffeeItem.price);
     const lineTotal = unitPrice * item.quantity;
-    const extras = _renderItemExtras(item, { fontSize: 11, color: '#666', showPrices: true });
+    const addons = getItemAddons(item).map((a: any) => a.nameAr).join('، ');
     return `
       <tr style="border-bottom: 1px solid #e5e5e5;">
-        <td style="padding: 12px 4px;">
+        <td style="padding: 8px 4px;">
           ${renderItemName(item.coffeeItem.nameAr, item.coffeeItem.nameEn)}
-          ${extras}
+          ${addons ? `<div style="font-size:11px;color:#666;margin-top:2px;">+ ${addons}</div>` : ''}
         </td>
         <td style="padding: 8px 4px; text-align: center;">${item.quantity}</td>
         <td style="padding: 8px 4px; text-align: left;">${lineTotal.toFixed(2)}</td>
@@ -1556,18 +1809,7 @@ export async function printSimpleReceipt(data: TaxInvoiceData): Promise<void> {
     `;
   }).join('');
 
-  const trackingUrl = `${window.location.origin}/tracking?order=${data.orderNumber}`;
-  let trackingQRCode = "";
-  try {
-    trackingQRCode = await QRCode.toDataURL(trackingUrl, {
-      width: 100,
-      margin: 1,
-      color: { dark: '#000000', light: '#FFFFFF' },
-      errorCorrectionLevel: 'M'
-    });
-  } catch (error) {
-    console.error("Error generating tracking QR code:", error);
-  }
+  // No tracking QR — removed to keep printing instant (no image loading)
 
   const receiptHtml = `
 <!DOCTYPE html>
@@ -1576,12 +1818,10 @@ export async function printSimpleReceipt(data: TaxInvoiceData): Promise<void> {
   <meta charset="UTF-8">
   <title>إيصال - ${data.orderNumber}</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap');
-    
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
     body {
-      font-family: 'Cairo', sans-serif;
+      font-family: Tahoma, Arial, 'Segoe UI', sans-serif;
       background: #fff;
       color: #000;
       direction: rtl;
@@ -1712,13 +1952,6 @@ export async function printSimpleReceipt(data: TaxInvoiceData): Promise<void> {
       </div>
     </div>
 
-    ${trackingQRCode ? `
-    <div style="text-align: center; padding: 16px 0; border-top: 2px dashed #333; margin-top: 16px;">
-      <p style="font-size: 12px; color: #666; margin-bottom: 8px;">امسح لتتبع طلبك</p>
-      <img src="${trackingQRCode}" alt="تتبع الطلب" style="width: 80px; height: 80px;" />
-      <p style="font-size: 10px; color: #888; margin-top: 4px;">رقم الطلب: ${fmtOrderNum(data.orderNumber)}</p>
-    </div>
-    ` : ''}
 
     <div class="footer">
       <p>شكراً لزيارتكم</p>
@@ -1737,151 +1970,4 @@ export async function printSimpleReceipt(data: TaxInvoiceData): Promise<void> {
     autoPrint: true, 
     showPrintButton: true 
   });
-}
-
-export async function printRefundThermal(opts: {
-  shopName?: string;
-  refundId: string;
-  originalOrderNumber: string | number;
-  items: Array<{ nameAr: string; nameEn?: string; quantity: number; unitPrice: number; subtotal: number }>;
-  refundAmount: number;
-  paymentMethod: 'cash' | 'card' | 'split';
-  cashAmount?: number;
-  cardAmount?: number;
-  reason: string;
-  employeeName?: string;
-  date: string;
-  originalPaymentMethod?: string;
-}): Promise<void> {
-  const shopName = opts.shopName || COMPANY_NAME;
-  const payMethodLabel =
-    opts.paymentMethod === 'cash' ? 'نقدي' :
-    opts.paymentMethod === 'card' ? 'بطاقة' : 'مقسّم';
-
-  const itemsRows = opts.items.map(it =>
-    `<tr>
-      <td style="padding:2px 4px;text-align:right;">${it.nameAr}</td>
-      <td style="padding:2px 4px;text-align:center;">${it.quantity}</td>
-      <td style="padding:2px 4px;text-align:left;">${it.subtotal.toFixed(2)}</td>
-    </tr>`
-  ).join('');
-
-  const html = `<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="UTF-8"/>
-  <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family: Tahoma, Arial, sans-serif; font-size:12px; color:#000; width:80mm; }
-    .center { text-align:center; }
-    .bold { font-weight:bold; }
-    .line { border-top:1px dashed #000; margin:4px 0; }
-    table { width:100%; border-collapse:collapse; font-size:11px; }
-    th { background:#eee; padding:2px 4px; }
-  </style>
-</head>
-<body>
-  <div class="center bold" style="font-size:16px;margin-bottom:4px;">${shopName}</div>
-  <div class="center" style="font-size:13px;font-weight:bold;color:#c00;">استرجاع / مرتجع</div>
-  <div class="line"></div>
-  <div>رقم الاسترجاع: <b>${opts.refundId}</b></div>
-  <div>الطلب الأصلي: <b>#${opts.originalOrderNumber}</b></div>
-  <div>التاريخ: ${opts.date}</div>
-  ${opts.employeeName ? `<div>الموظف: ${opts.employeeName}</div>` : ''}
-  <div class="line"></div>
-  <table>
-    <thead><tr><th>الصنف</th><th>الكمية</th><th>الإجمالي</th></tr></thead>
-    <tbody>${itemsRows}</tbody>
-  </table>
-  <div class="line"></div>
-  <div class="bold" style="font-size:14px;">إجمالي الاسترجاع: ${opts.refundAmount.toFixed(2)} ر.س</div>
-  <div>طريقة الاسترداد: ${payMethodLabel}</div>
-  ${opts.paymentMethod === 'split' ? `<div>نقدي: ${(opts.cashAmount||0).toFixed(2)} | بطاقة: ${(opts.cardAmount||0).toFixed(2)}</div>` : ''}
-  <div>السبب: ${opts.reason}</div>
-  <div class="line"></div>
-  <div class="center" style="margin-top:6px;">شكراً لتعاملكم معنا</div>
-</body>
-</html>`;
-
-  openPrintWindow(html, `استرجاع - ${opts.refundId}`, { paperWidth: '80mm', autoPrint: true, showPrintButton: false });
-}
-
-// ── Shift/Z-Report thermal print ─────────────────────────────────────────────
-export function printShiftThermal(shift: {
-  shiftNumber?: number | string;
-  employeeName?: string;
-  openedAt?: string | Date;
-  totalOrders?: number;
-  totalSales?: number;
-  totalCash?: number;
-  totalCard?: number;
-  paymentBreakdown?: Record<string, number>;
-}): void {
-  const { date: fmtD, time: fmtT } = formatDate(shift.openedAt ? new Date(shift.openedAt).toISOString() : new Date().toISOString());
-  const pb = shift.paymentBreakdown || {};
-  const pbRows = Object.entries(pb)
-    .filter(([, v]) => (v as number) > 0)
-    .map(([k, v]) => `<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;"><span>${k}</span><span>${(v as number).toFixed(2)} ر.س</span></div>`)
-    .join('');
-
-  const html = `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family: Tahoma, Arial, sans-serif; font-size:13px; color:#000; width:80mm; padding:8px; }
-    .center { text-align:center; }
-    .bold { font-weight:bold; }
-    .line { border-top:1px dashed #000; margin:6px 0; }
-    .row { display:flex; justify-content:space-between; padding:3px 0; }
-    .big { font-size:18px; font-weight:bold; }
-    @media print { body { margin:0; } }
-  </style></head><body>
-    <div class="center bold" style="font-size:18px;margin-bottom:4px;">${COMPANY_NAME}</div>
-    <div class="center" style="font-size:13px;font-weight:bold;">تقرير الوردية (Z-Report)</div>
-    <div class="line"></div>
-    <div class="row"><span>رقم الوردية:</span><span class="bold">${shift.shiftNumber || '—'}</span></div>
-    <div class="row"><span>الموظف:</span><span>${shift.employeeName || '—'}</span></div>
-    <div class="row"><span>تاريخ الفتح:</span><span>${fmtD}</span></div>
-    <div class="row"><span>وقت الفتح:</span><span>${fmtT}</span></div>
-    <div class="line"></div>
-    <div class="row"><span>عدد الطلبات:</span><span class="bold">${shift.totalOrders ?? 0}</span></div>
-    <div class="row"><span>إجمالي المبيعات:</span><span class="bold big">${(shift.totalSales ?? 0).toFixed(2)} ر.س</span></div>
-    <div class="line"></div>
-    <div class="row"><span>نقدي:</span><span>${(shift.totalCash ?? 0).toFixed(2)} ر.س</span></div>
-    <div class="row"><span>بطاقة:</span><span>${(shift.totalCard ?? 0).toFixed(2)} ر.س</span></div>
-    ${pbRows ? `<div class="line"></div>${pbRows}` : ''}
-    <div class="line"></div>
-    <div class="center" style="margin-top:8px;font-size:11px;">نهاية التقرير</div>
-  </body></html>`;
-
-  openPrintWindow(html, `تقرير الوردية - ${shift.shiftNumber || ''}`, { paperWidth: '80mm', autoPrint: true, showPrintButton: false });
-}
-
-// ── Receipt section printer (customer / kitchen / both) ───────────────────────
-export async function printReceiptSection(data: TaxInvoiceData, section: 'customer' | 'kitchen' | 'both'): Promise<void> {
-  if (section === 'customer' || section === 'both') {
-    await printTaxInvoice(data, { autoPrint: true });
-  }
-  if (section === 'kitchen' || section === 'both') {
-    const kitchenData: KitchenOrderData = {
-      orderNumber: data.orderNumber,
-      tableNumber: data.tableNumber,
-      items: data.items,
-      timestamp: data.date,
-    };
-    await printKitchenOrder(kitchenData);
-  }
-}
-
-// ── Preview window showing customer + employee receipt side-by-side ───────────
-export async function openReceiptPreviewWindow(data: TaxInvoiceData): Promise<void> {
-  await printTaxInvoice(data, { autoPrint: false });
-}
-
-// ── Pre-warm ZATCA QR code cache (no-op stub, warming happens inside printTaxInvoice) ──
-export function prewarmZatcaQr(_opts: {
-  orderNumber: string | number;
-  total: string | number;
-  date: string;
-  vatNumber?: string;
-}): void {
-  // QR generation is fast and happens inline during printing; this is intentionally a no-op.
 }

@@ -13,11 +13,15 @@ interface StatusBadgeProps {
 const statusIcons: Record<string, React.ElementType> = {
   pending: Clock,
   confirmed: CheckCircle2,
+  payment_confirmed: CheckCircle2,
   in_progress: Loader2,
   ready: CheckCircle2,
+  delivered: CheckCircle2,
+  received: CheckCircle2,
   completed: CheckCircle2,
   cancelled: XCircle,
   refunded: XCircle,
+  suspended: AlertTriangle,
   delayed: AlertTriangle,
 };
 

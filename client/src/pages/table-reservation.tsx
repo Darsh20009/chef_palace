@@ -192,7 +192,7 @@ export default function TableReservation() {
 
   if (showSuccess) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4" dir="rtl">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md shadow-2xl animate-in fade-in zoom-in duration-500">
           <CardContent className="pt-12 pb-8 text-center">
             <div className="mb-6">
@@ -216,7 +216,7 @@ export default function TableReservation() {
   }
 
   return (
-    <div className="min-h-screen bg-background py-8 px-4" dir="rtl">
+    <div className="min-h-screen bg-background py-8 px-4">
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-primary/10 rounded-full mb-4">
@@ -224,7 +224,7 @@ export default function TableReservation() {
           </div>
           <h1 className="text-4xl font-bold text-foreground mb-2">{tc("حجز طاولة", "Table Reservation")}</h1>
           <p className="text-lg text-muted-foreground">
-            احجز طاولتك المفضلة في أقرب فرع واستمتع بأشهى البخاري
+            احجز طاولتك المفضلة في أقرب فرع واستمتع بتجربة قهوة لا تُنسى
           </p>
         </div>
 

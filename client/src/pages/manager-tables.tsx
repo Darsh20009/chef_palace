@@ -230,6 +230,13 @@ export default function ManagerTables() {
     },
   });
 
+  const getStoredTenantId = () => {
+    try {
+      const emp = localStorage.getItem("currentEmployee");
+      return emp ? JSON.parse(emp)?.tenantId || 'demo-tenant' : 'demo-tenant';
+    } catch { return 'demo-tenant'; }
+  };
+
   // Toggle table active status mutation
   const toggleActiveStatusMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -237,7 +244,7 @@ export default function ManagerTables() {
         method: "PATCH",
         headers: { 
           "Content-Type": "application/json",
-          "x-tenant-id": "demo-tenant"
+          "x-tenant-id": getStoredTenantId()
         },
         credentials: "include",
       });
@@ -267,7 +274,7 @@ export default function ManagerTables() {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "x-tenant-id": "demo-tenant"
+          "x-tenant-id": getStoredTenantId()
         },
         credentials: "include",
       });
@@ -296,7 +303,7 @@ export default function ManagerTables() {
       const response = await fetch(`/api/tables/${id}`, {
         method: "DELETE",
         headers: {
-          "x-tenant-id": "demo-tenant"
+          "x-tenant-id": getStoredTenantId()
         },
         credentials: "include",
       });
@@ -408,7 +415,7 @@ export default function ManagerTables() {
   };
 
   return (
-    <div className="min-h-screen p-4 bg-background" dir="rtl">
+    <div className="min-h-screen p-4 bg-background">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -417,7 +424,7 @@ export default function ManagerTables() {
               <TableIcon className="w-8 h-8" />
               {tc("إدارة الطاولات", "Table Management")}
             </h1>
-            <p className="text-muted-foreground">{tc("إدارة طاولات المطعم وإنشاء رموز QR", "Manage cafe tables and generate QR codes")}</p>
+            <p className="text-muted-foreground">{tc("إدارة طاولات المقهى وإنشاء رموز QR", "Manage cafe tables and generate QR codes")}</p>
           </div>
           <Button variant="outline" className="" onClick={() => setLocation("/manager/dashboard")}>
             {tc("العودة للوحة التحكم", "Back to Dashboard")}
@@ -623,7 +630,7 @@ export default function ManagerTables() {
 
         {/* QR Code Dialog */}
         <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
-          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto bg-card" dir="rtl">
+          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto bg-card">
             <DialogHeader>
               <DialogTitle>
                 {tc("بطاقة QR للطاولة", "QR Card for Table")} {selectedTable?.tableNumber}

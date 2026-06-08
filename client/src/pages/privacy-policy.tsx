@@ -3,7 +3,7 @@ import { ArrowRight } from "lucide-react";
 
 export default function PrivacyPolicy() {
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-background">
       <div className="max-w-3xl mx-auto px-4 py-10">
         <Link href="/">
           <button className="flex items-center gap-2 text-sm text-muted-foreground mb-6 hover:text-foreground transition-colors">
@@ -105,7 +105,7 @@ export default function PrivacyPolicy() {
               </p>
               <div className="mt-2 p-3 bg-muted rounded-lg text-muted-foreground">
                 <p>مكان الشيف البخاري</p>
-                <p>البريد الإلكتروني: <a href="mailto:cafe@chefsplace.online" className="text-primary underline">cafe@chefsplace.online</a></p>
+                <p>البريد الإلكتروني: <a href="mailto:cafe@qiroxstudio.online" className="text-primary underline">cafe@qiroxstudio.online</a></p>
                 <p>الموقع: <a href="https://www.chefsplace.online" className="text-primary underline">www.chefsplace.online</a></p>
               </div>
             </section>
@@ -142,11 +142,11 @@ export default function PrivacyPolicy() {
               </p>
               <p>
                 <strong className="text-foreground">7. Your Rights.</strong> You may access, correct, or delete your data at any time
-                by contacting us at <a href="mailto:cafe@chefsplace.online" className="text-primary underline">cafe@chefsplace.online</a>.
+                by contacting us at <a href="mailto:cafe@qiroxstudio.online" className="text-primary underline">cafe@qiroxstudio.online</a>.
               </p>
               <p>
                 <strong className="text-foreground">8. Contact.</strong> مكان الشيف البخاري ·{" "}
-                <a href="mailto:cafe@chefsplace.online" className="text-primary underline">cafe@chefsplace.online</a>
+                <a href="mailto:cafe@qiroxstudio.online" className="text-primary underline">cafe@qiroxstudio.online</a>
               </p>
             </div>
           </div>

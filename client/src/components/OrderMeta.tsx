@@ -74,7 +74,7 @@ export function OrderMeta({
         <div className="flex flex-col gap-2">
           <Badge className="bg-primary/80 text-primary-foreground flex items-center gap-1 w-fit" data-testid={`badge-delivery-type-${orderId}`}>
             <Coffee className="w-3 h-3" />
-            جلوس في المطعم
+            جلوس في الكافيه
           </Badge>
           <div className="text-sm text-gray-400">
             {bName && <p>الفرع: {bName}</p>}

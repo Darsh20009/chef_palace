@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AtSign, Lock, Loader2, Eye, EyeOff } from "lucide-react";
 import type { Employee } from "@shared/schema";
-const chefsplaceLogoStaff = "/logo.png";
+import qiroxLogoStaff from "@assets/qirox-logo-customer.png";
 import { useTranslate } from "@/lib/useTranslate";
 
 export default function ManagerLogin() {
@@ -57,7 +57,7 @@ export default function ManagerLogin() {
       }
 
       if (employee.restoreKey) {
-        localStorage.setItem("chefsplace-restore-key", employee.restoreKey);
+        localStorage.setItem("qirox-restore-key", employee.restoreKey);
         delete employee.restoreKey;
       }
       localStorage.setItem("currentEmployee", JSON.stringify(employee));
@@ -89,11 +89,11 @@ export default function ManagerLogin() {
   };
 
   return (
-    <div dir="rtl" className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-4 sm:mb-6">
           <div className="inline-flex items-center justify-center w-20 h-14 sm:w-32 sm:h-20 mb-2 sm:mb-3">
-            <img src={chefsplaceLogoStaff} alt="مكان الشيف البخاري" className="w-full h-full object-contain" />
+            <img src={qiroxLogoStaff} alt="مكان الشيف — الإدارة" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-xl sm:text-2xl font-bold font-playfair text-foreground mb-1">مكان الشيف البخاري</h1>
           <p className="text-muted-foreground text-sm font-cairo">{tc("تسجيل دخول المدير", "Manager Login")}</p>

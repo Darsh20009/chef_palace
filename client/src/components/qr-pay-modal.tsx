@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Copy, Loader2, QrCode, Smartphone } from "lucide-react";
 import SarIcon from "@/components/sar-icon";
+import { useTranslate } from "@/lib/useTranslate";
 
 interface QrPayModalProps {
   open: boolean;
@@ -17,6 +18,7 @@ interface QrPayModalProps {
 }
 
 export default function QrPayModal({ open, onClose, payId, orderNumber, amount, onPaid }: QrPayModalProps) {
+  const tc = useTranslate();
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [status, setStatus] = useState<"waiting" | "paid" | "error">("waiting");
   const [copied, setCopied] = useState(false);
@@ -88,7 +90,7 @@ export default function QrPayModal({ open, onClose, payId, orderNumber, amount, 
         <DialogHeader className="px-5 pt-4 pb-3 border-b bg-gradient-to-l from-primary/10 to-transparent">
           <DialogTitle className="flex items-center gap-2 text-base">
             <QrCode className="w-5 h-5 text-primary" />
-            ادفع من جوالك عبر باي موب
+            {tc("ادفع من جوالك عبر باي موب", "Pay from your phone via PayMob")}
           </DialogTitle>
         </DialogHeader>
 
@@ -96,11 +98,11 @@ export default function QrPayModal({ open, onClose, payId, orderNumber, amount, 
           {/* Order summary card */}
           <div className="w-full bg-muted/40 rounded-2xl p-3 flex items-center justify-between">
             <div className="text-right">
-              <p className="text-[11px] text-muted-foreground leading-none">رقم الفاتورة</p>
+              <p className="text-[11px] text-muted-foreground leading-none">{tc("رقم الفاتورة", "Invoice #")}</p>
               <p className="font-mono font-bold text-sm" data-testid="text-qr-order-number">{orderNumber}</p>
             </div>
             <div className="text-left">
-              <p className="text-[11px] text-muted-foreground leading-none">المبلغ</p>
+              <p className="text-[11px] text-muted-foreground leading-none">{tc("المبلغ", "Amount")}</p>
               <p className="font-black text-lg text-primary flex items-center gap-1" data-testid="text-qr-amount">
                 {amount.toFixed(2)} <SarIcon size={14} />
               </p>
@@ -127,7 +129,7 @@ export default function QrPayModal({ open, onClose, payId, orderNumber, amount, 
                 <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center animate-in zoom-in duration-300">
                   <CheckCircle2 className="w-10 h-10 text-green-600" />
                 </div>
-                <p className="font-bold text-green-700 dark:text-green-300" data-testid="text-qr-paid">تم الدفع بنجاح!</p>
+                <p className="font-bold text-green-700 dark:text-green-300" data-testid="text-qr-paid">{tc("تم الدفع بنجاح!", "Payment Successful!")}</p>
               </div>
             )}
           </div>
@@ -136,7 +138,7 @@ export default function QrPayModal({ open, onClose, payId, orderNumber, amount, 
           {status === "waiting" && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground text-center">
               <Smartphone className="w-4 h-4 shrink-0" />
-              <span>اطلب من العميل مسح الباركود بكاميرا الجوال — سيفتح صفحة دفع آمنة عبر باي موب</span>
+              <span>{tc("اطلب من العميل مسح الباركود بكاميرا الجوال — سيفتح صفحة دفع آمنة عبر باي موب", "Ask the customer to scan the QR with their phone — opens a secure PayMob payment page")}</span>
             </div>
           )}
 
@@ -147,7 +149,7 @@ export default function QrPayModal({ open, onClose, payId, orderNumber, amount, 
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
               </span>
-              <span className="font-medium text-muted-foreground">بانتظار الدفع…</span>
+              <span className="font-medium text-muted-foreground">{tc("بانتظار الدفع…", "Waiting for payment…")}</span>
             </div>
           )}
 
@@ -159,12 +161,12 @@ export default function QrPayModal({ open, onClose, payId, orderNumber, amount, 
           >
             <span className="truncate font-mono text-muted-foreground" dir="ltr">{payUrl}</span>
             <span className="shrink-0 flex items-center gap-1 text-primary font-bold">
-              <Copy className="w-3 h-3" /> {copied ? "تم!" : "نسخ"}
+              <Copy className="w-3 h-3" /> {copied ? tc("تم!", "Copied!") : tc("نسخ", "Copy")}
             </span>
           </button>
 
           <Button variant="outline" className="w-full" onClick={onClose} data-testid="button-qr-close">
-            إغلاق
+            {tc("إغلاق", "Close")}
           </Button>
         </div>
       </DialogContent>

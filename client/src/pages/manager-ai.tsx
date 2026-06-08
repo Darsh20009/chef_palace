@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
+import { useTranslate } from "@/lib/useTranslate";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,14 +29,14 @@ interface Insight {
 }
 
 const QUICK_PROMPTS = [
-  { icon: "📊", label: "حلل مبيعات اليوم", prompt: "حلل مبيعات اليوم وأعطني ملاحظات وتوصيات" },
-  { icon: "★", label: "أفضل المنتجات", prompt: "ما هي أكثر المنتجات مبيعاً هذا الأسبوع وما توصيتك بشأنها؟" },
-  { icon: "◈", label: "اقتراح عروض", prompt: "اقترح عروضاً ترويجية مناسبة للأسبوع القادم بناءً على بيانات المبيعات" },
-  { icon: "📈", label: "تحسين الأرباح", prompt: "كيف يمكنني تحسين أرباح المطعم؟ أعطني خطة عملية" },
-  { icon: "🕐", label: "أوقات الذروة", prompt: "ما هي أوقات الذروة وكيف أستثمرها بشكل أفضل؟" },
-  { icon: "👥", label: "إدارة الموظفين", prompt: "أعطني نصائح لتحسين إنتاجية الموظفين في المطعم" },
-  { icon: "🍵", label: "منتجات جديدة", prompt: "اقترح منتجات جديدة أو موسمية يمكن إضافتها للمنيو" },
-  { icon: "📉", label: "تقليل التكاليف", prompt: "كيف يمكنني تقليل تكاليف التشغيل دون التأثير على الجودة؟" },
+  { icon: "📊", labelAr: "حلل مبيعات اليوم",   labelEn: "Analyze today's sales",   promptAr: "حلل مبيعات اليوم وأعطني ملاحظات وتوصيات", promptEn: "Analyze today's sales and give me insights and recommendations" },
+  { icon: "★",  labelAr: "أفضل المنتجات",       labelEn: "Top products",             promptAr: "ما هي أكثر المنتجات مبيعاً هذا الأسبوع وما توصيتك بشأنها؟", promptEn: "What are the best-selling products this week and what do you recommend?" },
+  { icon: "◈",  labelAr: "اقتراح عروض",         labelEn: "Suggest promotions",       promptAr: "اقترح عروضاً ترويجية مناسبة للأسبوع القادم بناءً على بيانات المبيعات", promptEn: "Suggest suitable promotions for next week based on sales data" },
+  { icon: "📈", labelAr: "تحسين الأرباح",       labelEn: "Improve profits",          promptAr: "كيف يمكنني تحسين أرباح الكافيه؟ أعطني خطة عملية", promptEn: "How can I improve the cafe's profits? Give me a practical plan" },
+  { icon: "🕐", labelAr: "أوقات الذروة",        labelEn: "Peak hours",               promptAr: "ما هي أوقات الذروة وكيف أستثمرها بشكل أفضل؟", promptEn: "What are the peak hours and how can I best leverage them?" },
+  { icon: "👥", labelAr: "إدارة الموظفين",      labelEn: "Staff management",         promptAr: "أعطني نصائح لتحسين إنتاجية الموظفين في الكافيه", promptEn: "Give me tips to improve staff productivity in the cafe" },
+  { icon: "🍵", labelAr: "منتجات جديدة",        labelEn: "New products",             promptAr: "اقترح منتجات جديدة أو موسمية يمكن إضافتها للمنيو", promptEn: "Suggest new or seasonal products that can be added to the menu" },
+  { icon: "📉", labelAr: "تقليل التكاليف",      labelEn: "Reduce costs",             promptAr: "كيف يمكنني تقليل تكاليف التشغيل دون التأثير على الجودة؟", promptEn: "How can I reduce operating costs without affecting quality?" },
 ];
 
 function formatContent(text: string) {
@@ -49,6 +51,9 @@ function formatContent(text: string) {
 
 export default function ManagerAI() {
   const [, setLocation] = useLocation();
+  const { i18n } = useTranslation();
+  const tc = useTranslate();
+  const isAr = i18n.language !== 'en';
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [showInsights, setShowInsights] = useState(true);
@@ -74,17 +79,14 @@ export default function ManagerAI() {
     onSuccess: (data) => {
       setMessages(prev => [...prev, {
         role: "assistant",
-        content: data.reply || "عذراً، لم أتمكن من الإجابة.",
+        content: data.reply || tc("عذراً، لم أتمكن من الإجابة.", "Sorry, I couldn't generate a response."),
         timestamp: new Date(),
       }]);
     },
     onError: (error: any) => {
-      const isLimit = error?.status === 429 || error?.message?.includes("الحد اليومي");
       setMessages(prev => [...prev, {
         role: "assistant",
-        content: isLimit
-          ? "⏳ وصلت للحد اليومي المجاني من Groq، جرب بكره!"
-          : `❌ ${error?.message || "حدث خطأ في الاتصال بالذكاء الاصطناعي."}`,
+        content: `❌ ${error?.message || tc("حدث خطأ في الاتصال بالذكاء الاصطناعي.", "An error occurred connecting to AI.")}`,
         timestamp: new Date(),
       }]);
     },
@@ -107,10 +109,10 @@ export default function ManagerAI() {
 
   const insights: Insight[] = (insightsData as any)?.insights || [];
   const stats = (insightsData as any)?.stats;
-  const hasApiError = (insightsData as any)?.error?.includes("OPENAI_API_KEY");
+  const hasApiError = (insightsData as any)?.error?.includes("KIMI_API_KEY") || (insightsData as any)?.configured === false;
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-background" dir={isAr ? 'rtl' : 'ltr'}>
       <div className="max-w-5xl mx-auto p-4 md:p-6 space-y-5">
 
         {/* ── Header ── */}
@@ -123,10 +125,10 @@ export default function ManagerAI() {
               <Brain className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-foreground leading-none">مركز الذكاء الاصطناعي</h1>
+              <h1 className="text-xl font-bold text-foreground leading-none">{tc('مركز الذكاء الاصطناعي', 'AI Center')}</h1>
               <div className="flex items-center gap-2 mt-0.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-xs text-muted-foreground">مدعوم بـ Gemini 2.0 Flash</span>
+                <span className="text-xs text-muted-foreground">{tc('مدعوم بـ', 'Powered by')} Kimi AI (Moonshot)</span>
               </div>
             </div>
           </div>
@@ -142,11 +144,11 @@ export default function ManagerAI() {
             <CardContent className="p-4 flex items-start gap-3">
               <Zap className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
               <div>
-                <p className="font-medium text-amber-700 dark:text-amber-400 text-sm">مفتاح API غير مضبوط</p>
+                <p className="font-medium text-amber-700 dark:text-amber-400 text-sm">{tc('مفتاح API غير مضبوط', 'API Key Not Configured')}</p>
                 <p className="text-amber-600 dark:text-amber-500 text-xs mt-1">
-                  لتفعيل الذكاء الاصطناعي، أضف متغير البيئة{" "}
-                  <code className="bg-amber-100 dark:bg-amber-900 px-1.5 py-0.5 rounded text-amber-700 dark:text-amber-300 font-mono text-[11px]">OPENAI_API_KEY</code>{" "}
-                  من <a href="https://openrouter.ai" target="_blank" className="text-amber-600 underline">openrouter.ai</a>
+                  {tc('لتفعيل الذكاء الاصطناعي، تأكد من ضبط مفتاح', 'To activate AI, make sure the key')}{" "}
+                  <code className="bg-amber-100 dark:bg-amber-900 px-1.5 py-0.5 rounded text-amber-700 dark:text-amber-300 font-mono text-[11px]">KIMI_API_KEY</code>{" "}
+                  {tc('في متغيرات البيئة', 'is set in environment variables')} — <a href="https://platform.moonshot.ai" target="_blank" className="text-amber-600 underline">platform.moonshot.ai</a>
                 </p>
               </div>
             </CardContent>
@@ -157,10 +159,10 @@ export default function ManagerAI() {
         {stats && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              { label: "مبيعات اليوم", value: `${(stats.todayRevenue || 0).toFixed(0)} ر.س`, icon: TrendingUp, color: "text-green-600 bg-green-100 dark:bg-green-900/30" },
-              { label: "طلبات اليوم", value: stats.todayOrders || 0, icon: ShoppingBag, color: "text-blue-600 bg-blue-100 dark:bg-blue-900/30" },
-              { label: "مبيعات الأسبوع", value: `${(stats.weekRevenue || 0).toFixed(0)} ر.س`, icon: BarChart3, color: "text-violet-600 bg-violet-100 dark:bg-violet-900/30" },
-              { label: "نمو الأسبوع", value: stats.growthPct ? `${stats.growthPct}%` : "—", icon: Target, color: stats.growthPct > 0 ? "text-green-600 bg-green-100 dark:bg-green-900/30" : "text-red-600 bg-red-100 dark:bg-red-900/30" },
+              { labelAr: "مبيعات اليوم",   labelEn: "Today's Sales",    value: `${(stats.todayRevenue || 0).toFixed(0)}`, icon: TrendingUp, color: "text-green-600 bg-green-100 dark:bg-green-900/30" },
+              { labelAr: "طلبات اليوم",    labelEn: "Today's Orders",   value: stats.todayOrders || 0, icon: ShoppingBag, color: "text-blue-600 bg-blue-100 dark:bg-blue-900/30" },
+              { labelAr: "مبيعات الأسبوع", labelEn: "Weekly Sales",     value: `${(stats.weekRevenue || 0).toFixed(0)}`, icon: BarChart3, color: "text-violet-600 bg-violet-100 dark:bg-violet-900/30" },
+              { labelAr: "نمو الأسبوع",    labelEn: "Weekly Growth",    value: stats.growthPct ? `${stats.growthPct}%` : "—", icon: Target, color: stats.growthPct > 0 ? "text-green-600 bg-green-100 dark:bg-green-900/30" : "text-red-600 bg-red-100 dark:bg-red-900/30" },
             ].map((stat, i) => (
               <Card key={i} className="border">
                 <CardContent className="p-3 flex items-center gap-3">
@@ -169,7 +171,7 @@ export default function ManagerAI() {
                   </div>
                   <div>
                     <p className="font-bold text-sm text-foreground">{stat.value}</p>
-                    <p className="text-muted-foreground text-[11px]">{stat.label}</p>
+                    <p className="text-muted-foreground text-[11px]">{isAr ? stat.labelAr : stat.labelEn}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -186,8 +188,8 @@ export default function ManagerAI() {
             >
               <div className="flex items-center gap-2">
                 <Lightbulb className="w-4 h-4 text-amber-500" />
-                <span className="text-sm font-semibold text-foreground">رؤى الذكاء الاصطناعي</span>
-                <Badge variant="secondary" className="text-[10px] h-5">محدث تلقائياً</Badge>
+                <span className="text-sm font-semibold text-foreground">{tc('رؤى الذكاء الاصطناعي', 'AI Insights')}</span>
+                <Badge variant="secondary" className="text-[10px] h-5">{tc('محدث تلقائياً', 'Auto-updated')}</Badge>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -209,7 +211,7 @@ export default function ManagerAI() {
                 {insightsLoading ? (
                   <div className="flex items-center gap-3 py-6 justify-center">
                     <Loader2 className="w-4 h-4 text-violet-500 animate-spin" />
-                    <span className="text-muted-foreground text-sm">يولد الذكاء الاصطناعي رؤى لمطعمك...</span>
+                    <span className="text-muted-foreground text-sm">{tc('يولد الذكاء الاصطناعي رؤى لكافيهك...', 'AI is generating insights for your cafe...')}</span>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -235,7 +237,7 @@ export default function ManagerAI() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
             <div className="flex items-center gap-2">
               <MessageSquare className="w-4 h-4 text-violet-500" />
-              <span className="text-sm font-semibold text-foreground">محادثة مع المساعد</span>
+              <span className="text-sm font-semibold text-foreground">{tc('محادثة مع المساعد', 'Chat with Assistant')}</span>
             </div>
             {messages.length > 0 && (
               <Button
@@ -246,7 +248,7 @@ export default function ManagerAI() {
                 data-testid="btn-clear-chat"
               >
                 <Trash2 className="w-3 h-3" />
-                مسح
+                {tc('مسح', 'Clear')}
               </Button>
             )}
           </div>
@@ -258,9 +260,9 @@ export default function ManagerAI() {
                 <div className="w-16 h-16 rounded-2xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center mb-4">
                   <Coffee className="w-8 h-8 text-violet-500" />
                 </div>
-                <p className="font-semibold text-foreground mb-1">أهلاً، كيف يمكنني مساعدتك؟</p>
+                <p className="font-semibold text-foreground mb-1">{tc('أهلاً، كيف يمكنني مساعدتك؟', 'Hello, how can I help you?')}</p>
                 <p className="text-muted-foreground text-sm max-w-sm">
-                  اسألني عن مبيعاتك، موظفيك، قائمتك، أو اطلب مني تحليل أداء مطعمك
+                  {tc('اسألني عن مبيعاتك، موظفيك، منيوك، أو اطلب مني تحليل أداء كافيهك', 'Ask me about your sales, staff, menu, or request a performance analysis of your cafe')}
                 </p>
               </div>
             ) : (
@@ -286,7 +288,7 @@ export default function ManagerAI() {
                       ) : msg.content}
                     </div>
                     <p className="text-muted-foreground text-[10px] mt-1 px-1">
-                      {msg.timestamp.toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" })}
+                      {msg.timestamp.toLocaleTimeString(isAr ? "ar-SA" : "en-US", { hour: "2-digit", minute: "2-digit" })}
                     </p>
                   </div>
                 </div>
@@ -302,7 +304,7 @@ export default function ManagerAI() {
                   <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: "0ms" }} />
                   <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: "150ms" }} />
                   <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: "300ms" }} />
-                  <span className="text-muted-foreground text-xs mr-1">يفكر...</span>
+                  <span className="text-muted-foreground text-xs mr-1">{tc('يفكر...', 'Thinking...')}</span>
                 </div>
               </div>
             )}
@@ -312,18 +314,18 @@ export default function ManagerAI() {
           {/* Quick Prompts — shown only when no messages */}
           {messages.length === 0 && (
             <div className="px-4 pb-3 border-t border-border bg-muted/20">
-              <p className="text-muted-foreground text-xs mb-2 pt-3">اختر سؤالاً سريعاً:</p>
+              <p className="text-muted-foreground text-xs mb-2 pt-3">{tc('اختر سؤالاً سريعاً:', 'Choose a quick question:')}</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {QUICK_PROMPTS.map((p, i) => (
                   <button
                     key={i}
-                    onClick={() => sendMessage(p.prompt)}
+                    onClick={() => sendMessage(isAr ? p.promptAr : p.promptEn)}
                     disabled={chatMutation.isPending}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-background hover:bg-muted border border-border hover:border-primary/30 rounded-xl text-xs text-muted-foreground hover:text-foreground transition-all text-right disabled:opacity-50"
+                    className={`flex items-center gap-1.5 px-3 py-2 bg-background hover:bg-muted border border-border hover:border-primary/30 rounded-xl text-xs text-muted-foreground hover:text-foreground transition-all ${isAr ? 'text-right' : 'text-left'} disabled:opacity-50`}
                     data-testid={`quick-prompt-${i}`}
                   >
                     <span className="shrink-0">{p.icon}</span>
-                    <span className="line-clamp-1">{p.label}</span>
+                    <span className="line-clamp-1">{isAr ? p.labelAr : p.labelEn}</span>
                   </button>
                 ))}
               </div>
@@ -338,7 +340,7 @@ export default function ManagerAI() {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="اسألني أي شيء عن مطعمك... (Enter للإرسال)"
+                placeholder={tc('اسألني أي شيء عن كافيهك... (Enter للإرسال)', 'Ask me anything about your cafe... (Enter to send)')}
                 className="resize-none text-sm min-h-[44px] max-h-[120px]"
                 rows={1}
                 disabled={chatMutation.isPending}
@@ -357,8 +359,8 @@ export default function ManagerAI() {
               </Button>
             </div>
             <p className="text-muted-foreground text-[10px] mt-1.5">
-              اضغط <kbd className="bg-muted border border-border rounded px-1 py-0.5 font-mono text-[9px]">Enter</kbd> للإرسال ·{" "}
-              <kbd className="bg-muted border border-border rounded px-1 py-0.5 font-mono text-[9px]">Shift+Enter</kbd> لسطر جديد
+              {tc('اضغط', 'Press')} <kbd className="bg-muted border border-border rounded px-1 py-0.5 font-mono text-[9px]">Enter</kbd> {tc('للإرسال', 'to send')} ·{" "}
+              <kbd className="bg-muted border border-border rounded px-1 py-0.5 font-mono text-[9px]">Shift+Enter</kbd> {tc('لسطر جديد', 'for new line')}
             </p>
           </div>
         </Card>
@@ -369,20 +371,23 @@ export default function ManagerAI() {
             {
               icon: BarChart3,
               colorClass: "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400",
-              title: "تحليل المبيعات",
-              desc: "يقرأ الذكاء الاصطناعي بيانات مبيعاتك في الوقت الفعلي ويقدم تحليلاً دقيقاً"
+              titleAr: "تحليل المبيعات",       titleEn: "Sales Analysis",
+              descAr: "يقرأ الذكاء الاصطناعي بيانات مبيعاتك في الوقت الفعلي ويقدم تحليلاً دقيقاً",
+              descEn: "AI reads your sales data in real-time and provides accurate analysis"
             },
             {
               icon: Star,
               colorClass: "bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400",
-              title: "تحسين المنيو",
-              desc: "اقتراحات ذكية لتطوير قائمة الطعام بناءً على الطلب والأداء"
+              titleAr: "تحسين المنيو",         titleEn: "Menu Optimization",
+              descAr: "اقتراحات ذكية لتطوير قائمة الطعام بناءً على الطلب والأداء",
+              descEn: "Smart suggestions to improve the menu based on demand and performance"
             },
             {
               icon: Users,
               colorClass: "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400",
-              title: "إدارة الفريق",
-              desc: "نصائح وتوصيات لتحسين إدارة موظفيك وجدولة الوردايات"
+              titleAr: "إدارة الفريق",         titleEn: "Team Management",
+              descAr: "نصائح وتوصيات لتحسين إدارة موظفيك وجدولة الوردايات",
+              descEn: "Tips and recommendations to improve staff management and shift scheduling"
             },
           ].map((card, i) => (
             <Card key={i} className="border">
@@ -391,8 +396,8 @@ export default function ManagerAI() {
                   <card.icon className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="font-semibold text-foreground text-sm">{card.title}</p>
-                  <p className="text-muted-foreground text-xs mt-1 leading-relaxed">{card.desc}</p>
+                  <p className="font-semibold text-foreground text-sm">{isAr ? card.titleAr : card.titleEn}</p>
+                  <p className="text-muted-foreground text-xs mt-1 leading-relaxed">{isAr ? card.descAr : card.descEn}</p>
                 </div>
               </CardContent>
             </Card>

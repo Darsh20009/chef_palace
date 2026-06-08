@@ -12,8 +12,9 @@ import {
   Coffee, Package, BarChart3, Calendar, ArrowUpRight, ArrowDownRight,
   Wallet, CreditCard, Building2, ChefHat, Settings, LogOut,
   FileText, PieChart, Activity, Target, Award, Sparkles,
-  GitCompare, UserCheck, Clock, Briefcase
+  GitCompare, UserCheck, Clock, Briefcase, Menu
 } from "lucide-react";
+import { ManagerSidebar, MobileBottomNav } from "@/components/manager-sidebar";
 import { 
   AreaChart, Area, BarChart, Bar, 
   PieChart as RechartsPie, Pie, Cell,
@@ -28,6 +29,7 @@ export default function ExecutiveDashboard() {
   const [, setLocation] = useLocation();
   const [manager, setManager] = useState<Employee | null>(null);
   const [dateFilter, setDateFilter] = useState<"today" | "week" | "month" | "year">("month");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const storedEmployee = localStorage.getItem("currentEmployee");
@@ -145,7 +147,7 @@ export default function ExecutiveDashboard() {
       .slice(0, 5);
   })();
 
-  const CHART_COLORS = ['#D4AF37', '#2D3748', '#38A169', '#E53E3E', '#805AD5'];
+  const CHART_COLORS = ['#2D9B6E', '#2D3748', '#38A169', '#E53E3E', '#805AD5'];
 
   const branchAnalytics = (() => {
     const analytics: Record<string, { 
@@ -267,66 +269,61 @@ export default function ExecutiveDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
-      <div className="header-gold px-6 py-4 border-b border-sidebar-border">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center shadow-lg">
-              <Sparkles className="w-6 h-6 text-slate-900" />
+    <div className="flex h-screen overflow-hidden bg-background" style={{ fontFamily: "'Cairo', sans-serif" }}>
+      <ManagerSidebar
+        manager={manager as any}
+        onLogout={handleLogout}
+        mobileOpen={mobileMenuOpen}
+        onMobileClose={() => setMobileMenuOpen(false)}
+        role={manager?.role}
+      />
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+      <header className="flex-shrink-0 bg-background border-b border-border px-4 lg:px-6 py-3 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <button
+            className="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl bg-muted text-muted-foreground hover:text-foreground"
+            onClick={() => setMobileMenuOpen(true)}
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <div className="hidden sm:block">
+            <div className="flex items-center gap-2">
+              <div className="text-foreground font-bold text-sm">{tc("مرحباً،", "Hello,")} <span className="text-[#2D9B6E]">{manager.fullName}</span></div>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium border ${
+                manager.role === 'admin' ? 'bg-purple-500/15 text-purple-400 border-purple-500/30' :
+                manager.role === 'owner' ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' :
+                'bg-[#2D9B6E]/15 text-[#2D9B6E] border-[#2D9B6E]/30'
+              }`}>
+                {manager.role === 'admin' ? tc('مدير عام', 'Admin') : manager.role === 'owner' ? tc('مالك', 'Owner') : tc('مدير', 'Manager')}
+              </span>
             </div>
-            <div>
-              <h1 className="text-xl font-semibold text-accent title-executive">
-                مكان الشيف البخاري Enterprise
-              </h1>
-              <p className="text-sm text-slate-400">
-                مرحباً، {manager.fullName}
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <Select value={dateFilter} onValueChange={(v: any) => setDateFilter(v)}>
-              <SelectTrigger className="w-36 bg-sidebar-accent border-sidebar-border text-sidebar-foreground">
-                <Calendar className="w-4 h-4 ml-2" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="today">{tc("اليوم", "Today")}</SelectItem>
-                <SelectItem value="week">{tc("هذا الأسبوع", "This Week")}</SelectItem>
-                <SelectItem value="month">{tc("هذا الشهر", "This Month")}</SelectItem>
-                <SelectItem value="year">{tc("هذا العام", "This Year")}</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={() => setLocation("/manager/dashboard")}
-              className="text-sidebar-foreground hover:bg-sidebar-accent"
-            >
-              <Settings className="w-5 h-5" />
-            </Button>
-            
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={handleLogout}
-              className="text-sidebar-foreground hover:bg-sidebar-accent"
-            >
-              <LogOut className="w-5 h-5" />
-            </Button>
+            <div className="text-muted-foreground text-xs">{tc("لوحة المتابعة التنفيذية", "Executive Dashboard")}</div>
           </div>
         </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
-        <div className="dashboard-grid">
-          <div className="kpi-card card-hover">
+        <div className="flex items-center gap-2">
+          <Select value={dateFilter} onValueChange={(v: any) => setDateFilter(v)}>
+            <SelectTrigger className="h-8 w-36 text-xs bg-muted/50 border-border text-foreground/70">
+              <Calendar className="w-3 h-3 ml-1 shrink-0" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="today">{tc("اليوم", "Today")}</SelectItem>
+              <SelectItem value="week">{tc("هذا الأسبوع", "This Week")}</SelectItem>
+              <SelectItem value="month">{tc("هذا الشهر", "This Month")}</SelectItem>
+              <SelectItem value="year">{tc("هذا العام", "This Year")}</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </header>
+      <main className="flex-1 overflow-y-auto pb-20 lg:pb-6">
+      <div className="p-4 lg:p-6 space-y-6 max-w-[1400px] mx-auto">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+          <div className="bg-card border border-border rounded-2xl p-4 lg:p-5 hover:shadow-sm transition-shadow">
             <div className="flex items-start justify-between mb-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-slate-900" />
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <DollarSign className="w-5 h-5 text-primary" />
               </div>
-              <Badge className="badge-premium badge-gold">
+              <Badge className="bg-amber-500/15 text-amber-600 border-amber-500/30 text-[10px]">
                 <TrendingUp className="w-3 h-3" />
                 +12.5%
               </Badge>
@@ -335,12 +332,12 @@ export default function ExecutiveDashboard() {
             <p className="text-2xl font-bold text-foreground">{totalRevenue.toLocaleString('ar-SA')} <span className="text-sm font-normal"><SarIcon /></span></p>
           </div>
 
-          <div className="kpi-card card-hover">
+          <div className="bg-card border border-border rounded-2xl p-4 lg:p-5 hover:shadow-sm transition-shadow">
             <div className="flex items-start justify-between mb-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-500 flex items-center justify-center">
-                <Wallet className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
+                <Wallet className="w-5 h-5 text-emerald-600" />
               </div>
-              <Badge className="badge-premium badge-success">
+              <Badge className="bg-[#2D9B6E]/15 text-[#2D9B6E] border-[#2D9B6E]/30 text-[10px]">
                 <Activity className="w-3 h-3" />
                 مكتمل
               </Badge>
@@ -349,20 +346,20 @@ export default function ExecutiveDashboard() {
             <p className="text-2xl font-bold text-foreground">{completedRevenue.toLocaleString('ar-SA')} <span className="text-sm font-normal"><SarIcon /></span></p>
           </div>
 
-          <div className="kpi-card card-hover">
+          <div className="bg-card border border-border rounded-2xl p-4 lg:p-5 hover:shadow-sm transition-shadow">
             <div className="flex items-start justify-between mb-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center">
-                <ShoppingBag className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+                <ShoppingBag className="w-5 h-5 text-blue-600" />
               </div>
             </div>
             <p className="text-sm text-muted-foreground mb-1">عدد الطلبات</p>
             <p className="text-2xl font-bold text-foreground">{filteredOrders.length.toLocaleString('ar-SA')}</p>
           </div>
 
-          <div className="kpi-card card-hover">
+          <div className="bg-card border border-border rounded-2xl p-4 lg:p-5 hover:shadow-sm transition-shadow">
             <div className="flex items-start justify-between mb-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-400 to-purple-500 flex items-center justify-center">
-                <Target className="w-5 h-5 text-white" />
+              <div className="w-10 h-10 rounded-lg bg-violet-50 dark:bg-violet-900/20 flex items-center justify-center">
+                <Target className="w-5 h-5 text-violet-600" />
               </div>
             </div>
             <p className="text-sm text-muted-foreground mb-1">متوسط قيمة الطلب</p>
@@ -371,11 +368,11 @@ export default function ExecutiveDashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-2 stat-card-premium">
-            <CardHeader className="section-header-executive pb-4">
+          <Card className="lg:col-span-2 bg-card border border-border">
+            <CardHeader className="pb-4">
               <div className="flex items-center gap-3">
-                <BarChart3 className="w-5 h-5 text-accent" />
-                <CardTitle className="text-lg title-executive">تحليل الإيرادات</CardTitle>
+                <BarChart3 className="w-5 h-5 text-primary" />
+                <CardTitle className="text-lg text-foreground">تحليل الإيرادات</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
@@ -383,8 +380,8 @@ export default function ExecutiveDashboard() {
                 <AreaChart data={dailyData}>
                   <defs>
                     <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#D4AF37" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#2D9B6E" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#2D9B6E" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -412,7 +409,7 @@ export default function ExecutiveDashboard() {
                   <Area 
                     type="monotone" 
                     dataKey="revenue" 
-                    stroke="#D4AF37" 
+                    stroke="#2D9B6E" 
                     strokeWidth={2}
                     fill="url(#revenueGradient)" 
                   />
@@ -421,11 +418,11 @@ export default function ExecutiveDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="stat-card-premium">
-            <CardHeader className="section-header-executive pb-4">
+          <Card className="bg-card border border-border">
+            <CardHeader className="pb-4">
               <div className="flex items-center gap-3">
-                <CreditCard className="w-5 h-5 text-accent" />
-                <CardTitle className="text-lg title-executive">طرق الدفع</CardTitle>
+                <CreditCard className="w-5 h-5 text-primary" />
+                <CardTitle className="text-lg text-foreground">طرق الدفع</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
@@ -460,11 +457,11 @@ export default function ExecutiveDashboard() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="stat-card-premium">
-            <CardHeader className="section-header-executive pb-4">
+          <Card className="bg-card border border-border">
+            <CardHeader className="pb-4">
               <div className="flex items-center gap-3">
-                <Award className="w-5 h-5 text-accent" />
-                <CardTitle className="text-lg title-executive">أفضل المنتجات</CardTitle>
+                <Award className="w-5 h-5 text-primary" />
+                <CardTitle className="text-lg text-foreground">أفضل المنتجات</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
@@ -474,7 +471,7 @@ export default function ExecutiveDashboard() {
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold
                       ${index === 0 ? 'bg-gradient-to-br from-primary to-primary/80 text-primary-foreground' : 
                         index === 1 ? 'bg-slate-200 text-slate-700' :
-                        index === 2 ? 'bg-accent text-accent' :
+                        index === 2 ? 'bg-[#2D9B6E]/20 text-[#2D9B6E]' :
                         'bg-slate-100 text-slate-600'}`}
                     >
                       {index + 1}
@@ -495,21 +492,21 @@ export default function ExecutiveDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="stat-card-premium">
-            <CardHeader className="section-header-executive pb-4">
+          <Card className="bg-card border border-border">
+            <CardHeader className="pb-4">
               <div className="flex items-center gap-3">
-                <Building2 className="w-5 h-5 text-accent" />
-                <CardTitle className="text-lg title-executive">نظرة سريعة</CardTitle>
+                <Building2 className="w-5 h-5 text-primary" />
+                <CardTitle className="text-lg text-foreground">نظرة سريعة</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 rounded-lg bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/20 dark:to-primary/10 border border-primary dark:border-primary">
+                <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
                   <div className="flex items-center gap-2 mb-2">
-                    <Building2 className="w-4 h-4 text-accent" />
-                    <span className="text-sm text-accent dark:text-accent">الفروع</span>
+                    <Building2 className="w-4 h-4 text-primary" />
+                    <span className="text-sm text-primary">الفروع</span>
                   </div>
-                  <p className="text-2xl font-bold text-accent dark:text-accent">{branches.length}</p>
+                  <p className="text-2xl font-bold text-primary">{branches.length}</p>
                 </div>
 
                 <div className="p-4 rounded-lg bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20 border border-emerald-200 dark:border-emerald-700">
@@ -541,11 +538,11 @@ export default function ExecutiveDashboard() {
         </div>
 
         {/* Branch Comparison Section */}
-        <Card className="stat-card-premium">
-          <CardHeader className="section-header-executive pb-4">
+        <Card className="bg-card border border-border">
+          <CardHeader className="pb-4">
             <div className="flex items-center gap-3">
-              <GitCompare className="w-5 h-5 text-accent" />
-              <CardTitle className="text-lg title-executive">مقارنة أداء الفروع</CardTitle>
+              <GitCompare className="w-5 h-5 text-primary" />
+              <CardTitle className="text-lg text-foreground">مقارنة أداء الفروع</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
@@ -570,11 +567,11 @@ export default function ExecutiveDashboard() {
                       }}
                       formatter={(value: number) => [`${value.toLocaleString('ar-SA')} ر.س`, 'الإيرادات']}
                     />
-                    <Bar dataKey="revenue" fill="#D4AF37" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="revenue" fill="#2D9B6E" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
                 
-                <div className="table-premium">
+                <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-border">
@@ -593,7 +590,7 @@ export default function ExecutiveDashboard() {
                           <td className="py-3 px-4">{branch.orders}</td>
                           <td className="py-3 px-4">{branch.avgOrder.toFixed(0)} <SarIcon /></td>
                           <td className="py-3 px-4">
-                            <Badge className={branch.growth >= 0 ? 'badge-premium badge-success' : 'badge-premium badge-danger'}>
+                            <Badge className={branch.growth >= 0 ? 'bg-[#2D9B6E]/15 text-[#2D9B6E] border-[#2D9B6E]/30 text-[10px]' : 'bg-red-500/15 text-red-500 border-red-500/30 text-[10px]'}>
                               {branch.growth >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                               {Math.abs(branch.growth).toFixed(1)}%
                             </Badge>
@@ -612,21 +609,21 @@ export default function ExecutiveDashboard() {
 
         {/* Labor Cost Analytics */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="stat-card-premium">
-            <CardHeader className="section-header-executive pb-4">
+          <Card className="bg-card border border-border">
+            <CardHeader className="pb-4">
               <div className="flex items-center gap-3">
-                <Briefcase className="w-5 h-5 text-accent" />
-                <CardTitle className="text-lg title-executive">تحليل تكلفة العمالة</CardTitle>
+                <Briefcase className="w-5 h-5 text-primary" />
+                <CardTitle className="text-lg text-foreground">تحليل تكلفة العمالة</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="p-4 rounded-lg bg-gradient-to-br from-primary/5 to-primary/10 dark:from-primary/20 dark:to-primary/10 border border-primary dark:border-primary">
+                <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
                   <div className="flex items-center gap-2 mb-2">
-                    <DollarSign className="w-4 h-4 text-accent" />
-                    <span className="text-sm text-accent dark:text-accent">التكلفة الشهرية (تقديرية)</span>
+                    <DollarSign className="w-4 h-4 text-primary" />
+                    <span className="text-sm text-primary">التكلفة الشهرية (تقديرية)</span>
                   </div>
-                  <p className="text-2xl font-bold text-accent dark:text-accent">
+                  <p className="text-2xl font-bold text-primary">
                     {laborAnalytics.totalCost.toLocaleString('ar-SA')} <span className="text-sm font-normal"><SarIcon /></span>
                   </p>
                 </div>
@@ -661,17 +658,17 @@ export default function ExecutiveDashboard() {
                       name === 'count' ? 'العدد' : 'التكلفة'
                     ]}
                   />
-                  <Bar dataKey="costEstimate" fill="#D4AF37" radius={[4, 4, 0, 0]} name="التكلفة" />
+                  <Bar dataKey="costEstimate" fill="#2D9B6E" radius={[4, 4, 0, 0]} name="التكلفة" />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
 
-          <Card className="stat-card-premium">
-            <CardHeader className="section-header-executive pb-4">
+          <Card className="bg-card border border-border">
+            <CardHeader className="pb-4">
               <div className="flex items-center gap-3">
-                <UserCheck className="w-5 h-5 text-accent" />
-                <CardTitle className="text-lg title-executive">توزيع الموظفين</CardTitle>
+                <UserCheck className="w-5 h-5 text-primary" />
+                <CardTitle className="text-lg text-foreground">توزيع الموظفين</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
@@ -718,7 +715,7 @@ export default function ExecutiveDashboard() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Button 
             onClick={() => setLocation("/manager/dashboard")}
-            className="h-20 btn-premium flex flex-col gap-2"
+            className="h-20 flex flex-col gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
           >
             <BarChart3 className="w-6 h-6" />
             <span>لوحة التحكم</span>
@@ -726,9 +723,9 @@ export default function ExecutiveDashboard() {
           <Button 
             onClick={() => setLocation("/employee/pos")}
             variant="outline"
-            className="h-20 flex flex-col gap-2 border-primary hover:border-primary hover:bg-background dark:hover:bg-primary/20"
+            className="h-20 flex flex-col gap-2 border-primary/30 hover:border-primary hover:bg-primary/5"
           >
-            <Package className="w-6 h-6 text-accent" />
+            <Package className="w-6 h-6 text-primary" />
             <span>نقاط البيع</span>
           </Button>
           <Button 
@@ -749,14 +746,9 @@ export default function ExecutiveDashboard() {
           </Button>
         </div>
       </div>
-
-      <footer className="border-t border-border mt-12 py-6">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <p className="text-sm text-muted-foreground">
-            مكان الشيف البخاري Enterprise &copy; {new Date().getFullYear()} - نظام إدارة المقاهي المتكامل
-          </p>
-        </div>
-      </footer>
+      </main>
+      <MobileBottomNav manager={manager as any} />
+      </div>
     </div>
   );
 }

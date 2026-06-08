@@ -4,7 +4,7 @@ function getEmployeeHeaders(): Record<string, string> {
   const headers: Record<string, string> = {};
   try {
     const stored = localStorage.getItem("currentEmployee");
-    const restoreKey = localStorage.getItem("chefsplace-restore-key");
+    const restoreKey = localStorage.getItem("qirox-restore-key");
     if (stored) {
       const employee = JSON.parse(stored);
       if (employee.id) headers['X-Employee-Id'] = employee.id;
@@ -16,7 +16,7 @@ function getEmployeeHeaders(): Record<string, string> {
 
 async function tryRestoreSession(): Promise<boolean> {
   const stored = localStorage.getItem("currentEmployee");
-  const restoreKey = localStorage.getItem("chefsplace-restore-key");
+  const restoreKey = localStorage.getItem("qirox-restore-key");
   if (!stored || !restoreKey) return false;
   
   try {
@@ -32,14 +32,14 @@ async function tryRestoreSession(): Promise<boolean> {
       const data = await res.json();
       localStorage.setItem("currentEmployee", JSON.stringify(data.employee));
       if (data.restoreKey) {
-        localStorage.setItem("chefsplace-restore-key", data.restoreKey);
+        localStorage.setItem("qirox-restore-key", data.restoreKey);
       }
       return true;
     }
   } catch (e) { console.warn('[queryClient] Session restore failed:', e); }
   
   localStorage.removeItem("currentEmployee");
-  localStorage.removeItem("chefsplace-restore-key");
+  localStorage.removeItem("qirox-restore-key");
   return false;
 }
 
@@ -100,7 +100,7 @@ export async function apiRequest(
 
  const newRestoreKey = res.headers.get('X-New-Restore-Key');
  if (newRestoreKey) {
-   localStorage.setItem("chefsplace-restore-key", newRestoreKey);
+   localStorage.setItem("qirox-restore-key", newRestoreKey);
  }
 
  if (res.status === 401 && !isRetry) {
@@ -138,7 +138,7 @@ export const getQueryFn: <T>(options: {
 
  const newRestoreKey = res.headers.get('X-New-Restore-Key');
  if (newRestoreKey) {
-   localStorage.setItem("chefsplace-restore-key", newRestoreKey);
+   localStorage.setItem("qirox-restore-key", newRestoreKey);
  }
 
  if (res.status === 401 && unauthorizedBehavior !== "returnNull") {

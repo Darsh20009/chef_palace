@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { brand } from "@/lib/brand";
 import { useTranslate } from "@/lib/useTranslate";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCartStore } from "@/lib/cart-store";
@@ -34,10 +33,9 @@ import {
   CheckCircle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-const banner1 = "/banners/banner-1.jpg";
-const banner2 = "/banners/banner-2.jpg";
-const chefsplaceLogo = "/logo.png";
-const banners = [banner1, banner2];
+import banner1 from "@assets/blackrose-banner-1.png";
+import banner2 from "@assets/blackrose-banner-2.png";
+import qiroxLogo from "@assets/qirox-logo-customer.png";
 import type { CoffeeItem, IProductAddon, IPromoOffer } from "@shared/schema";
 import { AddToCartModal } from "@/components/add-to-cart-modal";
 import { motion, AnimatePresence } from "framer-motion";
@@ -152,7 +150,7 @@ export default function MenuPage() {
 
   const getStatusMessage = () => {
     if (!businessConfig) return null;
-    if (businessConfig.isEmergencyClosed) return tc("نعتذر، المطعم مغلق حالياً لظروف طارئة", "Sorry, the restaurant is temporarily closed due to an emergency");
+    if (businessConfig.isEmergencyClosed) return tc("نعتذر، الكافيه مغلق حالياً لظروف طارئة", "Sorry, the cafe is temporarily closed due to an emergency");
     
     const isOpen = isStoreOpen();
     if (isOpen) return null;
@@ -163,10 +161,10 @@ export default function MenuPage() {
       let timeStr = "";
       if (hours > 0) timeStr += `${hours} ساعة `;
       if (minutes > 0) timeStr += `${minutes} دقيقة`;
-      return `المطعم مغلق حالياً، يفتح بعد ${timeStr}`;
+      return `الكافيه مغلق حالياً، يفتح بعد ${timeStr}`;
     }
 
-    return tc("المطعم مغلق حالياً", "The restaurant is currently closed");
+    return tc("الكافيه مغلق حالياً", "The cafe is currently closed");
   };
 
   const { data: coffeeItems = [], isLoading } = useQuery<CoffeeItem[]>({
@@ -297,7 +295,7 @@ export default function MenuPage() {
       const cheapestName = i18n.language === 'ar' ? cheapest?.nameAr : (cheapest?.nameEn || cheapest?.nameAr);
       if (cheapest) {
         slides.push({
-          image: cheapest.imageUrl || banner2,
+          image: cheapest.imageUrl || banner1,
           title: t("menu.banner.smart.cheapest_title", { name: cheapestName }),
           subtitle: t("menu.banner.smart.cheapest_subtitle"),
           badge: t("menu.banner.smart.cheapest_badge"),
@@ -335,7 +333,7 @@ export default function MenuPage() {
           subtitle: t("banner.1.subtitle"),
           badge: t("banner.1.badge"),
           linkType: 'product',
-          linkId: "buk-001",
+          linkId: "matcha-latte",
           externalUrl: undefined,
           couponCode: undefined,
           couponImageUrl: undefined
@@ -346,7 +344,7 @@ export default function MenuPage() {
           subtitle: t("banner.2.subtitle"),
           badge: t("banner.2.badge"),
           linkType: 'product',
-          linkId: "man-001",
+          linkId: "vanilla-latte",
           externalUrl: undefined,
           couponCode: undefined,
           couponImageUrl: undefined
@@ -368,25 +366,27 @@ export default function MenuPage() {
     Coffee, Flame, Snowflake, Star, Cake, Utensils, Sparkles
   };
 
-  const getCategoryEmoji = (cat: MenuCategory): string => {
-    return (cat as any).emoji || '';
-  };
-
-  const allTab = { id: "all", name: tc("الكل", "All"), icon: Utensils, emoji: "🍽️" };
+  const allTab = { id: "all", name: tc("الكل", "All"), icon: Coffee };
 
   const categories = [
     allTab,
     ...dynamicCategories.map(c => ({
       id: c.id,
       name: i18n.language === 'ar' ? c.nameAr : (c.nameEn || c.nameAr),
-      icon: iconMap[c.icon || 'Utensils'] || Utensils,
-      emoji: getCategoryEmoji(c),
+      icon: iconMap[c.icon || 'Coffee'] || Coffee,
     })),
   ];
 
   const bestSellers = coffeeItems
-    .filter(item => (item as any).isBestSeller || (item as any).salesCount > 10)
-    .sort((a, b) => ((b as any).salesCount || 0) - ((a as any).salesCount || 0))
+    .filter(item => (item as any).isBestSeller || (item as any).salesCount > 10 || item.category === 'food' || item.category === 'bakery')
+    .sort((a, b) => {
+      // Prioritize food in best sellers if it matches
+      const aIsFood = a.category === 'food' || a.category === 'bakery';
+      const bIsFood = b.category === 'food' || b.category === 'bakery';
+      if (aIsFood && !bIsFood) return -1;
+      if (!aIsFood && bIsFood) return 1;
+      return ((b as any).salesCount || 0) - ((a as any).salesCount || 0);
+    })
     .slice(0, 8);
 
 
@@ -400,9 +400,12 @@ export default function MenuPage() {
     // Remove common diacritics to normalise names
     const cleaned = nameAr.trim().replace(/^[\u064B-\u0652]+/, '');
 
-    // Group items sharing the same FIRST word AND same category
-    const firstWord = cleaned.split(/\s+/)[0] || 'unknown';
-    return `${item.category}::${firstWord}`;
+    // Group items sharing the same FIRST TWO words AND same category
+    // (e.g. "قهوة عربية صغير" + "قهوة عربية كبير" → same group;
+    //  but "قهوة تركية" stays separate)
+    const parts = cleaned.split(/\s+/).filter(Boolean);
+    const prefix = parts.slice(0, 2).join(' ') || parts[0] || 'unknown';
+    return `${item.category}::${prefix}`;
   };
 
   const groupedItems = coffeeItems.reduce((acc: Record<string, CoffeeItem[]>, item) => {
@@ -449,7 +452,7 @@ export default function MenuPage() {
 
   const sortedFilteredItems = [...filteredItems].sort((a, b) => {
     if (selectedCategory !== "all") return 0;
-    const categoryOrder = ['cat-bukhari', 'cat-mandi', 'cat-grills', 'cat-soup', 'cat-appetizers', 'cat-drinks', 'cat-desserts'];
+    const categoryOrder = ['hot', 'cold', 'desserts', 'bakery', 'sandwiches'];
     const aIdx = categoryOrder.indexOf(a.category);
     const bIdx = categoryOrder.indexOf(b.category);
     const aPos = aIdx === -1 ? 99 : aIdx;
@@ -457,25 +460,19 @@ export default function MenuPage() {
     return aPos - bPos;
   });
 
-  // ── Badge computation ────────────────────────────────────────────────────
-  // Compute best-seller threshold dynamically: items with salesCount >= average
-  // of all sold items and at least 3 sales. Falls back to 5 if no sales data.
-  const allSalesCounts = coffeeItems
+  // Auto-compute isBestSeller (top 3 items by salesCount with at least 1 sale)
+  // and isNew from isNewProduct field
+  const _allSalesCounts = coffeeItems
     .map(i => (i as any).salesCount || 0)
-    .filter(s => s > 0);
-  const bestSellerThreshold = allSalesCounts.length > 0
-    ? Math.max(3, Math.floor(allSalesCounts.reduce((a, b) => a + b, 0) / allSalesCounts.length))
-    : 3;
-
-  const enhancedSortedItems = sortedFilteredItems.map(item => ({
+    .filter((c: number) => c > 0)
+    .sort((a: number, b: number) => b - a);
+  const _bestSellerThreshold = _allSalesCounts.length >= 3
+    ? _allSalesCounts[2]  // value of 3rd highest
+    : _allSalesCounts[0] || 1;
+  const augmentedItems = sortedFilteredItems.map(item => ({
     ...item,
-    isBestSeller:
-      (item as any).isBestSeller === true ||
-      ((item as any).salesCount || 0) >= bestSellerThreshold,
-    isNew:
-      (item as any).isNew === true ||
-      (item as any).availabilityStatus === 'new' ||
-      (item as any).isNewProduct === 1,
+    isBestSeller: ((item as any).salesCount || 0) >= _bestSellerThreshold && _bestSellerThreshold > 0,
+    isNew: (item as any).isNewProduct === 1,
   }));
 
   const cartHasReservationItem = cartItems.some(ci => (ci.coffeeItem as any)?.isReservation);
@@ -574,10 +571,29 @@ export default function MenuPage() {
     <div className="min-h-screen bg-background" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
       <header className="fixed top-0 inset-x-0 z-[60] bg-black/60 backdrop-blur-md border-b border-white/10 flex items-end justify-between px-4 pb-3 min-h-[64px]" style={{paddingTop: 'max(env(safe-area-inset-top, 0px), 12px)'}}>
         <div className="flex items-center gap-3">
-          <img src={chefsplaceLogo} alt="Logo" className="w-10 h-10 object-cover rounded-full overflow-hidden flex-shrink-0" />
+          <div className="w-10 h-10 rounded-2xl bg-white/10 p-1.5 flex items-center justify-center">
+            <img src={qiroxLogo} alt="Logo" className="w-full h-full object-contain" />
+          </div>
           <div className="flex flex-col">
-            <h1 className="text-base font-black text-white leading-tight">مكان الشيف البخاري</h1>
-            <span className="text-[10px] font-bold text-white/60 tracking-wider uppercase">مطعم</span>
+            {(() => {
+              const isCarMode = (() => {
+                try { return sessionStorage.getItem("qirox_car_pickup_mode") === "1"; } catch { return false; }
+              })();
+              if (isCarMode) {
+                return (
+                  <>
+                    <h1 className="text-base font-black text-white leading-tight" data-testid="text-car-menu-title">منيو السيارات</h1>
+                    <span className="text-[10px] font-bold text-white/60 tracking-wider">استلام من السيارة 🚗</span>
+                  </>
+                );
+              }
+              return (
+                <>
+                  <h1 className="text-base font-black text-white leading-tight">مكان الشيف</h1>
+                  <span className="text-[10px] font-bold text-white/60 tracking-wider uppercase">CAFE</span>
+                </>
+              );
+            })()}
           </div>
         </div>
 
@@ -916,11 +932,10 @@ export default function MenuPage() {
                             src={offer.imageUrl}
                             alt={offerName}
                             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                            onError={(e) => { const el = e.currentTarget as HTMLImageElement; el.style.display = 'none'; el.parentElement!.querySelector('.offer-fallback')?.classList.remove('hidden'); }}
                           />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-5xl">🎁</div>
-                        )}
+                        ) : null}
+                        <div className={`offer-fallback w-full h-full flex items-center justify-center text-5xl ${offer.imageUrl ? 'hidden' : ''}`}>🎁</div>
                         {/* Discount badge */}
                         {discountPct > 0 && (
                           <div className={`absolute top-2 ${i18n.language === 'ar' ? 'left-2' : 'right-2'} bg-primary text-white text-xs font-black px-2.5 py-1 rounded-full shadow-lg`}>
@@ -960,11 +975,11 @@ export default function MenuPage() {
                         {/* Price */}
                         <div className="flex items-center gap-2">
                           <span className="text-base font-black text-primary">
-                            {offer.offerPrice.toFixed(2)} <span className="text-xs font-normal">ر.س</span>
+                            {offer.offerPrice.toFixed(2)} <SarIcon size={11} />
                           </span>
                           {offer.originalPrice !== offer.offerPrice && (
                             <span className="text-xs text-muted-foreground line-through">
-                              {offer.originalPrice.toFixed(2)} ر.س
+                              {offer.originalPrice.toFixed(2)} <SarIcon size={11} />
                             </span>
                           )}
                         </div>
@@ -1013,11 +1028,7 @@ export default function MenuPage() {
                 }`}
                 data-testid={`button-category-${cat.id}`}
               >
-                {(cat as any).emoji ? (
-                  <span className="text-base leading-none">{(cat as any).emoji}</span>
-                ) : (
-                  <cat.icon className={`w-4 h-4 ${selectedCategory === cat.id ? "text-primary-foreground" : "text-primary"}`} />
-                )}
+                <cat.icon className={`w-4 h-4 ${selectedCategory === cat.id ? "text-primary-foreground" : "text-primary"}`} />
                 <span>{cat.name}</span>
               </button>
             ))}
@@ -1032,65 +1043,30 @@ export default function MenuPage() {
             </div>
             <div className="flex gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory -mx-4 px-4 pb-2">
               {representativeItems.slice(0, 6).map((item) => (
-                <motion.div
-                  key={item.id}
-                  whileHover={{ scale: 1.03, y: -3 }}
-                  whileTap={{ scale: 0.97 }}
-                  className="flex-shrink-0 w-[150px] snap-start rounded-2xl overflow-hidden shadow-md cursor-pointer group relative bg-card border border-border/40"
+                <motion.div 
+                  key={item.id} 
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="flex-shrink-0 w-[140px] snap-start bg-card rounded-2xl border border-border p-3 space-y-3 shadow-sm cursor-pointer group"
                   onClick={() => handleAddToCartDirect(item)}
                   data-testid={`card-featured-${item.id}`}
                 >
-                  {/* Image area — 65% of card height */}
-                  <div className="relative h-[130px] overflow-hidden bg-gradient-to-br from-primary/10 to-accent/5">
-                    <img
-                      src={item.imageUrl || chefsplaceLogo}
-                      className={`w-full h-full transition-transform duration-500 group-hover:scale-110 ${item.imageUrl ? 'object-cover' : 'object-contain p-4 opacity-60'}`}
-                      alt={i18n.language === 'ar' ? item.nameAr : item.nameEn || item.nameAr}
-                      onError={(e) => {
-                        const img = e.target as HTMLImageElement;
-                        img.src = chefsplaceLogo;
-                        img.className = 'w-full h-full object-contain p-4 opacity-60';
-                      }}
+                  <div className="aspect-square rounded-xl overflow-hidden bg-secondary flex items-center justify-center">
+                    <img 
+                      src={item.imageUrl || qiroxLogo} 
+                      className={`transition-transform duration-500 group-hover:scale-110 ${item.imageUrl ? 'w-full h-full object-cover' : 'w-3/4 h-3/4 object-contain p-1'}`}
+                      alt={i18n.language === 'ar' ? item.nameAr : item.nameEn || item.nameAr} 
+                      onError={(e) => { const img = e.target as HTMLImageElement; img.src = qiroxLogo; img.className = img.className.replace('object-cover', 'object-contain') + ' p-1 w-3/4 h-3/4'; }}
                     />
-                    {/* Gradient overlay at bottom */}
-                    <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/60 to-transparent" />
-
-                    {/* Badges */}
-                    {item.isNewProduct === 1 && (
-                      <div className="absolute top-2 right-2 bg-primary text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow">
-                        {i18n.language === 'ar' ? 'جديد' : 'NEW'}
-                      </div>
-                    )}
-                    {item.oldPrice && item.oldPrice > item.price && (
-                      <div className="absolute top-2 left-2 bg-red-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow">
-                        -{Math.round(((item.oldPrice - item.price) / item.oldPrice) * 100)}%
-                      </div>
-                    )}
-
-                    {/* Price pinned to bottom of image */}
-                    <div className="absolute bottom-1.5 right-2 left-2 flex items-end justify-between">
-                      <div>
-                        <span className="text-white font-black text-sm drop-shadow">{item.price}</span>
-                        <span className="text-white/80 text-[10px] font-medium mr-0.5 drop-shadow"> ر.س</span>
-                        {item.oldPrice && item.oldPrice > item.price && (
-                          <div className="text-white/60 text-[9px] line-through leading-none">{item.oldPrice} ر.س</div>
-                        )}
-                      </div>
-                      {/* Add button — floating circle */}
-                      <motion.div
-                        whileTap={{ scale: 0.85 }}
-                        className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-lg group-hover:bg-primary/90 transition-colors flex-shrink-0"
-                      >
-                        <Plus className="w-4 h-4 text-white" />
-                      </motion.div>
-                    </div>
                   </div>
-
-                  {/* Name */}
-                  <div className="px-2.5 py-2">
-                    <h3 className="text-xs font-bold text-foreground leading-tight line-clamp-2">
-                      {i18n.language === 'ar' ? item.nameAr : item.nameEn || item.nameAr}
-                    </h3>
+                  <div className="space-y-1.5">
+                    <h3 className="text-sm font-semibold truncate text-foreground">{i18n.language === 'ar' ? item.nameAr : item.nameEn || item.nameAr}</h3>
+                    <div className="flex items-center justify-between">
+                      <span className="text-primary font-bold">{item.price} <small className="text-xs font-normal text-muted-foreground"><SarIcon /></small></span>
+                      <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary transition-colors">
+                        <Plus className="w-4 h-4 text-primary group-hover:text-white transition-colors" />
+                      </div>
+                    </div>
                   </div>
                 </motion.div>
               ))}
@@ -1103,7 +1079,7 @@ export default function MenuPage() {
             </h2>
             {businessConfig?.menuLayout === 'cards' ? (
               <CardsMenuLayout
-                items={enhancedSortedItems as any}
+                items={augmentedItems as any}
                 onAddItem={handleAddToCartDirect as any}
                 lang={i18n.language}
                 currency=<SarIcon />
@@ -1113,7 +1089,7 @@ export default function MenuPage() {
               />
             ) : businessConfig?.menuLayout === 'list' ? (
               <ListMenuLayout
-                items={enhancedSortedItems as any}
+                items={augmentedItems as any}
                 onAddItem={handleAddToCartDirect as any}
                 lang={i18n.language}
                 currency=<SarIcon />
@@ -1123,7 +1099,7 @@ export default function MenuPage() {
               />
             ) : (
               <ClassicMenuLayout
-                items={enhancedSortedItems as any}
+                items={augmentedItems as any}
                 onAddItem={handleAddToCartDirect as any}
                 lang={i18n.language}
                 currency=<SarIcon />
@@ -1213,16 +1189,16 @@ export default function MenuPage() {
       <footer className="text-center py-5 space-y-2">
         <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground/70">
           <a
-            href={`tel:${brand.phoneIntl}`}
+            href="tel:+966566507666"
             className="flex items-center gap-1 hover:text-primary transition-colors"
             data-testid="link-footer-call"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.63 3.45 2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9a16 16 0 0 0 6 6l1.06-1.06a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 21.73 16z"/></svg>
-            <span dir="ltr">{brand.phoneDisplay}</span>
+            <span dir="ltr">+966 56 650 7666</span>
           </a>
           <span className="text-muted-foreground/30">•</span>
           <a
-            href={brand.locationUrl}
+            href="https://maps.app.goo.gl/zhHFfQVjWRxVKEBn6?g_st=ic"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1 hover:text-primary transition-colors"
@@ -1233,15 +1209,17 @@ export default function MenuPage() {
           </a>
         </div>
         <div className="text-xs text-muted-foreground/40">
+          made by{" "}
           <a
             href="https://www.chefsplace.online"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-muted-foreground/70 transition-colors underline underline-offset-2"
-            data-testid="link-chefsplace"
+            data-testid="link-qirox-studio"
           >
-            chefsplace.online
-          </a>
+            Qirox Studio
+          </a>{" "}
+          group
         </div>
       </footer>
 

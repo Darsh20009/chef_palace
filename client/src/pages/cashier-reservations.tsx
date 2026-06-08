@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Search, Calendar, Phone, Users, Clock, CheckCircle2, XCircle, Clock3 } from "lucide-react";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
 
 interface Reservation {
   tableId: string;
@@ -37,7 +38,7 @@ export default function CashierReservations() {
   const { data: allReservations = [], isLoading } = useQuery({
     queryKey: ["/api/tables"],
     queryFn: async () => {
-      const response = await fetch("/api/tables");
+      const response = await fetch("/api/tables", { credentials: 'include' });
       if (!response.ok) throw new Error("Failed to fetch tables");
       const tables = await response.json();
       
@@ -63,7 +64,7 @@ export default function CashierReservations() {
     }
 
     try {
-      const response = await fetch(`/api/tables/reservations/customer/${searchPhone}`);
+      const response = await fetch(`/api/tables/reservations/customer/${searchPhone}`, { credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
         setFilteredReservations(data);
@@ -81,7 +82,8 @@ export default function CashierReservations() {
   const confirmMutation = useMutation({
     mutationFn: async (tableId: string) => {
       const response = await fetch(`/api/tables/${tableId}/approve-reservation`, {
-        method: 'POST'
+        method: 'POST',
+        credentials: 'include'
       });
       if (!response.ok) throw new Error(tc("فشل في تأكيد الحجز", "Failed to confirm reservation"));
       return response.json();
@@ -107,7 +109,8 @@ export default function CashierReservations() {
   const cancelMutation = useMutation({
     mutationFn: async (tableId: string) => {
       const response = await fetch(`/api/tables/${tableId}/cancel-reservation`, {
-        method: 'POST'
+        method: 'POST',
+        credentials: 'include'
       });
       if (!response.ok) throw new Error(tc("فشل في إلغاء الحجز", "Failed to cancel reservation"));
       return response.json();
@@ -187,7 +190,7 @@ export default function CashierReservations() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-4" dir="rtl">
+    <div className="min-h-screen bg-background p-4 pb-20">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -384,6 +387,7 @@ export default function CashierReservations() {
           )}
         </div>
       </div>
+      <MobileBottomNav />
     </div>
   );
 }

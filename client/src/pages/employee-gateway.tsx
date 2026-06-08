@@ -29,7 +29,7 @@ export default function EmployeeGateway() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (password.toLowerCase() === "c2030") {
+    if (password.toLowerCase() === "b2030") {
       localStorage.setItem("qirox-gateway-passed", "true");
       setLocation("/employee/login");
     } else {
@@ -39,10 +39,10 @@ export default function EmployeeGateway() {
   };
 
   return (
-    <div dir="rtl" className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2 font-playfair">مكان الشيف البخاري</h1>
+          <h1 className="text-3xl font-bold text-foreground mb-2 font-playfair">مكان الشيف — الإدارة</h1>
           <p className="text-muted-foreground font-cairo">{tc("بوابة الموظفين", "Staff Portal")}</p>
         </div>
 

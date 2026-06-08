@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import SarIcon from "@/components/sar-icon";
 import { queryClient, getErrorMessage } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -150,7 +151,7 @@ export default function CustomerReservations() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-4" dir="rtl">
+    <div className="min-h-screen bg-background p-4">
       <div className="max-w-2xl mx-auto">
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-4">
@@ -255,14 +256,14 @@ export default function CustomerReservations() {
                           {order.items.map((item: any, i: number) => (
                             <div key={i} className="flex justify-between text-xs text-muted-foreground">
                               <span>{item.nameAr || 'منتج'} × {item.quantity}</span>
-                              <span>{((item.price || 0) * (item.quantity || 1)).toFixed(2)} ر.س</span>
+                              <span>{((item.price || 0) * (item.quantity || 1)).toFixed(2)} <SarIcon size={11} /></span>
                             </div>
                           ))}
                         </div>
                       )}
                       <div className="flex justify-between items-center border-t pt-2">
                         <span className="text-xs text-muted-foreground">الإجمالي</span>
-                        <span className="font-bold text-sm">{(order.totalAmount || 0).toFixed(2)} ر.س</span>
+                        <span className="font-bold text-sm">{(order.totalAmount || 0).toFixed(2)} <SarIcon size={12} /></span>
                       </div>
                       {statusKey === 'pending_payment' && (
                         <div className="bg-orange-50 border border-orange-200 rounded-lg p-2.5 text-xs text-orange-700">

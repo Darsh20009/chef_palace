@@ -9,6 +9,7 @@ import { Download, Wallet, Coffee, Award, Sparkles, Gift, Star, CreditCard, Tren
 import type { LoyaltyCard } from "@shared/schema";
 import SarIcon from "@/components/sar-icon";
 import { brand } from "@/lib/brand";
+import { useTranslate } from "@/lib/useTranslate";
 
 interface LoyaltyCardProps {
   card: LoyaltyCard;
@@ -43,6 +44,7 @@ function getTierProgress(tier: string, totalSpent: number): { percentage: number
 }
 
 export default function LoyaltyCardComponent({ card, showActions = true, compact = false, showTierProgress = true }: LoyaltyCardProps) {
+  const tc = useTranslate();
   const qrCanvasRef = useRef<HTMLCanvasElement>(null);
   const barcodeSvgRef = useRef<SVGSVGElement>(null);
   const hasTierData = !!(card.tier && card.totalSpent !== undefined);
@@ -50,7 +52,7 @@ export default function LoyaltyCardComponent({ card, showActions = true, compact
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
   const [barcodeDataUrl, setBarcodeDataUrl] = useState<string>("");
 
-  const availableFreeDishes = Math.max(0, (card.freeCupsEarned || 0) - (card.freeCupsRedeemed || 0));
+  const availableFreeDrinks = Math.max(0, (card.freeCupsEarned || 0) - (card.freeCupsRedeemed || 0));
   const stampsProgress = (card.stamps || 0) % 6;
 
   useEffect(() => {
@@ -226,10 +228,10 @@ export default function LoyaltyCardComponent({ card, showActions = true, compact
       ctx.textAlign = 'right';
       ctx.fillStyle = '#4a3728';
       ctx.font = 'bold 18px Cairo, Arial';
-      ctx.fillText('وجبات مجانية متاحة', 600, 320);
+      ctx.fillText('مشروبات مجانية متاحة', 600, 320);
       ctx.font = 'bold 36px Cairo, Arial';
-      ctx.fillStyle = availableFreeDishes > 0 ? '#22c55e' : '#6b4f3c';
-      ctx.fillText(String(availableFreeDishes), 600, 370);
+      ctx.fillStyle = availableFreeDrinks > 0 ? '#22c55e' : '#6b4f3c';
+      ctx.fillText(String(availableFreeDrinks), 600, 370);
 
       ctx.font = 'bold 18px Cairo, Arial';
       ctx.fillStyle = '#4a3728';
@@ -245,7 +247,7 @@ export default function LoyaltyCardComponent({ card, showActions = true, compact
 
     function downloadCanvas() {
       const link = document.createElement('a');
-      link.download = `بطاقة-مكان-الشيف-${card.customerName || 'loyalty'}.png`;
+      link.download = `بطاقة-كوبي-${card.customerName || 'loyalty'}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
     }
@@ -271,19 +273,19 @@ export default function LoyaltyCardComponent({ card, showActions = true, compact
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <Coffee className="w-5 h-5" />
-              <span className="font-bold text-lg">بطاقة مكان الشيف</span>
+              <span className="font-bold text-lg">{tc("بطاقة كوبي", "QIROX Card")}</span>
               <Badge className={`${currentTier.badgeColor} text-white text-xs`}>{currentTier.nameAr}</Badge>
             </div>
             <p className="text-sm opacity-90 truncate" data-testid="text-customer-name-compact">{card.customerName}</p>
             <div className="flex items-center gap-4 mt-2 text-sm">
               <span className="flex items-center gap-1">
                 <Star className="w-4 h-4" />
-                {stampsProgress}/6 أختام
+                {stampsProgress}/6 {tc("أختام", "stamps")}
               </span>
-              {availableFreeDishes > 0 && (
+              {availableFreeDrinks > 0 && (
                 <span className="flex items-center gap-1 text-green-300 font-bold">
                   <Gift className="w-4 h-4" />
-                  {availableFreeDishes} مجاني
+                  {availableFreeDrinks} {tc("مجاني", "free")}
                 </span>
               )}
             </div>
@@ -308,7 +310,7 @@ export default function LoyaltyCardComponent({ card, showActions = true, compact
               </div>
               <div>
                 <h3 className="text-2xl font-bold" data-testid="text-brand">{brand.nameEn}</h3>
-                <p className="text-sm opacity-80">بطاقة الولاء الذكية</p>
+                <p className="text-sm opacity-80">{tc("بطاقة الولاء الذكية", "Smart Loyalty Card")}</p>
               </div>
             </div>
             <Badge className={`${currentTier.badgeColor} text-white px-3 py-1 text-sm`}>
@@ -319,13 +321,13 @@ export default function LoyaltyCardComponent({ card, showActions = true, compact
 
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1">
-              <h4 className="text-2xl font-bold" data-testid="text-customer-name">{card.customerName || 'عميل مميز'}</h4>
+              <h4 className="text-2xl font-bold" data-testid="text-customer-name">{card.customerName || tc('عميل مميز', 'Valued Member')}</h4>
               <p className="text-sm opacity-80 flex items-center gap-2" data-testid="text-phone">
                 <CreditCard className="w-4 h-4" />
                 {card.phoneNumber}
               </p>
               <p className="text-xs opacity-60 font-mono" data-testid="text-card-number">
-                رقم البطاقة: {card.cardNumber}
+                {tc("رقم البطاقة:", "Card #:")} {card.cardNumber}
               </p>
             </div>
           </div>
@@ -348,7 +350,7 @@ export default function LoyaltyCardComponent({ card, showActions = true, compact
                   <Star className="w-5 h-5 text-yellow-300" />
                 </div>
                 <div className="text-2xl font-bold">{stampsProgress}/6</div>
-                <div className="text-xs opacity-80">أختام</div>
+                <div className="text-xs opacity-80">{tc("أختام", "Stamps")}</div>
                 <div className="flex justify-center gap-1 mt-2">
                   {Array.from({ length: 6 }).map((_, i) => (
                     <div 
@@ -359,14 +361,14 @@ export default function LoyaltyCardComponent({ card, showActions = true, compact
                 </div>
               </div>
 
-              <div className={`rounded-lg p-3 ${availableFreeDishes > 0 ? 'bg-green-500/30' : 'bg-white/10'}`}>
+              <div className={`rounded-lg p-3 ${availableFreeDrinks > 0 ? 'bg-green-500/30' : 'bg-white/10'}`}>
                 <div className="flex items-center justify-center gap-1 mb-1">
                   <Gift className="w-5 h-5 text-green-300" />
                 </div>
-                <div className={`text-2xl font-bold ${availableFreeDishes > 0 ? 'text-green-300' : ''}`} data-testid="text-free-drinks">
-                  {availableFreeDishes}
+                <div className={`text-2xl font-bold ${availableFreeDrinks > 0 ? 'text-green-300' : ''}`} data-testid="text-free-drinks">
+                  {availableFreeDrinks}
                 </div>
-                <div className="text-xs opacity-80">وجبة مجانية</div>
+                <div className="text-xs opacity-80">{tc("مشروب مجاني", "Free Drink")}</div>
               </div>
 
               <div className="bg-white/10 rounded-lg p-3">
@@ -374,12 +376,12 @@ export default function LoyaltyCardComponent({ card, showActions = true, compact
                   <Sparkles className="w-5 h-5" />
                 </div>
                 <div className="text-xl font-bold" data-testid="text-discount-count">{card.discountCount || 0}</div>
-                <div className="text-xs opacity-80">مرة استخدام</div>
+                <div className="text-xs opacity-80">{tc("مرة استخدام", "Uses")}</div>
               </div>
 
               <div className="bg-white/10 rounded-lg p-3">
                 <div className="text-xl font-bold" data-testid="text-total-spent">{card.totalSpent || 0}</div>
-                <div className="text-xs opacity-80"><SarIcon /> إجمالي</div>
+                <div className="text-xs opacity-80"><SarIcon /> {tc("إجمالي", "Total")}</div>
               </div>
             </div>
           </div>
@@ -393,17 +395,17 @@ export default function LoyaltyCardComponent({ card, showActions = true, compact
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="w-4 h-4" />
-                  <span className="text-sm font-medium">تقدم المستوى</span>
+                  <span className="text-sm font-medium">{tc("تقدم المستوى", "Tier Progress")}</span>
                 </div>
                 <div className="flex items-center gap-1 text-xs">
                   <Crown className="w-3 h-3" />
-                  <span>المستوى التالي: {tierProgress.nextTier === 'silver' ? 'فضي' : tierProgress.nextTier === 'gold' ? 'ذهبي' : 'بلاتيني'}</span>
+                  <span>{tc("المستوى التالي:", "Next tier:")} {tierProgress.nextTier === 'silver' ? tc('فضي', 'Silver') : tierProgress.nextTier === 'gold' ? tc('ذهبي', 'Gold') : tc('بلاتيني', 'Platinum')}</span>
                 </div>
               </div>
               <Progress value={tierProgress.percentage} className="h-2" />
               <div className="flex justify-between text-xs opacity-80">
-                <span>{tierProgress.percentage.toFixed(0)}% مكتمل</span>
-                <span>متبقي {tierProgress.toNext} <SarIcon /> للترقية</span>
+                <span>{tierProgress.percentage.toFixed(0)}% {tc("مكتمل", "complete")}</span>
+                <span>{tc("متبقي", "Remaining")} {tierProgress.toNext} <SarIcon /> {tc("للترقية", "to upgrade")}</span>
               </div>
             </div>
           )}
@@ -412,9 +414,9 @@ export default function LoyaltyCardComponent({ card, showActions = true, compact
             <div className="bg-gradient-to-r from-amber-500/20 to-yellow-500/20 rounded-xl p-4 text-center">
               <div className="flex items-center justify-center gap-2 mb-1">
                 <Crown className="w-5 h-5 text-yellow-300" />
-                <span className="font-bold text-yellow-200">أعلى مستوى!</span>
+                <span className="font-bold text-yellow-200">{tc("أعلى مستوى!", "Top tier!")}</span>
               </div>
-              <p className="text-xs opacity-80">أنت في المستوى البلاتيني - استمتع بجميع المزايا الحصرية</p>
+              <p className="text-xs opacity-80">{tc("أنت في المستوى البلاتيني - استمتع بجميع المزايا الحصرية", "You're at Platinum tier — enjoy all exclusive benefits")}</p>
             </div>
           )}
         </div>
@@ -429,7 +431,7 @@ export default function LoyaltyCardComponent({ card, showActions = true, compact
             data-testid="button-download-card"
           >
             <Download className="w-4 h-4" />
-            تحميل البطاقة
+            {tc("تحميل البطاقة", "Download Card")}
           </Button>
 
           <Button
@@ -437,7 +439,7 @@ export default function LoyaltyCardComponent({ card, showActions = true, compact
             className="gap-2"
             data-testid="button-apple-wallet"
             onClick={() => {
-              const url = `https://www.chefsplace.online/api/loyalty/cards/${card.id}/apple-wallet-pass`;
+              const url = `https://chefsplace.online/api/loyalty/cards/${card.id}/apple-wallet-pass`;
               window.open(url, '_blank');
             }}
           >

@@ -41,7 +41,7 @@ export default function WarehouseManagementPage() {
 
   return (
     <PlanGate feature="warehouseManagement">
-    <div className="p-6 space-y-6 bg-background min-h-screen" dir="rtl">
+    <div className="p-6 space-y-6 bg-background min-h-screen">
       <div className="flex items-center gap-4 mb-6">
         <Button variant="ghost" size="icon" onClick={() => setLocation("/manager")} className="hover:bg-primary/10">
           <ArrowLeft className="w-5 h-5" />

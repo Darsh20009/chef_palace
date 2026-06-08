@@ -1,5 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Store, Truck } from "lucide-react";
+import SarIcon from "@/components/sar-icon";
 
 interface DeliveryMethodSelectorProps {
  value: "pickup" | "delivery";
@@ -49,7 +50,7 @@ export function DeliveryMethodSelector({ value, onChange }: DeliveryMethodSelect
  <div>
  <h4 className="font-semibold text-base">توصيل للمنزل</h4>
  <p className="text-sm text-muted-foreground mt-1">
- نوصل لك في البديعةوظهران البديعة(10 ريال)
+ نوصل لك في البديعة وظهران البديعة (10 <SarIcon size={11} />)
  </p>
  </div>
  </div>

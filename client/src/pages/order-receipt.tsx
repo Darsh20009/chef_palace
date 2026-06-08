@@ -137,10 +137,15 @@ export default function OrderReceiptPage() {
   const paymentLabel = (() => {
     const m = (order.paymentMethod || "").toLowerCase();
     if (m === "cash") return tc("نقدي", "Cash");
-    if (m === "external_pos") return tc("بطاقة على نقطة بيع", "Card via POS");
+    if (m === "apple_pay" || m === "paymob-apple-pay" || m === "neoleap-apple-pay") return "Apple Pay";
+    if (m === "stc-pay" || m === "stc_pay") return "STC Pay";
+    if (m === "mada") return tc("مدى", "Mada");
+    if (m === "pos" || m === "pos-network" || m === "card" || m === "network" || m === "external_pos") return tc("شبكة", "Network");
+    if (m === "qirox-card" || m === "qirox_card" || m === "qahwa-card" || m === "loyalty-card" || m === "loyalty") return tc("بطاقة ولاء", "Loyalty Card");
+    if (m === "geidea" || m === "paymob-card" || m === "paymob") return tc("بطاقة ائتمان", "Credit Card");
+    if (m === "bank_transfer" || m === "rajhi" || m === "alinma") return tc("تحويل بنكي", "Bank Transfer");
+    if (m === "split") return tc("نقدي + شبكة", "Split");
     if (m === "online") return tc("دفع إلكتروني", "Online Payment");
-    if (m === "card") return tc("بطاقة بنكية", "Card");
-    if (m === "qirox_card" || m === "qahwa-card") return tc("بطاقة الولاء", "Loyalty Card");
     return order.paymentMethod || tc("غير محدد", "N/A");
   })();
 

@@ -4,8 +4,9 @@ import { useTranslation } from "react-i18next";
 import { useTranslate } from "@/lib/useTranslate";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useRealtimeEvent, useRealtimeStatus, useRealtimeSend } from "@/hooks/useRealtimeEngine";
-import { getSoundEnabled, setSoundEnabled as saveSoundEnabled, testSound, playNotificationSound } from "@/lib/notification-sounds";
+import { getSoundEnabled, setSoundEnabled as saveSoundEnabled, testSound, playNotificationSound, playChannelSound, getChannelConfig } from "@/lib/notification-sounds";
 import { AudioUnlockBanner } from "@/components/audio-unlock-banner";
 import { 
   Coffee, ShoppingBag, Trash2, Plus, Minus, Search, 
@@ -60,6 +61,7 @@ import { LoadingState } from "@/components/ui/loading-state";
 import { EmptyState } from "@/components/ui/empty-state";
 import DrinkCustomizationDialog, { type DrinkCustomization } from "@/components/drink-customization-dialog";
 import PrinterSettingsPanel from "@/components/printer-settings-panel";
+import { SoundSettingsPanel } from "@/components/sound-settings-panel";
 import { loadPrinterSettings } from "@/lib/thermal-printer";
 import RefundDialog from "@/components/refund-dialog";
 import { PosShiftBar } from "@/components/pos-shift-bar";
@@ -87,7 +89,7 @@ export default function PosSystem() {
   const PAYMENT_METHOD_LABELS: Record<string, string> = {
     cash: tc("نقدي","Cash"),
     card: tc("شبكة","Network"),
-    "qahwa-card": tc("بطاقة مكان الشيف","Chef's Card"),
+    "qahwa-card": tc("بطاقة مكان الشيف","مكان الشيف Card"),
     split: tc("نقدي + شبكة","Cash + Network"),
   };
   const dir = i18n.language === 'ar' ? 'rtl' : 'ltr';
@@ -154,6 +156,7 @@ export default function PosSystem() {
   const [billPaymentMethod, setBillPaymentMethod] = useState<PaymentMethod>("cash");
   const [showPOSSettings, setShowPOSSettings] = useState(false);
   const [showPrinterSettings, setShowPrinterSettings] = useState(false);
+  const [showSoundSettings, setShowSoundSettings] = useState(false);
   const [printerMode] = useState(() => loadPrinterSettings().mode);
   const [autoPrint, setAutoPrint] = useState(() => {
     const stored = localStorage.getItem("pos-auto-print");
@@ -221,7 +224,7 @@ export default function PosSystem() {
     const isPosOrder = order?.channel === 'pos';
     if (isOnlineWebOrder) {
       setNewOrdersCount(prev => prev + 1);
-      if (soundEnabled) playNotificationSound('onlineOrderVoice', 1.0);
+      playChannelSound('online');
       toast({
         title: t('pos.new_order_toast'),
         description: t('pos.new_order_toast_desc', {
@@ -267,8 +270,8 @@ export default function PosSystem() {
           }
         }, 500);
       }
-    } else if (!isPosOrder && soundEnabled) {
-      playNotificationSound('newOrder', 0.6);
+    } else if (!isPosOrder) {
+      playChannelSound('manual');
     }
   });
 
@@ -282,7 +285,7 @@ export default function PosSystem() {
       if (prev.some(a => a._id === order._id)) return prev;
       return [order, ...prev];
     });
-    if (soundEnabled) playNotificationSound('onlineOrderVoice', 1.0);
+    playChannelSound('car');
     toast({
       title: `🚗 طلب سيارة — وصول خلال ${order.diffMin ?? '≤10'} دقيقة!`,
       description: `${order.customerName || 'عميل'} | ${order.carColor || ''} ${order.carType || ''} | لوحة: ${order.plateNumber || '—'}`,
@@ -638,6 +641,13 @@ export default function PosSystem() {
     staleTime: 10 * 60 * 1000,
   });
 
+  const { data: allPaymentMethods = [] } = useQuery<any[]>({
+    queryKey: ['/api/payment-methods'],
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const [showMorePayments, setShowMorePayments] = useState(false);
+
   const { data: tables = [], refetch: refetchTables } = useQuery<any[]>({
     queryKey: ["/api/tables/status", employee?.branchId],
     queryFn: async () => {
@@ -719,7 +729,7 @@ export default function PosSystem() {
   const openTableOrders = useMemo(() => {
     if (!liveOrders) return [];
     return liveOrders.filter((o: any) => 
-      ['pending', 'in_progress', 'ready'].includes(o.status) && 
+      ['pending', 'payment_confirmed', 'confirmed', 'in_progress', 'ready', 'delivered', 'received', 'suspended'].includes(o.status) && 
       o.tableNumber && 
       (o.orderType === 'dine_in' || o.orderType === 'dine-in')
     );
@@ -2483,28 +2493,84 @@ export default function PosSystem() {
 
           <div className="px-2 sm:px-4 py-2 border-t">
             <p className="text-xs sm:text-sm font-bold text-muted-foreground mb-2">{t('pos.payment_method')}</p>
-            <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
-              {PAYMENT_METHODS.map((method) => (
-                <Button
-                  key={method.id}
-                  type="button"
-                  variant={paymentMethod === method.id ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => {
-                    setPaymentMethod(method.id as PaymentMethod);
-                    setSplitCashAmount("");
-                    if (method.id === 'split') {
-                      setPersonPayments([{ id: Date.now().toString(), method: 'cash', amount: '' }]);
-                    }
-                  }}
-                  className="flex flex-col gap-0.5 h-auto py-2 text-[10px] sm:text-xs"
-                  data-testid={`button-payment-${method.id}`}
-                >
-                  <method.icon className="w-4 h-4" />
-                  <span className="font-bold">{t((method as any).tKey)}</span>
-                </Button>
-              ))}
-            </div>
+            {(() => {
+              const customPosMethods = allPaymentMethods.filter((m: any) => m.isCustom && m.enabledForPos !== false);
+              const allPos = [...PAYMENT_METHODS.map(m => ({ ...m, isCustom: false })), ...customPosMethods.map((m: any) => ({ id: m.id, isCustom: true, nameAr: m.nameAr, emoji: m.emoji || '💳' }))];
+              const visibleMethods = allPos.slice(0, 3);
+              const overflowMethods = allPos.slice(3);
+              return (
+                <div className="flex gap-1.5 sm:gap-2">
+                  {visibleMethods.map((method) => (
+                    <Button
+                      key={method.id}
+                      type="button"
+                      variant={paymentMethod === method.id ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        setPaymentMethod(method.id as PaymentMethod);
+                        setSplitCashAmount("");
+                        if (method.id === 'split') {
+                          setPersonPayments([{ id: Date.now().toString(), method: 'cash', amount: '' }]);
+                        }
+                      }}
+                      className="flex flex-col gap-0.5 h-auto py-2 text-[10px] sm:text-xs flex-1"
+                      data-testid={`button-payment-${method.id}`}
+                    >
+                      {(method as any).isCustom
+                        ? <span className="text-base leading-none">{(method as any).emoji}</span>
+                        : (() => { const IconComp = (method as any).icon; return <IconComp className="w-4 h-4" />; })()
+                      }
+                      <span className="font-bold truncate max-w-full px-1">
+                        {(method as any).isCustom ? (method as any).nameAr : t((method as any).tKey)}
+                      </span>
+                    </Button>
+                  ))}
+                  {overflowMethods.length > 0 && (
+                    <Popover open={showMorePayments} onOpenChange={setShowMorePayments}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          type="button"
+                          variant={overflowMethods.some(m => m.id === paymentMethod) ? "default" : "outline"}
+                          size="sm"
+                          className="flex flex-col gap-0.5 h-auto py-2 text-[10px] sm:text-xs w-12 shrink-0"
+                          data-testid="button-payment-more"
+                        >
+                          <MoreHorizontal className="w-4 h-4" />
+                          <span className="font-bold">{overflowMethods.length}+</span>
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-48 p-2" side="top" align="end">
+                        <div className="space-y-1">
+                          {overflowMethods.map((method) => (
+                            <button
+                              key={method.id}
+                              type="button"
+                              onClick={() => {
+                                setPaymentMethod(method.id as PaymentMethod);
+                                setSplitCashAmount("");
+                                setShowMorePayments(false);
+                              }}
+                              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold transition-colors ${paymentMethod === method.id ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+                              data-testid={`button-payment-overflow-${method.id}`}
+                            >
+                              {(method as any).isCustom
+                                ? <span className="text-base">{(method as any).emoji}</span>
+                                : (() => { const IconComp = (method as any).icon; return <IconComp className="w-4 h-4" />; })()
+                              }
+                              <span className="truncate">
+                                {(method as any).isCustom ? (method as any).nameAr : t((method as any).tKey)}
+                              </span>
+                              {paymentMethod === method.id && <Check className="w-3.5 h-3.5 ml-auto shrink-0" />}
+                            </button>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  )}
+                </div>
+              );
+            })()}
+
             {paymentMethod === "cash" && (() => {
               const received = parseFloat(splitCashAmount) || 0;
               const change = received - finalGrandTotal;
@@ -2924,7 +2990,7 @@ export default function PosSystem() {
               </div>
               {usePoints && pointsDiscount > 0 && (
                 <div className="flex justify-between text-[10px] sm:text-sm text-amber-600">
-                  <span className="font-bold">{i18n.language === 'ar' ? 'خصم بطاقة مكان الشيف' : 'بطاقة مكان الشيف'}</span>
+                  <span className="font-bold">{i18n.language === 'ar' ? 'خصم بطاقة مكان الشيف' : "Chef's Card"}</span>
                   <span className="font-bold">- {pointsDiscount.toFixed(2)} {t('pos.currency')}</span>
                 </div>
               )}
@@ -3181,11 +3247,9 @@ export default function PosSystem() {
                 onClick: () => setShowPOSSettings(true),
               },
               {
-                icon: soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />,
-                label: soundEnabled ? tc('إيقاف الصوت', 'Mute Sound') : tc('تشغيل الصوت', 'Enable Sound'),
-                onClick: () => { const next = !soundEnabled; setSoundEnabled(next); saveSoundEnabled('pos', next); },
-                active: soundEnabled,
-                activeClass: 'bg-primary/10 text-primary',
+                icon: <Volume2 className="w-5 h-5" />,
+                label: tc('إعدادات الأصوات', 'Sound Settings'),
+                onClick: () => setShowSoundSettings(true),
               },
             ],
           ]}
@@ -3588,7 +3652,7 @@ export default function PosSystem() {
               </div>
               {usePoints && pointsDiscount > 0 && (
                 <div className="flex justify-between text-sm text-amber-600">
-                  <span className="font-bold">{i18n.language === 'ar' ? 'خصم بطاقة مكان الشيف' : 'Chef Card Discount'}</span>
+                  <span className="font-bold">{i18n.language === 'ar' ? 'خصم بطاقة مكان الشيف' : "Chef's Card Discount"}</span>
                   <span className="font-bold">- {pointsDiscount.toFixed(2)} {t('pos.currency')}</span>
                 </div>
               )}
@@ -4012,8 +4076,13 @@ export default function PosSystem() {
                   const isSelectedForClose = selectedTableForBill?.id === order.id;
                   const statusLabels: Record<string, string> = {
                     'pending': t('pos.status_pending'),
+                    'payment_confirmed': t('pos.status_payment_confirmed', { defaultValue: 'تأكيد الدفع' }),
+                    'confirmed': t('pos.status_confirmed', { defaultValue: 'مؤكد' }),
                     'in_progress': t('pos.status_in_progress'),
                     'ready': t('pos.status_ready'),
+                    'delivered': t('pos.status_delivered', { defaultValue: 'تم التسليم' }),
+                    'received': t('pos.status_received', { defaultValue: 'تم الاستلام' }),
+                    'suspended': t('pos.status_suspended', { defaultValue: 'معلق' }),
                   };
 
                   return (
@@ -4215,6 +4284,21 @@ export default function PosSystem() {
         </DialogContent>
       </Dialog>
 
+      {/* ─── Sound Settings Dialog ───────────────────────────────────────────── */}
+      <Dialog open={showSoundSettings} onOpenChange={setShowSoundSettings}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto" dir={dir}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-right font-bold text-xl">
+              <Volume2 className="w-5 h-5 text-primary" />
+              {tc("إعدادات الأصوات", "Sound Settings")}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-2">
+            <SoundSettingsPanel />
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={showPOSSettings} onOpenChange={setShowPOSSettings}>
         <DialogContent className="max-w-md" dir={dir}>
           <DialogHeader>
@@ -4255,23 +4339,22 @@ export default function PosSystem() {
               <Label htmlFor="auto-print" className="text-sm font-bold cursor-pointer">{t('pos.auto_print')}</Label>
               <Switch id="auto-print" checked={autoPrint} onCheckedChange={setAutoPrint} />
             </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="sound-notif" className="text-sm font-bold cursor-pointer">{t('pos.sound_notif')}</Label>
-              <div className="flex items-center gap-2">
-                {soundEnabled && (
-                  <button
-                    onClick={() => testSound('newOrder', 0.8)}
-                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
-                    title={tc("اختبار الصوت","Test sound")}
-                    data-testid="button-test-sound-settings"
-                  >
-                    <PlayCircle className="w-4 h-4" />
-                    <span>{tc("اختبار","Test")}</span>
-                  </button>
-                )}
-                <Switch id="sound-notif" checked={soundEnabled} onCheckedChange={(val) => { setSoundEnabled(val); saveSoundEnabled('pos', val); }} />
+            <button
+              onClick={() => { setShowPOSSettings(false); setShowSoundSettings(true); }}
+              className="w-full flex items-center justify-between p-3 rounded-xl border-2 border-dashed border-primary/30 hover:border-primary hover:bg-primary/5 transition-all group"
+              data-testid="button-open-sound-settings"
+            >
+              <div className="flex items-center gap-3">
+                <div className="bg-primary/10 p-2 rounded-lg group-hover:bg-primary/20">
+                  <Volume2 className="w-5 h-5 text-primary" />
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-bold">{tc("إعدادات الأصوات", "Sound Settings")}</p>
+                  <p className="text-xs text-muted-foreground">{tc("تخصيص صوت لكل نوع طلب", "Customize sound per order type")}</p>
+                </div>
               </div>
-            </div>
+              <svg className="w-4 h-4 text-muted-foreground group-hover:text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+            </button>
             <div className="flex items-center justify-between">
               <Label htmlFor="show-vat" className="text-sm font-bold cursor-pointer">{t('pos.show_vat')}</Label>
               <Switch id="show-vat" checked={showVatLabel} onCheckedChange={setShowVatLabel} />

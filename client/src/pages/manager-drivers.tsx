@@ -172,7 +172,7 @@ export default function ManagerDrivers() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-background p-4" dir="rtl">
+    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-background p-4">
       <div className="max-w-7xl mx-auto mb-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -262,7 +262,7 @@ export default function ManagerDrivers() {
       </div>
 
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="bg-[#2d1f1a] border-primary/20 text-white max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
+        <DialogContent className="bg-[#2d1f1a] border-primary/20 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="text-accent">{tc("إضافة سائق جديد", "Add New Driver")}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmitNewDriver} className="space-y-4">
             <DriverFormFields />
@@ -277,7 +277,7 @@ export default function ManagerDrivers() {
       </Dialog>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="bg-[#2d1f1a] border-primary/20 text-white max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
+        <DialogContent className="bg-[#2d1f1a] border-primary/20 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="text-accent">{tc("تعديل معلومات السائق", "Edit Driver Information")}</DialogTitle></DialogHeader>
           {editingDriver && (
             <form onSubmit={handleSubmitEditDriver} className="space-y-4">

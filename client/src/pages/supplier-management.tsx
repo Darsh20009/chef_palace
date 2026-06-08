@@ -133,19 +133,19 @@ interface SupplierInvoice {
 }
 
 const mockSuppliers: Supplier[] = [
-  { id: "1", name: "شركة الفاخرية للمؤن", contactPerson: "أحمد محمد", phone: "0501234567", email: "info@arabiccoffee.sa", address: "حي الملز", city: "الرياض", category: "بهارات", rating: 4.8, totalOrders: 45, totalSpent: 125000, paymentTerms: "30 يوم", status: "active", createdAt: "2024-01-15" },
+  { id: "1", name: "شركة البن العربي", contactPerson: "أحمد محمد", phone: "0501234567", email: "info@arabiccoffee.sa", address: "حي الملز", city: "الرياض", category: "قهوة", rating: 4.8, totalOrders: 45, totalSpent: 125000, paymentTerms: "30 يوم", status: "active", createdAt: "2024-01-15" },
   { id: "2", name: "مصنع الحليب الطازج", contactPerson: "خالد علي", phone: "0559876543", email: "sales@freshmilk.sa", address: "المنطقة الصناعية", city: "جدة", category: "ألبان", rating: 4.5, totalOrders: 78, totalSpent: 89000, paymentTerms: "15 يوم", status: "active", createdAt: "2024-02-20" },
   { id: "3", name: "موردين السكر والحلويات", contactPerson: "سعيد أحمد", phone: "0541112233", address: "حي الصفا", city: "الدمام", category: "مواد غذائية", rating: 4.2, totalOrders: 32, totalSpent: 45000, paymentTerms: "نقدي", status: "active", createdAt: "2024-03-10" },
 ];
 
 const mockPurchaseOrders: PurchaseOrder[] = [
-  { id: "1", orderNumber: "PO-2025-001", supplierId: "1", supplierName: "شركة الفاخرية للمؤن", items: [{ ingredientId: "1", ingredientName: "بن عربي محمص", quantity: 50, unit: "كجم", unitPrice: 120, total: 6000 }], subtotal: 6000, vatAmount: 900, total: 6900, status: "received", expectedDelivery: "2025-12-25", actualDelivery: "2025-12-24", createdAt: "2025-12-20", createdBy: "المدير" },
+  { id: "1", orderNumber: "PO-2025-001", supplierId: "1", supplierName: "شركة البن العربي", items: [{ ingredientId: "1", ingredientName: "بن عربي محمص", quantity: 50, unit: "كجم", unitPrice: 120, total: 6000 }], subtotal: 6000, vatAmount: 900, total: 6900, status: "received", expectedDelivery: "2025-12-25", actualDelivery: "2025-12-24", createdAt: "2025-12-20", createdBy: "المدير" },
   { id: "2", orderNumber: "PO-2025-002", supplierId: "2", supplierName: "مصنع الحليب الطازج", items: [{ ingredientId: "2", ingredientName: "حليب كامل الدسم", quantity: 200, unit: "لتر", unitPrice: 8, total: 1600 }], subtotal: 1600, vatAmount: 240, total: 1840, status: "confirmed", expectedDelivery: "2025-12-30", createdAt: "2025-12-28", createdBy: "المدير" },
-  { id: "3", orderNumber: "PO-2025-003", supplierId: "1", supplierName: "شركة الفاخرية للمؤن", items: [{ ingredientId: "1", ingredientName: "بن كولومبي", quantity: 30, unit: "كجم", unitPrice: 150, total: 4500 }], subtotal: 4500, vatAmount: 675, total: 5175, status: "sent", expectedDelivery: "2025-01-05", createdAt: "2025-12-29", createdBy: "المدير" },
+  { id: "3", orderNumber: "PO-2025-003", supplierId: "1", supplierName: "شركة البن العربي", items: [{ ingredientId: "1", ingredientName: "بن كولومبي", quantity: 30, unit: "كجم", unitPrice: 150, total: 4500 }], subtotal: 4500, vatAmount: 675, total: 5175, status: "sent", expectedDelivery: "2025-01-05", createdAt: "2025-12-29", createdBy: "المدير" },
 ];
 
 const mockInvoices: SupplierInvoice[] = [
-  { id: "1", invoiceNumber: "INV-SUP-001", supplierId: "1", supplierName: "شركة الفاخرية للمؤن", purchaseOrderId: "1", amount: 6000, vatAmount: 900, total: 6900, dueDate: "2026-01-20", status: "paid", paidAt: "2025-12-28", createdAt: "2025-12-24" },
+  { id: "1", invoiceNumber: "INV-SUP-001", supplierId: "1", supplierName: "شركة البن العربي", purchaseOrderId: "1", amount: 6000, vatAmount: 900, total: 6900, dueDate: "2026-01-20", status: "paid", paidAt: "2025-12-28", createdAt: "2025-12-24" },
   { id: "2", invoiceNumber: "INV-SUP-002", supplierId: "2", supplierName: "مصنع الحليب الطازج", amount: 1600, vatAmount: 240, total: 1840, dueDate: "2026-01-15", status: "pending", createdAt: "2025-12-28" },
 ];
 
@@ -338,7 +338,7 @@ export default function SupplierManagementPage() {
 
   return (
     <PlanGate feature="supplierManagement">
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-background" dir="rtl">
+    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-background">
       <div className="container mx-auto p-4 md:p-6 max-w-7xl">
         <div className="flex items-center justify-between gap-4 mb-6">
           <Button 
@@ -378,7 +378,7 @@ export default function SupplierManagementPage() {
                 <div>
                   <p className="text-green-100 text-sm">{tc("إجمالي المشتريات", "Total Purchases")}</p>
                   <p className="text-3xl font-bold mt-1">{(totalSpent / 1000).toFixed(0)}K</p>
-                  <p className="text-green-200 text-xs mt-1">{tc("ريال سعودي", "SAR")}</p>
+                  <p className="text-green-200 text-xs mt-1"><SarIcon size={11} /></p>
                 </div>
                 <DollarSign className="w-12 h-12 text-green-200" />
               </div>
@@ -391,7 +391,7 @@ export default function SupplierManagementPage() {
                 <div>
                   <p className="text-accent text-sm">{tc("فواتير معلقة", "Pending Invoices")}</p>
                   <p className="text-3xl font-bold mt-1">{pendingInvoices.toLocaleString()}</p>
-                  <p className="text-accent text-xs mt-1">{tc("ريال سعودي", "SAR")}</p>
+                  <p className="text-accent text-xs mt-1"><SarIcon size={11} /></p>
                 </div>
                 <Receipt className="w-12 h-12 text-accent" />
               </div>
@@ -453,7 +453,7 @@ export default function SupplierManagementPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">جميع الفئات</SelectItem>
-                  <SelectItem value="spices">بهارات ومواد غذائية</SelectItem>
+                  <SelectItem value="coffee">قهوة</SelectItem>
                   <SelectItem value="dairy">ألبان</SelectItem>
                   <SelectItem value="food">مواد غذائية</SelectItem>
                 </SelectContent>
@@ -680,7 +680,7 @@ export default function SupplierManagementPage() {
                 <CardContent>
                   <div className="space-y-4">
                     <div className="flex justify-between items-center p-3 bg-background dark:bg-primary/20 rounded-lg">
-                      <span>بهارات</span>
+                      <span>قهوة</span>
                       <span className="font-bold">55%</span>
                     </div>
                     <div className="flex justify-between items-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
@@ -764,7 +764,7 @@ export default function SupplierManagementPage() {
                       <SelectValue placeholder="اختر الفئة" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="spices">بهارات ومواد غذائية</SelectItem>
+                      <SelectItem value="coffee">قهوة</SelectItem>
                       <SelectItem value="dairy">ألبان</SelectItem>
                       <SelectItem value="food">مواد غذائية</SelectItem>
                       <SelectItem value="packaging">تغليف</SelectItem>

@@ -177,7 +177,8 @@ export default function InventoryStockPage() {
       if (!data.branchId || !data.rawItemId) {
         return Promise.reject(new Error("بيانات غير صالحة"));
       }
-      return apiRequest("POST", "/api/inventory/stock/adjust", data);
+      const { type, ...rest } = data;
+      return apiRequest("POST", "/api/inventory/stock/adjust", { ...rest, movementType: type === 'add' ? 'adjustment' : 'adjustment' });
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/inventory/stock"] });
@@ -391,7 +392,7 @@ export default function InventoryStockPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white p-4 md:p-6" dir="rtl">
+    <div className="min-h-screen bg-white p-4 md:p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -458,7 +459,7 @@ export default function InventoryStockPage() {
             <div>
               <p className="text-xs font-medium text-gray-500">{tc("قيمة المخزون","Stock Value")}</p>
               <p className="text-2xl font-black text-blue-700">{totalStockValue.toFixed(0)}</p>
-              <p className="text-xs text-gray-400">{tc("ريال سعودي","SAR")}</p>
+              <p className="text-xs text-gray-400"><SarIcon size={11} /></p>
             </div>
           </div>
         </div>
@@ -673,7 +674,7 @@ export default function InventoryStockPage() {
         </Card>
 
         <Dialog open={isQuickAdjustOpen} onOpenChange={setIsQuickAdjustOpen}>
-          <DialogContent dir="rtl" className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 {adjustType === "add" ? (
@@ -802,7 +803,7 @@ export default function InventoryStockPage() {
         </Dialog>
 
         <Dialog open={isNewBatchOpen} onOpenChange={setIsNewBatchOpen}>
-          <DialogContent dir="rtl" className="sm:max-w-lg">
+          <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <div className="p-2 rounded-lg bg-primary dark:bg-primary/30">

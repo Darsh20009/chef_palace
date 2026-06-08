@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import QRCode from "qrcode";
-const chefsplaceLogo = "/logo.png";
+import qiroxLogo from "@assets/qirox-logo-customer.png";
 import { brand as sysBrand } from "@/lib/brand";
 
 interface TableQRCardProps {
@@ -215,7 +215,7 @@ export function TableQRCard({ tableNumber, qrToken, branchName, tableUrl }: Tabl
           ctx.font      = `bold ${logoSz * 0.4}px 'Georgia', serif`;
           ctx.textAlign     = "center";
           ctx.textBaseline  = "middle";
-          ctx.fillText("MS", logoCX, logoCY);
+          ctx.fillText("BR", logoCX, logoCY);
         }
 
         const nameY = logoCY + logoSz / 2 + 44;
@@ -223,7 +223,7 @@ export function TableQRCard({ tableNumber, qrToken, branchName, tableUrl }: Tabl
         ctx.font          = "bold 58px 'Georgia', 'Times New Roman', serif";
         ctx.textAlign     = "center";
         ctx.textBaseline  = "alphabetic";
-        ctx.fillText("مكان الشيف البخاري", W / 2, nameY);
+        ctx.fillText("مكان الشيف", W / 2, nameY);
 
         ctx.fillStyle     = C.gold;
         ctx.font          = "22px 'Georgia', serif";
@@ -282,7 +282,7 @@ export function TableQRCard({ tableNumber, qrToken, branchName, tableUrl }: Tabl
 
       logoImg.onload  = () => drawMain(true);
       logoImg.onerror = () => drawMain(false);
-      logoImg.src     = chefsplaceLogo;
+      logoImg.src     = qiroxLogo;
     };
 
     const drawQRSection = async (
@@ -387,9 +387,9 @@ export function TableQRCard({ tableNumber, qrToken, branchName, tableUrl }: Tabl
             ctx.font         = "bold 18px 'Georgia', serif";
             ctx.textAlign    = "center";
             ctx.textBaseline = "middle";
-            ctx.fillText("MS", ocx, ocy);
+            ctx.fillText("BR", ocx, ocy);
           };
-          logoOverlay.src = chefsplaceLogo;
+          logoOverlay.src = qiroxLogo;
 
           const ctaY = qrY + qrSz + pad + 40;
 

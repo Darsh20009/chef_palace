@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import SarIcon from "@/components/sar-icon";
 import PaymobCheckout from "@/components/paymob-checkout";
 import { brand } from "@/lib/brand";
+import { useTranslate } from "@/lib/useTranslate";
 
 interface PublicOrderItem {
   name: string;
@@ -35,6 +36,7 @@ interface PublicTablePayload {
 type PageMode = "order" | "table";
 
 export default function PayPage() {
+  const tc = useTranslate();
   // The URL param is the unguessable order `id` (nanoid), not the order number.
   const [orderMatch, orderParams] = useRoute("/pay/order/:id");
   const [tableMatch, tableParams] = useRoute("/pay/table/:qrToken");
@@ -67,7 +69,7 @@ export default function PayPage() {
           const data = await r.json();
           if (cancelled) return;
           if (!r.ok || data?.error) {
-            setError(data?.error || "تعذّر العثور على الفاتورة.");
+            setError(data?.error || tc("تعذّر العثور على الفاتورة.", "Invoice not found."));
           } else {
             setSelectedOrder(data as PublicOrder);
             if (data.alreadyPaid) setPaid(true);
@@ -77,15 +79,15 @@ export default function PayPage() {
           const data = await r.json();
           if (cancelled) return;
           if (!r.ok || data?.error) {
-            setError(data?.error || "تعذّر تحميل بيانات الطاولة.");
+            setError(data?.error || tc("تعذّر تحميل بيانات الطاولة.", "Failed to load table data."));
           } else {
             setTableBills(data as PublicTablePayload);
           }
         } else {
-          setError("الرابط غير صالح.");
+          setError(tc("الرابط غير صالح.", "Invalid link."));
         }
       } catch (e: any) {
-        if (!cancelled) setError(e?.message || "خطأ في الاتصال.");
+        if (!cancelled) setError(e?.message || tc("خطأ في الاتصال.", "Connection error."));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -127,7 +129,7 @@ export default function PayPage() {
       });
       const data = await res.json();
       if (!res.ok || !data?.paymentUrl) {
-        throw new Error(data?.error || data?.details || "تعذّر بدء عملية الدفع.");
+        throw new Error(data?.error || data?.details || tc("تعذّر بدء عملية الدفع.", "Failed to initiate payment."));
       }
       setCheckoutUrl(data.paymentUrl);
     } catch (e: any) {
@@ -141,7 +143,7 @@ export default function PayPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-primary/5 to-background gap-3" dir="rtl">
         <Loader2 className="w-10 h-10 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground">جارٍ تحميل الفاتورة…</p>
+        <p className="text-sm text-muted-foreground">{tc("جارٍ تحميل الفاتورة…", "Loading invoice…")}</p>
       </div>
     );
   }
@@ -152,7 +154,7 @@ export default function PayPage() {
         <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
           <AlertTriangle className="w-8 h-8 text-red-600" />
         </div>
-        <h1 className="font-bold text-lg">تعذّر تحميل الفاتورة</h1>
+        <h1 className="font-bold text-lg">{tc("تعذّر تحميل الفاتورة", "Failed to load invoice")}</h1>
         <p className="text-sm text-muted-foreground max-w-xs">{error}</p>
       </div>
     );
@@ -164,10 +166,10 @@ export default function PayPage() {
         <div className="w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center animate-in zoom-in duration-500">
           <CheckCircle2 className="w-12 h-12 text-green-600" />
         </div>
-        <h1 className="font-bold text-xl text-green-700 dark:text-green-300">تم الدفع بنجاح</h1>
-        <p className="text-sm text-muted-foreground max-w-xs">شكراً لك! يمكنك إغلاق هذه الصفحة الآن.</p>
+        <h1 className="font-bold text-xl text-green-700 dark:text-green-300">{tc("تم الدفع بنجاح", "Payment Successful")}</h1>
+        <p className="text-sm text-muted-foreground max-w-xs">{tc("شكراً لك! يمكنك إغلاق هذه الصفحة الآن.", "Thank you! You can close this page now.")}</p>
         {selectedOrder && (
-          <p className="font-mono text-xs text-muted-foreground">رقم الفاتورة: {selectedOrder.orderNumber}</p>
+          <p className="font-mono text-xs text-muted-foreground">{tc("رقم الفاتورة:", "Invoice #:")} {selectedOrder.orderNumber}</p>
         )}
       </div>
     );
@@ -179,10 +181,10 @@ export default function PayPage() {
         <div className="flex items-center justify-between border-b pb-2">
           <div className="flex items-center gap-2">
             <Receipt className="w-4 h-4 text-primary" />
-            <span className="font-bold text-sm">فاتورة <span className="font-mono">#{order.orderNumber}</span></span>
+            <span className="font-bold text-sm">{tc("فاتورة", "Invoice")} <span className="font-mono">#{order.orderNumber}</span></span>
           </div>
           {order.tableNumber && (
-            <span className="text-xs bg-muted px-2 py-1 rounded-full">طاولة {order.tableNumber}</span>
+            <span className="text-xs bg-muted px-2 py-1 rounded-full">{tc("طاولة", "Table")} {order.tableNumber}</span>
           )}
         </div>
 
@@ -201,15 +203,15 @@ export default function PayPage() {
 
         <div className="border-t pt-2 space-y-1 text-sm">
           <div className="flex justify-between text-muted-foreground">
-            <span>المجموع قبل الضريبة</span>
+            <span>{tc("المجموع قبل الضريبة", "Subtotal")}</span>
             <span className="font-mono flex items-center gap-1">{order.subtotal.toFixed(2)} <SarIcon size={10} /></span>
           </div>
           <div className="flex justify-between text-muted-foreground">
-            <span>ضريبة القيمة المضافة 15%</span>
+            <span>{tc("ضريبة القيمة المضافة 15%", "VAT 15%")}</span>
             <span className="font-mono flex items-center gap-1">{order.tax.toFixed(2)} <SarIcon size={10} /></span>
           </div>
           <div className="flex justify-between font-black text-lg pt-1 border-t">
-            <span>الإجمالي</span>
+            <span>{tc("الإجمالي", "Total")}</span>
             <span className="font-mono text-primary flex items-center gap-1">
               {order.total.toFixed(2)} <SarIcon size={14} />
             </span>
@@ -223,7 +225,7 @@ export default function PayPage() {
           data-testid={`button-pay-${order.orderNumber}`}
         >
           {initiating ? <Loader2 className="w-5 h-5 animate-spin" /> : <CreditCard className="w-5 h-5" />}
-          ادفع الآن عبر باي موب
+          {tc("ادفع الآن عبر باي موب", "Pay Now via PayMob")}
         </Button>
       </CardContent>
     </Card>
@@ -236,13 +238,13 @@ export default function PayPage() {
         <div className="text-center space-y-1">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold">
             <ShieldCheck className="w-3.5 h-3.5" />
-            دفع آمن عبر {brand.platformNameAr || brand.nameAr}
+            {tc("دفع آمن عبر", "Secure payment via")} {brand.platformNameAr || brand.nameAr}
           </div>
           {tableBills?.table && (
-            <h1 className="text-2xl font-black pt-2">طاولة {tableBills.table.tableNumber}</h1>
+            <h1 className="text-2xl font-black pt-2">{tc("طاولة", "Table")} {tableBills.table.tableNumber}</h1>
           )}
           {selectedOrder && !tableBills && (
-            <h1 className="text-xl font-black pt-2">فاتورتك جاهزة للدفع</h1>
+            <h1 className="text-xl font-black pt-2">{tc("فاتورتك جاهزة للدفع", "Your invoice is ready to pay")}</h1>
           )}
         </div>
 
@@ -259,8 +261,8 @@ export default function PayPage() {
             <Card className="border-2">
               <CardContent className="p-6 text-center space-y-2">
                 <Receipt className="w-10 h-10 mx-auto text-muted-foreground" />
-                <p className="font-bold">لا توجد فواتير مفتوحة لهذه الطاولة</p>
-                <p className="text-xs text-muted-foreground">إذا كنت قد طلبت للتو، انتظر بضع لحظات وأعد تحميل الصفحة.</p>
+                <p className="font-bold">{tc("لا توجد فواتير مفتوحة لهذه الطاولة", "No open bills for this table")}</p>
+                <p className="text-xs text-muted-foreground">{tc("إذا كنت قد طلبت للتو، انتظر بضع لحظات وأعد تحميل الصفحة.", "If you just ordered, wait a moment and reload the page.")}</p>
               </CardContent>
             </Card>
           ) : (
@@ -270,7 +272,7 @@ export default function PayPage() {
 
         <div className="text-center text-[10px] text-muted-foreground flex items-center justify-center gap-1.5 pt-2">
           <ShieldCheck className="w-3 h-3 text-green-500" />
-          جميع المعاملات مشفّرة — مدى · فيزا · ماستركارد عبر PayMob
+          {tc("جميع المعاملات مشفّرة — مدى · فيزا · ماستركارد عبر PayMob", "All transactions encrypted — Mada · Visa · Mastercard via PayMob")}
         </div>
       </div>
 

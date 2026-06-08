@@ -311,7 +311,7 @@ import { useState } from "react";
     const currentSection = guideSections.find(s => s.id === activeSection);
 
     return (
-      <div className="min-h-screen bg-background" dir="rtl">
+      <div className="min-h-screen bg-background">
         <div className="container mx-auto p-4 md:p-6 max-w-7xl">
           <div className="flex items-center justify-between gap-4 mb-6">
             <Button 

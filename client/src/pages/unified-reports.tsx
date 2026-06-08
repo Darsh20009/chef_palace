@@ -11,11 +11,16 @@ import { ArrowLeft, TrendingUp, ShoppingCart, Users, DollarSign, Download, Build
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslate } from "@/lib/useTranslate";
+import SarIcon from "@/components/sar-icon";
 
 const COLORS = ['#2D9B6E', '#f97316', '#3b82f6', '#a855f7', '#ec4899', '#eab308', '#14b8a6'];
 
 function formatCurrency(amount: number) {
   return `${amount.toFixed(2)} ر.س`;
+}
+
+function FC({ amount, size = 12 }: { amount: number; size?: number }) {
+  return <>{(amount || 0).toFixed(2)} <SarIcon size={size} /></>;
 }
 
 export default function UnifiedReports() {
@@ -62,7 +67,7 @@ export default function UnifiedReports() {
   const branches = data?.branches || [];
 
   return (
-    <div className="p-4 md:p-6 space-y-6 bg-background min-h-screen" dir="rtl">
+    <div className="p-4 md:p-6 space-y-6 bg-background min-h-screen">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate("/manager/dashboard")}>
@@ -109,7 +114,7 @@ export default function UnifiedReports() {
               <Card>
                 <CardContent className="p-4 text-center">
                   <DollarSign className="w-8 h-8 mx-auto mb-2 text-[#2D9B6E]" />
-                  <p className="text-2xl font-bold">{formatCurrency(summary?.totalRevenue || 0)}</p>
+                  <p className="text-2xl font-bold"><FC amount={summary?.totalRevenue || 0} size={18} /></p>
                   <p className="text-xs text-muted-foreground">{tc("إجمالي الإيرادات", "Total Revenue")}</p>
                 </CardContent>
               </Card>
@@ -123,7 +128,7 @@ export default function UnifiedReports() {
               <Card>
                 <CardContent className="p-4 text-center">
                   <TrendingUp className="w-8 h-8 mx-auto mb-2 text-orange-500" />
-                  <p className="text-2xl font-bold">{formatCurrency(summary?.avgOrderValue || 0)}</p>
+                  <p className="text-2xl font-bold"><FC amount={summary?.avgOrderValue || 0} size={18} /></p>
                   <p className="text-xs text-muted-foreground">{tc("متوسط الطلب", "Avg. Order")}</p>
                 </CardContent>
               </Card>
@@ -147,15 +152,15 @@ export default function UnifiedReports() {
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
                       <span className="text-sm flex items-center gap-2"><Banknote className="w-4 h-4 text-green-600" /> {tc("نقدي", "Cash")}</span>
-                      <span className="font-bold">{formatCurrency(summary?.cashSales || 0)}</span>
+                      <span className="font-bold"><FC amount={summary?.cashSales || 0} /></span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm flex items-center gap-2"><CreditCard className="w-4 h-4 text-blue-600" /> {tc("شبكة", "Card")}</span>
-                      <span className="font-bold">{formatCurrency(summary?.cardSales || 0)}</span>
+                      <span className="font-bold"><FC amount={summary?.cardSales || 0} /></span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm flex items-center gap-2"><Wallet className="w-4 h-4 text-purple-600" /> {tc("بطاقة مكان الشيف", "مكان الشيف البخاري Card")}</span>
-                      <span className="font-bold">{formatCurrency(summary?.loyaltySales || 0)}</span>
+                      <span className="text-sm flex items-center gap-2"><Wallet className="w-4 h-4 text-purple-600" /> {tc("بطاقة مكان الشيف", "مكان الشيف Card")}</span>
+                      <span className="font-bold"><FC amount={summary?.loyaltySales || 0} /></span>
                     </div>
                   </div>
                   {summary && summary.totalRevenue > 0 && (
@@ -166,7 +171,7 @@ export default function UnifiedReports() {
                             data={[
                               { name: tc('نقدي', 'Cash'), value: summary.cashSales },
                               { name: tc('شبكة', 'Card'), value: summary.cardSales },
-                              { name: tc('بطاقة مكان الشيف', 'مكان الشيف البخاري Card'), value: summary.loyaltySales },
+                              { name: tc('بطاقة مكان الشيف', 'مكان الشيف Card'), value: summary.loyaltySales },
                             ].filter(d => d.value > 0)}
                             cx="50%" cy="50%" innerRadius={40} outerRadius={70} dataKey="value"
                             label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
@@ -203,7 +208,7 @@ export default function UnifiedReports() {
                                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
                                 {branch.name}
                               </span>
-                              <span className="font-bold">{formatCurrency(branch.revenue)}</span>
+                              <span className="font-bold"><FC amount={branch.revenue} /></span>
                             </div>
                             <div className="flex items-center gap-2">
                               <Progress value={pct} className="flex-1 h-2" />
@@ -211,7 +216,7 @@ export default function UnifiedReports() {
                             </div>
                             <div className="flex gap-3 text-xs text-muted-foreground">
                               <span>{branch.orders} {tc("طلب", "orders")}</span>
-                              <span>{tc("متوسط", "avg")} {formatCurrency(branch.avgOrder)}</span>
+                              <span>{tc("متوسط", "avg")} <FC amount={branch.avgOrder} /></span>
                               <span>{branch.customers} {tc("عميل", "customers")}</span>
                             </div>
                           </div>
@@ -263,7 +268,7 @@ export default function UnifiedReports() {
                           <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
                           {branch.name}
                         </CardTitle>
-                        <Badge className="bg-[#2D9B6E] text-white">{formatCurrency(branch.revenue)}</Badge>
+                        <Badge className="bg-[#2D9B6E] text-white"><FC amount={branch.revenue} /></Badge>
                       </div>
                     </CardHeader>
                     <CardContent>
@@ -273,7 +278,7 @@ export default function UnifiedReports() {
                           <p className="text-xs text-muted-foreground">{tc("طلبات", "Orders")}</p>
                         </div>
                         <div className="p-3 bg-muted/50 rounded-lg text-center">
-                          <p className="text-lg font-bold">{formatCurrency(branch.avgOrder)}</p>
+                          <p className="text-lg font-bold"><FC amount={branch.avgOrder} /></p>
                           <p className="text-xs text-muted-foreground">{tc("متوسط الطلب", "Avg. Order")}</p>
                         </div>
                         <div className="p-3 bg-muted/50 rounded-lg text-center">
@@ -281,7 +286,7 @@ export default function UnifiedReports() {
                           <p className="text-xs text-muted-foreground">{tc("عملاء", "Customers")}</p>
                         </div>
                         <div className="p-3 bg-muted/50 rounded-lg text-center">
-                          <p className="text-lg font-bold">{formatCurrency(branch.cashSales)}</p>
+                          <p className="text-lg font-bold"><FC amount={branch.cashSales} /></p>
                           <p className="text-xs text-muted-foreground">{tc("نقدي", "Cash")}</p>
                         </div>
                       </div>
@@ -296,7 +301,7 @@ export default function UnifiedReports() {
                                   <span className="text-xs text-muted-foreground w-4">{i + 1}.</span>
                                   {item.name}
                                 </span>
-                                <span className="text-muted-foreground">{item.qty}x — {formatCurrency(item.revenue)}</span>
+                                <span className="text-muted-foreground">{item.qty}x — <FC amount={item.revenue} /></span>
                               </div>
                             ))}
                           </div>
@@ -346,7 +351,7 @@ export default function UnifiedReports() {
                         <Tooltip formatter={(v: number) => formatCurrency(v)} />
                         <Bar dataKey="cashSales" stackId="a" fill="#2D9B6E" name={tc("نقدي", "Cash")} />
                         <Bar dataKey="cardSales" stackId="a" fill="#3b82f6" name={tc("شبكة", "Card")} />
-                        <Bar dataKey="loyaltySales" stackId="a" fill="#a855f7" name={tc("بطاقة مكان الشيف", "مكان الشيف البخاري Card")} />
+                        <Bar dataKey="loyaltySales" stackId="a" fill="#a855f7" name={tc("بطاقة مكان الشيف", "مكان الشيف Card")} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -399,7 +404,7 @@ export default function UnifiedReports() {
                   <div className="text-xs text-muted-foreground space-y-1">
                     <p>• <strong>1101</strong> — {tc("النقدية (مدين)", "Cash (Debit)")}</p>
                     <p>• <strong>1102</strong> — {tc("الشبكة/مدى (مدين)", "Card/Mada (Debit)")}</p>
-                    <p>• <strong>1103</strong> — {tc("بطاقة مكان الشيف (مدين)", "مكان الشيف البخاري Card (Debit)")}</p>
+                    <p>• <strong>1103</strong> — {tc("بطاقة مكان الشيف (مدين)", "مكان الشيف Card (Debit)")}</p>
                     <p>• <strong>4101</strong> — {tc("إيرادات المبيعات (دائن)", "Sales Revenue (Credit)")}</p>
                     <p>• <strong>2201</strong> — {tc("ضريبة القيمة المضافة (دائن)", "VAT (Credit)")}</p>
                   </div>

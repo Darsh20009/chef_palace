@@ -11,7 +11,7 @@ import { CheckCircle2, AlertCircle, Loader } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import SarIcon from "@/components/sar-icon";
-const chefsplaceLogo = "/logo.png";
+import qiroxLogo from "@assets/qirox-logo-customer.png";
 
 const SUBSCRIPTION_PLANS = [
   {
@@ -179,7 +179,7 @@ export default function TenantSignup() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <img src={chefsplaceLogo} alt="مكان الشيف البخاري" className="w-16 h-16 object-contain rounded-xl" />
+            <img src={qiroxLogo} alt="مكان الشيف البخاري" className="w-16 h-16 object-contain rounded-xl" />
           </div>
           <h1 className="text-4xl font-bold text-foreground mb-2">
             انضم إلى مكان الشيف البخاري
@@ -205,7 +205,7 @@ export default function TenantSignup() {
                   </Label>
                   <Input
                     id="nameAr"
-                    placeholder="مثال: مكان الشيف البخاري"
+                    placeholder="مثال: قهوة الواحة"
                     value={formData.nameAr}
                     onChange={(e) => handleInputChange("nameAr", e.target.value)}
                     className="text-right"

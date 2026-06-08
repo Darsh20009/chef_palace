@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { AtSign, Lock, Phone, Eye, EyeOff, Loader2, ArrowRight, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslate } from "@/lib/useTranslate";
-const chefsplaceLogoStaff = "/logo.png";
+import qiroxLogoStaff from "@assets/qirox-logo-customer.png";
 
 type Step = "username" | "phone" | "password";
 
@@ -100,13 +100,13 @@ export default function EmployeeForgotPassword() {
   };
 
   return (
-    <div dir="rtl" className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-40 h-28 mb-4">
-            <img src={chefsplaceLogoStaff} alt="مكان الشيف البخاري" className="w-full h-full object-contain" />
+            <img src={qiroxLogoStaff} alt="مكان الشيف — الإدارة" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-3xl font-bold text-foreground mb-2 font-playfair">مكان الشيف البخاري</h1>
+          <h1 className="text-3xl font-bold text-foreground mb-2 font-playfair">مكان الشيف — الإدارة</h1>
           <p className="text-muted-foreground font-cairo">{tc("استعادة كلمة المرور", "Password Recovery")}</p>
         </div>
 

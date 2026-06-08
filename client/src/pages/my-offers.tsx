@@ -155,7 +155,7 @@ export default function MyOffersPage() {
           id: 'frequent',
           title: 'عميل مميز!',
           titleEn: 'VIP Customer!',
-          description: `كمكافأة لولائك، احصل على ${discountTextAr} على أي وجبة`,
+          description: `كمكافأة لولائك، احصل على ${discountTextAr} على أي مشروب`,
           descriptionEn: `As a reward for your loyalty, get a ${discountTextEn} on any drink`,
           discount: discountValue,
           type: 'frequent'
@@ -175,7 +175,7 @@ export default function MyOffersPage() {
         
         result.push({
           id: 'special-drink',
-          title: 'عرض خاص على وجبتك المفضلة',
+          title: 'عرض خاص على مشروبك المفضل',
           titleEn: 'Special Offer on Your Favorite Drink',
           description: `${discountTextAr} ${featuredItem.nameAr}`,
           descriptionEn: `${discountTextEn} ${featuredItem.nameEn || featuredItem.nameAr}`,
@@ -309,7 +309,7 @@ export default function MyOffersPage() {
                     </div>
                     {offer.discount > 0 && (
                       <Badge className="bg-white text-foreground font-bold text-lg px-3 py-1">
-                        {offer.type === 'loyalty' ? `${offer.discount} ${tc("ر.س", "SAR")}` : `${offer.discount}%`}
+                        {offer.type === 'loyalty' ? <>{offer.discount} <SarIcon size={13} /></> : `${offer.discount}%`}
                       </Badge>
                     )}
                   </div>

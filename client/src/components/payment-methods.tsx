@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { useLoyaltyCard } from "@/hooks/useLoyaltyCard";
 import { brand } from "@/lib/brand";
+import { useTranslate } from "@/lib/useTranslate";
 
 // Payment methods temporarily disabled — coming soon
 const COMING_SOON_METHODS = ['neoleap', 'neoleap-apple-pay'];
@@ -37,6 +38,7 @@ export default function PaymentMethods({
  comingSoon = false,
 }: PaymentMethodsProps) {
  const { toast } = useToast();
+ const tc = useTranslate();
   const [cardMode, setCardMode] = useState<'use' | 'add' | null>(null);
   const [searchPhone, setSearchPhone] = useState("");
   const [searchCardNumber, setSearchCardNumber] = useState("");
@@ -79,8 +81,8 @@ export default function PaymentMethods({
   if (!searchPhone && !searchCardNumber) {
    toast({
     variant: "destructive",
-    title: "خطأ",
-    description: "يرجى إدخال رقم الجوال أو رقم البطاقة",
+    title: tc("خطأ", "Error"),
+    description: tc("يرجى إدخال رقم الجوال أو رقم البطاقة", "Please enter phone or card number"),
    });
    return;
   }
@@ -95,20 +97,20 @@ export default function PaymentMethods({
    }
 
    const res = await fetch(url);
-   if (!res.ok) throw new Error("البطاقة غير موجودة");
+   if (!res.ok) throw new Error(tc("البطاقة غير موجودة", "Card not found"));
    const cardData = await res.json();
    updateCardInCache(cardData);
    setIsAddingCard(false);
    setCardMode('use');
    toast({
-    title: "تم العثور على البطاقة",
-    description: `أهلاً ${cardData.customerName || 'عميلنا العزيز'}`,
+    title: tc("تم العثور على البطاقة", "Card found"),
+    description: `${tc("أهلاً", "Welcome")} ${cardData.customerName || tc('عميلنا العزيز', 'Valued Customer')}`,
    });
   } catch (error) {
    toast({
     variant: "destructive",
-    title: "خطأ",
-    description: "لم يتم العثور على بطاقة مرتبطة بهذه البيانات",
+    title: tc("خطأ", "Error"),
+    description: tc("لم يتم العثور على بطاقة مرتبطة بهذه البيانات", "No card found with this information"),
    });
   } finally {
    setIsSearching(false);
@@ -118,19 +120,19 @@ export default function PaymentMethods({
  if (comingSoon) {
    return (
      <div className="space-y-4" data-testid="section-payment-methods">
-       <h3 className="text-lg font-semibold text-foreground mb-4">اختر طريقة الدفع</h3>
+       <h3 className="text-lg font-semibold text-foreground mb-4">{tc("اختر طريقة الدفع", "Choose Payment Method")}</h3>
        <div className="relative rounded-2xl overflow-hidden border border-amber-200/60 bg-amber-50/60 dark:bg-amber-950/20 dark:border-amber-800/40">
          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 z-10 bg-white/70 dark:bg-black/60 backdrop-blur-sm">
            <div className="flex items-center justify-center w-14 h-14 rounded-full bg-amber-100 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-700 shadow-md">
              <Clock className="w-7 h-7 text-amber-600 dark:text-amber-400" />
            </div>
            <div className="text-center space-y-1 px-4">
-             <p className="font-bold text-amber-800 dark:text-amber-300 text-base">خيارات الدفع قريباً</p>
-             <p className="text-xs text-amber-600/80 dark:text-amber-400/70">سيتم تفعيل طرق الدفع في إصدار قادم</p>
+             <p className="font-bold text-amber-800 dark:text-amber-300 text-base">{tc("خيارات الدفع قريباً", "Payment options coming soon")}</p>
+             <p className="text-xs text-amber-600/80 dark:text-amber-400/70">{tc("سيتم تفعيل طرق الدفع في إصدار قادم", "Payment methods will be enabled in a future release")}</p>
            </div>
            <span className="flex items-center gap-1.5 bg-amber-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow">
              <Clock className="w-3.5 h-3.5" />
-             قريباً
+             {tc("قريباً", "Coming Soon")}
            </span>
          </div>
          <div className="opacity-20 pointer-events-none select-none space-y-3 p-4">
@@ -157,7 +159,7 @@ export default function PaymentMethods({
 
  return (
    <div className="space-y-4" data-testid="section-payment-methods">
-     <h3 className="text-lg font-semibold text-foreground mb-4">اختر طريقة الدفع</h3>
+     <h3 className="text-lg font-semibold text-foreground mb-4">{tc("اختر طريقة الدفع", "Choose Payment Method")}</h3>
      <div className="space-y-4">
      {paymentMethods.map((method) => {
     const isQahwaCard = (method.id as string) === 'qahwa-card';
@@ -177,13 +179,15 @@ export default function PaymentMethods({
 
     if (isLoyaltyCard) return null; // Always hide loyalty card from customer checkout
 
+    // Filter custom methods by enabledForCustomer
+    if ((method as any).isCustom && (method as any).enabledForCustomer === false) return null;
+
     // Hide mobile wallet (paymob-wallet) — not used in SA flow
     if ((method.id as string) === 'paymob-wallet') return null;
 
-    // Hide Apple Pay on non-Apple devices
     const isPaymobApplePay = (method.id as string) === 'paymob-apple-pay';
-    if (isPaymobApplePay && !isAppleDevice()) return null;
-    if (isApplePay && !isAppleDevice()) return null;
+    // Hide ALL Apple Pay variants on non-Apple devices
+    if ((isApplePay || isPaymobApplePay) && !isAppleDevice()) return null;
 
     // Coming Soon: show disabled card with badge
     if (isComingSoon) {
@@ -203,11 +207,11 @@ export default function PaymentMethods({
                     <h4 className="font-bold text-muted-foreground">{method.nameAr}</h4>
                     <span className="flex items-center gap-1 bg-amber-100 text-amber-700 text-[11px] font-bold px-2.5 py-1 rounded-full border border-amber-200">
                       <Clock className="w-3 h-3" />
-                      قريباً
+                      {tc("قريباً", "Soon")}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {isApplePay ? "سيتوفر Apple Pay قريباً" : "الدفع بالبطاقة سيكون متاحاً قريباً"}
+                    {isApplePay ? tc("سيتوفر Apple Pay قريباً", "Apple Pay coming soon") : tc("الدفع بالبطاقة سيكون متاحاً قريباً", "Card payment coming soon")}
                   </p>
                 </div>
               </div>
@@ -217,7 +221,7 @@ export default function PaymentMethods({
       );
     }
 
-    // PayMob Apple Pay — official Apple Pay button design (only shown on Apple devices)
+    // PayMob Apple Pay — official Apple Pay button design, visible on all devices
     if (isPaymobApplePay) {
       return (
         <div key={method.id}>
@@ -242,12 +246,14 @@ export default function PaymentMethods({
               userSelect: "none",
             }}
           >
+            {/* Official Apple logo SVG */}
             <svg
               viewBox="0 0 170 170"
               style={{ height: "22px", width: "22px", fill: "#fff", flexShrink: 0 }}
             >
-              <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.197-2.12-9.973-3.17-14.34-3.17-4.58 0-9.492 1.05-14.746 3.17-5.262 2.13-9.501 3.24-12.742 3.35-4.929 0.21-9.842-1.96-14.746-6.52-3.13-2.73-7.045-7.41-11.735-14.04-5.032-7.08-9.169-15.29-12.41-24.65-3.471-10.11-5.211-19.9-5.211-29.378 0-10.857 2.346-20.21 7.045-28.143 3.687-6.52 8.594-11.672 14.73-15.466 6.136-3.294 12.759-5.277 19.88-5.375 3.906 0 9.022 1.211 15.366 3.597 6.326 2.394 10.387 3.605 12.172 3.605 1.331 0 5.838-1.419 13.49-4.247 7.23-2.618 13.326-3.701 18.31-3.273 13.54 1.093 23.71 6.43 30.52 16.05-12.1 7.33-18.09 17.6-17.96 30.78 0.12 10.26 3.83 18.79 11.12 25.55 3.31 3.14 7.01 5.57 11.12 7.29-0.89 2.58-1.83 5.05-2.83 7.42zM119.11 7.24c0 8.042-2.94 15.551-8.81 22.507-7.079 8.273-15.644 13.05-24.92 12.294-0.119-0.965-0.18-1.98-0.18-3.047 0-7.72 3.361-15.994 9.336-22.752 2.984-3.43 6.7718-6.2877 11.185-8.5773 4.4012-2.2554 8.5656-3.5023 12.4884-3.7113 0.12 1.0327 0.17 2.0654 0.17 3.0877z"/>
+              <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.197-2.12-9.973-3.17-14.34-3.17-4.58 0-9.492 1.05-14.746 3.17-5.262 2.13-9.501 3.24-12.742 3.35-4.929 0.21-9.842-1.96-14.746-6.52-3.13-2.73-7.045-7.41-11.735-14.04-5.032-7.08-9.169-15.29-12.41-24.65-3.471-10.11-5.211-19.9-5.211-29.378 0-10.857 2.346-20.else21 7.045-28.143 3.687-6.52 8.594-11.672 14.73-15.466 6.136-3.294 12.759-5.277 19.88-5.375 3.906 0 9.022 1.211 15.366 3.597 6.326 2.394 10.387 3.605 12.172 3.605 1.331 0 5.838-1.419 13.49-4.247 7.23-2.618 13.326-3.701 18.31-3.273 13.54 1.093 23.71 6.43 30.52 16.05-12.1 7.33-18.09 17.6-17.96 30.78 0.12 10.26 3.83 18.79 11.12 25.55 3.31 3.14 7.01 5.57 11.12 7.29-0.89 2.58-1.83 5.05-2.83 7.42zM119.11 7.24c0 8.042-2.94 15.551-8.81 22.507-7.079 8.273-15.644 13.05-24.92 12.294-0.119-0.965-0.18-1.98-0.18-3.047 0-7.72 3.361-15.994 9.336-22.752 2.984-3.43 6.7718-6.2877 11.185-8.5773 4.4012-2.2554 8.5656-3.5023 12.4884-3.7113 0.12 1.0327 0.17 2.0654 0.17 3.0877z"/>
             </svg>
+            {/* Official "Pay" text with Apple styling */}
             <span style={{
               color: "#fff",
               fontSize: "24px",
@@ -261,7 +267,7 @@ export default function PaymentMethods({
           </div>
           {isSelected && (
             <p style={{ textAlign: "center", fontSize: "11px", color: "#888", marginTop: "6px" }}>
-              سيتم تحويلك إلى بوابة الدفع الآمنة
+              {tc("سيتم تحويلك إلى بوابة الدفع الآمنة", "You will be redirected to the secure payment gateway")}
             </p>
           )}
         </div>
@@ -285,7 +291,7 @@ export default function PaymentMethods({
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <h4 className="font-bold text-foreground text-sm">الدفع بالبطاقة</h4>
+                    <h4 className="font-bold text-foreground text-sm">{tc("الدفع بالبطاقة", "Card Payment")}</h4>
                     {isSelected && (
                       <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center animate-in zoom-in duration-300 flex-shrink-0">
                         <Check className="w-4 h-4 text-primary-foreground" />
@@ -340,7 +346,7 @@ export default function PaymentMethods({
                 </div>
                 <div className="flex-1 min-w-0">
                   <h4 className="font-bold text-foreground text-sm">STC Pay</h4>
-                  <p className="text-xs text-muted-foreground">الدفع عبر محفظة STC</p>
+                  <p className="text-xs text-muted-foreground">{tc("الدفع عبر محفظة STC", "Pay via STC wallet")}</p>
                 </div>
                 {isSelected && (
                   <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center animate-in zoom-in duration-300 flex-shrink-0">
@@ -390,7 +396,7 @@ export default function PaymentMethods({
                    <div className="flex justify-between items-start flex-shrink-0">
                      <div className="space-y-1">
                        <p className="text-xs uppercase tracking-widest opacity-75">{brand.nameEn}</p>
-                       <h4 className="text-2xl font-black">{isNeoLeap ? (method.id === 'neoleap-apple-pay' ? 'Apple Pay' : 'بطاقة بنكية') : 'بطاقة الولاء'}</h4>
+                       <h4 className="text-2xl font-black">{isNeoLeap ? (method.id === 'neoleap-apple-pay' ? 'Apple Pay' : tc('بطاقة بنكية', 'Bank Card')) : tc('بطاقة الولاء', 'Loyalty Card')}</h4>
                      </div>
                      <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-lg flex items-center justify-center flex-shrink-0">
                        {isNeoLeap ? <CreditCard className="w-6 h-6 text-white" /> : <Coffee className="w-6 h-6 text-white" />}
@@ -402,13 +408,13 @@ export default function PaymentMethods({
                         <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur">
                           <Zap className="w-8 h-8 text-amber-400 animate-pulse" />
                         </div>
-                        <p className="text-lg font-bold">{method.id === 'neoleap-apple-pay' ? 'دفع سريع عبر Apple Pay' : 'دفع آمن عبر NeoLeap'}</p>
-                        <p className="text-sm opacity-80">مدى، فيزا، ماستر كارد</p>
+                        <p className="text-lg font-bold">{method.id === 'neoleap-apple-pay' ? tc('دفع سريع عبر Apple Pay', 'Quick pay via Apple Pay') : tc('دفع آمن عبر NeoLeap', 'Secure pay via NeoLeap')}</p>
+                        <p className="text-sm opacity-80">{tc("مدى، فيزا، ماستر كارد", "Mada, Visa, Mastercard")}</p>
                      </div>
                    ) : cardMode === null ? (
                      <div className="flex flex-col items-center justify-center my-auto">
                           <div className="bg-white/10 backdrop-blur rounded-lg p-4 space-y-3 text-center w-full">
-                            <p className="text-sm opacity-90">كيف تريد استخدام بطاقتك؟</p>
+                            <p className="text-sm opacity-90">{tc("كيف تريد استخدام بطاقتك؟", "How would you like to use your card?")}</p>
                             <div className="space-y-2">
                               <Button 
                                 size="sm"
@@ -418,13 +424,13 @@ export default function PaymentMethods({
                                   // Logic for "Pay with Copy Card"
                                   onSelectMethod(method.id);
                                   toast({
-                                    title: "تم اختيار الدفع بالبطاقة",
-                                    description: "سيتم خصم قيمة الطلب من رصيد بطاقة مكان الشيف الخاصة بك",
+                                    title: tc("تم اختيار الدفع بالبطاقة", "Card payment selected"),
+                                    description: tc("سيتم خصم قيمة الطلب من رصيد بطاقة مكان الشيف الخاصة بك", "The order value will be deducted from your card balance"),
                                   });
                                 }}
                               >
                                 <Zap className="w-4 h-4 ml-2" />
-                                ادفع ببطاقة مكان الشيف
+                                {tc("ادفع ببطاقة مكان الشيف (كوبي)", "Pay with Chef's Card (Copy)")}
                               </Button>
                                {foundCard && (
                               <Button 
@@ -436,7 +442,7 @@ export default function PaymentMethods({
                                 }}
                               >
                                 <Check className="w-4 h-4 ml-2" />
-                                استخدام البطاقة المربوطة
+                                {tc("استخدام البطاقة المربوطة", "Use linked card")}
                               </Button>
                             )}
                             <Button 
@@ -448,7 +454,7 @@ export default function PaymentMethods({
                               }}
                             >
                               <Plus className="w-4 h-4 ml-2" />
-                              إضافة بطاقة أخرى
+                              {tc("إضافة بطاقة أخرى", "Add another card")}
                             </Button>
                           </div>
                         </div>
@@ -456,28 +462,28 @@ export default function PaymentMethods({
                     ) : cardMode === 'use' && foundCard ? (
                       <div className="space-y-3 flex-1 flex flex-col justify-center">
                         <div className="space-y-1">
-                          <p className="text-xs opacity-75">رقم البطاقة</p>
+                          <p className="text-xs opacity-75">{tc("رقم البطاقة", "Card Number")}</p>
                           <p className="text-lg font-mono tracking-widest font-bold">
                             {foundCard.cardNumber.replace(/(.{4})/g, '$1 ')}
                           </p>
                         </div>
                         <div className="grid grid-cols-3 gap-2 text-center text-sm">
                           <div className="bg-white/10 rounded-lg p-2 backdrop-blur">
-                            <p className="text-xs opacity-70">صاحب</p>
-                            <p className="font-bold">{foundCard.customerName?.split(' ')[0] || 'عضو'}</p>
+                            <p className="text-xs opacity-70">{tc("صاحب", "Owner")}</p>
+                            <p className="font-bold">{foundCard.customerName?.split(' ')[0] || tc('عضو', 'Member')}</p>
                           </div>
                           <div className="bg-white/10 rounded-lg p-2 backdrop-blur">
-                            <p className="text-xs opacity-70">مجاني</p>
+                            <p className="text-xs opacity-70">{tc("مجاني", "Free")}</p>
                             <p className="font-bold text-base">{(foundCard.freeCupsEarned || 0) - (foundCard.freeCupsRedeemed || 0)}</p>
                           </div>
                           <div className="bg-white/10 rounded-lg p-2 backdrop-blur">
-                            <p className="text-xs opacity-70">خصم</p>
+                            <p className="text-xs opacity-70">{tc("خصم", "Discount")}</p>
                             <p className="font-bold text-base">{foundCard.discountPercentage || 0}%</p>
                           </div>
                         </div>
                         <div className="bg-white/10 rounded-lg p-2 backdrop-blur text-center mt-2">
-                          <p className="text-xs opacity-70">رصيد الوجبات</p>
-                          <p className="font-bold text-base">{(foundCard.freeCupsEarned || 0) - (foundCard.freeCupsRedeemed || 0)} وجبة مجانية</p>
+                          <p className="text-xs opacity-70">{tc("رصيد المشروبات", "Drink Balance")}</p>
+                          <p className="font-bold text-base">{(foundCard.freeCupsEarned || 0) - (foundCard.freeCupsRedeemed || 0)} {tc("مشروب مجاني", "free drink(s)")}</p>
                         </div>
                         <Button 
                           size="sm"
@@ -488,7 +494,7 @@ export default function PaymentMethods({
                           }}
                         >
                           <Plus className="w-4 h-4 ml-2" />
-                          تغيير البطاقة
+                          {tc("تغيير البطاقة", "Change card")}
                         </Button>
                       </div>
                     ) : null}
@@ -500,11 +506,11 @@ export default function PaymentMethods({
                     <div className="space-y-4">
                       <h4 className="font-bold text-amber-900 flex items-center gap-2">
                         <Search className="w-4 h-4" />
-                        البحث عن بطاقتك
+                        {tc("البحث عن بطاقتك", "Search for your card")}
                       </h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label className="text-xs text-amber-800">رقم الجوال</Label>
+                          <Label className="text-xs text-amber-800">{tc("رقم الجوال", "Phone Number")}</Label>
                           <div className="relative">
                             <Phone className="absolute right-3 top-2.5 w-4 h-4 text-amber-400" />
                             <Input 
@@ -516,11 +522,11 @@ export default function PaymentMethods({
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-xs text-amber-800">رقم البطاقة</Label>
+                          <Label className="text-xs text-amber-800">{tc("رقم البطاقة", "Card Number")}</Label>
                           <div className="relative">
                             <CreditCard className="absolute right-3 top-2.5 w-4 h-4 text-amber-400" />
                             <Input 
-                              placeholder="رقم البطاقة" 
+                              placeholder={tc("رقم البطاقة", "Card Number")} 
                               className="pr-9 border-amber-100 focus:ring-amber-400"
                               value={searchCardNumber}
                               onChange={(e) => setSearchCardNumber(e.target.value)}
@@ -534,14 +540,14 @@ export default function PaymentMethods({
                           onClick={handleSearchCard}
                           disabled={isSearching}
                         >
-                          {isSearching ? "جاري البحث..." : "تأكيد الإضافة"}
+                          {isSearching ? tc("جاري البحث...", "Searching...") : tc("تأكيد الإضافة", "Confirm")}
                         </Button>
                         <Button 
                           variant="ghost" 
                           className="text-primary hover:bg-primary/10"
                           onClick={() => setCardMode(null)}
                         >
-                          إلغاء
+                          {tc("إلغاء", "Cancel")}
                         </Button>
                       </div>
                     </div>
@@ -582,33 +588,33 @@ export default function PaymentMethods({
                 {/* Bank Transfer IBAN Details */}
                 {isSelected && ((method as any).requiresReceipt || (method as any).bankIban || (method as any).bankName) && (
                   <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-xl border border-blue-200 dark:border-blue-800 space-y-2">
-                    <p className="text-xs font-bold text-blue-700 dark:text-blue-300">بيانات التحويل</p>
+                    <p className="text-xs font-bold text-blue-700 dark:text-blue-300">{tc("بيانات التحويل", "Transfer Details")}</p>
                     {(method as any).bankAccountHolder && (
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">اسم الحساب</span>
+                        <span className="text-xs text-muted-foreground">{tc("اسم الحساب", "Account Name")}</span>
                         <span className="text-xs font-semibold text-foreground">{(method as any).bankAccountHolder}</span>
                       </div>
                     )}
                     {(method as any).bankName && (
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">البنك</span>
+                        <span className="text-xs text-muted-foreground">{tc("البنك", "Bank")}</span>
                         <span className="text-xs font-semibold text-foreground">{(method as any).bankName}</span>
                       </div>
                     )}
                     {(method as any).bankIban && (
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">رقم الآيبان</span>
+                        <span className="text-xs text-muted-foreground">{tc("رقم الآيبان", "IBAN")}</span>
                         <span className="text-xs font-mono font-bold text-blue-700 dark:text-blue-300 dir-ltr" dir="ltr">{(method as any).bankIban}</span>
                       </div>
                     )}
                     {!(method as any).bankIban && !(method as any).bankName && method.details && (
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">رقم الحساب</span>
+                        <span className="text-xs text-muted-foreground">{tc("رقم الحساب", "Account Number")}</span>
                         <span className="text-xs font-mono font-bold text-blue-700 dark:text-blue-300 dir-ltr" dir="ltr">{method.details}</span>
                       </div>
                     )}
                     <p className="text-[10px] text-blue-600 dark:text-blue-400 mt-1">
-                      يرجى التحويل وإرسال صورة الإيصال لإتمام الطلب
+                      {tc("يرجى التحويل وإرسال صورة الإيصال لإتمام الطلب", "Please transfer and send receipt photo to complete the order")}
                     </p>
                   </div>
                 )}

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { Plus, Minus } from "lucide-react";
+import { useTranslate } from "@/lib/useTranslate";
 
 export interface SidebarItem {
   icon: React.ReactNode;
@@ -30,6 +31,7 @@ const SIZE_CONFIG: Record<SizeKey, { aside: string; btn: string; iconScale: stri
 const STORAGE_KEY = "pos-quick-sidebar-size";
 
 export function QuickSidebar({ groups, bottomItems = [] }: QuickSidebarProps) {
+  const tc = useTranslate();
   const [size, setSize] = useState<SizeKey>(() => {
     const saved = localStorage.getItem(STORAGE_KEY) as SizeKey | null;
     return saved && saved in SIZE_CONFIG ? saved : "md";
@@ -74,7 +76,7 @@ export function QuickSidebar({ groups, bottomItems = [] }: QuickSidebarProps) {
                 <Plus className="w-3.5 h-3.5" />
               </button>
             </TooltipTrigger>
-            <TooltipContent side="right" className="text-xs">تكبير</TooltipContent>
+            <TooltipContent side="right" className="text-xs">{tc("تكبير", "Enlarge")}</TooltipContent>
           </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -87,7 +89,7 @@ export function QuickSidebar({ groups, bottomItems = [] }: QuickSidebarProps) {
                 <Minus className="w-3.5 h-3.5" />
               </button>
             </TooltipTrigger>
-            <TooltipContent side="right" className="text-xs">تصغير</TooltipContent>
+            <TooltipContent side="right" className="text-xs">{tc("تصغير", "Shrink")}</TooltipContent>
           </Tooltip>
         </div>
 

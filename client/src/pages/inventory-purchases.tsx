@@ -169,6 +169,7 @@ export default function InventoryPurchasesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/inventory/purchases"] });
       queryClient.invalidateQueries({ queryKey: ["/api/inventory/stock"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/inventory/movements"] });
       queryClient.invalidateQueries({ queryKey: ["/api/accounting/journal-entries"] });
       toast({ title: tc("تم استلام الفاتورة وتحديث المخزون والقيود المحاسبية", "Invoice received and inventory updated") });
     },
@@ -314,7 +315,7 @@ export default function InventoryPurchasesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white text-gray-900 p-6 space-y-6" dir="rtl">
+    <div className="min-h-screen bg-white text-gray-900 p-6 space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <FileText className="h-8 w-8 text-green-600" />
@@ -500,7 +501,7 @@ export default function InventoryPurchasesPage() {
       </Card>
 
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" dir="rtl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{tc("إنشاء فاتورة شراء جديدة", "Create New Purchase Invoice")}</DialogTitle>
           </DialogHeader>
@@ -687,7 +688,7 @@ export default function InventoryPurchasesPage() {
       </Dialog>
 
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-2xl" dir="rtl">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>تفاصيل الفاتورة</DialogTitle>
           </DialogHeader>
@@ -801,7 +802,7 @@ export default function InventoryPurchasesPage() {
       </Dialog>
 
       <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-        <DialogContent className="max-w-md" dir="rtl">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5 text-primary" />

@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Car, Save, AlertCircle, CheckCircle2, MapPin } from "lucide-react";
+import { useTranslate } from "@/lib/useTranslate";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Order, Customer } from "@shared/schema";
@@ -18,6 +19,7 @@ interface CarPickupFormProps {
 
 export function CarPickupForm({ order, customer }: CarPickupFormProps) {
   const { toast } = useToast();
+  const tc = useTranslate();
   const customerId = customer?.id;
 
   const [carType, setCarType] = useState(customer?.carType || "");
@@ -34,15 +36,15 @@ export function CarPickupForm({ order, customer }: CarPickupFormProps) {
       queryClient.invalidateQueries({ queryKey: ["/api/customers", customerId, "orders"] });
       setFormSubmitted(true);
       toast({
-        title: "تم حفظ معلومات السيارة",
-        description: "الآن أخبرنا عند وصولك",
+        title: tc("تم حفظ معلومات السيارة", "Car Info Saved"),
+        description: tc("الآن أخبرنا عند وصولك", "Now let us know when you arrive"),
       });
     },
     onError: () => {
       toast({
         variant: "destructive",
-        title: "خطأ",
-        description: "حدث خطأ أثناء حفظ معلومات السيارة",
+        title: tc("خطأ", "Error"),
+        description: tc("حدث خطأ أثناء حفظ معلومات السيارة", "An error occurred while saving car info"),
       });
     }
   });
@@ -66,15 +68,15 @@ export function CarPickupForm({ order, customer }: CarPickupFormProps) {
       setArrivedNotified(true);
       queryClient.invalidateQueries({ queryKey: ["/api/customers", customerId, "orders"] });
       toast({
-        title: "✅ تم إعلام المطعم بوصولك",
-        description: "سيتم توصيل طلبك إليك خلال لحظات",
+        title: tc("✅ تم إعلام الكافيه بوصولك", "✅ Café Notified of Your Arrival"),
+        description: tc("سيتم توصيل طلبك إليك خلال لحظات", "Your order will be delivered to you shortly"),
       });
     },
     onError: () => {
       toast({
         variant: "destructive",
-        title: "خطأ",
-        description: "تعذر الإعلام، يرجى المحاولة مرة أخرى",
+        title: tc("خطأ", "Error"),
+        description: tc("تعذر الإعلام، يرجى المحاولة مرة أخرى", "Failed to notify, please try again"),
       });
     }
   });
@@ -85,8 +87,8 @@ export function CarPickupForm({ order, customer }: CarPickupFormProps) {
     if (!carType.trim() || !carColor.trim()) {
       toast({
         variant: "destructive",
-        title: "خطأ",
-        description: "يرجى إدخال نوع السيارة ولونها",
+        title: tc("خطأ", "Error"),
+        description: tc("يرجى إدخال نوع السيارة ولونها", "Please enter your car type and color"),
       });
       return;
     }
@@ -110,7 +112,7 @@ export function CarPickupForm({ order, customer }: CarPickupFormProps) {
       {arrivedNotified ? (
         <div className="flex items-center gap-2 p-3 bg-green-900/30 rounded-lg border border-green-500/40 text-green-400 text-sm font-bold">
           <CheckCircle2 className="w-5 h-5 shrink-0" />
-          تم إعلام المطعم بوصولك — سيصلك الطلب قريباً
+          {tc("تم إعلام الكافيه بوصولك — سيصلك الطلب قريباً", "Café notified of your arrival — order coming shortly")}
         </div>
       ) : (
         <Button
@@ -120,11 +122,11 @@ export function CarPickupForm({ order, customer }: CarPickupFormProps) {
           data-testid="button-customer-arrived"
         >
           {customerArrivedMutation.isPending ? (
-            "جاري الإعلام..."
+            tc("جاري الإعلام...", "Notifying...")
           ) : (
             <>
               <MapPin className="ml-2 h-5 w-5" />
-              أنا وصلت — أعلمنا بوصولك
+              {tc("أنا وصلت — أعلمنا بوصولك", "I've Arrived — Notify the Café")}
             </>
           )}
         </Button>
@@ -141,16 +143,16 @@ export function CarPickupForm({ order, customer }: CarPickupFormProps) {
               <Car className="w-6 h-6 text-purple-400" />
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-bold text-purple-400 mb-2">معلومات السيارة</h3>
+              <h3 className="text-lg font-bold text-purple-400 mb-2">{tc("معلومات السيارة", "Car Info")}</h3>
               <div className="space-y-1 text-sm text-gray-300">
-                {savedCarType && <p><strong className="text-purple-400">النوع:</strong> {savedCarType}</p>}
-                {savedCarColor && <p><strong className="text-purple-400">اللون:</strong> {savedCarColor}</p>}
-                {savedPlate && <p><strong className="text-purple-400">اللوحة:</strong> {savedPlate}</p>}
+                {savedCarType && <p><strong className="text-purple-400">{tc("النوع:", "Type:")}</strong> {savedCarType}</p>}
+                {savedCarColor && <p><strong className="text-purple-400">{tc("اللون:", "Color:")}</strong> {savedCarColor}</p>}
+                {savedPlate && <p><strong className="text-purple-400">{tc("اللوحة:", "Plate:")}</strong> {savedPlate}</p>}
               </div>
               <div className="mt-3 p-3 bg-purple-900/30 rounded-lg border border-purple-500/20">
                 <p className="text-xs text-purple-300">
                   <AlertCircle className="w-4 h-4 inline ml-1" />
-                  سيقوم الموظف بتوصيل طلبك إلى سيارتك
+                  {tc("سيقوم الموظف بتوصيل طلبك إلى سيارتك", "A staff member will deliver your order to your car")}
                 </p>
               </div>
               <ArrivalButton />
@@ -171,10 +173,10 @@ export function CarPickupForm({ order, customer }: CarPickupFormProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-purple-400">
             <Car className="w-5 h-5" />
-            استلام من السيارة
+            {tc("استلام من السيارة", "Car Pickup")}
           </CardTitle>
           <p className="text-sm text-gray-400">
-            أدخل معلومات سيارتك لتوصيل الطلب إليك
+            {tc("أدخل معلومات سيارتك لتوصيل الطلب إليك", "Enter your car info so we can deliver to you")}
           </p>
         </CardHeader>
         <CardContent>
@@ -183,24 +185,24 @@ export function CarPickupForm({ order, customer }: CarPickupFormProps) {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <Label htmlFor="carType" className="text-gray-300">نوع السيارة</Label>
+                <Label htmlFor="carType" className="text-gray-300">{tc("نوع السيارة", "Car Type")}</Label>
                 <Input
                   id="carType"
                   value={carType}
                   onChange={(e) => setCarType(e.target.value)}
-                  placeholder="مثال: كامري، سوناتا، اكورد"
+                  placeholder={tc("مثال: كامري، سوناتا، اكورد", "e.g. Camry, Sonata, Accord")}
                   className="bg-gray-800/50 border-gray-700 text-white"
                   data-testid="input-car-type"
                 />
               </div>
 
               <div>
-                <Label htmlFor="carColor" className="text-gray-300">لون السيارة</Label>
+                <Label htmlFor="carColor" className="text-gray-300">{tc("لون السيارة", "Car Color")}</Label>
                 <Input
                   id="carColor"
                   value={carColor}
                   onChange={(e) => setCarColor(e.target.value)}
-                  placeholder="مثال: أبيض، أسود، فضي"
+                  placeholder={tc("مثال: أبيض، أسود، فضي", "e.g. White, Black, Silver")}
                   className="bg-gray-800/50 border-gray-700 text-white"
                   data-testid="input-car-color"
                 />
@@ -216,7 +218,7 @@ export function CarPickupForm({ order, customer }: CarPickupFormProps) {
                     data-testid="checkbox-save-car-info"
                   />
                   <Label htmlFor="saveCarInfo" className="text-sm text-gray-300 cursor-pointer">
-                    حفظ معلومات السيارة للطلبات المستقبلية
+                    {tc("حفظ معلومات السيارة للطلبات المستقبلية", "Save car info for future orders")}
                   </Label>
                 </div>
               )}
@@ -228,11 +230,11 @@ export function CarPickupForm({ order, customer }: CarPickupFormProps) {
                 data-testid="button-submit-car-info"
               >
                 {updateCarPickupMutation.isPending ? (
-                  <>جاري الحفظ...</>
+                  <>{tc("جاري الحفظ...", "Saving...")}</>
                 ) : (
                   <>
                     <Save className="ml-2 h-4 w-4" />
-                    حفظ معلومات السيارة
+                    {tc("حفظ معلومات السيارة", "Save Car Info")}
                   </>
                 )}
               </Button>

@@ -12,10 +12,10 @@ import { Input } from "@/components/ui/input";
 import { LoadingState, EmptyState, ErrorState } from "@/components/ui/states";
 import { EmployeeSidebar } from "@/components/employee-sidebar";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
-import html2canvas from "html2canvas";
-const chefsplaceLogoStaff = "/logo.png";
+type Html2CanvasType = (el: HTMLElement, opts?: any) => Promise<HTMLCanvasElement>;
+import qiroxLogoStaff from "@assets/qirox-logo-customer.png";
 import type { Employee } from "@shared/schema";
-import { useOrderWebSocket } from "@/lib/websocket";
+import { useRealtimeEvent, useRealtimeStatus } from "@/hooks/useRealtimeEngine";
 import { queryClient } from "@/lib/queryClient";
 import { playNotificationSound } from "@/lib/notification-sounds";
 
@@ -61,9 +61,9 @@ export default function EmployeeDashboard() {
 
   // Set SEO metadata
   useEffect(() => {
-    document.title = "Employee Dashboard - مكان الشيف البخاري | Order Management";
+    document.title = "Employee Dashboard - مكان الشيف — الإدارة | Order Management";
     const metaDesc = document.querySelector('meta[name="description"]');
-    if (metaDesc) metaDesc.setAttribute('content', 'مكان الشيف البخاري Employee Dashboard - Track orders, leave requests and notifications');
+    if (metaDesc) metaDesc.setAttribute('content', 'مكان الشيف — الإدارة Employee Dashboard - Track orders, leave requests and notifications');
   }, []);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
@@ -82,36 +82,27 @@ export default function EmployeeDashboard() {
   const cardRef = useRef<HTMLDivElement>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // WebSocket hook for real-time order notifications
-  const { isConnected: wsConnected } = useOrderWebSocket({
-    clientType: "pos",
-    branchId: employee?.branchId?.toString(),
-    onNewOrder: (order) => {
-      fetchPendingOrders();
-      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
-      if (order?.channel !== 'pos') {
-        setNewOrderAlert({
-          orderNumber: order?.orderNumber || order?.id,
-          orderType: order?.orderType,
-          timestamp: new Date(),
-        });
-        setTimeout(() => setNewOrderAlert(null), 15000);
-      }
-      if (order?.channel !== 'pos') {
-        const isOnline = order?.channel === 'online' || order?.channel === 'web'
-          || order?.orderType === 'online' || !order?.channel;
-        if (isOnline) {
-          playNotificationSound('cashierOrder', 1.0);
-        } else {
-          playNotificationSound('newOrder', 0.85);
-        }
-      }
-    },
-    onOrderUpdated: () => {
-      fetchPendingOrders();
-      queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
-    },
-    enabled: !!employee,
+  const { connected: wsConnected } = useRealtimeStatus();
+
+  useRealtimeEvent("new_order", (order: any) => {
+    fetchPendingOrders();
+    queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+    if (order?.channel !== 'pos') {
+      setNewOrderAlert({
+        orderNumber: order?.orderNumber || order?.id,
+        orderType: order?.orderType,
+        timestamp: new Date(),
+      });
+      setTimeout(() => setNewOrderAlert(null), 15000);
+      const isOnline = order?.channel === 'online' || order?.channel === 'web'
+        || order?.orderType === 'online' || !order?.channel;
+      playNotificationSound(isOnline ? 'cashierOrder' : 'newOrder', isOnline ? 1.0 : 0.85);
+    }
+  });
+
+  useRealtimeEvent("order_updated", () => {
+    fetchPendingOrders();
+    queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
   });
 
   useEffect(() => {
@@ -340,6 +331,7 @@ export default function EmployeeDashboard() {
     if (!cardRef.current) return;
     
     try {
+      const { default: html2canvas } = await import(/* @vite-ignore */ 'html2canvas') as { default: any };
       const canvas = await html2canvas(cardRef.current, {
         backgroundColor: '#1a1410',
         scale: 2
@@ -542,10 +534,10 @@ export default function EmployeeDashboard() {
                     <div className="bg-gradient-to-r from-primary via-primary to-primary/80 p-6 relative">
                       <div className="flex items-center justify-center gap-4 mb-2">
                         <div className="w-20 h-20 flex items-center justify-center shadow-lg rounded-lg">
-                          <img src={chefsplaceLogoStaff} alt="مكان الشيف البخاري Logo" className="w-full h-full object-contain rounded-lg" />
+                          <img src={qiroxLogoStaff} alt="مكان الشيف — الإدارة Logo" className="w-full h-full object-contain rounded-lg" />
                         </div>
                         <div className="text-white text-right">
-                          <h3 className="text-2xl font-bold">مكان الشيف البخاري</h3>
+                          <h3 className="text-2xl font-bold">مكان الشيف — الإدارة</h3>
                           <p className="text-white/80 text-xs">Staff Portal</p>
                         </div>
                       </div>

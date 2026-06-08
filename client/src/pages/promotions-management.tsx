@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslate, tc } from "@/lib/useTranslate";
+import SarIconComponent from "@/components/sar-icon";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -48,7 +49,7 @@ interface CoffeeItem {
 }
 
 function SarIcon() {
-  return <span className="font-arabic text-xs font-bold">ر.س</span>;
+  return <SarIconComponent size={12} />;
 }
 
 const offerTypeLabels: Record<string, { label: string; color: string; icon: any }> = {
@@ -215,7 +216,7 @@ export default function PromotionsManagement() {
   };
 
   return (
-    <div className="p-6 space-y-6" dir="rtl">
+    <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => setLocation("/manager/dashboard")} data-testid="btn-back">
@@ -328,7 +329,7 @@ export default function PromotionsManagement() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={showDialog} onOpenChange={v => { setShowDialog(v); if (!v) { setEditingId(null); setForm({ ...defaultForm }); } }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingId ? tc("تعديل العرض", "Edit Offer") : tc("إنشاء عرض / باقة جديدة", "Create New Offer / Bundle")}</DialogTitle>
           </DialogHeader>
@@ -387,11 +388,11 @@ export default function PromotionsManagement() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>السعر الأصلي (ر.س) *</Label>
+                <Label>السعر الأصلي (<SarIconComponent size={11} />) *</Label>
                 <Input type="number" min="0" step="0.01" value={form.originalPrice} onChange={e => setForm(f => ({ ...f, originalPrice: e.target.value }))} placeholder="0.00" data-testid="input-offer-originalPrice" />
               </div>
               <div>
-                <Label>سعر العرض (ر.س) *</Label>
+                <Label>سعر العرض (<SarIconComponent size={11} />) *</Label>
                 <Input type="number" min="0" step="0.01" value={form.offerPrice} onChange={e => setForm(f => ({ ...f, offerPrice: e.target.value }))} placeholder="0.00" data-testid="input-offer-offerPrice" />
               </div>
             </div>
@@ -445,7 +446,7 @@ export default function PromotionsManagement() {
                       {!item.imageUrl && <div className="w-8 h-8 rounded-lg bg-muted flex-shrink-0" />}
                       <div className="flex-1 text-right">
                         <div className="font-medium">{item.nameAr}</div>
-                        <div className="text-xs text-muted-foreground">{item.price.toFixed(2)} ر.س</div>
+                        <div className="text-xs text-muted-foreground">{item.price.toFixed(2)} <SarIcon /></div>
                       </div>
                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${selected ? 'bg-primary border-primary' : 'border-border'}`}>
                         {selected && <Check className="w-3 h-3 text-white" />}
@@ -488,7 +489,7 @@ export default function PromotionsManagement() {
 
       {/* Delete Confirm */}
       <Dialog open={!!deleteId} onOpenChange={v => !v && setDeleteId(null)}>
-        <DialogContent className="max-w-sm" dir="rtl">
+        <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>تأكيد الحذف</DialogTitle>
           </DialogHeader>

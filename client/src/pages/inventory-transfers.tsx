@@ -236,7 +236,7 @@ export default function InventoryTransfersPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white text-gray-900 p-6 space-y-6" dir="rtl">
+    <div className="min-h-screen bg-white text-gray-900 p-6 space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <ArrowRightLeft className="h-8 w-8 text-green-600" />
@@ -414,7 +414,7 @@ export default function InventoryTransfersPage() {
       </Card>
 
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{tc("طلب تحويل جديد", "New Transfer Request")}</DialogTitle>
           </DialogHeader>
@@ -549,7 +549,7 @@ export default function InventoryTransfersPage() {
       </Dialog>
 
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-2xl" dir="rtl">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{tc("تفاصيل التحويل", "Transfer Details")}</DialogTitle>
           </DialogHeader>

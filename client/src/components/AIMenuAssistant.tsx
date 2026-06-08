@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Sparkles, Loader2, Copy, Check, ChevronRight, RefreshCw, Wand2, Star, BookOpen, Layers, Palette, PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { brand } from "@/lib/brand";
+import { useTranslate } from "@/lib/useTranslate";
 
 interface AIMenuAssistantProps {
   nameAr: string;
@@ -145,6 +146,7 @@ export function AIMenuAssistant({
   onInsertAddons,
   compact = false,
 }: AIMenuAssistantProps) {
+  const tc = useTranslate();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [activeTask, setActiveTask] = useState<AITask | null>(null);
@@ -157,7 +159,7 @@ export function AIMenuAssistant({
 
   const runTask = async (task: AITask) => {
     if (!canRun) {
-      toast({ title: "أدخل اسم المنتج أولاً", variant: "destructive" });
+      toast({ title: tc("أدخل اسم المنتج أولاً", "Enter product name first"), variant: "destructive" });
       return;
     }
     setActiveTask(task);
@@ -171,14 +173,10 @@ export function AIMenuAssistant({
         body: JSON.stringify({ nameAr, nameEn, category, task, existingDescription, existingIngredients }),
       });
       const data = await res.json();
-      if (res.status === 429 || data.dailyLimit) {
-        toast({ title: "⏳ وصلت للحد اليومي", description: "جرب مرة ثانية بكره!", variant: "destructive" });
-        return;
-      }
-      if (!res.ok) throw new Error(data.error || "فشل الاتصال");
+      if (!res.ok) throw new Error(data.error || tc("فشل الاتصال", "Connection failed"));
       setResult(data.result || "");
     } catch (err: any) {
-      toast({ title: "خطأ في الذكاء الاصطناعي", description: err.message, variant: "destructive" });
+      toast({ title: tc("خطأ في الذكاء الاصطناعي", "AI error"), description: err.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -194,15 +192,15 @@ export function AIMenuAssistant({
     if (!result) return;
     if (activeTask === "description_ar" || activeTask === "description_en" || activeTask === "description_both" || activeTask === "flavor_profile") {
       onInsertDescription?.(result);
-      toast({ title: "✅ تم إدراج الوصف في الحقل" });
+      toast({ title: tc("✅ تم إدراج الوصف في الحقل", "✅ Description inserted") });
     } else if (activeTask === "name_en") {
       const firstLine = result.split("\n").find(l => l.trim()) || result;
       const cleaned = firstLine.replace(/^[1-3][.)]\s*/, "").trim();
       onInsertNameEn?.(cleaned);
-      toast({ title: "✅ تم إدراج الاسم الإنجليزي" });
+      toast({ title: tc("✅ تم إدراج الاسم الإنجليزي", "✅ English name inserted") });
     } else if (activeTask === "ingredients") {
       onInsertIngredients?.(result);
-      toast({ title: "✅ تم إدراج المكونات" });
+      toast({ title: tc("✅ تم إدراج المكونات", "✅ Ingredients inserted") });
     } else if (activeTask === "addons" && onInsertAddons) {
       const lines = result.split("\n").filter(l => l.includes("—") || l.includes("-"));
       const parsed = lines.slice(0, 8).map(line => {
@@ -213,7 +211,7 @@ export function AIMenuAssistant({
       }).filter(a => a.nameAr.length > 0);
       if (parsed.length) {
         onInsertAddons(parsed);
-        toast({ title: `✅ تم إضافة ${parsed.length} خيارات للمنتج` });
+        toast({ title: tc(`✅ تم إضافة ${parsed.length} خيارات للمنتج`, `✅ Added ${parsed.length} options to product`) });
       }
     }
   };
@@ -235,7 +233,7 @@ export function AIMenuAssistant({
         data-testid="button-ai-assistant"
       >
         <Sparkles className={`${compact ? "w-3 h-3" : "w-4 h-4"} ml-1.5`} />
-        {compact ? "AI" : "مساعد الذكاء الاصطناعي"}
+        {compact ? "AI" : tc("مساعد الذكاء الاصطناعي", "AI Assistant")}
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -267,7 +265,7 @@ export function AIMenuAssistant({
             {!nameAr && (
               <p className="relative mt-3 text-amber-400 text-sm flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                أدخل اسم المنتج في النموذج لتفعيل المساعد
+                {tc("أدخل اسم المنتج في النموذج لتفعيل المساعد", "Enter product name in the form to activate the assistant")}
               </p>
             )}
           </div>
@@ -275,7 +273,7 @@ export function AIMenuAssistant({
           <div className="p-6 space-y-5 max-h-[65vh] overflow-y-auto">
             {/* Task Grid */}
             <div>
-              <p className="text-xs text-gray-500 mb-3 uppercase tracking-wider">اختر نوع المحتوى المطلوب</p>
+              <p className="text-xs text-gray-500 mb-3 uppercase tracking-wider">{tc("اختر نوع المحتوى المطلوب", "Choose content type")}</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {TASK_OPTIONS.map(opt => (
                   <button
@@ -350,7 +348,7 @@ export function AIMenuAssistant({
                   {loading ? (
                     <div className="flex items-center gap-3 text-purple-300">
                       <Loader2 className="w-4 h-4 animate-spin text-purple-400" />
-                      <span className="text-sm">يفكر الذكاء الاصطناعي...</span>
+                      <span className="text-sm">{tc("يفكر الذكاء الاصطناعي...", "AI is thinking...")}</span>
                       <div className="flex gap-1 mr-auto">
                         {[0,1,2].map(i => (
                           <div key={i} className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
@@ -374,7 +372,7 @@ export function AIMenuAssistant({
                         className="flex-1 bg-gradient-to-r from-emerald-600 to-green-700 hover:from-emerald-500 hover:to-green-600 text-white text-sm shadow-lg shadow-emerald-500/20"
                       >
                         <ChevronRight className="w-4 h-4 ml-1" />
-                        إدراج في النموذج
+                        {tc("إدراج في النموذج", "Insert into form")}
                       </Button>
                     )}
                     <Button
@@ -396,8 +394,8 @@ export function AIMenuAssistant({
                 <div className="w-14 h-14 mx-auto mb-3 rounded-full bg-purple-950/40 border border-purple-800/30 flex items-center justify-center">
                   <Sparkles className="w-6 h-6 text-purple-600" />
                 </div>
-                <p className="text-sm">اختر نوع المحتوى لتوليده بالذكاء الاصطناعي</p>
-                <p className="text-xs mt-1 text-gray-700">يعمل بـ Gemini Flash — سريع وإبداعي</p>
+                <p className="text-sm">{tc("اختر نوع المحتوى لتوليده بالذكاء الاصطناعي", "Choose content type to generate with AI")}</p>
+                <p className="text-xs mt-1 text-gray-700">{tc("يعمل بـ Gemini Flash — سريع وإبداعي", "Powered by Gemini Flash — fast and creative")}</p>
               </div>
             )}
           </div>

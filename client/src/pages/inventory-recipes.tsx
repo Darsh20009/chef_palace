@@ -129,76 +129,112 @@ const unitConversions: Record<string, Record<string, number>> = {
 };
 
 const drinkRecipeTemplates: Record<string, { name: string; ingredients: Array<{ rawCode: string; quantity: number; unit: string; description: string }> }> = {
-  "bukhari-chicken": {
-    name: "بخاري دجاج (1 شخص)",
+  "espresso-single": {
+    name: "إسبريسو (شوت واحد)",
     ingredients: [
-      { rawCode: "RAW-001", quantity: 250, unit: "g", description: "أرز بسمتي" },
-      { rawCode: "RAW-002", quantity: 300, unit: "g", description: "دجاج طازج" },
-      { rawCode: "RAW-003", quantity: 20, unit: "g", description: "توابل بخاري" },
-      { rawCode: "RAW-004", quantity: 30, unit: "ml", description: "زيت نباتي" },
+      { rawCode: "RAW-001", quantity: 9, unit: "g", description: "حبوب قهوة أرابيكا" },
+      { rawCode: "RAW-013", quantity: 1, unit: "piece", description: "كوب صغير" },
     ]
   },
-  "bukhari-lamb": {
-    name: "بخاري لحم (1 شخص)",
+  "espresso-double": {
+    name: "إسبريسو (دبل شوت)",
     ingredients: [
-      { rawCode: "RAW-001", quantity: 250, unit: "g", description: "أرز بسمتي" },
-      { rawCode: "RAW-005", quantity: 350, unit: "g", description: "لحم خروف" },
-      { rawCode: "RAW-003", quantity: 25, unit: "g", description: "توابل بخاري" },
-      { rawCode: "RAW-004", quantity: 30, unit: "ml", description: "زيت نباتي" },
+      { rawCode: "RAW-001", quantity: 18, unit: "g", description: "حبوب قهوة أرابيكا" },
+      { rawCode: "RAW-013", quantity: 1, unit: "piece", description: "كوب صغير" },
     ]
   },
-  "mandi-chicken": {
-    name: "مندي دجاج (1 شخص)",
+  "cappuccino": {
+    name: "كابتشينو",
     ingredients: [
-      { rawCode: "RAW-001", quantity: 250, unit: "g", description: "أرز بسمتي" },
-      { rawCode: "RAW-002", quantity: 350, unit: "g", description: "دجاج طازج" },
-      { rawCode: "RAW-006", quantity: 15, unit: "g", description: "توابل مندي" },
+      { rawCode: "RAW-001", quantity: 18, unit: "g", description: "حبوب قهوة (دبل شوت)" },
+      { rawCode: "RAW-003", quantity: 120, unit: "ml", description: "حليب طازج" },
+      { rawCode: "RAW-014", quantity: 1, unit: "piece", description: "كوب متوسط" },
     ]
   },
-  "shish-tawook": {
-    name: "شيش طاووق",
+  "cafe-latte": {
+    name: "كافيه لاتيه",
     ingredients: [
-      { rawCode: "RAW-002", quantity: 200, unit: "g", description: "دجاج طازج" },
-      { rawCode: "RAW-007", quantity: 50, unit: "g", description: "مارينا ثوم وليمون" },
+      { rawCode: "RAW-001", quantity: 18, unit: "g", description: "حبوب قهوة (دبل شوت)" },
+      { rawCode: "RAW-003", quantity: 180, unit: "ml", description: "حليب طازج" },
+      { rawCode: "RAW-014", quantity: 1, unit: "piece", description: "كوب متوسط" },
     ]
   },
-  "lentil-soup": {
-    name: "شوربة عدس",
+  "vanilla-latte": {
+    name: "فانيلا لاتيه",
     ingredients: [
-      { rawCode: "RAW-008", quantity: 100, unit: "g", description: "عدس أحمر" },
-      { rawCode: "RAW-009", quantity: 10, unit: "ml", description: "زيت زيتون" },
-      { rawCode: "RAW-010", quantity: 5, unit: "g", description: "كمون وتوابل" },
+      { rawCode: "RAW-001", quantity: 18, unit: "g", description: "حبوب قهوة (دبل شوت)" },
+      { rawCode: "RAW-003", quantity: 180, unit: "ml", description: "حليب طازج" },
+      { rawCode: "RAW-006", quantity: 30, unit: "ml", description: "سيرب فانيلا" },
+      { rawCode: "RAW-015", quantity: 1, unit: "piece", description: "كوب كبير" },
     ]
   },
-  "hummus": {
-    name: "حمص بالطحينة",
+  "mocha": {
+    name: "موكا",
     ingredients: [
-      { rawCode: "RAW-011", quantity: 100, unit: "g", description: "حمص مطبوخ" },
-      { rawCode: "RAW-012", quantity: 30, unit: "g", description: "طحينة" },
-      { rawCode: "RAW-009", quantity: 10, unit: "ml", description: "زيت زيتون" },
+      { rawCode: "RAW-001", quantity: 18, unit: "g", description: "حبوب قهوة (دبل شوت)" },
+      { rawCode: "RAW-003", quantity: 150, unit: "ml", description: "حليب طازج" },
+      { rawCode: "RAW-008", quantity: 30, unit: "ml", description: "شوكولاتة سائلة" },
+      { rawCode: "RAW-010", quantity: 30, unit: "ml", description: "كريمة مخفوقة" },
+      { rawCode: "RAW-015", quantity: 1, unit: "piece", description: "كوب كبير" },
     ]
   },
-  "ayran": {
-    name: "عيران بالنعناع",
+  "iced-latte": {
+    name: "آيس لاتيه",
     ingredients: [
-      { rawCode: "RAW-013", quantity: 200, unit: "ml", description: "لبن" },
-      { rawCode: "RAW-014", quantity: 5, unit: "g", description: "نعناع طازج" },
+      { rawCode: "RAW-001", quantity: 18, unit: "g", description: "حبوب قهوة (دبل شوت)" },
+      { rawCode: "RAW-003", quantity: 200, unit: "ml", description: "حليب طازج بارد" },
+      { rawCode: "RAW-015", quantity: 1, unit: "piece", description: "كوب كبير" },
+    ]
+  },
+  "iced-mocha": {
+    name: "آيس موكا",
+    ingredients: [
+      { rawCode: "RAW-001", quantity: 18, unit: "g", description: "حبوب قهوة (دبل شوت)" },
+      { rawCode: "RAW-003", quantity: 180, unit: "ml", description: "حليب طازج بارد" },
+      { rawCode: "RAW-008", quantity: 30, unit: "ml", description: "شوكولاتة سائلة" },
+      { rawCode: "RAW-010", quantity: 30, unit: "ml", description: "كريمة مخفوقة" },
+      { rawCode: "RAW-015", quantity: 1, unit: "piece", description: "كوب كبير" },
+    ]
+  },
+  "iced-matcha-latte": {
+    name: "آيس ماتشا لاتيه",
+    ingredients: [
+      { rawCode: "RAW-009", quantity: 3, unit: "g", description: "بودرة ماتشا" },
+      { rawCode: "RAW-003", quantity: 200, unit: "ml", description: "حليب طازج بارد" },
+      { rawCode: "RAW-015", quantity: 1, unit: "piece", description: "كوب كبير" },
+    ]
+  },
+  "cold-brew": {
+    name: "كولد برو",
+    ingredients: [
+      { rawCode: "RAW-019", quantity: 200, unit: "ml", description: "قهوة كولد برو مركزة" },
+      { rawCode: "RAW-015", quantity: 1, unit: "piece", description: "كوب كبير" },
+    ]
+  },
+  "vanilla-cold-brew": {
+    name: "فانيلا كولد برو",
+    ingredients: [
+      { rawCode: "RAW-019", quantity: 200, unit: "ml", description: "قهوة كولد برو مركزة" },
+      { rawCode: "RAW-006", quantity: 30, unit: "ml", description: "سيرب فانيلا" },
+      { rawCode: "RAW-015", quantity: 1, unit: "piece", description: "كوب كبير" },
     ]
   },
 };
 
 const quickIngredientTemplates = [
-  { name: "أرز بسمتي (100غ)", rawCode: "RAW-001", quantity: 100, unit: "g", icon: Wheat },
-  { name: "أرز بسمتي (250غ)", rawCode: "RAW-001", quantity: 250, unit: "g", icon: Wheat },
-  { name: "دجاج (200غ)", rawCode: "RAW-002", quantity: 200, unit: "g", icon: Package },
-  { name: "دجاج (300غ)", rawCode: "RAW-002", quantity: 300, unit: "g", icon: Package },
-  { name: "لحم خروف (200غ)", rawCode: "RAW-005", quantity: 200, unit: "g", icon: Package },
-  { name: "توابل بخاري (20غ)", rawCode: "RAW-003", quantity: 20, unit: "g", icon: FlaskConical },
-  { name: "توابل مندي (15غ)", rawCode: "RAW-006", quantity: 15, unit: "g", icon: FlaskConical },
-  { name: "زيت نباتي (30مل)", rawCode: "RAW-004", quantity: 30, unit: "ml", icon: Droplet },
-  { name: "زيت زيتون (10مل)", rawCode: "RAW-009", quantity: 10, unit: "ml", icon: Droplet },
-  { name: "طحينة (30غ)", rawCode: "RAW-012", quantity: 30, unit: "g", icon: FlaskConical },
-  { name: "لبن (200مل)", rawCode: "RAW-013", quantity: 200, unit: "ml", icon: Droplet },
+  { name: "شوت إسبريسو (9غ)", rawCode: "RAW-001", quantity: 9, unit: "g", icon: Coffee },
+  { name: "دبل شوت (18غ)", rawCode: "RAW-001", quantity: 18, unit: "g", icon: Coffee },
+  { name: "حليب كابتشينو (120مل)", rawCode: "RAW-003", quantity: 120, unit: "ml", icon: Droplet },
+  { name: "حليب لاتيه (180مل)", rawCode: "RAW-003", quantity: 180, unit: "ml", icon: Droplet },
+  { name: "حليب آيس (200مل)", rawCode: "RAW-003", quantity: 200, unit: "ml", icon: Droplet },
+  { name: "سيرب فانيلا (30مل)", rawCode: "RAW-006", quantity: 30, unit: "ml", icon: FlaskConical },
+  { name: "سيرب كراميل (30مل)", rawCode: "RAW-007", quantity: 30, unit: "ml", icon: FlaskConical },
+  { name: "شوكولاتة (30مل)", rawCode: "RAW-008", quantity: 30, unit: "ml", icon: FlaskConical },
+  { name: "ماتشا (3غ)", rawCode: "RAW-009", quantity: 3, unit: "g", icon: Wheat },
+  { name: "كريمة مخفوقة (30مل)", rawCode: "RAW-010", quantity: 30, unit: "ml", icon: FlaskConical },
+  { name: "كوب صغير", rawCode: "RAW-013", quantity: 1, unit: "piece", icon: Package },
+  { name: "كوب وسط", rawCode: "RAW-014", quantity: 1, unit: "piece", icon: Package },
+  { name: "كوب كبير", rawCode: "RAW-015", quantity: 1, unit: "piece", icon: Package },
 ];
 
 const categoryLabels: Record<string, string> = {
@@ -206,13 +242,6 @@ const categoryLabels: Record<string, string> = {
   hot: "ساخنة",
   cold: "باردة",
   special: "خاصة",
-  "cat-bukhari": "أرز بخاري",
-  "cat-mandi": "مندي وزربيان",
-  "cat-grills": "مشاوي",
-  "cat-soup": "شوربة",
-  "cat-appetizers": "مقبلات",
-  "cat-drinks": "مشروبات",
-  "cat-desserts": "حلويات",
 };
 
 const getCompatibleUnits = (baseUnit: string): string[] => {
@@ -514,7 +543,7 @@ export default function InventoryRecipesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white text-gray-900 p-6 space-y-6" dir="rtl">
+    <div className="min-h-screen bg-white text-gray-900 p-6 space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
           <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-100">
@@ -749,7 +778,7 @@ export default function InventoryRecipesPage() {
       </Card>
 
       <Dialog open={isRecipeDialogOpen} onOpenChange={setIsRecipeDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" dir="rtl">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <BookOpen className="h-5 w-5 text-emerald-600" />
@@ -1007,7 +1036,7 @@ export default function InventoryRecipesPage() {
       </Dialog>
 
       <Dialog open={isAddIngredientOpen} onOpenChange={setIsAddIngredientOpen}>
-        <DialogContent className="max-w-2xl" dir="rtl">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Plus className="h-5 w-5 text-emerald-600" />
@@ -1176,7 +1205,7 @@ export default function InventoryRecipesPage() {
       </Dialog>
 
       <Dialog open={isQuickSetupOpen} onOpenChange={setIsQuickSetupOpen}>
-        <DialogContent className="max-w-lg" dir="rtl">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Zap className="h-5 w-5 text-emerald-600" />

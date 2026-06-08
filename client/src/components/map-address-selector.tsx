@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { MapPin, Check, X, Navigation, Store, Coffee } from "lucide-react";
+import SarIcon from "@/components/sar-icon";
+import { useTranslate } from "@/lib/useTranslate";
 import { DELIVERY_ZONES, getZoneForLocation, type DeliveryZone } from "@shared/zones";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -167,6 +169,7 @@ export default function MapAddressSelector({
   onAddressSelected,
   onCancel,
 }: MapAddressSelectorProps) {
+  const tc = useTranslate();
   const [position, setPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedZone, setSelectedZone] = useState<DeliveryZone | null>(null);
   const [pickupInfo, setPickupInfo] = useState<ReturnType<typeof checkPickupAvailability> | null>(null);
@@ -184,7 +187,7 @@ export default function MapAddressSelector({
   const handleGetCurrentLocation = () => {
     setIsLoadingLocation(true);
     if (!navigator.geolocation) {
-      alert("المتصفح لا يدعم تحديد الموقع الجغرافي");
+      alert(tc("المتصفح لا يدعم تحديد الموقع الجغرافي", "Browser does not support geolocation"));
       setIsLoadingLocation(false);
       return;
     }
@@ -241,7 +244,7 @@ export default function MapAddressSelector({
     if (!position) return;
 
     if (selectedOrderType === "delivery" && selectedZone) {
-      const fullAddress = address || `${selectedZone.nameAr}، الرياض`;
+      const fullAddress = address || `${selectedZone.nameAr}، ينبع`;
       onAddressSelected({
         fullAddress,
         lat: position.lat,
@@ -304,7 +307,7 @@ export default function MapAddressSelector({
                     <p className={`text-sm mt-1 ${
                       selectedOrderType === "delivery" ? "text-green-600 dark:text-green-300" : "text-muted-foreground"
                     }`}>
-                      رسوم التوصيل: {selectedZone?.deliveryFee} ريال
+                      رسوم التوصيل: {selectedZone?.deliveryFee} <SarIcon size={12} />
                     </p>
                   </div>
                 </div>
@@ -404,7 +407,7 @@ export default function MapAddressSelector({
               <Popup>
                 <div className="text-right">
                   <p className="font-semibold">{zone.nameAr}</p>
-                  <p className="text-sm">رسوم التوصيل: {zone.deliveryFee} ريال</p>
+                  <p className="text-sm">رسوم التوصيل: {zone.deliveryFee} <SarIcon size={12} /></p>
                 </div>
               </Popup>
             </Polygon>

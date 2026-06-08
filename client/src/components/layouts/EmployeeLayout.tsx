@@ -1,5 +1,7 @@
 import { ReactNode, useEffect, useState } from "react";
 import { useLocation, Link } from "wouter";
+import { LanguageToggle } from "@/components/language-toggle";
+import { useTranslation } from "react-i18next";
 import { 
   Home, 
   ShoppingBag, 
@@ -58,6 +60,7 @@ export function EmployeeLayout({
 }: EmployeeLayoutProps) {
   const [location, setLocation] = useLocation();
   const [employee, setEmployee] = useState<Employee | null>(null);
+  const { i18n } = useTranslation();
 
   useEffect(() => {
     const storedEmployee = localStorage.getItem("currentEmployee");
@@ -94,7 +97,7 @@ export function EmployeeLayout({
 
   const handleLogout = () => {
     localStorage.removeItem("currentEmployee");
-    localStorage.removeItem("chefsplace-restore-key");
+    localStorage.removeItem("qirox-restore-key");
     setLocation("/employee/gateway");
   };
 
@@ -105,7 +108,7 @@ export function EmployeeLayout({
     { path: "/employee/pos", icon: CreditCard, label: "نقطة البيع", roles: ["cashier", "manager", "admin", "owner"] },
     { path: "/employee/kitchen", icon: ChefHat, label: "المطبخ", roles: ["barista", "manager", "admin", "owner"] },
     { path: "/employee/table-orders", icon: TableIcon, label: "الطاولات", roles: ["all"] },
-    { path: "/employee/menu-management", icon: Coffee, label: "الأطباق", roles: ["manager", "admin", "owner"] },
+    { path: "/employee/menu-management", icon: Coffee, label: "المشروبات", roles: ["manager", "admin", "owner"] },
     { path: "/employee/menu-management?type=food", icon: Utensils, label: "المأكولات", roles: ["manager", "admin", "owner"] },
     { path: "/employee/loyalty", icon: Users, label: "الولاء", roles: ["all"] },
   ];
@@ -119,7 +122,7 @@ export function EmployeeLayout({
     owner: "المالك",
     manager: "مدير",
     cashier: "كاشير",
-    barista: "محضر طعام",
+    barista: "باريستا",
     driver: "سائق",
   };
 
@@ -130,7 +133,7 @@ export function EmployeeLayout({
 
   return (
     <SidebarProvider defaultOpen={false} style={sidebarStyle as React.CSSProperties}>
-      <div className="flex h-screen w-full" dir="rtl">
+      <div className="flex h-screen w-full" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
         <Sidebar side="right" collapsible="icon">
           <SidebarHeader className="border-b p-4">
             <div className="flex items-center gap-3">
@@ -224,6 +227,7 @@ export function EmployeeLayout({
             </div>
             {employee && (
               <div className="flex items-center gap-2">
+                <LanguageToggle />
                 <span className="text-sm text-muted-foreground hidden sm:block">
                   {employee.nameAr}
                 </span>
@@ -232,6 +236,16 @@ export function EmployeeLayout({
                     {employee.nameAr?.charAt(0) || "م"}
                   </AvatarFallback>
                 </Avatar>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleLogout}
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive gap-1.5 hidden sm:flex"
+                  data-testid="button-logout-header"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span className="text-xs">تسجيل الخروج</span>
+                </Button>
               </div>
             )}
           </header>
@@ -264,7 +278,7 @@ export function EmployeeLayout({
 
       {/* Mobile Notification Permission Banner */}
       {showNotifBanner && (
-        <div className="fixed bottom-16 sm:bottom-4 left-4 right-4 z-50 max-w-sm mx-auto" dir="rtl">
+        <div className="fixed bottom-16 sm:bottom-4 left-4 right-4 z-50 max-w-sm mx-auto" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
           <div className="bg-primary text-primary-foreground rounded-2xl shadow-2xl p-4 flex flex-col gap-3">
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2">

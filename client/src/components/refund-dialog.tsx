@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
+import { useTranslate } from "@/lib/useTranslate";
 
 interface RefundItem {
   coffeeItemId: string;
@@ -42,6 +43,7 @@ type RefundPayMethod = "cash" | "card" | "split";
 
 export default function RefundDialog({ open, onOpenChange, branchId, employeeId, employeeName, tenantId }: RefundDialogProps) {
   const { toast } = useToast();
+  const tc = useTranslate();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [searchQuery, setSearchQuery] = useState("");
@@ -101,7 +103,7 @@ export default function RefundDialog({ open, onOpenChange, branchId, employeeId,
         }
       }
       if (!order) {
-        setSearchError("لم يتم العثور على الطلب — تحقق من الرقم أو الجوال");
+        setSearchError(tc("لم يتم العثور على الطلب — تحقق من الرقم أو الجوال", "Order not found — check the number or phone"));
       } else {
         const items = typeof order.items === "string" ? JSON.parse(order.items) : (order.items || []);
         order.items = items;
@@ -117,7 +119,7 @@ export default function RefundDialog({ open, onOpenChange, branchId, employeeId,
         setRefundQtys(initQty);
       }
     } catch {
-      setSearchError("حدث خطأ أثناء البحث");
+      setSearchError(tc("حدث خطأ أثناء البحث", "An error occurred while searching"));
     } finally {
       setIsSearching(false);
     }
@@ -164,7 +166,7 @@ export default function RefundDialog({ open, onOpenChange, branchId, employeeId,
       return res.json();
     },
     onSuccess: (data) => {
-      toast({ title: "✅ تم الاسترجاع بنجاح", description: `إجمالي المسترجع: ${data.refundAmount?.toFixed(2)} ريال` });
+      toast({ title: tc("✅ تم الاسترجاع بنجاح", "✅ Refund successful"), description: `${tc("إجمالي المسترجع:", "Total refunded:")} ${data.refundAmount?.toFixed(2)} ${tc("ريال", "SAR")}` });
       setTimeout(() => {
         printRefundThermal({
           refundId: data.id,
@@ -183,30 +185,30 @@ export default function RefundDialog({ open, onOpenChange, branchId, employeeId,
       handleClose();
     },
     onError: (err: any) => {
-      toast({ title: "فشل الاسترجاع", description: err.message || "حدث خطأ", variant: "destructive" });
+      toast({ title: tc("فشل الاسترجاع", "Refund failed"), description: err.message || tc("حدث خطأ", "An error occurred"), variant: "destructive" });
     },
   });
 
   const handleConfirmRefund = () => {
     const items = buildRefundItems();
     if (items.length === 0) {
-      toast({ title: "اختر صنفاً واحداً على الأقل", variant: "destructive" });
+      toast({ title: tc("اختر صنفاً واحداً على الأقل", "Select at least one item"), variant: "destructive" });
       return;
     }
     if (!reason.trim()) {
-      toast({ title: "يرجى إدخال سبب الاسترجاع", variant: "destructive" });
+      toast({ title: tc("يرجى إدخال سبب الاسترجاع", "Please enter a refund reason"), variant: "destructive" });
       return;
     }
     const refundAmount = calcRefundTotal();
     if (refundAmount <= 0) {
-      toast({ title: "المبلغ المسترجع يجب أن يكون أكبر من صفر", variant: "destructive" });
+      toast({ title: tc("المبلغ المسترجع يجب أن يكون أكبر من صفر", "Refund amount must be greater than zero"), variant: "destructive" });
       return;
     }
     if (payMethod === "split") {
       const cash = parseFloat(cashAmount) || 0;
       const card = parseFloat(cardAmount) || 0;
       if (Math.abs(cash + card - refundAmount) > 0.01) {
-        toast({ title: `مجموع النقدي + الشبكة يجب أن يساوي ${refundAmount.toFixed(2)} ريال`, variant: "destructive" });
+        toast({ title: tc(`مجموع النقدي + الشبكة يجب أن يساوي ${refundAmount.toFixed(2)} ريال`, `Cash + card must equal ${refundAmount.toFixed(2)} SAR`), variant: "destructive" });
         return;
       }
     }
@@ -230,9 +232,9 @@ export default function RefundDialog({ open, onOpenChange, branchId, employeeId,
   const refundTotal = calcRefundTotal();
   const orderItems = getOrderItems();
   const payMethodLabel: Record<RefundPayMethod, string> = {
-    cash: "نقدي",
-    card: "شبكة / بطاقة",
-    split: "نقدي + شبكة",
+    cash: tc("نقدي", "Cash"),
+    card: tc("شبكة / بطاقة", "Card"),
+    split: tc("نقدي + شبكة", "Cash + Card"),
   };
 
   return (
@@ -244,10 +246,10 @@ export default function RefundDialog({ open, onOpenChange, branchId, employeeId,
               <RotateCcw className="w-5 h-5 text-red-600" />
             </div>
             <div>
-              <p className="text-base font-bold">استرجاع طلب / Refund</p>
+              <p className="text-base font-bold">{tc("استرجاع طلب", "Refund Order")}</p>
               <p className="text-xs font-normal text-muted-foreground">
-                الخطوة {step} من 3 —{" "}
-                {step === 1 ? "البحث عن الطلب" : step === 2 ? "تحديد الأصناف" : "تفاصيل الاسترجاع"}
+                {tc("الخطوة", "Step")} {step} {tc("من", "of")} 3 —{" "}
+                {step === 1 ? tc("البحث عن الطلب", "Search Order") : step === 2 ? tc("تحديد الأصناف", "Select Items") : tc("تفاصيل الاسترجاع", "Refund Details")}
               </p>
             </div>
           </DialogTitle>
@@ -267,10 +269,10 @@ export default function RefundDialog({ open, onOpenChange, branchId, employeeId,
           {step === 1 && (
             <div className="space-y-4 py-2">
               <div className="space-y-2">
-                <Label className="text-sm font-bold">ابحث برقم الطلب أو رقم الجوال</Label>
+                <Label className="text-sm font-bold">{tc("ابحث برقم الطلب أو رقم الجوال", "Search by order number or phone")}</Label>
                 <div className="flex gap-2">
                   <Input
-                    placeholder="مثال: 42  أو  0501234567"
+                    placeholder={tc("مثال: 42  أو  0501234567", "e.g. 42 or 0501234567")}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -294,30 +296,30 @@ export default function RefundDialog({ open, onOpenChange, branchId, employeeId,
                 <div className="border-2 border-green-200 rounded-xl p-4 bg-green-50 space-y-3">
                   <div className="flex items-center justify-between">
                     <Badge variant="outline" className="border-green-500 text-green-700 font-bold">
-                      طلب #{foundOrder.orderNumber}
+                      {tc("طلب", "Order")} #{foundOrder.orderNumber}
                     </Badge>
                     <CheckCircle className="w-5 h-5 text-green-600" />
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
-                      <span className="text-muted-foreground text-xs">التاريخ</span>
+                      <span className="text-muted-foreground text-xs">{tc("التاريخ", "Date")}</span>
                       <p className="font-medium">{foundOrder.createdAt ? format(new Date(foundOrder.createdAt), "dd/MM/yyyy HH:mm") : "—"}</p>
                     </div>
                     <div>
-                      <span className="text-muted-foreground text-xs">إجمالي الطلب</span>
+                      <span className="text-muted-foreground text-xs">{tc("إجمالي الطلب", "Order Total")}</span>
                       <p className="font-bold text-green-700">{Number(foundOrder.totalAmount || 0).toFixed(2)} <SarIcon size={12} /></p>
                     </div>
                     <div>
-                      <span className="text-muted-foreground text-xs">طريقة الدفع الأصلية</span>
+                      <span className="text-muted-foreground text-xs">{tc("طريقة الدفع الأصلية", "Original Payment Method")}</span>
                       <p className="font-medium">{foundOrder.paymentMethod || "—"}</p>
                     </div>
                     <div>
-                      <span className="text-muted-foreground text-xs">عدد الأصناف</span>
-                      <p className="font-medium">{orderItems.length} صنف</p>
+                      <span className="text-muted-foreground text-xs">{tc("عدد الأصناف", "Items Count")}</span>
+                      <p className="font-medium">{orderItems.length} {tc("صنف", "item(s)")}</p>
                     </div>
                   </div>
                   {foundOrder.customerInfo?.customerName && (
-                    <p className="text-xs text-muted-foreground">العميل: {foundOrder.customerInfo.customerName}</p>
+                    <p className="text-xs text-muted-foreground">{tc("العميل:", "Customer:")} {foundOrder.customerInfo.customerName}</p>
                   )}
                 </div>
               )}
@@ -328,7 +330,7 @@ export default function RefundDialog({ open, onOpenChange, branchId, employeeId,
           {step === 2 && (
             <div className="space-y-3 py-2">
               <div className="flex items-center justify-between mb-1">
-                <p className="text-sm text-muted-foreground">اختر الأصناف المراد استرجاعها وحدد الكمية</p>
+                <p className="text-sm text-muted-foreground">{tc("اختر الأصناف المراد استرجاعها وحدد الكمية", "Select items to refund and set quantity")}</p>
                 <button
                   type="button"
                   className="text-xs text-primary underline"
@@ -344,7 +346,7 @@ export default function RefundDialog({ open, onOpenChange, branchId, employeeId,
                     setRefundQtys(allQty);
                   }}
                 >
-                  تحديد الكل
+                  {tc("تحديد الكل", "Select All")}
                 </button>
               </div>
 
@@ -371,8 +373,8 @@ export default function RefundDialog({ open, onOpenChange, branchId, employeeId,
                       </button>
 
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-sm truncate">{item.coffeeItem?.nameAr || item.nameAr || "صنف"}</p>
-                        <p className="text-xs text-muted-foreground">{price.toFixed(2)} <SarIcon size={11} /> للوحدة</p>
+                        <p className="font-bold text-sm truncate">{item.coffeeItem?.nameAr || item.nameAr || tc("صنف", "Item")}</p>
+                        <p className="text-xs text-muted-foreground">{price.toFixed(2)} <SarIcon size={11} /> {tc("للوحدة", "each")}</p>
                       </div>
 
                       <div className="flex items-center gap-1 shrink-0">
@@ -402,7 +404,7 @@ export default function RefundDialog({ open, onOpenChange, branchId, employeeId,
 
               <Separator />
               <div className="flex justify-between items-center p-3 bg-red-50 rounded-xl border border-red-200">
-                <span className="font-bold text-sm">إجمالي الاسترجاع</span>
+                <span className="font-bold text-sm">{tc("إجمالي الاسترجاع", "Refund Total")}</span>
                 <span className="text-xl font-black text-red-600">{refundTotal.toFixed(2)} <SarIcon size={14} /></span>
               </div>
             </div>
@@ -413,16 +415,16 @@ export default function RefundDialog({ open, onOpenChange, branchId, employeeId,
             <div className="space-y-4 py-2">
               <div className="p-3 bg-muted/50 rounded-xl border text-sm space-y-1.5">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">إجمالي الاسترجاع</span>
+                  <span className="text-muted-foreground">{tc("إجمالي الاسترجاع", "Refund Total")}</span>
                   <span className="font-black text-red-600 text-base">{refundTotal.toFixed(2)} <SarIcon size={13} /></span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">عدد الأصناف</span>
-                  <span className="font-medium">{buildRefundItems().length} صنف</span>
+                  <span className="text-muted-foreground">{tc("عدد الأصناف", "Items Count")}</span>
+                  <span className="font-medium">{buildRefundItems().length} {tc("صنف", "item(s)")}</span>
                 </div>
                 {foundOrder?.paymentMethod && (
                   <div className="flex justify-between pt-1 border-t border-dashed">
-                    <span className="text-muted-foreground">طريقة الدفع الأصلية</span>
+                    <span className="text-muted-foreground">{tc("طريقة الدفع الأصلية", "Original Payment Method")}</span>
                     <span className="font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded text-xs">
                       {foundOrder.paymentMethod}
                     </span>
@@ -431,7 +433,7 @@ export default function RefundDialog({ open, onOpenChange, branchId, employeeId,
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm font-bold">طريقة إعادة المبلغ</Label>
+                <Label className="text-sm font-bold">{tc("طريقة إعادة المبلغ", "Refund Method")}</Label>
                 <div className="grid grid-cols-3 gap-2">
                   {(["cash", "card", "split"] as RefundPayMethod[]).map((m) => {
                     const Icon = m === "cash" ? Banknote : m === "card" ? CreditCard : SplitSquareVertical;
@@ -457,7 +459,7 @@ export default function RefundDialog({ open, onOpenChange, branchId, employeeId,
                 <div className="grid grid-cols-2 gap-3 p-3 bg-muted/50 rounded-xl border">
                   <div className="space-y-1">
                     <Label className="text-xs font-bold flex items-center gap-1">
-                      <Banknote className="w-3 h-3" />المبلغ النقدي
+                      <Banknote className="w-3 h-3" />{tc("المبلغ النقدي", "Cash Amount")}
                     </Label>
                     <Input
                       type="number"
@@ -475,7 +477,7 @@ export default function RefundDialog({ open, onOpenChange, branchId, employeeId,
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs font-bold flex items-center gap-1">
-                      <CreditCard className="w-3 h-3" />مبلغ الشبكة
+                      <CreditCard className="w-3 h-3" />{tc("مبلغ الشبكة", "Card Amount")}
                     </Label>
                     <Input
                       type="number"
@@ -492,15 +494,21 @@ export default function RefundDialog({ open, onOpenChange, branchId, employeeId,
                     />
                   </div>
                   <p className="col-span-2 text-xs text-muted-foreground text-center">
-                    المجموع يجب أن يساوي {refundTotal.toFixed(2)} <SarIcon size={11} />
+                    {tc("المجموع يجب أن يساوي", "Total must equal")} {refundTotal.toFixed(2)} <SarIcon size={11} />
                   </p>
                 </div>
               )}
 
               <div className="space-y-1">
-                <Label className="text-sm font-bold">سبب الاسترجاع <span className="text-red-500">*</span></Label>
+                <Label className="text-sm font-bold">{tc("سبب الاسترجاع", "Refund Reason")} <span className="text-red-500">*</span></Label>
                 <div className="flex flex-wrap gap-1.5 mb-2">
-                  {["منتج تالف", "خطأ في الطلب", "تأخر في التحضير", "العميل غير راضٍ", "طلب مكرر"].map(r => (
+                  {[
+                    tc("منتج تالف", "Damaged product"),
+                    tc("خطأ في الطلب", "Wrong order"),
+                    tc("تأخر في التحضير", "Delayed preparation"),
+                    tc("العميل غير راضٍ", "Customer unsatisfied"),
+                    tc("طلب مكرر", "Duplicate order")
+                  ].map(r => (
                     <button
                       key={r}
                       type="button"
@@ -514,7 +522,7 @@ export default function RefundDialog({ open, onOpenChange, branchId, employeeId,
                   ))}
                 </div>
                 <Input
-                  placeholder="أو اكتب السبب هنا..."
+                  placeholder={tc("أو اكتب السبب هنا...", "Or type reason here...")}
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   className="text-right"
@@ -523,9 +531,9 @@ export default function RefundDialog({ open, onOpenChange, branchId, employeeId,
               </div>
 
               <div className="space-y-1">
-                <Label className="text-sm font-bold">ملاحظات إضافية (اختياري)</Label>
+                <Label className="text-sm font-bold">{tc("ملاحظات إضافية (اختياري)", "Additional Notes (optional)")}</Label>
                 <Input
-                  placeholder="أي تفاصيل إضافية..."
+                  placeholder={tc("أي تفاصيل إضافية...", "Any additional details...")}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   className="text-right"
@@ -542,7 +550,7 @@ export default function RefundDialog({ open, onOpenChange, branchId, employeeId,
           {step > 1 && (
             <Button type="button" variant="outline" onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3)} className="gap-1" data-testid="button-refund-back">
               <ChevronRight className="w-4 h-4" />
-              السابق
+              {tc("السابق", "Back")}
             </Button>
           )}
 
@@ -554,7 +562,7 @@ export default function RefundDialog({ open, onOpenChange, branchId, employeeId,
               onClick={() => setStep((s) => (s + 1) as 2 | 3)}
               data-testid="button-refund-next"
             >
-              التالي
+              {tc("التالي", "Next")}
               <ChevronLeft className="w-4 h-4" />
             </Button>
           )}
@@ -572,7 +580,7 @@ export default function RefundDialog({ open, onOpenChange, branchId, employeeId,
               ) : (
                 <Printer className="w-4 h-4" />
               )}
-              تأكيد الاسترجاع وطباعة الإيصال
+              {tc("تأكيد الاسترجاع وطباعة الإيصال", "Confirm Refund & Print Receipt")}
             </Button>
           )}
         </div>

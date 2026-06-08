@@ -87,7 +87,7 @@ export default function GiftCardsManagementPage() {
 
   return (
     <PlanGate feature="giftCards">
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto p-4 md:p-6 max-w-4xl">
         <div className="flex items-center justify-between mb-6">
           <Button variant="ghost" onClick={() => setLocation("/manager/dashboard")} className="text-muted-foreground hover:text-foreground" data-testid="btn-back">
@@ -102,7 +102,7 @@ export default function GiftCardsManagementPage() {
                 <Plus className="w-4 h-4 ml-2" />بطاقة جديدة
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-card border-border" dir="rtl">
+            <DialogContent className="bg-card border-border">
               <DialogHeader>
                 <DialogTitle className="text-foreground">{tc("إنشاء بطاقة هدية جديدة", "Create New Gift Card")}</DialogTitle>
               </DialogHeader>

@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import SarIcon from "@/components/sar-icon";
 import { useTranslate } from "@/lib/useTranslate";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -17,7 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Coffee, ShoppingBag, User, Phone, Trash2, Plus, Minus, ArrowRight, Check, Scan, Search, X, Gift, Printer, MonitorSmartphone, Settings, Wifi, WifiOff, FileText, Store, Truck, MapPin, Wallet, CreditCard } from "lucide-react";
-const chefsplaceLogoStaff = "/logo.png";
+import qiroxLogoStaff from "@assets/qirox-logo-customer.png";
 import QRScanner from "@/components/qr-scanner";
 import BarcodeScanner from "@/components/barcode-scanner";
 import { TableOccupancyAlerts } from "@/components/table-occupancy-alerts";
@@ -26,6 +27,7 @@ import { printTaxInvoice, printCustomerPickupReceipt, printCashierReceipt, print
 import type { Employee, CoffeeItem, PaymentMethod, LoyaltyCard } from "@shared/schema";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import PrinterSettingsPanel from "@/components/printer-settings-panel";
+import { ShiftSummaryWidget } from "@/components/shift-summary-widget";
 
 interface OrderItem {
  coffeeItem: CoffeeItem;
@@ -184,6 +186,63 @@ export default function EmployeeCashier() {
    };
  }, [toast]);
 
+ // 🚀 Professional keyboard shortcuts (F1=New, F2=Submit, F4=Print Last, Esc=Clear)
+ useEffect(() => {
+   const onKey = (e: KeyboardEvent) => {
+     const target = e.target as HTMLElement | null;
+     if (target) {
+       const tag = target.tagName;
+       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable) {
+         if (e.key === "Escape") target.blur();
+         return;
+       }
+     }
+     if (document.querySelector('[role="dialog"][data-state="open"]')) return;
+
+     switch (e.key) {
+       case "F1":
+         e.preventDefault();
+         setOrderItems([]);
+         setCustomerName("");
+         setCustomerPhone("");
+         setCustomerEmail("");
+         setCustomerId(null);
+         setLoyaltyCard(null);
+         setAppliedDiscount(null);
+         setDiscountCode("");
+         setStampsToUse(0);
+         setPointsToRedeem(0);
+         setUsePointsDiscount(false);
+         toast({ title: tc("🆕 طلب جديد", "🆕 New Order"), description: tc("تم تفريغ السلة", "Cart cleared") });
+         break;
+       case "F2":
+         e.preventDefault();
+         handleSubmitOrder();
+         break;
+       case "F4":
+         e.preventDefault();
+         if (lastOrder) {
+           handlePrintAllReceipts();
+         } else {
+           toast({ title: tc("لا يوجد طلب", "No order"), description: tc("لا يوجد طلب سابق للطباعة", "No previous order to print"), variant: "destructive" });
+         }
+         break;
+       case "Escape":
+         if (orderItems.length > 0) {
+           e.preventDefault();
+           if (window.confirm(tc("هل تريد إلغاء الطلب الحالي؟", "Cancel the current order?"))) {
+             setOrderItems([]);
+             toast({ title: tc("تم الإلغاء", "Cancelled") });
+           }
+         }
+         break;
+     }
+   };
+   window.addEventListener("keydown", onKey);
+   return () => window.removeEventListener("keydown", onKey);
+   // eslint-disable-next-line react-hooks/exhaustive-deps
+ }, [orderItems, lastOrder]);
+
  // Check POS device connection
  useEffect(() => {
  const checkPosConnection = async () => {
@@ -306,7 +365,7 @@ export default function EmployeeCashier() {
   const createOrderMutation = useMutation({
     mutationFn: async (orderData: any) => {
       // Show customer details for confirmation
-      const pmLabels: Record<string, string> = { cash: tc("نقداً","Cash"), pos: tc("شبكة","Network"), "pos-network": tc("شبكة","Network"), "qahwa-card": tc("بطاقة مكان الشيف","مكان الشيف البخاري Card"), "loyalty-card": tc("بطاقة ولاء","Loyalty Card") };
+      const pmLabels: Record<string, string> = { cash: tc("نقداً","Cash"), pos: tc("شبكة","Network"), "pos-network": tc("شبكة","Network"), "qahwa-card": tc("بطاقة مكان الشيف","مكان الشيف Card"), "loyalty-card": tc("بطاقة ولاء","Loyalty Card") };
       const pmLabel = pmLabels[orderData.paymentMethod] || tc("شبكة","Network");
       const confirmMessage = `تأكيد الدفع (${pmLabel}) للعميل: ${orderData.customerInfo.customerName}\nرقم الجوال: ${orderData.customerInfo.phoneNumber}\nالإجمالي: ${orderData.totalAmount} ريال`;
       if (!window.confirm(confirmMessage)) {
@@ -342,10 +401,10 @@ export default function EmployeeCashier() {
     },
  onSuccess: async (order) => {
  const paymentMethodAr = paymentMethod === "cash" ? tc("نقدي","Cash") : 
- paymentMethod === "qahwa-card" || paymentMethod === "loyalty-card" ? tc("بطاقة مكان الشيف","مكان الشيف البخاري Card") :
+ paymentMethod === "qahwa-card" || paymentMethod === "loyalty-card" ? tc("بطاقة مكان الشيف","مكان الشيف Card") :
  tc("شبكة","Network");
  
- const orderTypeAr = orderType === 'dine-in' ? tc('في المطعم','Dine-in') :
+ const orderTypeAr = orderType === 'dine-in' ? tc('في الكافيه','Dine-in') :
  orderType === 'pickup' ? tc('استلام','Pickup') : tc('توصيل','Delivery');
  
  setLastOrder({
@@ -883,7 +942,7 @@ export default function EmployeeCashier() {
        
        // Update lastOrder state using pre-captured values (form resets in onSuccess)
        const pmLabel = capturedPaymentMethod === "cash" ? tc("نقدي","Cash") :
-         capturedPaymentMethod === "qahwa-card" || capturedPaymentMethod === "loyalty-card" ? tc("بطاقة مكان الشيف","مكان الشيف البخاري Card") :
+         capturedPaymentMethod === "qahwa-card" || capturedPaymentMethod === "loyalty-card" ? tc("بطاقة مكان الشيف","مكان الشيف Card") :
          tc("إلكتروني","Electronic");
        setLastOrder({
          orderNumber: order.orderNumber,
@@ -952,10 +1011,11 @@ export default function EmployeeCashier() {
  return (
  <div className="min-h-screen bg-gray-50 p-4 pb-20 sm:pb-4">
  <div className="max-w-7xl mx-auto">
+ <ShiftSummaryWidget />
  <div className="flex items-center justify-between mb-6">
  <div className="flex items-center gap-3">
  <div className="w-12 h-12 flex-shrink-0">
- <img src={chefsplaceLogoStaff} alt="مكان الشيف البخاري" className="w-full h-full object-contain rounded-2xl" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+ <img src={qiroxLogoStaff} alt="مكان الشيف" className="w-full h-full object-contain rounded-2xl" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
  </div>
  <div>
  <h1 className="text-2xl font-bold text-primary">{tc("نظام الكاشير","Cashier System")}</h1>
@@ -1215,7 +1275,7 @@ export default function EmployeeCashier() {
  </h4>
  </div>
  <p className="text-gray-400 text-xs">
- {Number(item.coffeeItem.price).toFixed(2)} {tc("ريال","SAR")}
+ {Number(item.coffeeItem.price).toFixed(2)} <SarIcon size={11} />
  </p>
  </div>
  <Button
@@ -1261,7 +1321,7 @@ export default function EmployeeCashier() {
    }
    const addonsExtra = ((item.customization as any)?.selectedItemAddons || []).reduce((s: number, a: any) => s + (Number(a.price) || 0), 0);
    return ((price + addonsExtra) * item.quantity).toFixed(2);
- })()} {tc("ريال","SAR")}
+ })()} <SarIcon size={11} />
  </span>
  </div>
  </div>
@@ -1379,7 +1439,7 @@ export default function EmployeeCashier() {
  </Badge>
  <div className="text-right">
    <span className="text-purple-300 text-sm block">{tc("نقاط العميل", "Customer Points")}</span>
-   <span className="text-purple-400 text-xs">≈ {pointsToSar(customerPoints).toFixed(2)} {tc("ريال","SAR")}</span>
+   <span className="text-purple-400 text-xs">≈ {pointsToSar(customerPoints).toFixed(2)} <SarIcon size={11} /></span>
  </div>
  </div>
  {!usePointsDiscount ? (
@@ -1408,7 +1468,7 @@ export default function EmployeeCashier() {
      </div>
      {pointsToRedeem > 0 && (
        <p className="text-xs text-purple-400 text-right">
-         {tc("خصم", "Discount")}: {pointsToSar(pointsToRedeem).toFixed(2)} {tc("ريال","SAR")}
+         {tc("خصم", "Discount")}: {pointsToSar(pointsToRedeem).toFixed(2)} <SarIcon size={11} />
        </p>
      )}
    </div>
@@ -1425,7 +1485,7 @@ export default function EmployeeCashier() {
      </Button>
      <div className="text-right">
        <p className="text-purple-300 text-sm font-medium">{tc("تم تطبيق","Applied")} {pointsToRedeem} {tc("نقطة","pts")}</p>
-       <p className="text-green-400 text-xs">{tc("خصم","Discount")} {pointsToSar(pointsToRedeem).toFixed(2)} {tc("ريال","SAR")}</p>
+       <p className="text-green-400 text-xs">{tc("خصم","Discount")} {pointsToSar(pointsToRedeem).toFixed(2)} <SarIcon size={11} /></p>
      </div>
    </div>
  )}
@@ -1443,7 +1503,7 @@ export default function EmployeeCashier() {
  <div className="flex items-center justify-between">
  <div className="flex items-center gap-2">
  <Gift className="w-5 h-5 text-primary" />
- <span className="text-accent font-semibold">{tc("بطاقة مكان الشيف","Loyalty Card")}</span>
+ <span className="text-accent font-semibold">{tc("بطاقة كوبي","Loyalty Card")}</span>
  </div>
  <Badge className="bg-primary text-black">
  {(loyaltyCard.freeCupsEarned || 0) - (loyaltyCard.freeCupsRedeemed || 0)} {tc("أختام","stamps")}
@@ -1471,7 +1531,7 @@ export default function EmployeeCashier() {
  </div>
  <p className="text-xs text-gray-500 text-right flex items-center gap-1 justify-end">
  <Gift className="w-3 h-3 text-primary" />
- {tc("الأطباق المجانية متاحة:","Free drinks available:")} {Math.floor(((loyaltyCard.freeCupsEarned || 0) - (loyaltyCard.freeCupsRedeemed || 0)) / 10)}
+ {tc("المشروبات المجانية متاحة:","Free drinks available:")} {Math.floor(((loyaltyCard.freeCupsEarned || 0) - (loyaltyCard.freeCupsRedeemed || 0)) / 10)}
  </p>
  </div>
  )}
@@ -1493,7 +1553,7 @@ export default function EmployeeCashier() {
  data-testid="button-order-type-dinein"
  >
  <Store className="w-5 h-5" />
- <span className="text-xs">{tc("في المطعم","Dine-in")}</span>
+ <span className="text-xs">{tc("في الكافيه","Dine-in")}</span>
  </Button>
  <Button
  type="button"
@@ -1551,7 +1611,7 @@ export default function EmployeeCashier() {
     <SelectContent className="bg-gray-50 border-gray-300 text-gray-900">
       <SelectItem value="cash">{tc("نقدي","Cash")}</SelectItem>
       <SelectItem value="pos-network">{tc("شبكة","Network")}</SelectItem>
-      <SelectItem value="qahwa-card">{tc("بطاقة مكان الشيف (ولاء)","مكان الشيف البخاري Card (Loyalty)")}</SelectItem>
+      <SelectItem value="qahwa-card">{tc("بطاقة مكان الشيف (ولاء)","مكان الشيف Card (Loyalty)")}</SelectItem>
     </SelectContent>
  </Select>
  {paymentMethod === 'qahwa-card' && loyaltyCard && (
@@ -1680,7 +1740,7 @@ export default function EmployeeCashier() {
  <div className="flex justify-between items-center text-sm">
  <span className="text-gray-400">{tc("المجموع الفرعي:","Subtotal:")}</span>
  <span className="text-gray-300" data-testid="text-subtotal">
- {calculateSubtotal().toFixed(2)} {tc("ريال","SAR")}
+ {calculateSubtotal().toFixed(2)} <SarIcon size={11} />
  </span>
  </div>
  
@@ -1688,7 +1748,7 @@ export default function EmployeeCashier() {
  <div className="flex justify-between items-center text-sm">
  <span className="text-green-400">{tc("الخصم","Discount")} ({appliedDiscount.percentage}%):</span>
  <span className="text-green-400" data-testid="text-discount-amount">
- -{calculateDiscount().toFixed(2)} {tc("ريال","SAR")}
+ -{calculateDiscount().toFixed(2)} <SarIcon size={11} />
  </span>
  </div>
  )}
@@ -1697,7 +1757,7 @@ export default function EmployeeCashier() {
  <div className="flex justify-between items-center text-sm">
  <span className="text-purple-400">{tc("خصم النقاط","Points Discount")} ({pointsToRedeem} {tc("نقطة","pts")}):</span>
  <span className="text-purple-400" data-testid="text-points-discount-amount">
- -{pointsToSar(pointsToRedeem).toFixed(2)} {tc("ريال","SAR")}
+ -{pointsToSar(pointsToRedeem).toFixed(2)} <SarIcon size={11} />
  </span>
  </div>
  )}
@@ -1707,7 +1767,7 @@ export default function EmployeeCashier() {
  <div className="flex justify-between items-center text-lg font-bold">
  <span className="text-accent">{tc("الإجمالي:","Total:")}</span>
  <span className="text-accent" data-testid="text-total">
- {calculateTotal()} {tc("ريال","SAR")}
+ {calculateTotal()} <SarIcon size={11} />
  </span>
  </div>
  </div>
@@ -1732,7 +1792,7 @@ export default function EmployeeCashier() {
 
  {/* Pending Orders Panel */}
  <Dialog open={showPendingPanel} onOpenChange={setShowPendingPanel}>
-   <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto bg-gray-50 border-orange-500/30" dir="rtl">
+   <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto bg-gray-50 border-orange-500/30">
      <DialogHeader>
        <DialogTitle className="text-orange-300 flex items-center gap-2">
          <Printer className="w-5 h-5" />
@@ -1758,7 +1818,7 @@ export default function EmployeeCashier() {
                      <span className="text-white font-semibold text-sm">{customerName}</span>
                      <Badge className="bg-orange-500/20 text-orange-300 border-orange-500/30 border text-[10px] px-1.5">{tc('غير مرسل','Unsynced')}</Badge>
                    </div>
-                   <p className="text-gray-400 text-xs">{tc('الوقت:','Time:')} {createdAt} • {itemCount} {tc('منتجات','items')} • {tc('الإجمالي:','Total:')} {total} {tc('ر.س','SAR')}</p>
+                   <p className="text-gray-400 text-xs">{tc('الوقت:','Time:')} {createdAt} • {itemCount} {tc('منتجات','items')} • {tc('الإجمالي:','Total:')} {total} <SarIcon size={11} /></p>
                    <p className="text-gray-500 text-xs mt-0.5">{tc('رقم:','No:')} {po.id.slice(-8)}</p>
                  </div>
                  <div className="flex flex-col gap-2">

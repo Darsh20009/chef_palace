@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Plus, Minus, ShoppingCart } from "lucide-react";
+import { AddonGroupsSelector, validateAddonGroups, calcAddonGroupsPrice, type SelectedAddonGroup } from "@/components/addon-groups-selector";
+import type { AddonGroup } from "@/components/addon-groups-editor";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
@@ -37,6 +39,7 @@ export function AddToCartModal({
   const [selectedItemAddonIndices, setSelectedItemAddonIndices] = useState<number[]>([]);
   const [selectedBundledItems, setSelectedBundledItems] = useState<Record<number, string[]>>({});
   const [selectedReservationPackageIdx, setSelectedReservationPackageIdx] = useState<number | null>(null);
+  const [selectedAddonGroups, setSelectedAddonGroups] = useState<SelectedAddonGroup[]>([]);
   const { toast } = useToast();
   const { i18n } = useTranslation();
   const isAr = i18n.language === 'ar';
@@ -60,6 +63,7 @@ export function AddToCartModal({
       setSelectedItemAddonIndices([]);
       setSelectedBundledItems({});
       setSelectedReservationPackageIdx(null);
+      setSelectedAddonGroups([]);
     }
   }, [isOpen, item]);
 
@@ -128,7 +132,7 @@ export function AddToCartModal({
     if (activeItem.availableSizes && activeItem.availableSizes.length > 0 && !selectedSize) {
       toast({
         title: isAr ? "تنبيه" : "Notice",
-        description: isAr ? "يرجى اختيار النوع" : "Please select an option",
+        description: isAr ? "يرجى اختيار حجم المشروب" : "Please select a drink size",
         variant: "destructive",
       });
       return;
@@ -150,6 +154,13 @@ export function AddToCartModal({
         description: isAr ? "يرجى اختيار باقة الحجز" : "Please select a reservation package",
         variant: "destructive",
       });
+      return;
+    }
+
+    const addonGroupsDef: AddonGroup[] = (activeItem as any)?.addonGroups || [];
+    const groupValidErr = validateAddonGroups(addonGroupsDef, selectedAddonGroups);
+    if (groupValidErr) {
+      toast({ title: isAr ? "تنبيه" : "Notice", description: groupValidErr, variant: "destructive" });
       return;
     }
 
@@ -188,6 +199,7 @@ export function AddToCartModal({
       selectedAddons: selectedAddons,
       selectedItemAddons,
       selectedBundledItems: selectedBundledDetails,
+      selectedAddonGroups,
       isReservation: !!(activeItem as any)?.isReservation,
       selectedReservationPackage,
     };
@@ -197,6 +209,9 @@ export function AddToCartModal({
   };
 
   if (!activeItem) return null;
+
+  const addonGroupsDef: AddonGroup[] = (activeItem as any)?.addonGroups || [];
+  const addonGroupsPrice = calcAddonGroupsPrice(selectedAddonGroups);
 
   const inlineAddonsPrice = selectedItemAddonIndices.reduce((sum, idx) => {
     return sum + (inlineAddons[idx]?.price ?? 0);
@@ -217,22 +232,23 @@ export function AddToCartModal({
       ? activeItem.availableSizes?.find((s) => s.nameAr === selectedSize)?.price ??
         activeItem.price
       : activeItem.price) * quantity +
-    (productAddonPrice + inlineAddonsPrice + bundledItemsPrice) * quantity;
+    (productAddonPrice + inlineAddonsPrice + bundledItemsPrice + addonGroupsPrice) * quantity;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && resetModal()}>
-      <DialogContent className="max-w-sm bg-background border border-border rounded-2xl p-0 overflow-hidden">
-        <div className="relative h-32 bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center">
+      <DialogContent className="max-w-sm bg-background border border-border rounded-2xl p-0 overflow-hidden flex flex-col max-h-[92vh]">
+        <div className="relative h-28 flex-shrink-0 bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center">
           {activeItem.imageUrl && (
             <img 
               src={activeItem.imageUrl.startsWith('/') ? activeItem.imageUrl : `/${activeItem.imageUrl}`} 
               alt={isAr ? activeItem.nameAr : activeItem.nameEn || activeItem.nameAr} 
-              className="w-24 h-24 rounded-xl object-cover border-4 border-background shadow-lg"
+              className="w-20 h-20 rounded-xl object-cover border-4 border-background shadow-lg"
             />
           )}
         </div>
         
-        <div className="px-4 pb-4 space-y-4">
+        <div className="flex-1 overflow-y-auto overscroll-contain">
+        <div className="px-4 pb-2 space-y-4">
           <DialogHeader className="pt-2">
             <DialogTitle className="text-xl font-bold text-center text-foreground">
               {isAr ? activeItem.nameAr : activeItem.nameEn || activeItem.nameAr}
@@ -371,6 +387,14 @@ export function AddToCartModal({
             </div>
           )}
 
+          {addonGroupsDef.length > 0 && (
+            <AddonGroupsSelector
+              groups={addonGroupsDef}
+              value={selectedAddonGroups}
+              onChange={setSelectedAddonGroups}
+            />
+          )}
+
           {specificAddons.length > 0 && inlineAddons.length === 0 && (
             <div className="space-y-2">
               <Label className="text-sm font-semibold text-foreground">{isAr ? "الإضافات" : "Addons"}</Label>
@@ -433,7 +457,7 @@ export function AddToCartModal({
 
           {drinkAddons.length > 0 && (
             <div className="space-y-2">
-              <Label className="text-sm font-semibold text-foreground">{isAr ? "إضافة وجبة" : "Add Item"}</Label>
+              <Label className="text-sm font-semibold text-foreground">{isAr ? "إضافة مشروب" : "Add Drink"}</Label>
               <div className="flex flex-wrap gap-2">
                 {drinkAddons.map((addon) => {
                   const linkedDrink = getLinkedDrinkInfo(addon);
@@ -556,7 +580,7 @@ export function AddToCartModal({
                           <div className="text-right">
                             <div>{isAr ? bItem.nameAr : (bItem.nameEn || bItem.nameAr)}</div>
                             <div className={`text-[10px] ${isSelected ? 'text-white/80' : 'text-primary font-bold'}`}>
-                              {bItem.customPrice === 0 ? (isAr ? "مجاني 🎁" : "Free 🎁") : `+${bItem.customPrice} ${isAr ? 'ر.س' : 'SAR'}`}
+                              {bItem.customPrice === 0 ? (isAr ? "مجاني 🎁" : "Free 🎁") : <span>+{bItem.customPrice} <SarIcon size={10} /></span>}
                             </div>
                           </div>
                         </button>
@@ -593,22 +617,25 @@ export function AddToCartModal({
             </div>
           </div>
 
-          <div className="flex items-center justify-between pt-2">
-            <div>
-              <span className="text-xs text-muted-foreground">{isAr ? "الإجمالي" : "Total"}</span>
-              <div className="text-2xl font-bold text-primary">
-                {totalPrice.toFixed(2)} <span className="text-sm"><SarIcon /></span>
-              </div>
+        </div>
+        </div>
+
+        {/* ── Fixed footer: total + add button ── */}
+        <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-t bg-background">
+          <div>
+            <span className="text-xs text-muted-foreground">{isAr ? "الإجمالي" : "Total"}</span>
+            <div className="text-2xl font-bold text-primary">
+              {totalPrice.toFixed(2)} <span className="text-sm"><SarIcon /></span>
             </div>
-            <Button
-              onClick={handleAddToCart}
-              className="bg-primary hover:bg-primary/90 text-white px-6 py-5 rounded-xl font-bold shadow-lg"
-              data-testid="button-add-to-cart"
-            >
-              <ShoppingCart className="w-4 h-4 ml-2" />
-              {isAr ? "إضافة" : "Add"}
-            </Button>
           </div>
+          <Button
+            onClick={handleAddToCart}
+            className="bg-primary hover:bg-primary/90 text-white px-6 py-5 rounded-xl font-bold shadow-lg"
+            data-testid="button-add-to-cart"
+          >
+            <ShoppingCart className="w-4 h-4 ml-2" />
+            {isAr ? "إضافة" : "Add"}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

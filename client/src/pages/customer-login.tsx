@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { User, Phone, Zap, Star, ChevronRight } from "lucide-react";
-const chefsplaceLogo = "/logo.png";
+import qiroxLogo from "@assets/qirox-logo-customer.png";
 import { customerStorage } from "@/lib/customer-storage";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslate } from "@/lib/useTranslate";
@@ -43,19 +43,19 @@ export default function CustomerLogin() {
     setLoading(true);
     customerStorage.setGuestInfo(trimName, trimPhone);
     customerStorage.setGuestMode(true);
-    toast({ title: tc("أهلاً ", "Welcome ") + trimName, description: tc("اختر وجبتك وأكمل الطلب", "Choose your meal and complete your order") });
+    toast({ title: tc("أهلاً ", "Welcome ") + trimName, description: tc("اختر مشروبك وأكمل الطلب", "Choose your drink and complete your order") });
     setLocation("/menu");
   };
 
   if (mode === 'choice') {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-background via-primary/5 to-background flex flex-col items-center justify-center p-4" dir="rtl">
+      <div className="min-h-screen bg-gradient-to-b from-background via-primary/5 to-background flex flex-col items-center justify-center p-4">
         <div className="text-center mb-8">
           <div className="flex flex-col items-center gap-2 mb-2">
-            <img src={chefsplaceLogo} alt="مكان الشيف البخاري" className="h-16 object-contain" />
+            <img src={qiroxLogo} alt="مكان الشيف البخاري" className="h-16 object-contain" />
             <h1 className="text-3xl font-bold font-playfair text-foreground">مكان الشيف البخاري</h1>
           </div>
-          <p className="text-muted-foreground text-lg font-cairo">{tc("لكل وجبة بخاري، لحظة نجاح", "For every coffee moment, a moment of success")}</p>
+          <p className="text-muted-foreground text-lg font-cairo">{tc("لكل لحظة قهوة ، لحظة نجاح", "For every coffee moment, a moment of success")}</p>
         </div>
 
         <div className="w-full max-w-md space-y-3">
@@ -112,7 +112,7 @@ export default function CustomerLogin() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-primary/5 to-background flex flex-col items-center justify-center p-4" dir="rtl">
+    <div className="min-h-screen bg-gradient-to-b from-background via-primary/5 to-background flex flex-col items-center justify-center p-4">
       <Card className="w-full max-w-md bg-card border-border/50 backdrop-blur shadow-lg">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center gap-2 mb-1">

@@ -36,6 +36,8 @@ interface AttendanceStatus {
   todayCheckOut?: string;
   leaveBalance?: number;
   totalLeaves?: number;
+  shiftStartTime?: string;
+  shiftEndTime?: string;
 }
 
 interface DistanceError {
@@ -50,7 +52,7 @@ function getAuthHeaders(): Record<string, string> {
   if (!emp) return {};
   try {
     const e = JSON.parse(emp);
-    const restoreKey = localStorage.getItem("restoreKey") || e.restoreKey || "";
+    const restoreKey = localStorage.getItem("qirox-restore-key") || localStorage.getItem("restoreKey") || e.restoreKey || "";
     const id = e.id || e._id || "";
     if (id && restoreKey) return { "x-employee-id": id, "x-restore-key": restoreKey };
   } catch (_) {}
@@ -103,6 +105,7 @@ export default function EmployeeAttendance() {
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const [distanceError, setDistanceError] = useState<DistanceError | null>(null);
   const [now, setNow] = useState(new Date());
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -186,14 +189,26 @@ export default function EmployeeAttendance() {
   useEffect(() => { getLocation(); }, [getLocation]);
 
   const startCamera = async () => {
+    setCameraError(null);
     setIsCapturing(true);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("no-support");
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
       streamRef.current = stream;
-      if (videoRef.current) videoRef.current.srcObject = stream;
-    } catch (_) {
-      toast({ title: tc("خطأ", "Error"), description: tc("لا يمكن فتح الكاميرا", "Cannot access camera"), variant: "destructive" });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play().catch(() => {});
+      }
+    } catch (err: any) {
       setIsCapturing(false);
+      const msg = err?.name === "NotAllowedError" || err?.name === "PermissionDeniedError"
+        ? tc("تم رفض إذن الكاميرا — اسمح للمتصفح باستخدام الكاميرا من الإعدادات", "Camera permission denied — allow it in browser settings")
+        : err?.name === "NotFoundError"
+          ? tc("لا توجد كاميرا على هذا الجهاز", "No camera found on this device")
+          : tc("تعذّر فتح الكاميرا — يمكنك التحضير بدون صورة", "Camera unavailable — you can still check in without a photo");
+      setCameraError(msg);
     }
   };
 
@@ -225,6 +240,7 @@ export default function EmployeeAttendance() {
 
   const doCheckIn = async () => {
     if (!location) { toast({ title: tc("خطأ", "Error"), description: tc("يرجى تحديد الموقع أولاً", "Please get your location first"), variant: "destructive" }); return; }
+    if (!photoUrl) { toast({ title: tc("الصورة مطلوبة", "Photo Required"), description: tc("يجب التقاط صورة الحضور قبل التسجيل", "You must take an attendance photo before checking in"), variant: "destructive" }); return; }
     setIsLoading(true);
     try {
       const r = await fetch("/api/attendance/check-in", { method: "POST", headers: { "Content-Type": "application/json", ...getAuthHeaders() }, body: JSON.stringify({ location, photoUrl: photoUrl || null }), credentials: "include" });
@@ -249,6 +265,7 @@ export default function EmployeeAttendance() {
 
   const doCheckOut = async () => {
     if (!location) { toast({ title: tc("خطأ", "Error"), description: tc("يرجى تحديد الموقع أولاً", "Please get your location first"), variant: "destructive" }); return; }
+    if (!photoUrl) { toast({ title: tc("الصورة مطلوبة", "Photo Required"), description: tc("يجب التقاط صورة الانصراف قبل التسجيل", "You must take a check-out photo before checking out"), variant: "destructive" }); return; }
     setIsLoading(true);
     try {
       const r = await fetch("/api/attendance/check-out", { method: "POST", headers: { "Content-Type": "application/json", ...getAuthHeaders() }, body: JSON.stringify({ location, photoUrl: photoUrl || null }), credentials: "include" });
@@ -274,8 +291,18 @@ export default function EmployeeAttendance() {
 
   if (!employee) return null;
 
-  // ── Shift calculations ────────────────────────────────────────
-  const { startH, startM, endH, endM } = parseShiftTime(employee);
+  // ── Shift calculations — prefer API-returned shift times from my-status ──────
+  function parseShiftFromStatus(status: AttendanceStatus | null, emp: Employee | null) {
+    // First priority: shift times returned by the attendance API (always fresh from DB)
+    if (status?.shiftStartTime) {
+      const [sh, sm] = status.shiftStartTime.split(":").map(Number);
+      const [eh, em] = (status.shiftEndTime || "17:00").split(":").map(Number);
+      return { startH: sh || 8, startM: sm || 0, endH: eh || 17, endM: em || 0 };
+    }
+    // Fallback: parse from localStorage employee object
+    return parseShiftTime(emp);
+  }
+  const { startH, startM, endH, endM } = parseShiftFromStatus(attendanceStatus, employee);
 
   const todayBase = new Date(now);
   todayBase.setHours(0, 0, 0, 0);
@@ -298,7 +325,7 @@ export default function EmployeeAttendance() {
   const formattedTime = now.toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-background pb-nav" dir="rtl">
+    <div className="min-h-screen bg-gray-50 dark:bg-background pb-nav">
       <div className="max-w-lg mx-auto p-4 space-y-4">
 
         {/* Header */}
@@ -527,45 +554,76 @@ export default function EmployeeAttendance() {
           </CardContent>
         </Card>
 
-        {/* Photo (optional) */}
+        {/* Photo (mandatory) */}
         {!attendanceStatus?.hasCheckedOut && (
-          <Card className="bg-card border-border">
+          <Card className={`border-2 ${photoUrl ? "border-green-400" : "border-red-300 bg-red-50/30 dark:bg-red-900/10"}`}>
             <CardHeader className="pb-2">
               <CardTitle className="text-primary flex items-center gap-2 text-sm">
                 <Camera className="w-4 h-4" />
                 {tc("صورة الحضور", "Attendance Photo")}
-                <Badge variant="outline" className="text-xs text-muted-foreground border-muted-foreground/30 mr-1">{tc("اختياري", "Optional")}</Badge>
+                <Badge className="text-xs bg-red-100 text-red-700 border-red-300 mr-1">
+                  {tc("إلزامي", "Required")}
+                </Badge>
               </CardTitle>
-              <CardDescription className="text-xs">{tc("التقط سيلفي للتوثيق (غير إلزامي)", "Take a selfie for verification (optional)")}</CardDescription>
+              <CardDescription className="text-xs text-red-600 dark:text-red-400 font-medium">
+                {tc("الصورة إلزامية — لا يمكن التسجيل بدون التقاط صورة", "Photo is required — cannot check in without a photo")}
+              </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-2">
               {isCapturing ? (
                 <div className="space-y-3">
-                  <video ref={videoRef} autoPlay playsInline muted className="w-full rounded-xl" />
-                  <Button onClick={capturePhoto} className="w-full bg-primary hover:bg-primary/90" data-testid="button-capture">
-                    <Camera className="w-4 h-4 ml-2" />
-                    {tc("التقاط الصورة", "Capture")}
-                  </Button>
+                  <video ref={videoRef} autoPlay playsInline muted className="w-full rounded-xl bg-black" />
+                  <div className="flex gap-2">
+                    <Button onClick={capturePhoto} className="flex-1 bg-primary hover:bg-primary/90" data-testid="button-capture">
+                      <Camera className="w-4 h-4 ml-2" />
+                      {tc("التقاط الصورة", "Capture")}
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => {
+                      if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+                      setIsCapturing(false);
+                      setCameraError(null);
+                    }} className="border-gray-300" data-testid="button-cancel-camera">
+                      {tc("إلغاء", "Cancel")}
+                    </Button>
+                  </div>
                 </div>
               ) : capturedPhoto ? (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <img src={capturedPhoto} alt="Captured" className="w-full rounded-xl" />
                   <div className="flex items-center gap-2">
                     <Button variant="outline" onClick={retakePhoto} className="flex-1 border-primary/50 text-primary" size="sm" data-testid="button-retake">
-                      {tc("إعادة", "Retake")}
+                      {tc("إعادة التصوير", "Retake")}
                     </Button>
-                    {photoUrl && (
-                      <div className="flex items-center gap-1 text-green-600 text-xs">
+                    {photoUrl ? (
+                      <div className="flex items-center gap-1 text-green-600 text-xs font-medium">
                         <CheckCircle2 className="w-3.5 h-3.5" />
-                        {tc("تم الرفع", "Uploaded")}
+                        {tc("✅ تم رفع الصورة", "✅ Photo uploaded")}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1 text-amber-600 text-xs">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        {tc("جاري الرفع...", "Uploading...")}
                       </div>
                     )}
                   </div>
                 </div>
+              ) : cameraError ? (
+                <div className="space-y-2">
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-3">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
+                      <p className="text-red-700 text-xs">{cameraError}</p>
+                    </div>
+                  </div>
+                  <Button onClick={startCamera} variant="outline" className="w-full border-primary/50 text-primary" size="sm" data-testid="button-retry-camera">
+                    <RefreshCw className="w-4 h-4 ml-2" />
+                    {tc("إعادة المحاولة", "Retry Camera")}
+                  </Button>
+                </div>
               ) : (
-                <Button onClick={startCamera} variant="outline" className="w-full border-primary/50 text-primary" size="sm" data-testid="button-start-camera">
+                <Button onClick={startCamera} className="w-full bg-primary hover:bg-primary/90 text-white" size="sm" data-testid="button-start-camera">
                   <Camera className="w-4 h-4 ml-2" />
-                  {tc("فتح الكاميرا", "Open Camera")}
+                  {tc("فتح الكاميرا والتقاط الصورة", "Open Camera & Take Photo")}
                 </Button>
               )}
               <canvas ref={canvasRef} className="hidden" />
@@ -580,29 +638,40 @@ export default function EmployeeAttendance() {
               <>
                 <Button
                   onClick={doCheckIn}
-                  disabled={isLoading || !location}
+                  disabled={isLoading || !location || !photoUrl}
                   className="w-full h-14 text-lg font-bold bg-green-600 hover:bg-green-700 disabled:opacity-50 shadow-lg"
                   data-testid="button-check-in"
                 >
                   {isLoading ? <Loader2 className="w-5 h-5 animate-spin ml-2" /> : <CheckCircle2 className="w-5 h-5 ml-2" />}
                   {tc("تسجيل الحضور", "Check In")}
                 </Button>
-                {!location && (
+                {(!location || !photoUrl) && (
                   <p className="text-xs text-center text-muted-foreground">
-                    {locationError ? tc("⚠️ يجب تفعيل الموقع أولاً", "⚠️ Enable location first") : tc("⏳ انتظر تحديد الموقع...", "⏳ Waiting for location...")}
+                    {locationError ? tc("⚠️ يجب تفعيل الموقع أولاً", "⚠️ Enable location first") 
+                    : !location ? tc("⏳ انتظر تحديد الموقع...", "⏳ Waiting for location...")
+                    : tc("⚠️ يجب التقاط صورة الحضور أولاً", "⚠️ Must take attendance photo first")}
                   </p>
                 )}
               </>
             ) : (
-              <Button
-                onClick={doCheckOut}
-                disabled={isLoading || !location}
-                className="w-full h-14 text-lg font-bold bg-rose-600 hover:bg-rose-700 disabled:opacity-50 shadow-lg"
-                data-testid="button-check-out"
-              >
-                {isLoading ? <Loader2 className="w-5 h-5 animate-spin ml-2" /> : <ArrowRight className="w-5 h-5 ml-2" />}
-                {tc("تسجيل الانصراف", "Check Out")}
-              </Button>
+              <>
+                <Button
+                  onClick={doCheckOut}
+                  disabled={isLoading || !location || !photoUrl}
+                  className="w-full h-14 text-lg font-bold bg-rose-600 hover:bg-rose-700 disabled:opacity-50 shadow-lg"
+                  data-testid="button-check-out"
+                >
+                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin ml-2" /> : <ArrowRight className="w-5 h-5 ml-2" />}
+                  {tc("تسجيل الانصراف", "Check Out")}
+                </Button>
+                {(!location || !photoUrl) && (
+                  <p className="text-xs text-center text-muted-foreground">
+                    {locationError ? tc("⚠️ يجب تفعيل الموقع أولاً", "⚠️ Enable location first")
+                    : !location ? tc("⏳ انتظر تحديد الموقع...", "⏳ Waiting for location...")
+                    : tc("⚠️ يجب التقاط صورة الانصراف أولاً", "⚠️ Must take check-out photo first")}
+                  </p>
+                )}
+              </>
             )}
           </div>
         )}

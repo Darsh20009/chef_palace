@@ -35,7 +35,7 @@ export default function BIAnalytics() {
   const { data, isLoading } = useQuery({
     queryKey: ["/api/analytics/advanced", period],
     queryFn: async () => {
-      const res = await fetch(`/api/analytics/advanced?period=${period}`);
+      const res = await fetch(`/api/analytics/advanced?period=${period}`, { credentials: 'include' });
       if (!res.ok) throw new Error("Failed");
       return res.json();
     },
@@ -44,7 +44,7 @@ export default function BIAnalytics() {
   const { data: unified } = useQuery({
     queryKey: ["/api/reports/unified", period],
     queryFn: async () => {
-      const res = await fetch(`/api/reports/unified?period=${period}`);
+      const res = await fetch(`/api/reports/unified?period=${period}`, { credentials: 'include' });
       if (!res.ok) return null;
       return res.json();
     },
@@ -115,7 +115,7 @@ export default function BIAnalytics() {
 
   return (
     <PlanGate feature="biAnalytics">
-    <div className="p-4 md:p-6 space-y-6 bg-background min-h-screen" dir="rtl">
+    <div className="p-4 md:p-6 space-y-6 bg-background min-h-screen">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate("/manager/dashboard")}>
@@ -124,7 +124,7 @@ export default function BIAnalytics() {
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <Brain className="w-7 h-7 text-[#2D9B6E]" />
-              تحليلات BI المتقدمة
+              {tc("تحليلات BI المتقدمة", "Advanced BI Analytics")}
             </h1>
             <p className="text-sm text-muted-foreground">{tc("ذكاء الأعمال والرؤى التحليلية", "Business intelligence and analytical insights")}</p>
           </div>
@@ -151,8 +151,8 @@ export default function BIAnalytics() {
           <TabsList className="grid grid-cols-4 w-full max-w-xl">
             <TabsTrigger value="insights">{tc("الرؤى", "Insights")}</TabsTrigger>
             <TabsTrigger value="performance">{tc("الأداء", "Performance")}</TabsTrigger>
-            <TabsTrigger value="products">المنتجات</TabsTrigger>
-            <TabsTrigger value="patterns">الأنماط</TabsTrigger>
+            <TabsTrigger value="products">{tc("المنتجات", "Products")}</TabsTrigger>
+            <TabsTrigger value="patterns">{tc("الأنماط", "Patterns")}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="insights" className="space-y-6">
@@ -168,7 +168,7 @@ export default function BIAnalytics() {
                     )}
                   </div>
                   <p className="text-xl font-bold">{formatCurrency(data?.summary?.totalRevenue || 0)}</p>
-                  <p className="text-xs text-muted-foreground">الإيرادات</p>
+                  <p className="text-xs text-muted-foreground">{tc("الإيرادات", "Revenue")}</p>
                 </CardContent>
               </Card>
               <Card>
@@ -182,7 +182,7 @@ export default function BIAnalytics() {
                     )}
                   </div>
                   <p className="text-xl font-bold">{data?.summary?.totalOrders || 0}</p>
-                  <p className="text-xs text-muted-foreground">الطلبات</p>
+                  <p className="text-xs text-muted-foreground">{tc("الطلبات", "Orders")}</p>
                 </CardContent>
               </Card>
               <Card>
@@ -196,7 +196,7 @@ export default function BIAnalytics() {
                     )}
                   </div>
                   <p className="text-xl font-bold">{formatCurrency(data?.summary?.avgOrderValue || 0)}</p>
-                  <p className="text-xs text-muted-foreground">متوسط الطلب</p>
+                  <p className="text-xs text-muted-foreground">{tc("متوسط الطلب", "Avg Order")}</p>
                 </CardContent>
               </Card>
               <Card>
@@ -210,7 +210,7 @@ export default function BIAnalytics() {
                     )}
                   </div>
                   <p className="text-xl font-bold">{data?.summary?.uniqueCustomers || 0}</p>
-                  <p className="text-xs text-muted-foreground">العملاء</p>
+                  <p className="text-xs text-muted-foreground">{tc("العملاء", "Customers")}</p>
                 </CardContent>
               </Card>
             </div>
@@ -219,9 +219,9 @@ export default function BIAnalytics() {
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm flex items-center gap-2">
-                    <Brain className="w-4 h-4 text-[#2D9B6E]" /> رؤى ذكية
+                    <Brain className="w-4 h-4 text-[#2D9B6E]" /> {tc("رؤى ذكية", "Smart Insights")}
                   </CardTitle>
-                  <CardDescription>تحليل تلقائي لأداء المتجر</CardDescription>
+                  <CardDescription>{tc("تحليل تلقائي لأداء المتجر", "Automatic store performance analysis")}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
@@ -247,7 +247,7 @@ export default function BIAnalytics() {
             {data?.revenueTrend && data.revenueTrend.length > 0 && (
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">اتجاه الإيرادات</CardTitle>
+                  <CardTitle className="text-sm">{tc("اتجاه الإيرادات", "Revenue Trend")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="h-64">
@@ -270,7 +270,7 @@ export default function BIAnalytics() {
             {data?.hourlyData && (
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">خريطة الطلبات بالساعة</CardTitle>
+                  <CardTitle className="text-sm">{tc("خريطة الطلبات بالساعة", "Hourly Orders Map")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="h-64">
@@ -294,7 +294,7 @@ export default function BIAnalytics() {
             {dayPartData.length > 0 && (
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">توزيع الفترات</CardTitle>
+                  <CardTitle className="text-sm">{tc("توزيع الفترات", "Day-Part Distribution")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -302,7 +302,7 @@ export default function BIAnalytics() {
                       <div key={idx} className="p-4 bg-muted/50 rounded-lg text-center">
                         <p className="text-xs font-medium text-muted-foreground mb-1">{part.name}</p>
                         <p className="text-lg font-bold">{part.orders}</p>
-                        <p className="text-xs text-muted-foreground">طلب</p>
+                        <p className="text-xs text-muted-foreground">{tc("طلب", "orders")}</p>
                         <p className="text-sm font-bold text-[#2D9B6E] mt-1">{formatCurrency(part.revenue)}</p>
                       </div>
                     ))}
@@ -314,7 +314,7 @@ export default function BIAnalytics() {
             {data?.employeePerformance && data.employeePerformance.length > 0 && (
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">أداء الموظفين</CardTitle>
+                  <CardTitle className="text-sm">{tc("أداء الموظفين", "Employee Performance")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="h-64">
@@ -338,7 +338,7 @@ export default function BIAnalytics() {
               <>
                 <Card>
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">مزيج المنتجات (إيرادات)</CardTitle>
+                    <CardTitle className="text-sm">{tc("مزيج المنتجات (إيرادات)", "Product Mix (Revenue)")}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="h-64">
@@ -360,7 +360,7 @@ export default function BIAnalytics() {
 
                 <Card>
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">ترتيب المنتجات</CardTitle>
+                    <CardTitle className="text-sm">{tc("ترتيب المنتجات", "Product Ranking")}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
@@ -399,7 +399,7 @@ export default function BIAnalytics() {
             {data?.paymentBreakdown && data.paymentBreakdown.length > 0 && (
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">توزيع طرق الدفع</CardTitle>
+                  <CardTitle className="text-sm">{tc("توزيع طرق الدفع", "Payment Methods Distribution")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="h-64">
@@ -407,7 +407,7 @@ export default function BIAnalytics() {
                       <PieChart>
                         <Pie data={data.paymentBreakdown.map((p: any) => ({
                           ...p,
-                          name: p.method === 'cash' ? 'نقدي' : p.method === 'card' ? 'شبكة' : p.method === 'qahwa-card' ? 'بطاقة مكان الشيف' : p.method,
+                          name: p.method === 'cash' ? tc('نقدي','Cash') : p.method === 'card' ? tc('شبكة','Card') : p.method === 'qahwa-card' || p.method === 'qirox-card' ? tc('بطاقة ولاء','Loyalty Card') : p.method === 'apple_pay' || p.method?.includes('apple') ? 'Apple Pay' : p.method,
                         }))} cx="50%" cy="50%" innerRadius={45} outerRadius={75} dataKey="amount"
                           label={({ name, percentage }) => `${name} ${percentage}%`}
                         >
@@ -426,7 +426,7 @@ export default function BIAnalytics() {
             {data?.hourlyData && (
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">العلاقة بين الطلبات والإيرادات بالساعة</CardTitle>
+                  <CardTitle className="text-sm">{tc("العلاقة بين الطلبات والإيرادات بالساعة", "Orders vs Revenue by Hour")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="h-64">
@@ -448,16 +448,16 @@ export default function BIAnalytics() {
             {unified?.branches && unified.branches.length > 1 && (
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">مقارنة الفروع — رادار</CardTitle>
+                  <CardTitle className="text-sm">{tc("مقارنة الفروع — رادار", "Branch Comparison — Radar")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="h-72">
                     <ResponsiveContainer width="100%" height="100%">
                       <RadarChart data={[
-                        { metric: 'الإيرادات', ...Object.fromEntries(unified.branches.map((b: any) => [b.name, b.revenue])) },
-                        { metric: 'الطلبات', ...Object.fromEntries(unified.branches.map((b: any) => [b.name, b.orders * 100])) },
-                        { metric: 'العملاء', ...Object.fromEntries(unified.branches.map((b: any) => [b.name, b.customers * 100])) },
-                        { metric: 'المتوسط', ...Object.fromEntries(unified.branches.map((b: any) => [b.name, b.avgOrder * 10])) },
+                        { metric: tc('الإيرادات','Revenue'), ...Object.fromEntries(unified.branches.map((b: any) => [b.name, b.revenue])) },
+                        { metric: tc('الطلبات','Orders'), ...Object.fromEntries(unified.branches.map((b: any) => [b.name, b.orders * 100])) },
+                        { metric: tc('العملاء','Customers'), ...Object.fromEntries(unified.branches.map((b: any) => [b.name, b.customers * 100])) },
+                        { metric: tc('المتوسط','Avg'), ...Object.fromEntries(unified.branches.map((b: any) => [b.name, b.avgOrder * 10])) },
                       ]}>
                         <PolarGrid />
                         <PolarAngleAxis dataKey="metric" fontSize={11} />

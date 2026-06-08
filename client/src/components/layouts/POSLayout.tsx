@@ -1,5 +1,7 @@
 import { ReactNode, useEffect, useState } from "react";
 import { useLocation, Link } from "wouter";
+import { LanguageToggle } from "@/components/language-toggle";
+import { useTranslation } from "react-i18next";
 import { 
   CreditCard, 
   ShoppingBag, 
@@ -49,6 +51,7 @@ export function POSLayout({
 }: POSLayoutProps) {
   const [location, setLocation] = useLocation();
   const [employee, setEmployee] = useState<Employee | null>(null);
+  const { i18n } = useTranslation();
 
   useEffect(() => {
     const storedEmployee = localStorage.getItem("currentEmployee");
@@ -59,7 +62,7 @@ export function POSLayout({
 
   const handleLogout = () => {
     localStorage.removeItem("currentEmployee");
-    localStorage.removeItem("chefsplace-restore-key");
+    localStorage.removeItem("qirox-restore-key");
     setLocation("/employee/gateway");
   };
 
@@ -76,7 +79,7 @@ export function POSLayout({
     admin: "مدير النظام",
     manager: "مدير",
     cashier: "كاشير",
-    barista: "محضر طعام",
+    barista: "باريستا",
   };
 
   const sidebarStyle = {
@@ -86,7 +89,7 @@ export function POSLayout({
 
   return (
     <SidebarProvider style={sidebarStyle as React.CSSProperties}>
-      <div className="flex h-screen w-full" dir="rtl">
+      <div className="flex h-screen w-full" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
         <Sidebar side="right" collapsible="icon">
           <SidebarHeader className="border-b p-4">
             <div className="flex items-center gap-3">
@@ -166,16 +169,19 @@ export function POSLayout({
               )}
               {title && <h1 className="text-lg font-semibold">{title}</h1>}
             </div>
-            {employee && (
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-xs">
-                  POS
-                </Badge>
-                <span className="text-sm text-muted-foreground hidden sm:block">
-                  {employee.nameAr}
-                </span>
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              <LanguageToggle />
+              {employee && (
+                <>
+                  <Badge variant="outline" className="text-xs">
+                    POS
+                  </Badge>
+                  <span className="text-sm text-muted-foreground hidden sm:block">
+                    {employee.nameAr}
+                  </span>
+                </>
+              )}
+            </div>
           </header>
 
           <main className="flex-1 overflow-auto">

@@ -37,15 +37,6 @@ function StarRatingInput({ value, onChange }: { value: number; onChange: (v: num
   );
 }
 
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
-  return outputArray;
-}
-
 function MiniPushBanner({ customerId, t }: { customerId: string; t: any }) {
   const [permission, setPermission] = useState<NotificationPermission>(
     'Notification' in window ? Notification.permission : 'default'
@@ -68,24 +59,12 @@ function MiniPushBanner({ customerId, t }: { customerId: string; t: any }) {
     if (!supported || !customerId) return;
     setLoading(true);
     try {
-      const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-      await navigator.serviceWorker.ready;
-      let sub = await reg.pushManager.getSubscription();
-      if (!sub) {
-        const res = await fetch('/api/push/vapid-key');
-        const { publicKey } = await res.json();
-        if (!publicKey) return;
-        const perm = await Notification.requestPermission();
-        setPermission(perm);
-        if (perm !== 'granted') return;
-        sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) });
+      const { subscribeToPush } = await import('@/lib/push-utils');
+      const ok = await subscribeToPush({ userType: 'customer', userId: customerId });
+      if (ok) {
+        setIsSubscribed(true);
+        setPermission('granted');
       }
-      await fetch('/api/push/subscribe', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subscription: sub.toJSON(), userType: 'customer', userId: customerId }),
-      });
-      setIsSubscribed(true);
-      setPermission('granted');
     } catch (err) {
       console.error('[Push]', err);
     } finally {

@@ -233,7 +233,7 @@ export default function InventoryRawItemsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white text-gray-900 p-6 space-y-6" dir="rtl">
+    <div className="min-h-screen bg-white text-gray-900 p-6 space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-4">
           <div className="p-3 rounded-2xl bg-gradient-to-br from-green-100 to-green-200 shadow-sm shadow-green-200">
@@ -451,7 +451,7 @@ export default function InventoryRawItemsPage() {
       </Card>
 
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-w-2xl bg-white" dir="rtl">
+        <DialogContent className="max-w-2xl bg-white">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Plus className="h-5 w-5 text-accent" />
@@ -476,7 +476,7 @@ export default function InventoryRawItemsPage() {
                   id="nameAr"
                   value={formData.nameAr}
                   onChange={(e) => setFormData({ ...formData, nameAr: e.target.value })}
-                  placeholder={tc("أرز بسمتي", "Basmati rice")}
+                  placeholder={tc("حبوب قهوة", "Coffee beans")}
                   data-testid="input-name-ar"
                 />
               </div>
@@ -595,7 +595,7 @@ export default function InventoryRawItemsPage() {
       </Dialog>
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl bg-white" dir="rtl">
+        <DialogContent className="max-w-2xl bg-white">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Edit className="h-5 w-5 text-accent" />

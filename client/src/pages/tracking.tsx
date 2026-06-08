@@ -46,7 +46,7 @@ function CountdownTimer({ estimatedMinutes, startTime, t }: { estimatedMinutes: 
       const elapsed = (now - start) / 1000;
       
       setTimeLeft(remaining);
-      setProgress(Math.max(0, Math.min(100, 100 - (elapsed / totalSeconds) * 100)));
+      setProgress(totalSeconds > 0 ? Math.max(0, Math.min(100, 100 - (elapsed / totalSeconds) * 100)) : 100);
     };
 
     calculateTime();

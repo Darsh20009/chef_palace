@@ -3,17 +3,17 @@ import { useTranslate } from "@/lib/useTranslate";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle, Home, ArrowRight } from "lucide-react";
-const chefsplaceLogoStaff = "/logo.png";
+import qiroxLogoStaff from "@assets/qirox-logo-customer.png";
 
 export default function NotFound() {
   const tc = useTranslate();
   const [, setLocation] = useLocation();
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-background p-4" dir="rtl">
+    <div className="min-h-screen w-full flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardContent className="pt-8 pb-8 flex flex-col items-center text-center gap-6">
-          <img src={chefsplaceLogoStaff} alt="مكان الشيف البخاري" className="w-16 h-16 object-contain rounded-xl" />
+          <img src={qiroxLogoStaff} alt="مكان الشيف" className="w-16 h-16 object-contain rounded-xl" />
           <div className="flex flex-col items-center gap-2">
             <AlertCircle className="h-12 w-12 text-destructive" />
             <h1 className="text-2xl font-bold text-foreground">{tc("404 — الصفحة غير موجودة", "404 — Page Not Found")}</h1>

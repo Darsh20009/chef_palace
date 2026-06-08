@@ -1,16 +1,17 @@
-import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { LayoutDashboard, Users, FileText, Settings, LogOut, Bell, Code2, GitBranch, Mail, Coffee, BookOpen, Star, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-const chefsplaceLogoStaff = "/logo.png";
+import qiroxLogoStaff from "@assets/qirox-logo-customer.png";
 import { brand } from "@/lib/brand";
 
 
 export function AdminSidebar() {
   const [location, navigate] = useLocation();
+  const { i18n } = useTranslation();
+  const isAr = i18n.language !== 'en';
 
-  // Fetch unread notification count — poll every 30s
   const { data: unreadData } = useQuery<{ count: number }>({
     queryKey: ['/api/notifications/unread-count'],
     refetchInterval: 30_000,
@@ -20,69 +21,67 @@ export function AdminSidebar() {
 
   const groups = [
     {
-      label: "الرئيسية",
+      label: isAr ? "الرئيسية" : "Main",
       items: [
-        { label: 'لوحة التحكم', icon: LayoutDashboard, path: '/admin/dashboard', isNotifications: false },
+        { label: isAr ? 'لوحة التحكم' : 'Dashboard', icon: LayoutDashboard, path: '/admin/dashboard', isNotifications: false },
       ]
     },
     {
-      label: "العمليات",
+      label: isAr ? "العمليات" : "Operations",
       items: [
-        { label: 'إدارة قائمة الطعام', icon: Coffee, path: '/employee/menu-management', isNotifications: false },
-        { label: 'إدارة الطلبات', icon: ClipboardList, path: '/manager/orders', isNotifications: false },
-        { label: 'حجوزات الطاولات', icon: BookOpen, path: '/manager/reservations', isNotifications: false },
-        { label: 'حجوزات المنتجات', icon: Star, path: '/manager/product-reservations', isNotifications: false },
+        { label: isAr ? 'إدارة المأكولات والمشروبات' : 'Menu Management', icon: Coffee, path: '/employee/menu-management', isNotifications: false },
+        { label: isAr ? 'إدارة الطلبات' : 'Orders', icon: ClipboardList, path: '/manager/orders', isNotifications: false },
+        { label: isAr ? 'حجوزات الطاولات' : 'Table Reservations', icon: BookOpen, path: '/manager/reservations', isNotifications: false },
+        { label: isAr ? 'حجوزات المنتجات' : 'Product Reservations', icon: Star, path: '/manager/product-reservations', isNotifications: false },
       ]
     },
     {
-      label: "الإدارة",
+      label: isAr ? "الإدارة" : "Management",
       items: [
-        { label: 'الموظفون', icon: Users, path: '/admin/employees', isNotifications: false },
-        { label: 'الفروع', icon: GitBranch, path: '/admin/branches', isNotifications: false },
-        { label: 'التقارير', icon: FileText, path: '/admin/reports', isNotifications: false },
+        { label: isAr ? 'الموظفون' : 'Employees', icon: Users, path: '/admin/employees', isNotifications: false },
+        { label: isAr ? 'الفروع' : 'Branches', icon: GitBranch, path: '/admin/branches', isNotifications: false },
+        { label: isAr ? 'التقارير' : 'Reports', icon: FileText, path: '/admin/reports', isNotifications: false },
       ]
     },
     {
-      label: "التواصل",
+      label: isAr ? "التواصل" : "Communication",
       items: [
-        { label: 'إرسال الإشعارات', icon: Bell, path: '/admin/notifications', isNotifications: true },
-        { label: 'التسويق البريدي', icon: Mail, path: '/admin/email', isNotifications: false },
+        { label: isAr ? 'إرسال الإشعارات' : 'Send Notifications', icon: Bell, path: '/admin/notifications', isNotifications: true },
+        { label: isAr ? 'التسويق البريدي' : 'Email Marketing', icon: Mail, path: '/admin/email', isNotifications: false },
       ]
     },
     {
-      label: "الإعدادات",
+      label: isAr ? "الإعدادات" : "Settings",
       items: [
-        { label: 'الإعدادات', icon: Settings, path: '/admin/settings', isNotifications: false },
-        { label: 'إدارة API', icon: Code2, path: '/admin/api', isNotifications: false },
+        { label: isAr ? 'الإعدادات' : 'Settings', icon: Settings, path: '/admin/settings', isNotifications: false },
+        { label: isAr ? 'إدارة API' : 'API Management', icon: Code2, path: '/admin/api', isNotifications: false },
       ]
     },
   ];
 
   const handleLogout = async () => {
     await fetch('/api/employees/logout', { method: 'POST' });
-    localStorage.removeItem("chefsplace-restore-key");
+    localStorage.removeItem("qirox-restore-key");
     navigate('/employee/login');
   };
 
   return (
     <>
       <div className="w-64 bg-background border-l border-border flex flex-col h-screen sticky top-0">
-        {/* Logo */}
         <div className="p-6 border-b border-border">
           <div className="flex items-center gap-3 mb-1">
             <img
-              src={chefsplaceLogoStaff}
+              src={qiroxLogoStaff}
               alt={brand.platformNameEn}
               className="w-10 h-10 object-contain rounded-lg"
             />
             <div>
-              <h2 className="text-lg font-bold text-foreground">{brand.platformNameAr}</h2>
-              <p className="text-xs text-muted-foreground">لوحة التحكم الإدارية</p>
+              <h2 className="text-lg font-bold text-foreground">{isAr ? brand.platformNameAr : brand.platformNameEn}</h2>
+              <p className="text-xs text-muted-foreground">{isAr ? 'لوحة التحكم الإدارية' : 'Admin Dashboard'}</p>
             </div>
           </div>
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 p-4 space-y-4 overflow-y-auto">
           {groups.map((group) => (
             <div key={group.label}>
@@ -101,7 +100,7 @@ export function AdminSidebar() {
                           ? 'bg-primary text-primary-foreground shadow-sm'
                           : 'text-foreground hover:bg-primary/10'
                       }`}
-                      data-testid={`sidebar-link-${item.label}`}
+                      data-testid={`sidebar-link-${item.path.split('/').pop()}`}
                     >
                       <div className="relative shrink-0">
                         <Icon className="w-4 h-4" />
@@ -125,7 +124,6 @@ export function AdminSidebar() {
           ))}
         </nav>
 
-        {/* Bottom actions */}
         <div className="p-4 border-t border-border space-y-2">
           <Button
             onClick={handleLogout}
@@ -134,7 +132,7 @@ export function AdminSidebar() {
             data-testid="button-logout"
           >
             <LogOut className="w-4 h-4 ml-2" />
-            تسجيل الخروج
+            {isAr ? 'تسجيل الخروج' : 'Logout'}
           </Button>
         </div>
       </div>

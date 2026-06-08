@@ -1,5 +1,6 @@
 import { useTranslate } from "@/lib/useTranslate";
 import { useState, useEffect } from "react";
+import SarIcon from "@/components/sar-icon";
 import { useLocation, useSearch } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Coffee, ArrowRight, ArrowLeft, CheckCircle, XCircle, Plus, Edit2, Trash2, Sparkles, Upload, ImageIcon, X, FlaskConical, AlertTriangle, Library, ChevronUp, ChevronDown, ListOrdered } from "lucide-react";
+import { AddonGroupsEditor, type AddonGroup } from "@/components/addon-groups-editor";
 import { ImageLibraryModal } from "@/components/ImageLibraryModal";
 import { AIMenuAssistant } from "@/components/AIMenuAssistant";
 import { useToast } from "@/hooks/use-toast";
@@ -36,8 +38,8 @@ interface BranchAvailability {
 }
 
 const UNIFIED_CATEGORIES = [
-  { id: 'hot',        nameAr: 'أطباق ساخنة' },
-  { id: 'cold',       nameAr: 'أطباق باردة' },
+  { id: 'hot',        nameAr: 'مشروبات ساخنة' },
+  { id: 'cold',       nameAr: 'مشروبات باردة' },
   { id: 'desserts',   nameAr: 'حلا والكيك'    },
   { id: 'bakery',     nameAr: 'المخبوزات'      },
   { id: 'sandwiches', nameAr: 'الساندوتشات'   },
@@ -78,6 +80,8 @@ type BundledSection = {
 };
 const [addBundledItems, setAddBundledItems] = useState<BundledSection[]>([]);
 const [editBundledItems, setEditBundledItems] = useState<BundledSection[]>([]);
+const [addAddonGroups, setAddAddonGroups] = useState<AddonGroup[]>([]);
+const [editAddonGroups, setEditAddonGroups] = useState<AddonGroup[]>([]);
 
 type ReservationPackage = { packageName: string; description?: string; price: number; duration?: string; maxGuests?: number; };
 const [addIsReservation, setAddIsReservation] = useState(false);
@@ -345,15 +349,15 @@ const [aiEditDescription, setAiEditDescription] = useState("");
    setSelectedCategory(defaultCategory);
    setSelectedCoffeeStrength("classic");
    toast({
-     title: tc("تم إضافة الطبق", "Item Added"),
-     description: tc("تم إضافة الطبق بنجاح إلى القائمة", "Item was added successfully to the menu"),
+     title: tc("تم إضافة المشروب", "Item Added"),
+     description: tc("تم إضافة المشروب بنجاح إلى القائمة", "Item was added successfully to the menu"),
    });
  },
  onError: (error: any) => {
    toast({
      variant: "destructive",
-     title: tc("فشل إضافة الطبق", "Failed to Add Item"),
-     description: error.message || tc("حدث خطأ أثناء إضافة الطبق", "An error occurred while adding the item"),
+     title: tc("فشل إضافة المشروب", "Failed to Add Item"),
+     description: error.message || tc("حدث خطأ أثناء إضافة المشروب", "An error occurred while adding the item"),
    });
  },
  });
@@ -414,13 +418,13 @@ const [aiEditDescription, setAiEditDescription] = useState("");
  queryClient.invalidateQueries({ queryKey: ["/api/coffee-items"] });
  toast({
  title: tc("تم التحديث بنجاح", "Updated Successfully"),
- description: tc("تم تحديث حالة توفر الطبق", "Item availability updated"),
+ description: tc("تم تحديث حالة توفر المشروب", "Item availability updated"),
  });
  },
  onError: () => {
  toast({
  title: tc("خطأ", "Error"),
- description: tc("فشل تحديث حالة توفر الطبق", "Failed to update item availability"),
+ description: tc("فشل تحديث حالة توفر المشروب", "Failed to update item availability"),
  variant: "destructive",
  });
  },
@@ -440,14 +444,14 @@ const [aiEditDescription, setAiEditDescription] = useState("");
  setEditingItem(null);
  toast({
  title: tc("تم التحديث", "Updated"),
- description: tc("تم تحديث الطبق بنجاح", "Item updated successfully"),
+ description: tc("تم تحديث المشروب بنجاح", "Item updated successfully"),
  });
  },
  onError: (error: any) => {
  toast({
  variant: "destructive",
  title: tc("فشل التحديث", "Update Failed"),
- description: error.message || tc("حدث خطأ أثناء تحديث الطبق", "An error occurred while updating the item"),
+ description: error.message || tc("حدث خطأ أثناء تحديث المشروب", "An error occurred while updating the item"),
  });
  },
  });
@@ -457,7 +461,7 @@ const [aiEditDescription, setAiEditDescription] = useState("");
    const res = await apiRequest("DELETE", `/api/coffee-items/${id}`);
    if (!res.ok) {
      const errorData = await res.json();
-     throw new Error(errorData.error || tc("فشل في حذف الطبق", "Failed to delete item"));
+     throw new Error(errorData.error || tc("فشل في حذف المشروب", "Failed to delete item"));
    }
    return await res.json();
  },
@@ -469,7 +473,7 @@ const [aiEditDescription, setAiEditDescription] = useState("");
    setDeletingItemId(null);
    toast({
      title: tc("تم الحذف", "Deleted"),
-     description: tc("تم حذف الطبق بنجاح", "Item deleted successfully"),
+     description: tc("تم حذف المشروب بنجاح", "Item deleted successfully"),
    });
  },
  onError: (error: any) => {
@@ -477,7 +481,7 @@ const [aiEditDescription, setAiEditDescription] = useState("");
    toast({
      variant: "destructive",
      title: tc("فشل الحذف", "Delete Failed"),
-     description: error.message || tc("حدث خطأ أثناء حذف الطبق. قد يكون الطبق مرتبطاً بطلبات حالية.", "Error deleting item. Item may be linked to current orders."),
+     description: error.message || tc("حدث خطأ أثناء حذف المشروب. قد يكون المشروب مرتبطاً بطلبات حالية.", "Error deleting item. Item may be linked to current orders."),
    });
  },
  });
@@ -587,6 +591,7 @@ const [aiEditDescription, setAiEditDescription] = useState("");
      availableSizes: addEditableSizes.filter(s => s.nameAr.trim()),
      addons: addEditableAddons.filter(a => a.nameAr.trim()),
      bundledItems: addBundledItems,
+     addonGroups: addAddonGroups,
      isReservation: addIsReservation,
      reservationPackages: addReservationPackages.filter(p => p.packageName.trim()),
    });
@@ -618,10 +623,8 @@ const [aiEditDescription, setAiEditDescription] = useState("");
      price: parseFloat(step1Data.price),
      oldPrice: step1Data.oldPrice ? parseFloat(step1Data.oldPrice) : undefined,
      category: step1Data.category,
-     menuType: isFood ? 'food' : 'drinks',
      coffeeStrength: step1Data.coffeeStrength || "classic",
      imageUrl: step1Data.imageUrl,
-     imageUrls: (step1Data as any).imageUrls || (step1Data.imageUrl ? [step1Data.imageUrl] : []),
      isAvailable: 1,
      availabilityStatus: "available",
      isNewProduct: 0,
@@ -629,10 +632,10 @@ const [aiEditDescription, setAiEditDescription] = useState("");
      availableSizes: step1Data.availableSizes || [],
      addons: (step1Data as any).addons || [],
      bundledItems: (step1Data as any).bundledItems || [],
+     addonGroups: addAddonGroups,
      isReservation: (step1Data as any).isReservation || false,
      reservationPackages: (step1Data as any).reservationPackages || [],
      branchAvailability: step1Data.branchAvailability,
-     publishedBranches: step1Data.branchAvailability ? step1Data.branchAvailability.map((b: any) => b.branchId) : undefined,
      hasRecipe: 0,
      requiresRecipe: 0,
    };
@@ -658,10 +661,8 @@ const [aiEditDescription, setAiEditDescription] = useState("");
      price: parseFloat(step1Data.price),
      oldPrice: step1Data.oldPrice ? parseFloat(step1Data.oldPrice) : undefined,
      category: step1Data.category,
-     menuType: isFood ? 'food' : 'drinks',
      coffeeStrength: step1Data.coffeeStrength || "classic",
      imageUrl: step1Data.imageUrl,
-     imageUrls: (step1Data as any).imageUrls || (step1Data.imageUrl ? [step1Data.imageUrl] : []),
      isAvailable: 1,
      availabilityStatus: "available",
      isNewProduct: 0,
@@ -669,10 +670,10 @@ const [aiEditDescription, setAiEditDescription] = useState("");
      availableSizes: step1Data.availableSizes || [],
      addons: (step1Data as any).addons || [],
      bundledItems: (step1Data as any).bundledItems || [],
+     addonGroups: addAddonGroups,
      isReservation: (step1Data as any).isReservation || false,
      reservationPackages: (step1Data as any).reservationPackages || [],
      branchAvailability: step1Data.branchAvailability,
-     publishedBranches: step1Data.branchAvailability ? step1Data.branchAvailability.map((b: any) => b.branchId) : undefined,
      hasRecipe: hasRecipeItems ? 1 : 0,
      requiresRecipe: 1,
    };
@@ -755,6 +756,7 @@ const [aiEditDescription, setAiEditDescription] = useState("");
     imageUrls: editImageUrls.length > 0 ? editImageUrls : ((editingItem as any).imageUrls || []),
     addons: editableAddons,
     bundledItems: editBundledItems,
+    addonGroups: editAddonGroups,
     isReservation: editIsReservation,
     reservationPackages: editReservationPackages.filter(p => p.packageName.trim()),
      availableSizes: editableSizes,
@@ -768,6 +770,7 @@ const [aiEditDescription, setAiEditDescription] = useState("");
  setEditableSizes(item.availableSizes || []);
  setEditableAddons(item.addons || []);
  setEditBundledItems((item as any).bundledItems || []);
+ setEditAddonGroups((item as any).addonGroups || []);
  setEditIsReservation((item as any).isReservation || false);
  setEditReservationPackages((item as any).reservationPackages || []);
 setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : []));
@@ -792,11 +795,11 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
  };
 
  const legacyCategoryNames: Record<string, string> = {
- basic: tc("أطباق رئيسية", "Main Dishes"),
- hot: tc("أطباق ساخنة", "Hot Dishes"),
- cold: tc("أطباق باردة", "Cold Dishes"),
- specialty: tc("إضافات", "Specialty Dishes"),
- drinks: tc("الأطباق", "Dishes"),
+ basic: tc("قهوة أساسية", "Basic Coffee"),
+ hot: tc("قهوة ساخنة", "Hot Coffee"),
+ cold: tc("قهوة باردة", "Cold Coffee"),
+ specialty: tc("مشروبات إضافية", "Specialty Drinks"),
+ drinks: tc("المشروبات", "Drinks"),
  desserts: tc("الحلويات", "Desserts"),
  food: tc("المأكولات", "Food"),
  bakery: tc("المخبوزات", "Bakery"),
@@ -861,8 +864,8 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
                  <Coffee className="w-7 h-7 text-primary" />
                </div>
                <div className="text-center">
-                 <p className="text-lg font-bold text-gray-800">إضافة وجبة</p>
-                 <p className="text-xs text-gray-400">بخاري، مندي، زربيان</p>
+                 <p className="text-lg font-bold text-gray-800">إضافة مشروب</p>
+                 <p className="text-xs text-gray-400">قهوة، عصائر، مشروبات</p>
                </div>
                <div className="flex items-center gap-1 text-primary text-sm font-medium">
                  <Plus className="w-4 h-4" />
@@ -945,6 +948,7 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
     setAddEditableAddons([]);
     setAddEditableSizes([]);
     setAddBundledItems([]);
+    setAddAddonGroups([]);
     setAddIsReservation(false);
     setAddReservationPackages([]);
     setSelectedCategory(defaultCategory);
@@ -957,14 +961,14 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
  data-testid="button-add-item"
  >
  <Plus className="w-4 h-4 ml-2" />
- {isFood ? tc('إضافة صنف جديد', 'Add New Item') : tc('إضافة وجبة جديد', 'Add New Drink')}
+ {isFood ? tc('إضافة صنف جديد', 'Add New Item') : tc('إضافة مشروب جديد', 'Add New Drink')}
  </Button>
  </DialogTrigger>
  <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-2xl max-h-[90vh] overflow-y-auto">
  <DialogHeader>
  <DialogTitle className="text-accent">
    <div className="flex flex-col gap-3">
-     <span>{tc("إضافة وجبة جديد", "Add New Item")}</span>
+     <span>{tc("إضافة مشروب جديد", "Add New Item")}</span>
      <div className="flex items-center gap-2 text-sm font-normal">
        <span className={`px-3 py-1 rounded-full ${addStep === 1 ? 'bg-primary text-white' : 'bg-gray-600 text-gray-300'}`}>
          1. المعلومات الأساسية
@@ -1103,7 +1107,7 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
  />
  </div>
 <div>
- <Label className="text-gray-300">{tc("صور الطبق (حتى 5 صور)", "Item Photos (up to 5)")}</Label>
+ <Label className="text-gray-300">{tc("صور المشروب (حتى 5 صور)", "Item Photos (up to 5)")}</Label>
  <div className="mt-2 space-y-2">
    <div className="flex flex-wrap gap-2">
      {addImageUrls.map((url, idx) => (
@@ -1128,10 +1132,10 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
  </div>
 
  <div>
- <Label htmlFor="spiceLevel" className="text-gray-300">درجة التوابل</Label>
+ <Label htmlFor="coffeeStrength" className="text-gray-300">قوة القهوة</Label>
  <Select value={selectedCoffeeStrength} onValueChange={setSelectedCoffeeStrength}>
  <SelectTrigger className="bg-gray-50 border-gray-300 text-gray-900" data-testid="select-coffee-strength">
- <SelectValue placeholder="اختر درجة التوابل" />
+ <SelectValue placeholder="اختر قوة القهوة" />
  </SelectTrigger>
  <SelectContent className="bg-white border-gray-200 text-gray-900">
  <SelectItem value="mild">خفيفة (1-4)</SelectItem>
@@ -1239,8 +1243,9 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
                     <button type="button" onClick={() => { setEditingAddonImageIdx(idx); setImageLibraryContext("add-addon"); setIsImageLibraryOpen(true); }} className="w-8 h-8 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center shrink-0 overflow-hidden hover:border-accent/50 transition-colors" data-testid={"button-add-addon-img-" + idx}>
                       {addon.imageUrl ? <img src={addon.imageUrl.startsWith('/') ? addon.imageUrl : '/' + addon.imageUrl} className="w-full h-full object-cover rounded-lg" alt="" /> : <Plus className="w-3 h-3 text-gray-400" />}
                     </button>
-                    <Input type="text" placeholder="اسم الخيار" value={addon.nameAr} onChange={(e) => { const next = [...addEditableAddons]; next[idx] = { ...next[idx], nameAr: e.target.value }; setAddEditableAddons(next); }} className="bg-white border-gray-300 text-gray-900 flex-1 h-8 text-sm" data-testid={"input-add-addon-name-" + idx} />
-                    <Input type="number" placeholder="السعر" value={addon.price} onChange={(e) => { const next = [...addEditableAddons]; next[idx] = { ...next[idx], price: parseFloat(e.target.value) || 0 }; setAddEditableAddons(next); }} className="bg-white border-gray-300 text-gray-900 w-20 h-8 text-sm" data-testid={"input-add-addon-price-" + idx} />
+                    <Input type="text" placeholder={tc("اسم الخيار (عربي)", "Option name (AR)")} value={addon.nameAr} onChange={(e) => { const next = [...addEditableAddons]; next[idx] = { ...next[idx], nameAr: e.target.value }; setAddEditableAddons(next); }} className="bg-white border-gray-300 text-gray-900 flex-1 h-8 text-sm" data-testid={"input-add-addon-name-" + idx} />
+                    <Input type="text" placeholder={tc("الاسم (إنجليزي)", "Option name (EN)")} value={addon.nameEn || ''} onChange={(e) => { const next = [...addEditableAddons]; next[idx] = { ...next[idx], nameEn: e.target.value }; setAddEditableAddons(next); }} className="bg-white border-gray-300 text-gray-900 flex-1 h-8 text-sm" dir="ltr" data-testid={"input-add-addon-name-en-" + idx} />
+                    <Input type="number" placeholder={tc("السعر", "Price")} value={addon.price} onChange={(e) => { const next = [...addEditableAddons]; next[idx] = { ...next[idx], price: parseFloat(e.target.value) || 0 }; setAddEditableAddons(next); }} className="bg-white border-gray-300 text-gray-900 w-20 h-8 text-sm" data-testid={"input-add-addon-price-" + idx} />
                     <button type="button" onClick={() => setAddEditableAddons(addEditableAddons.filter((_, i) => i !== idx))} className="text-red-400 hover:text-red-600 shrink-0" data-testid={"button-remove-addon-" + idx}><X className="w-4 h-4" /></button>
                   </div>
                 ); })}
@@ -1255,8 +1260,9 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
               <button type="button" onClick={() => { setEditingAddonImageIdx(idx); setImageLibraryContext("add-addon"); setIsImageLibraryOpen(true); }} className="w-10 h-10 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center shrink-0 overflow-hidden hover:border-accent/50 transition-colors" data-testid={"button-add-addon-img-" + idx}>
                 {addon.imageUrl ? <img src={addon.imageUrl.startsWith('/') ? addon.imageUrl : '/' + addon.imageUrl} className="w-full h-full object-cover rounded-lg" alt="" /> : <Plus className="w-3 h-3 text-gray-500" />}
               </button>
-              <Input type="text" placeholder="اسم الإضافة" value={addon.nameAr} onChange={(e) => { const next = [...addEditableAddons]; next[idx] = { ...next[idx], nameAr: e.target.value }; setAddEditableAddons(next); }} className="bg-gray-50 border-gray-300 text-gray-900 flex-1" data-testid={"input-add-addon-name-" + idx} />
-              <Input type="number" placeholder="السعر" value={addon.price} onChange={(e) => { const next = [...addEditableAddons]; next[idx] = { ...next[idx], price: parseFloat(e.target.value) || 0 }; setAddEditableAddons(next); }} className="bg-gray-50 border-gray-300 text-gray-900 w-20" data-testid={"input-add-addon-price-" + idx} />
+              <Input type="text" placeholder={tc("اسم الإضافة (عربي)", "Addon name (AR)")} value={addon.nameAr} onChange={(e) => { const next = [...addEditableAddons]; next[idx] = { ...next[idx], nameAr: e.target.value }; setAddEditableAddons(next); }} className="bg-gray-50 border-gray-300 text-gray-900 flex-1" data-testid={"input-add-addon-name-" + idx} />
+              <Input type="text" placeholder={tc("الاسم (إنجليزي)", "Addon name (EN)")} value={addon.nameEn || ''} onChange={(e) => { const next = [...addEditableAddons]; next[idx] = { ...next[idx], nameEn: e.target.value }; setAddEditableAddons(next); }} className="bg-gray-50 border-gray-300 text-gray-900 flex-1" dir="ltr" data-testid={"input-add-addon-name-en-" + idx} />
+              <Input type="number" placeholder={tc("السعر", "Price")} value={addon.price} onChange={(e) => { const next = [...addEditableAddons]; next[idx] = { ...next[idx], price: parseFloat(e.target.value) || 0 }; setAddEditableAddons(next); }} className="bg-gray-50 border-gray-300 text-gray-900 w-20" data-testid={"input-add-addon-price-" + idx} />
               <Button type="button" size="sm" variant="outline" onClick={() => setAddEditableAddons(addEditableAddons.filter((_, i) => i !== idx))} className="border-red-500/30 text-red-500 shrink-0" data-testid={"button-remove-addon-" + idx}><X className="w-4 h-4" /></Button>
             </div>
             <div className="flex gap-1">
@@ -1282,7 +1288,7 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
     <div key={secIdx} className="border border-purple-200 rounded-lg p-3 space-y-2 bg-purple-50/30">
       <div className="flex items-center gap-2">
         <Input
-          placeholder="اسم القسم (مثال: اختر طبقك)"
+          placeholder="اسم القسم (مثال: اختر مشروبك)"
           value={section.sectionTitle}
           onChange={(e) => { const n = [...addBundledItems]; n[secIdx] = {...n[secIdx], sectionTitle: e.target.value}; setAddBundledItems(n); }}
           className="bg-white border-gray-300 text-gray-900 flex-1 h-8 text-sm"
@@ -1319,7 +1325,7 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
           </select>
           <div className="flex items-center gap-1 shrink-0">
             <Input type="number" min={0} step={0.5} placeholder="سعره" value={bItem.customPrice} onChange={(e) => { const n = [...addBundledItems]; n[secIdx].items[itemIdx] = {...n[secIdx].items[itemIdx], customPrice: parseFloat(e.target.value) || 0}; setAddBundledItems(n); }} className="bg-white border-gray-300 text-gray-900 w-20 h-8 text-sm" data-testid={`input-bundle-price-${secIdx}-${itemIdx}`} />
-            <span className="text-xs text-gray-500">ر.س</span>
+            <SarIcon size={11} />
             {bItem.customPrice === 0 && bItem.productId && <span className="text-xs bg-green-100 text-green-700 px-1 rounded">مجاني</span>}
           </div>
           <button type="button" onClick={() => { const n = [...addBundledItems]; n[secIdx].items = n[secIdx].items.filter((_, i) => i !== itemIdx); setAddBundledItems(n); }} className="text-red-400 hover:text-red-600 shrink-0" data-testid={`btn-del-bundle-item-${secIdx}-${itemIdx}`}><X className="w-3 h-3" /></button>
@@ -1330,6 +1336,9 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
   ))}
   <Button type="button" size="sm" variant="outline" onClick={() => setAddBundledItems([...addBundledItems, { sectionTitle: '', selectionType: 'single', minSelectable: 0, maxSelectable: 1, items: [] }])} className="border-purple-400/40 text-purple-600 w-full" data-testid="btn-add-bundle-section"><Plus className="w-4 h-4 ml-1" />إضافة قسم منتجات مصاحبة</Button>
 </div>
+
+{/* Advanced Addon Groups Section */}
+<AddonGroupsEditor value={addAddonGroups} onChange={setAddAddonGroups} />
 
 {/* Reservation Section */}
 <div className="space-y-2 border border-amber-200 rounded-lg p-3 bg-amber-50/30">
@@ -1423,9 +1432,9 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
  ) : (
  <div className="space-y-4">
    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-     <p className="text-gray-400 text-sm mb-1">الطبق:</p>
+     <p className="text-gray-400 text-sm mb-1">المشروب:</p>
      <p className="text-accent font-bold text-lg">{step1Data?.nameAr}</p>
-     <p className="text-gray-500 text-sm">{step1Data?.category && categoryNames[step1Data.category as keyof typeof categoryNames]} • {step1Data?.price} ريال</p>
+     <p className="text-gray-500 text-sm">{step1Data?.category && categoryNames[step1Data.category as keyof typeof categoryNames]} • {step1Data?.price} <SarIcon size={11} /></p>
    </div>
 
    <div className="border-t border-gray-200 pt-4">
@@ -1433,7 +1442,7 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
        <FlaskConical className="w-5 h-5" />
        وصفة المنتج (المواد الخام)
      </Label>
-     <p className="text-gray-500 text-sm mb-3">اختر المواد الخام اللازمة لتحضير الطبق مع الكميات</p>
+     <p className="text-gray-500 text-sm mb-3">اختر المواد الخام اللازمة لتحضير المشروب مع الكميات</p>
      
     {canManageMenu && rawItems.length > 0 ? (
        <>
@@ -1464,7 +1473,7 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
                  />
                  <label htmlFor={`raw-step2-${raw.id}`} className="text-gray-600 flex-1 cursor-pointer">
                    <span>{raw.nameAr}</span>
-                   <span className="text-gray-500 text-xs mr-2">({raw.unitCost.toFixed(2)} ريال/{raw.unit})</span>
+                   <span className="text-gray-500 text-xs mr-2">({raw.unitCost.toFixed(2)} <SarIcon size={10} />/{raw.unit})</span>
                  </label>
                  {isSelected && (
                    <div className="flex items-center gap-2">
@@ -1549,7 +1558,7 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
                        {breakdown.map((item, idx) => (
                          <div key={idx} className="flex justify-between text-gray-400">
                            <span>{item.name} ({item.quantity} {item.unit})</span>
-                           <span>{item.cost.toFixed(2)} ريال</span>
+                           <span>{item.cost.toFixed(2)} <SarIcon size={10} /></span>
                          </div>
                        ))}
                      </div>
@@ -1558,16 +1567,16 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
                    <div className="border-t border-green-500/20 pt-3 space-y-2">
                      <div className="flex justify-between items-center">
                        <span className="text-gray-300">تكلفة الوصفة (COGS):</span>
-                       <span className="text-green-400 font-bold" data-testid="text-recipe-cost">{totalCost.toFixed(2)} ريال</span>
+                       <span className="text-green-400 font-bold" data-testid="text-recipe-cost">{totalCost.toFixed(2)} <SarIcon size={11} /></span>
                      </div>
                      <div className="flex justify-between items-center">
                        <span className="text-gray-300">سعر البيع:</span>
-                       <span className="text-white font-bold">{sellingPrice.toFixed(2)} ريال</span>
+                       <span className="text-white font-bold">{sellingPrice.toFixed(2)} <SarIcon size={11} /></span>
                      </div>
                      <div className="flex justify-between items-center">
                        <span className="text-gray-300">هامش الربح:</span>
                        <span className={`font-bold ${grossProfit >= 0 ? 'text-green-500' : 'text-red-500'}`} data-testid="text-profit-margin">
-                         {grossProfit.toFixed(2)} ريال ({profitMargin.toFixed(1)}%)
+                         {grossProfit.toFixed(2)} <SarIcon size={11} /> ({profitMargin.toFixed(1)}%)
                        </span>
                      </div>
                    </div>
@@ -1624,7 +1633,7 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
          className="bg-gradient-to-r from-green-500 to-green-700"
          data-testid="button-submit"
        >
-         {createItemMutation.isPending ? "جاري الإضافة..." : "إضافة الطبق"}
+         {createItemMutation.isPending ? "جاري الإضافة..." : "إضافة المشروب"}
        </Button>
      </div>
    </div>
@@ -1659,7 +1668,7 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
  {isLoading ? (
  <div className="text-center text-primary py-12">
  <Coffee className="w-12 h-12 animate-spin mx-auto mb-4" />
- <p>{isFood ? 'جاري تحميل المأكولات...' : 'جاري تحميل الأطباق...'}</p>
+ <p>{isFood ? 'جاري تحميل المأكولات...' : 'جاري تحميل المشروبات...'}</p>
  </div>
  ) : (
  Object.entries(categorizedItems).map(([category, items]) => (
@@ -1693,7 +1702,7 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
  <p className="text-gray-400 text-sm">{item.nameEn}</p>
  <div className="flex items-center gap-2 mt-1">
  <span className="text-accent font-bold" data-testid={`text-price-${item.id}`}>
- {parseFloat(String(item.price)).toFixed(2)} ريال
+ {parseFloat(String(item.price)).toFixed(2)} <SarIcon size={11} />
  </span>
  {item.coffeeStrength && item.coffeeStrength !== "classic" && (
  <Badge variant="outline" className="text-xs border-gray-300 text-gray-400">
@@ -1830,7 +1839,7 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
  <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
  <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-2xl max-h-[90vh] overflow-y-auto">
  <DialogHeader>
- <DialogTitle className="text-accent">تعديل الطبق</DialogTitle>
+ <DialogTitle className="text-accent">تعديل المشروب</DialogTitle>
  </DialogHeader>
  {editingItem && (
  <form onSubmit={handleSubmitEditItem} className="space-y-4">
@@ -1960,7 +1969,7 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
  </div>
  </div>
 <div>
-<Label className="text-gray-300">{tc("صور الطبق (حتى 5 صور)", "Item Photos (up to 5)")}</Label>
+<Label className="text-gray-300">{tc("صور المشروب (حتى 5 صور)", "Item Photos (up to 5)")}</Label>
 <div className="mt-2 space-y-2">
   <div className="flex flex-wrap gap-2">
     {editImageUrls.map((url, idx) => (
@@ -2080,8 +2089,9 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
                      <button type="button" onClick={() => { setEditingAddonImageIdx(idx); setImageLibraryContext("edit-addon"); setIsImageLibraryOpen(true); }} className="w-8 h-8 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center shrink-0 overflow-hidden hover:border-accent/50 transition-colors" data-testid={`button-edit-addon-img-${idx}`}>
                        {addon.imageUrl ? <img src={addon.imageUrl.startsWith('/') ? addon.imageUrl : '/' + addon.imageUrl} className="w-full h-full object-cover rounded-lg" alt="" /> : <Plus className="w-3 h-3 text-gray-400" />}
                      </button>
-                     <Input type="text" placeholder="اسم الخيار" value={addon.nameAr} onChange={(e) => { const n = [...editableAddons]; n[idx] = { ...n[idx], nameAr: e.target.value }; setEditableAddons(n); }} className="bg-white border-gray-300 text-gray-900 flex-1 h-8 text-sm" data-testid={`input-edit-addon-name-${idx}`} />
-                     <Input type="number" placeholder="السعر" value={addon.price} onChange={(e) => { const n = [...editableAddons]; n[idx] = { ...n[idx], price: parseFloat(e.target.value) || 0 }; setEditableAddons(n); }} className="bg-white border-gray-300 text-gray-900 w-20 h-8 text-sm" data-testid={`input-edit-addon-price-${idx}`} />
+                     <Input type="text" placeholder={tc("اسم الخيار (عربي)", "Option name (AR)")} value={addon.nameAr} onChange={(e) => { const n = [...editableAddons]; n[idx] = { ...n[idx], nameAr: e.target.value }; setEditableAddons(n); }} className="bg-white border-gray-300 text-gray-900 flex-1 h-8 text-sm" data-testid={`input-edit-addon-name-${idx}`} />
+                     <Input type="text" placeholder={tc("الاسم (إنجليزي)", "Option name (EN)")} value={addon.nameEn || ''} onChange={(e) => { const n = [...editableAddons]; n[idx] = { ...n[idx], nameEn: e.target.value }; setEditableAddons(n); }} className="bg-white border-gray-300 text-gray-900 flex-1 h-8 text-sm" dir="ltr" data-testid={`input-edit-addon-name-en-${idx}`} />
+                     <Input type="number" placeholder={tc("السعر", "Price")} value={addon.price} onChange={(e) => { const n = [...editableAddons]; n[idx] = { ...n[idx], price: parseFloat(e.target.value) || 0 }; setEditableAddons(n); }} className="bg-white border-gray-300 text-gray-900 w-20 h-8 text-sm" data-testid={`input-edit-addon-price-${idx}`} />
                      <button type="button" onClick={() => setEditableAddons(editableAddons.filter((_, i) => i !== idx))} className="text-red-400 hover:text-red-600 shrink-0" data-testid={`button-delete-addon-${idx}`}><X className="w-4 h-4" /></button>
                    </div>
                  ); })}
@@ -2096,8 +2106,9 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
                <button type="button" onClick={() => { setEditingAddonImageIdx(idx); setImageLibraryContext("edit-addon"); setIsImageLibraryOpen(true); }} className="w-10 h-10 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center shrink-0 overflow-hidden hover:border-accent/50 transition-colors" data-testid={`button-edit-addon-img-${idx}`}>
                  {addon.imageUrl ? <img src={addon.imageUrl.startsWith('/') ? addon.imageUrl : '/' + addon.imageUrl} className="w-full h-full object-cover rounded-lg" alt="" /> : <Plus className="w-3 h-3 text-gray-500" />}
                </button>
-               <Input type="text" placeholder="اسم الإضافة" value={addon.nameAr} onChange={(e) => { const n = [...editableAddons]; n[idx] = { ...n[idx], nameAr: e.target.value }; setEditableAddons(n); }} className="bg-gray-50 border-gray-300 text-gray-900 flex-1" data-testid={`input-edit-addon-name-${idx}`} />
-               <Input type="number" placeholder="السعر" value={addon.price} onChange={(e) => { const n = [...editableAddons]; n[idx] = { ...n[idx], price: parseFloat(e.target.value) || 0 }; setEditableAddons(n); }} className="bg-gray-50 border-gray-300 text-gray-900 w-20" data-testid={`input-edit-addon-price-${idx}`} />
+               <Input type="text" placeholder={tc("اسم الإضافة (عربي)", "Addon name (AR)")} value={addon.nameAr} onChange={(e) => { const n = [...editableAddons]; n[idx] = { ...n[idx], nameAr: e.target.value }; setEditableAddons(n); }} className="bg-gray-50 border-gray-300 text-gray-900 flex-1" data-testid={`input-edit-addon-name-${idx}`} />
+               <Input type="text" placeholder={tc("الاسم (إنجليزي)", "Addon name (EN)")} value={addon.nameEn || ''} onChange={(e) => { const n = [...editableAddons]; n[idx] = { ...n[idx], nameEn: e.target.value }; setEditableAddons(n); }} className="bg-gray-50 border-gray-300 text-gray-900 flex-1" dir="ltr" data-testid={`input-edit-addon-name-en-${idx}`} />
+               <Input type="number" placeholder={tc("السعر", "Price")} value={addon.price} onChange={(e) => { const n = [...editableAddons]; n[idx] = { ...n[idx], price: parseFloat(e.target.value) || 0 }; setEditableAddons(n); }} className="bg-gray-50 border-gray-300 text-gray-900 w-20" data-testid={`input-edit-addon-price-${idx}`} />
                <Button type="button" size="sm" variant="outline" onClick={() => setEditableAddons(editableAddons.filter((_, i) => i !== idx))} className="border-red-500/30 text-red-500 shrink-0" data-testid={`button-delete-addon-${idx}`}><X className="w-4 h-4" /></Button>
              </div>
              <div className="flex gap-1">
@@ -2151,7 +2162,7 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
            </select>
            <div className="flex items-center gap-1 shrink-0">
              <Input type="number" min={0} step={0.5} placeholder="سعره" value={bItem.customPrice} onChange={(e) => { const n = [...editBundledItems]; n[secIdx].items[itemIdx] = {...n[secIdx].items[itemIdx], customPrice: parseFloat(e.target.value) || 0}; setEditBundledItems(n); }} className="bg-white border-gray-300 text-gray-900 w-20 h-8 text-sm" data-testid={`input-edit-bundle-price-${secIdx}-${itemIdx}`} />
-             <span className="text-xs text-gray-500">ر.س</span>
+             <SarIcon size={11} />
              {bItem.customPrice === 0 && bItem.productId && <span className="text-xs bg-green-100 text-green-700 px-1 rounded">مجاني</span>}
            </div>
            <button type="button" onClick={() => { const n = [...editBundledItems]; n[secIdx].items = n[secIdx].items.filter((_, i) => i !== itemIdx); setEditBundledItems(n); }} className="text-red-400 hover:text-red-600 shrink-0" data-testid={`btn-del-edit-bundle-item-${secIdx}-${itemIdx}`}><X className="w-3 h-3" /></button>
@@ -2162,6 +2173,9 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
    ))}
    <Button type="button" size="sm" variant="outline" onClick={() => setEditBundledItems([...editBundledItems, { sectionTitle: '', selectionType: 'single', minSelectable: 0, maxSelectable: 1, items: [] }])} className="border-purple-400/40 text-purple-600 w-full" data-testid="btn-add-edit-bundle-section"><Plus className="w-4 h-4 ml-1" />إضافة قسم منتجات مصاحبة</Button>
  </div>
+
+{/* Advanced Addon Groups Section - Edit */}
+<AddonGroupsEditor value={editAddonGroups} onChange={setEditAddonGroups} />
 
 {/* Reservation Section - Edit */}
 <div className="space-y-2 border border-amber-200 rounded-lg p-3 bg-amber-50/30">
@@ -2225,7 +2239,7 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
  className="bg-gradient-to-r from-blue-500 to-blue-700"
  data-testid="button-edit-submit"
  >
- {updateItemMutation.isPending ? "جاري التحديث..." : "تحديث الطبق"}
+ {updateItemMutation.isPending ? "جاري التحديث..." : "تحديث المشروب"}
  </Button>
  </div>
  </form>
@@ -2251,7 +2265,7 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
      
      <div className="space-y-4 py-4">
        <div className="bg-gray-50 p-3 rounded-lg border border-green-500/20">
-         <p className="text-gray-400 text-sm">سعر البيع: <span className="text-accent font-bold">{editingRecipeItem?.price} ريال</span></p>
+         <p className="text-gray-400 text-sm">سعر البيع: <span className="text-accent font-bold">{editingRecipeItem?.price} <SarIcon size={11} /></span></p>
        </div>
        
        <div>
@@ -2285,7 +2299,7 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
                  />
                  <label htmlFor={`recipe-edit-${raw.id}`} className="text-gray-600 flex-1 cursor-pointer">
                    <span>{raw.nameAr}</span>
-                   <span className="text-gray-500 text-xs mr-2">({raw.unitCost.toFixed(2)} ريال/{raw.unit})</span>
+                   <span className="text-gray-500 text-xs mr-2">({raw.unitCost.toFixed(2)} <SarIcon size={10} />/{raw.unit})</span>
                  </label>
                  {isSelected && (
                    <div className="flex items-center gap-2">
@@ -2350,7 +2364,7 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
                        {breakdown.map((item, idx) => (
                          <div key={idx} className="flex justify-between text-gray-400">
                            <span>{item.name} ({item.quantity} {item.unit})</span>
-                           <span>{item.cost.toFixed(2)} ريال</span>
+                           <span>{item.cost.toFixed(2)} <SarIcon size={10} /></span>
                          </div>
                        ))}
                      </div>
@@ -2359,16 +2373,16 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
                    <div className="border-t border-green-500/20 pt-3 space-y-2">
                      <div className="flex justify-between items-center">
                        <span className="text-gray-300">تكلفة الوصفة (COGS):</span>
-                       <span className="text-green-400 font-bold">{totalCost.toFixed(2)} ريال</span>
+                       <span className="text-green-400 font-bold">{totalCost.toFixed(2)} <SarIcon size={11} /></span>
                      </div>
                      <div className="flex justify-between items-center">
                        <span className="text-gray-300">سعر البيع:</span>
-                       <span className="text-white font-bold">{sellingPrice.toFixed(2)} ريال</span>
+                       <span className="text-white font-bold">{sellingPrice.toFixed(2)} <SarIcon size={11} /></span>
                      </div>
                      <div className="flex justify-between items-center">
                        <span className="text-gray-300">هامش الربح:</span>
                        <span className={`font-bold ${grossProfit >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                         {grossProfit.toFixed(2)} ريال ({profitMargin.toFixed(1)}%)
+                         {grossProfit.toFixed(2)} <SarIcon size={11} /> ({profitMargin.toFixed(1)}%)
                        </span>
                      </div>
                    </div>
@@ -2413,7 +2427,7 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
  <AlertDialogHeader>
  <AlertDialogTitle className="text-red-500">تأكيد الحذف</AlertDialogTitle>
  <AlertDialogDescription className="text-gray-300">
- هل أنت متأكد من حذف هذا الطبق؟ لا يمكن التراجع عن هذا الإجراء.
+ هل أنت متأكد من حذف هذا المشروب؟ لا يمكن التراجع عن هذا الإجراء.
  </AlertDialogDescription>
  </AlertDialogHeader>
  <AlertDialogFooter>
@@ -2469,7 +2483,7 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
  </AlertDialog>
 {/* Category Reorder Dialog */}
 <Dialog open={isCategoryReorderOpen} onOpenChange={setIsCategoryReorderOpen}>
-  <DialogContent className="bg-card border-border text-foreground max-w-sm" dir="rtl">
+  <DialogContent className="bg-card border-border text-foreground max-w-sm">
     <DialogHeader>
       <DialogTitle className="flex items-center gap-2 text-foreground">
         <ListOrdered className="w-5 h-5 text-primary" />

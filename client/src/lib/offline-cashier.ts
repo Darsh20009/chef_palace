@@ -1,8 +1,8 @@
 // Offline Cashier Utilities
   // Handles caching menu items and queuing orders when offline
 
-  const OFFLINE_MENU_KEY = 'chefsplace-offline-menu';
-  const OFFLINE_CONFIG_KEY = 'chefsplace-offline-config';
+  const OFFLINE_MENU_KEY = 'qirox-offline-menu';
+  const OFFLINE_CONFIG_KEY = 'qirox-offline-config';
   const OFFLINE_PENDING_ORDERS_KEY = 'qirox-pending-orders';
 
   // ---- Menu Caching ----

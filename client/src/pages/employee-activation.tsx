@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { UserPlus, Eye, EyeOff } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useTranslate } from "@/lib/useTranslate";
-const chefsplaceLogoStaff = "/logo.png";
+import qiroxLogoStaff from "@assets/qirox-logo-customer.png";
 
 export default function EmployeeActivation() {
   const [, setLocation] = useLocation();
@@ -71,11 +71,11 @@ export default function EmployeeActivation() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4" dir="rtl">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md border border-border bg-card shadow-xl">
         <CardHeader className="space-y-3 text-center pb-4">
           <div className="flex justify-center mb-1">
-            <img src={chefsplaceLogoStaff} alt="مكان الشيف البخاري" className="h-12 object-contain" />
+            <img src={qiroxLogoStaff} alt="مكان الشيف" className="h-12 object-contain" />
           </div>
           <div className="text-center">
             <CardTitle className="text-2xl font-bold text-foreground">{tc("تفعيل حساب موظف جديد", "Activate New Employee Account")}</CardTitle>

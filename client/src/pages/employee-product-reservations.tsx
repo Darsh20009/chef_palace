@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import SarIcon from "@/components/sar-icon";
 import { queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useTranslation } from "react-i18next";
+import { useTranslate } from "@/lib/useTranslate";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
 import {
   Calendar, Clock, Phone, User, Package, CheckCircle2, XCircle,
   Clock3, Search, RefreshCw, ChevronDown, ChevronUp, Filter,
@@ -16,43 +20,49 @@ import {
 
 type ResStatus = 'pending_payment' | 'pending_confirmation' | 'confirmed' | 'rejected' | 'cancelled' | 'completed';
 
-const STATUS_CONFIG: Record<ResStatus, { label: string; color: string; icon: any }> = {
-  pending_payment:      { label: 'بانتظار الدفع',         color: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300', icon: CreditCard },
-  pending_confirmation: { label: 'بانتظار التأكيد',       color: 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300', icon: Clock3 },
-  confirmed:            { label: 'مؤكد',                  color: 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300', icon: CheckCircle2 },
-  rejected:             { label: 'مرفوض',                 color: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300', icon: XCircle },
-  cancelled:            { label: 'ملغى',                  color: 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800/30 dark:text-gray-400', icon: XCircle },
-  completed:            { label: 'مكتمل',                 color: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300', icon: CheckCircle2 },
+const STATUS_CONFIG: Record<ResStatus, { labelAr: string; labelEn: string; color: string; icon: any }> = {
+  pending_payment:      { labelAr: 'بانتظار الدفع',    labelEn: 'Awaiting Payment',   color: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300', icon: CreditCard },
+  pending_confirmation: { labelAr: 'بانتظار التأكيد',  labelEn: 'Pending Confirmation', color: 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300', icon: Clock3 },
+  confirmed:            { labelAr: 'مؤكد',              labelEn: 'Confirmed',           color: 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300', icon: CheckCircle2 },
+  rejected:             { labelAr: 'مرفوض',             labelEn: 'Rejected',            color: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300', icon: XCircle },
+  cancelled:            { labelAr: 'ملغى',               labelEn: 'Cancelled',           color: 'bg-gray-100 text-gray-600 border-gray-200 dark:bg-gray-800/30 dark:text-gray-400', icon: XCircle },
+  completed:            { labelAr: 'مكتمل',             labelEn: 'Completed',           color: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300', icon: CheckCircle2 },
 };
 
-function formatDate(dateStr: string) {
+function formatDate(dateStr: string, isAr: boolean) {
   try {
-    return new Date(dateStr).toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    return new Date(dateStr).toLocaleDateString(isAr ? 'ar-SA' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   } catch { return dateStr; }
 }
 
-function ReservationCard({ order, onStatusChange }: { order: any; onStatusChange: (id: string, status: ResStatus) => void }) {
+function ReservationCard({ order, onStatusChange, isAr, tc }: {
+  order: any;
+  onStatusChange: (id: string, status: ResStatus) => void;
+  isAr: boolean;
+  tc: (ar: string, en: string) => string;
+}) {
   const [expanded, setExpanded] = useState(false);
   const resStatus: ResStatus = order.productReservationStatus || 'pending_payment';
   const statusCfg = STATUS_CONFIG[resStatus];
   const StatusIcon = statusCfg.icon;
+  const statusLabel = isAr ? statusCfg.labelAr : statusCfg.labelEn;
 
-  const nextActions: { status: ResStatus; label: string; variant: 'default' | 'destructive' | 'outline' }[] = (() => {
+  const nextActions: { status: ResStatus; labelAr: string; labelEn: string; variant: 'default' | 'destructive' | 'outline' }[] = (() => {
     switch (resStatus) {
       case 'pending_payment':
         return [
-          { status: 'pending_confirmation', label: 'تأكيد الدفع →', variant: 'default' },
-          { status: 'cancelled', label: 'إلغاء', variant: 'destructive' },
+          { status: 'pending_confirmation', labelAr: 'تأكيد الدفع →', labelEn: 'Confirm Payment →', variant: 'default' },
+          { status: 'cancelled', labelAr: 'إلغاء', labelEn: 'Cancel', variant: 'destructive' },
         ];
       case 'pending_confirmation':
         return [
-          { status: 'confirmed', label: '✓ تأكيد الحجز', variant: 'default' },
-          { status: 'rejected', label: '✗ رفض', variant: 'destructive' },
+          { status: 'confirmed', labelAr: '✓ تأكيد الحجز', labelEn: '✓ Confirm Booking', variant: 'default' },
+          { status: 'rejected', labelAr: '✗ رفض', labelEn: '✗ Reject', variant: 'destructive' },
         ];
       case 'confirmed':
         return [
-          { status: 'completed', label: 'إكمال', variant: 'default' },
-          { status: 'cancelled', label: 'إلغاء', variant: 'destructive' },
+          { status: 'completed', labelAr: 'إكمال', labelEn: 'Complete', variant: 'default' },
+          { status: 'cancelled', labelAr: 'إلغاء', labelEn: 'Cancel', variant: 'destructive' },
         ];
       default:
         return [];
@@ -70,7 +80,7 @@ function ReservationCard({ order, onStatusChange }: { order: any; onStatusChange
           </div>
           <Badge className={`${statusCfg.color} border text-xs font-bold gap-1 px-2 py-1`}>
             <StatusIcon className="w-3 h-3" />
-            {statusCfg.label}
+            {statusLabel}
           </Badge>
         </div>
 
@@ -78,7 +88,7 @@ function ReservationCard({ order, onStatusChange }: { order: any; onStatusChange
           {order.productReservationDate && (
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <Calendar className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-              <span className="truncate">{formatDate(order.productReservationDate)}</span>
+              <span className="truncate">{formatDate(order.productReservationDate, isAr)}</span>
             </div>
           )}
           {order.productReservationFromTime && (
@@ -95,7 +105,7 @@ function ReservationCard({ order, onStatusChange }: { order: any; onStatusChange
           )}
           <div className="flex items-center gap-1.5 text-muted-foreground">
             <ShoppingBag className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-            <span className="font-semibold text-foreground">{(order.totalAmount || 0).toFixed(2)} ر.س</span>
+            <span className="font-semibold text-foreground">{(order.totalAmount || 0).toFixed(2)} <SarIcon size={12} /></span>
           </div>
         </div>
 
@@ -104,7 +114,7 @@ function ReservationCard({ order, onStatusChange }: { order: any; onStatusChange
           className="w-full flex items-center justify-between text-xs text-muted-foreground hover:text-foreground transition-colors py-1 border-t border-border/50"
           onClick={() => setExpanded(v => !v)}
         >
-          <span>المنتجات ({Array.isArray(order.items) ? order.items.length : 0})</span>
+          <span>{tc('المنتجات', 'Products')} ({Array.isArray(order.items) ? order.items.length : 0})</span>
           {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
         </button>
 
@@ -116,10 +126,16 @@ function ReservationCard({ order, onStatusChange }: { order: any; onStatusChange
                 <div key={idx} className="flex items-start gap-2 bg-muted/40 rounded-lg p-2">
                   <Package className="w-3.5 h-3.5 text-amber-500 mt-0.5 shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold">{item.nameAr || item.coffeeItem?.nameAr || 'منتج'} × {item.quantity}</p>
-                    {pkg && <p className="text-xs text-muted-foreground">الباقة: {pkg.packageName}{pkg.maxGuests ? ` · حتى ${pkg.maxGuests} أشخاص` : ''}</p>}
+                    <p className="text-xs font-semibold">
+                      {isAr ? (item.nameAr || item.coffeeItem?.nameAr || tc('منتج', 'Product')) : (item.nameEn || item.coffeeItem?.nameEn || item.nameAr || item.coffeeItem?.nameAr || tc('منتج', 'Product'))} × {item.quantity}
+                    </p>
+                    {pkg && (
+                      <p className="text-xs text-muted-foreground">
+                        {tc('الباقة', 'Package')}: {pkg.packageName}{pkg.maxGuests ? ` · ${tc('حتى', 'up to')} ${pkg.maxGuests} ${tc('أشخاص', 'guests')}` : ''}
+                      </p>
+                    )}
                   </div>
-                  <span className="text-xs font-bold text-amber-600">{((item.price || 0) * (item.quantity || 1)).toFixed(2)} ر.س</span>
+                  <span className="text-xs font-bold text-amber-600">{((item.price || 0) * (item.quantity || 1)).toFixed(2)} <SarIcon size={10} /></span>
                 </div>
               );
             })}
@@ -138,7 +154,7 @@ function ReservationCard({ order, onStatusChange }: { order: any; onStatusChange
                 onClick={() => onStatusChange(order.id, action.status)}
                 data-testid={`button-reservation-${action.status}-${order.id}`}
               >
-                {action.label}
+                {isAr ? action.labelAr : action.labelEn}
               </Button>
             ))}
           </div>
@@ -150,6 +166,9 @@ function ReservationCard({ order, onStatusChange }: { order: any; onStatusChange
 
 export default function EmployeeProductReservations() {
   const { toast } = useToast();
+  const { i18n } = useTranslation();
+  const tc = useTranslate();
+  const isAr = i18n.language !== 'en';
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
@@ -161,14 +180,14 @@ export default function EmployeeProductReservations() {
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: ResStatus }) => {
       const res = await apiRequest('PATCH', `/api/product-reservations/${id}/status`, { productReservationStatus: status });
-      if (!res.ok) throw new Error('فشل تحديث الحالة');
+      if (!res.ok) throw new Error(tc('فشل تحديث الحالة', 'Failed to update status'));
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/product-reservations'] });
-      toast({ title: 'تم تحديث حالة الحجز' });
+      toast({ title: tc('تم تحديث حالة الحجز', 'Reservation status updated') });
     },
-    onError: (err: any) => toast({ title: 'خطأ', description: err.message, variant: 'destructive' }),
+    onError: (err: any) => toast({ title: tc('خطأ', 'Error'), description: err.message, variant: 'destructive' }),
   });
 
   const filtered = reservations.filter(r => {
@@ -187,13 +206,13 @@ export default function EmployeeProductReservations() {
   }, {} as Record<string, number>);
 
   return (
-    <div className="min-h-screen bg-background pb-20" dir="rtl">
+    <div className="min-h-screen bg-background pb-20" dir={isAr ? 'rtl' : 'ltr'}>
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border">
         <div className="px-4 py-3 space-y-3 max-w-2xl mx-auto">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-lg font-black">🗓️ حجوزات المنتجات</h1>
-              <p className="text-xs text-muted-foreground">{reservations.length} حجز إجمالي</p>
+              <h1 className="text-lg font-black">🗓️ {tc('حجوزات المنتجات', 'Product Reservations')}</h1>
+              <p className="text-xs text-muted-foreground">{reservations.length} {tc('حجز إجمالي', 'total reservations')}</p>
             </div>
             <Button size="sm" variant="outline" onClick={() => refetch()} data-testid="button-refresh-reservations">
               <RefreshCw className="w-4 h-4" />
@@ -201,12 +220,12 @@ export default function EmployeeProductReservations() {
           </div>
 
           <div className="relative">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className={`absolute ${isAr ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground`} />
             <Input
-              placeholder="بحث برقم الطلب أو الاسم أو الجوال..."
+              placeholder={tc('بحث برقم الطلب أو الاسم أو الجوال...', 'Search by order number, name or phone...')}
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="pr-9 h-9 text-sm"
+              className={`${isAr ? 'pr-9' : 'pl-9'} h-9 text-sm`}
               data-testid="input-search-reservations"
             />
           </div>
@@ -217,7 +236,7 @@ export default function EmployeeProductReservations() {
               className={`shrink-0 text-xs px-3 py-1.5 rounded-full border font-medium transition-colors ${statusFilter === 'all' ? 'bg-primary text-primary-foreground border-primary' : 'bg-background border-border text-muted-foreground hover:text-foreground'}`}
               data-testid="filter-all"
             >
-              الكل ({reservations.length})
+              {tc('الكل', 'All')} ({reservations.length})
             </button>
             {(Object.entries(STATUS_CONFIG) as [ResStatus, typeof STATUS_CONFIG[ResStatus]][]).map(([k, cfg]) => (
               <button
@@ -226,7 +245,7 @@ export default function EmployeeProductReservations() {
                 className={`shrink-0 text-xs px-3 py-1.5 rounded-full border font-medium transition-colors ${statusFilter === k ? 'bg-primary text-primary-foreground border-primary' : 'bg-background border-border text-muted-foreground hover:text-foreground'}`}
                 data-testid={`filter-${k}`}
               >
-                {cfg.label} {counts[k] > 0 ? `(${counts[k]})` : ''}
+                {isAr ? cfg.labelAr : cfg.labelEn} {counts[k] > 0 ? `(${counts[k]})` : ''}
               </button>
             ))}
           </div>
@@ -241,19 +260,28 @@ export default function EmployeeProductReservations() {
         ) : filtered.length === 0 ? (
           <div className="text-center py-16 text-muted-foreground">
             <Calendar className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p className="font-semibold">{search || statusFilter !== 'all' ? 'لا توجد نتائج مطابقة' : 'لا توجد حجوزات منتجات بعد'}</p>
-            <p className="text-xs mt-1">ستظهر الحجوزات هنا عند إنشائها من العملاء</p>
+            <p className="font-semibold">
+              {search || statusFilter !== 'all'
+                ? tc('لا توجد نتائج مطابقة', 'No matching results')
+                : tc('لا توجد حجوزات منتجات بعد', 'No product reservations yet')}
+            </p>
+            <p className="text-xs mt-1">
+              {tc('ستظهر الحجوزات هنا عند إنشائها من العملاء', 'Reservations will appear here when created by customers')}
+            </p>
           </div>
         ) : (
           filtered.map(order => (
             <ReservationCard
               key={order.id}
               order={order}
+              isAr={isAr}
+              tc={tc}
               onStatusChange={(id, status) => updateStatusMutation.mutate({ id, status })}
             />
           ))
         )}
       </div>
+      <MobileBottomNav />
     </div>
   );
 }

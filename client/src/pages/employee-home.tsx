@@ -5,12 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import {
   Coffee, LogOut, ShoppingCart, ClipboardList, User, ChefHat,
   Warehouse, Eye, Calendar, FileText, BarChart3, Lock, Utensils,
-  ChevronLeft, Car, Copy
+  ChevronLeft, Car, Copy, Sparkles
 } from "lucide-react";
 import type { Employee } from "@shared/schema";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { useTranslate } from "@/lib/useTranslate";
-const chefsplaceLogo = "/logo.png";
+import qiroxLogo from "@assets/qirox-logo-customer.png";
 
 export default function EmployeeHome() {
   const [, setLocation] = useLocation();
@@ -53,16 +53,18 @@ export default function EmployeeHome() {
   const isManager = employee.role === "manager" || employee.role === "admin";
 
   const employeeQuickAccess = [
+    { title: tc("المساعد الذكي", "AI Assistant"), icon: Sparkles, path: "/employee/ai", testId: "button-brand-ai", highlight: true },
     { title: tc("نقطة البيع", "Point of Sale"), icon: ShoppingCart, path: "/employee/pos", testId: "button-pos" },
     { title: tc("الطلبات", "Orders"), icon: ClipboardList, path: "/employee/orders", testId: "button-orders" },
     { title: tc("الحضور", "Attendance"), icon: Calendar, path: "/employee/attendance", testId: "button-attendance" },
     { title: tc("طلب إجازة", "Leave Request"), icon: FileText, path: "/employee/leave-request", testId: "button-leave" },
     { title: tc("المطبخ", "Kitchen"), icon: ChefHat, path: "/employee/kitchen", testId: "button-kitchen" },
     { title: tc("ملفي الشخصي", "My Profile"), icon: User, path: "/employee/dashboard", testId: "button-hr" },
+    { title: tc("📖 دليل النظام", "📖 System Guide"), icon: FileText, path: "/guide", testId: "button-guide" },
   ];
 
   const managerAccess = [
-    { title: tc("إدارة الأطباق", "Dishes Menu"), icon: Coffee, path: "/employee/menu-management", testId: "button-menu-mgmt" },
+    { title: tc("إدارة المشروبات", "Drinks Menu"), icon: Coffee, path: "/employee/menu-management", testId: "button-menu-mgmt" },
     { title: tc("إدارة الطعام", "Food Menu"), icon: Utensils, path: "/employee/menu-management?type=food", testId: "button-food-mgmt" },
     { title: tc("المواد الخام", "Ingredients"), icon: Warehouse, path: "/employee/ingredients", testId: "button-ingredients-mgmt" },
     { title: tc("لوحة التحكم", "Dashboard"), icon: BarChart3, path: "/employee/dashboard", testId: "button-dashboard" },
@@ -73,13 +75,13 @@ export default function EmployeeHome() {
   const initials = (employee.fullName || "?").split(" ").map((w: string) => w[0]).slice(0, 2).join("");
 
   return (
-    <div className="min-h-screen bg-background pb-nav" dir="rtl">
+    <div className="min-h-screen bg-background pb-nav">
 
       {/* Header */}
       <div className="bg-card border-b border-border px-4 py-4">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src={chefsplaceLogo} alt="مكان الشيف البخاري" className="w-9 h-9 object-contain rounded-lg" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+            <img src={qiroxLogo} alt="مكان الشيف" className="w-9 h-9 object-contain rounded-lg" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
             <div>
               <p className="text-xs text-muted-foreground leading-none mb-0.5">مكان الشيف البخاري</p>
               <h1 className="text-sm font-bold text-foreground leading-none">{tc("بوابة الموظفين", "Employee Portal")}</h1>

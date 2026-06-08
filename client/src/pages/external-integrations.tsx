@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslate } from "@/lib/useTranslate";
+import SarIcon from "@/components/sar-icon";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -49,7 +50,7 @@ export default function ExternalIntegrationsPage() {
     { id: 'toyou', nameAr: 'تويو', nameEn: 'ToYou' }
   ];
 
-  // مكان الشيف البخاري queries
+  // مكان الشيف — الإدارة queries
   const { data: qsMe, isLoading: qsMeLoading, refetch: refetchMe } = useQuery<any>({
     queryKey: ["/api/qirox-studio/me"],
     staleTime: 60000,
@@ -87,7 +88,7 @@ export default function ExternalIntegrationsPage() {
   };
 
   return (
-    <div className="p-6 space-y-8 bg-background min-h-screen" dir="rtl">
+    <div className="p-6 space-y-8 bg-background min-h-screen">
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button
@@ -106,7 +107,7 @@ export default function ExternalIntegrationsPage() {
         <Globe className="h-10 w-10 text-primary mr-auto" />
       </div>
 
-      {/* ─── مكان الشيف البخاري API Section ─── */}
+      {/* ─── مكان الشيف — الإدارة API Section ─── */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -114,8 +115,8 @@ export default function ExternalIntegrationsPage() {
               <Zap className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-foreground">مكان الشيف البخاري API</h2>
-              <p className="text-sm text-muted-foreground">{tc("مركز إدارة حساب مكان الشيف البخاري المتكامل", "Integrated مكان الشيف البخاري account management hub")}</p>
+              <h2 className="text-xl font-bold text-foreground">مكان الشيف — الإدارة API</h2>
+              <p className="text-sm text-muted-foreground">{tc("مركز إدارة حساب مكان الشيف — الإدارة المتكامل", "Integrated مكان الشيف — الإدارة account management hub")}</p>
             </div>
             {isQSConnected ? (
               <Badge className="bg-green-500/10 text-green-600 border-green-500/30 flex gap-1 items-center">
@@ -222,7 +223,7 @@ export default function ExternalIntegrationsPage() {
               <div>
                 <p className="text-xs text-muted-foreground">{tc("رصيد المحفظة", "Wallet Balance")}</p>
                 <p className="text-2xl font-bold text-foreground" data-testid="qs-stat-wallet">
-                  {qsWalletLoading ? "..." : `${qsWallet?.balance ?? 0} ر.س`}
+                  {qsWalletLoading ? "..." : <>{qsWallet?.balance ?? 0} <SarIcon size={14} /></>}
                 </p>
               </div>
             </CardContent>
@@ -240,7 +241,7 @@ export default function ExternalIntegrationsPage() {
                 <div>
                   <p className="text-sm text-muted-foreground">{tc("إجمالي الإيرادات المُفوترة", "Total Invoiced Revenue")}</p>
                   <p className="text-3xl font-bold text-green-700 dark:text-green-400" data-testid="qs-stat-revenue">
-                    {qsStats?.invoices?.totalRevenue?.toLocaleString("ar-SA") ?? 0} <span className="text-base">ر.س</span>
+                    {qsStats?.invoices?.totalRevenue?.toLocaleString("ar-SA") ?? 0} <SarIcon size={14} />
                   </p>
                 </div>
               </div>
@@ -277,7 +278,7 @@ export default function ExternalIntegrationsPage() {
                     <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-muted/50 text-sm">
                       <span className="font-medium">#{order.id || i+1}</span>
                       <span className="text-muted-foreground">{order.status || "—"}</span>
-                      <span className="font-semibold">{order.total ?? "—"} ر.س</span>
+                      <span className="font-semibold">{order.total ?? "—"} <SarIcon size={11} /></span>
                     </div>
                   ))}
                 </div>
@@ -374,7 +375,7 @@ export default function ExternalIntegrationsPage() {
                   <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 text-sm">
                     <span className="font-medium">#{inv.id || inv.number || i+1}</span>
                     <span className="text-muted-foreground">{inv.clientName || inv.customer || "—"}</span>
-                    <span className="font-bold">{inv.amount ?? inv.total ?? "—"} ر.س</span>
+                    <span className="font-bold">{inv.amount ?? inv.total ?? "—"} <SarIcon size={11} /></span>
                     <Badge
                       className={`text-xs ${inv.status === 'paid' ? 'bg-green-500/10 text-green-600' : 'bg-yellow-500/10 text-yellow-600'}`}
                     >
@@ -401,7 +402,7 @@ export default function ExternalIntegrationsPage() {
                   <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-muted/50 text-sm">
                     <span className="text-muted-foreground">{tx.description || tx.type || `معاملة ${i+1}`}</span>
                     <span className={`font-bold ${tx.amount > 0 ? 'text-green-600' : 'text-red-500'}`}>
-                      {tx.amount > 0 ? '+' : ''}{tx.amount} ر.س
+                      {tx.amount > 0 ? '+' : ''}{tx.amount} <SarIcon size={11} />
                     </span>
                   </div>
                 ))}

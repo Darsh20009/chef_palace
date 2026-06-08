@@ -15,6 +15,37 @@ import {
 } from "lucide-react";
 import * as XLSX from 'xlsx';
 import type { Employee } from "@shared/schema";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { MapContainer, TileLayer, Marker, Popup, Circle, Tooltip } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+
+// Fix Leaflet default marker icons in bundlers
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+});
+
+const branchIcon = L.divIcon({
+  className: "",
+  html: `<div style="background:#16a34a;color:white;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:18px;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.4);">🏪</div>`,
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
+  popupAnchor: [0, -16],
+});
+
+function makeEmployeeIcon(inside: boolean) {
+  const bg = inside ? "#16a34a" : "#dc2626";
+  return L.divIcon({
+    className: "",
+    html: `<div style="background:${bg};color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:15px;border:2px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.4);">👤</div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    popupAnchor: [0, -14],
+  });
+}
 
 interface LeaveRequest {
   id: string;
@@ -68,6 +99,8 @@ interface Branch {
   id: string;
   name?: string;
   nameAr?: string;
+  location?: { lat: number; lng: number };
+  geofenceRadius?: number;
 }
 
 export default function ManagerAttendance() {
@@ -403,7 +436,7 @@ export default function ManagerAttendance() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-background p-4" dir="rtl">
+    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-background p-4 pb-20">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -530,7 +563,7 @@ export default function ManagerAttendance() {
         {/* Monthly Report Section */}
         {activeTab === 'monthly' && (
           <div className="space-y-4">
-            <Card className="bg-white border-gray-200">
+            <Card className="bg-gradient-to-br from-background to-background border-primary/20">
               <CardContent className="p-4">
                 <div className="flex flex-wrap gap-3 items-center">
                   <div>
@@ -539,18 +572,18 @@ export default function ManagerAttendance() {
                       type="month"
                       value={selectedMonth}
                       onChange={(e) => setSelectedMonth(e.target.value)}
-                      className="bg-white border-gray-200 text-gray-900 w-44"
+                      className="bg-[#1a1410] border-primary/20 text-white w-44"
                       data-testid="input-monthly-month"
                     />
                   </div>
                   <div>
-                    <label className="text-gray-400 text-xs block mb-1">الفرع</label>
+                    <label className="text-gray-400 text-xs block mb-1">{tc("الفرع","Branch")}</label>
                     <Select value={selectedBranch} onValueChange={setSelectedBranch}>
-                      <SelectTrigger className="w-40 bg-white border-gray-200 text-gray-900" data-testid="select-monthly-branch">
-                        <SelectValue placeholder="كل الفروع" />
+                      <SelectTrigger className="w-40 bg-[#1a1410] border-primary/20 text-white" data-testid="select-monthly-branch">
+                        <SelectValue placeholder={tc("كل الفروع","All Branches")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">كل الفروع</SelectItem>
+                        <SelectItem value="all">{tc("كل الفروع","All Branches")}</SelectItem>
                         {branches.map((b) => (
                           <SelectItem key={b.id} value={b.id}>{b.nameAr || b.name}</SelectItem>
                         ))}
@@ -604,14 +637,14 @@ export default function ManagerAttendance() {
 
                 {/* Best Employee Banner */}
                 {monthlyReport.bestEmployee && (
-                  <Card className="bg-gradient-to-br from-yellow-50 to-amber-50 border-yellow-200">
+                  <Card className="bg-gradient-to-br from-yellow-900/30 to-yellow-950/20 border-yellow-500/30">
                     <CardContent className="p-4 flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center flex-shrink-0 border border-yellow-200">
-                        <Trophy className="w-6 h-6 text-yellow-600" />
+                      <div className="w-12 h-12 rounded-full bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
+                        <Trophy className="w-6 h-6 text-yellow-400" />
                       </div>
                       <div>
-                        <p className="text-yellow-700 font-bold text-lg">{monthlyReport.bestEmployee.employee?.fullName}</p>
-                        <p className="text-gray-500 text-sm">الموظف المثالي لشهر {selectedMonth}</p>
+                        <p className="text-yellow-400 font-bold text-lg">{monthlyReport.bestEmployee.employee?.fullName}</p>
+                        <p className="text-gray-400 text-sm">الموظف المثالي لشهر {selectedMonth}</p>
                         <div className="flex gap-3 mt-1 flex-wrap">
                           <span className="text-xs text-green-400 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />{monthlyReport.bestEmployee.presentDays} يوم حضور</span>
                           <span className="text-xs text-red-400 flex items-center gap-1"><XCircle className="w-3 h-3" />{monthlyReport.bestEmployee.absentDays} غياب</span>
@@ -624,10 +657,10 @@ export default function ManagerAttendance() {
                 )}
 
                 {/* Employee Ranking Table */}
-                <Card className="bg-white border-gray-200">
+                <Card className="bg-gradient-to-br from-background to-background border-primary/20">
                   <CardHeader>
-                    <CardTitle className="text-gray-900 text-base flex items-center gap-2">
-                      <Users className="w-4 h-4 text-primary" />
+                    <CardTitle className="text-accent text-base flex items-center gap-2">
+                      <Users className="w-4 h-4" />
                       ترتيب الموظفين حسب الالتزام
                     </CardTitle>
                   </CardHeader>
@@ -635,7 +668,7 @@ export default function ManagerAttendance() {
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
-                          <tr className="border-b border-gray-200 bg-gray-50">
+                          <tr className="border-b border-primary/20 bg-[#1a1410]">
                             <th className="text-right py-3 px-4 text-gray-400 font-medium">#</th>
                             <th className="text-right py-3 px-4 text-gray-400 font-medium">الموظف</th>
                             <th className="text-right py-3 px-4 text-gray-400 font-medium">أيام الحضور</th>
@@ -648,14 +681,14 @@ export default function ManagerAttendance() {
                         </thead>
                         <tbody>
                           {(monthlyReport.report || []).map((emp: any, idx: number) => (
-                            <tr key={emp.employee?.id || idx} className={`border-b border-gray-100 ${idx === 0 ? 'bg-yellow-50' : idx === 1 ? 'bg-gray-50' : idx === 2 ? 'bg-amber-50' : ''}`}>
+                            <tr key={emp.employee?.id || idx} className={`border-b border-primary/10 ${idx === 0 ? 'bg-yellow-900/10' : idx === 1 ? 'bg-gray-800/30' : idx === 2 ? 'bg-amber-900/10' : ''}`}>
                               <td className="py-3 px-4">
                                 {idx === 0 ? <Trophy className="w-4 h-4 text-yellow-400" /> :
                                  idx === 1 ? <span className="text-gray-400 font-bold">2</span> :
                                  idx === 2 ? <span className="text-amber-600 font-bold">3</span> :
                                  <span className="text-gray-500">{idx + 1}</span>}
                               </td>
-                              <td className="py-3 px-4 text-gray-900 font-medium">{emp.employee?.fullName || '-'}</td>
+                              <td className="py-3 px-4 text-white font-medium">{emp.employee?.fullName || '-'}</td>
                               <td className="py-3 px-4 text-green-400 font-bold">{emp.presentDays}</td>
                               <td className="py-3 px-4 text-red-400 font-bold">{emp.absentDays}</td>
                               <td className="py-3 px-4 text-amber-400 font-bold">{emp.lateDays}</td>
@@ -663,7 +696,7 @@ export default function ManagerAttendance() {
                               <td className="py-3 px-4 text-blue-400">{emp.totalWorkHours || 0}h</td>
                               <td className="py-3 px-4">
                                 <div className="flex items-center gap-2">
-                                  <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                  <div className="w-16 h-1.5 bg-gray-700 rounded-full overflow-hidden">
                                     <div className="h-full bg-green-500 rounded-full" style={{ width: `${emp.attendanceRate || 0}%` }} />
                                   </div>
                                   <span className={`text-xs font-bold ${(emp.attendanceRate || 0) >= 80 ? 'text-green-400' : (emp.attendanceRate || 0) >= 60 ? 'text-amber-400' : 'text-red-400'}`}>
@@ -682,7 +715,7 @@ export default function ManagerAttendance() {
             ) : (
               <div className="text-center py-12 text-gray-400">
                 <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p>اختر الشهر واضغط "عرض التقرير"</p>
+                <p>{tc("اختر الشهر واضغط \"عرض التقرير\"", "Select a month and click \"Show Report\"")}</p>
               </div>
             )}
           </div>
@@ -699,7 +732,7 @@ export default function ManagerAttendance() {
                   تنبيهات الخروج عن النطاق ({liveAlerts.length})
                 </div>
                 {liveAlerts.map(alert => (
-                  <div key={alert.id} className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                  <div key={alert.id} className="flex items-start gap-3 bg-red-950/40 border border-red-700/40 rounded-lg px-3 py-2">
                     <AlertTriangle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
                     <div className="flex-1 text-sm">
                       <span className="text-red-300 font-medium">{alert.employeeName}</span>
@@ -740,9 +773,122 @@ export default function ManagerAttendance() {
               </Button>
             </div>
 
+            {/* ── Leaflet Map ── */}
+            {(() => {
+              // Pick a branch to display: the selected one or the first with location
+              const displayBranch = selectedBranch !== 'all'
+                ? branches.find(b => b.id === selectedBranch)
+                : branches.find(b => b.location?.lat && b.location?.lng);
+              const hasEmployeesWithLoc = liveEmployees.some(e => e.lastLocation?.lat);
+              const hasBranchLoc = displayBranch?.location?.lat && displayBranch?.location?.lng;
+
+              // Compute map center: branch location, first employee, or Yanbu default
+              const center: [number, number] = hasBranchLoc
+                ? [displayBranch!.location!.lat, displayBranch!.location!.lng]
+                : hasEmployeesWithLoc
+                ? [liveEmployees[0].lastLocation.lat, liveEmployees[0].lastLocation.lng]
+                : [24.0895, 38.0618]; // ينبع
+
+              return (
+                <Card className="bg-[#1a1410] border-primary/20 overflow-hidden">
+                  <CardHeader className="py-2 px-4">
+                    <CardTitle className="text-accent text-sm flex items-center gap-2">
+                      <MapPin className="w-4 h-4" />
+                      خريطة الفرع والموظفين
+                      {hasBranchLoc && (
+                        <span className="text-xs text-gray-400 font-normal">
+                          — {displayBranch?.nameAr || displayBranch?.name}
+                          {' '}(نطاق {displayBranch?.geofenceRadius || 200}م)
+                        </span>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                  <div style={{ height: 340 }}>
+                    <MapContainer
+                      center={center}
+                      zoom={hasBranchLoc || hasEmployeesWithLoc ? 16 : 13}
+                      style={{ height: "100%", width: "100%" }}
+                      key={`${center[0]}-${center[1]}`}
+                    >
+                      <TileLayer
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                      />
+
+                      {/* Branch markers & geofence circles */}
+                      {branches.filter(b => b.location?.lat && b.location?.lng).map(branch => (
+                        <>
+                          <Marker
+                            key={`branch-marker-${branch.id}`}
+                            position={[branch.location!.lat, branch.location!.lng]}
+                            icon={branchIcon}
+                          >
+                            <Popup>
+                              <div dir="rtl" style={{ fontSize: 13 }}>
+                                <strong>🏪 {branch.nameAr || branch.name}</strong><br />
+                                نطاق الحضور: {branch.geofenceRadius || 200} متر
+                              </div>
+                            </Popup>
+                            <Tooltip direction="top" offset={[0, -16]} permanent={false}>
+                              {branch.nameAr || branch.name}
+                            </Tooltip>
+                          </Marker>
+                          <Circle
+                            key={`branch-circle-${branch.id}`}
+                            center={[branch.location!.lat, branch.location!.lng]}
+                            radius={branch.geofenceRadius || 200}
+                            pathOptions={{ color: "#16a34a", fillColor: "#16a34a", fillOpacity: 0.08, weight: 2, dashArray: "6 4" }}
+                          />
+                        </>
+                      ))}
+
+                      {/* Employee markers */}
+                      {liveEmployees.filter(e => e.lastLocation?.lat).map(emp => (
+                        <Marker
+                          key={emp.employeeId}
+                          position={[emp.lastLocation.lat, emp.lastLocation.lng]}
+                          icon={makeEmployeeIcon(emp.isInsideBranch)}
+                        >
+                          <Popup>
+                            <div dir="rtl" className="text-sm space-y-1" style={{ minWidth: 160 }}>
+                              <div className="font-bold">{emp.employeeName}</div>
+                              <div>{emp.isInsideBranch ? '✅ داخل الفرع' : '❌ خارج الفرع'}</div>
+                              <div>المسافة: {emp.distanceFromBranch}م</div>
+                              <div className="text-gray-400 text-xs">آخر تحديث: {new Date(emp.lastSeen).toLocaleTimeString('ar-SA')}</div>
+                              <a
+                                href={`https://www.google.com/maps?q=${emp.lastLocation.lat},${emp.lastLocation.lng}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-500 text-xs"
+                              >
+                                📍 فتح في Google Maps
+                              </a>
+                            </div>
+                          </Popup>
+                          <Tooltip direction="top" offset={[0, -14]}>
+                            {emp.employeeName} — {emp.isInsideBranch ? '✅' : '❌'}
+                          </Tooltip>
+                        </Marker>
+                      ))}
+                    </MapContainer>
+                  </div>
+                  <div className="px-4 py-2 flex flex-wrap gap-3 text-xs text-gray-400 border-t border-primary/10">
+                    <span className="flex items-center gap-1"><span style={{ background: '#16a34a', borderRadius: '50%', display: 'inline-block', width: 10, height: 10 }} /> داخل الفرع</span>
+                    <span className="flex items-center gap-1"><span style={{ background: '#dc2626', borderRadius: '50%', display: 'inline-block', width: 10, height: 10 }} /> خارج الفرع</span>
+                    <span className="flex items-center gap-1"><span style={{ background: '#16a34a', borderRadius: '50%', display: 'inline-block', width: 10, height: 10 }} />🏪 مركز الفرع</span>
+                    {!hasBranchLoc && (
+                      <span className="text-amber-400 flex items-center gap-1">
+                        ⚠️ لم يتم تعيين موقع GPS للفرع — يرجى ضبطه في إعدادات الفرع
+                      </span>
+                    )}
+                  </div>
+                </Card>
+              );
+            })()}
+
             {/* Employee location cards */}
             {liveEmployees.length === 0 ? (
-              <Card className="bg-gray-50 border-gray-200">
+              <Card className="bg-[#1a1410] border-primary/20">
                 <CardContent className="p-8 text-center text-gray-400">
                   <Navigation className="w-10 h-10 mx-auto mb-3 opacity-30" />
                   <p>لا يوجد موظفون قاموا بتسجيل الحضور حالياً</p>
@@ -753,7 +899,7 @@ export default function ManagerAttendance() {
                 {liveEmployees.map(emp => (
                   <Card
                     key={emp.employeeId}
-                    className={`border transition-all ${emp.isInsideBranch ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}
+                    className={`border transition-all ${emp.isInsideBranch ? 'bg-[#1a1410] border-green-800/40' : 'bg-red-950/30 border-red-700/50'}`}
                     data-testid={`card-live-employee-${emp.employeeId}`}
                   >
                     <CardContent className="p-4">
@@ -863,7 +1009,7 @@ export default function ManagerAttendance() {
         )}
 
         {activeTab === 'daily' && (<>
-        <Card className="bg-white border-gray-200 mb-6">
+        <Card className="bg-gradient-to-br from-background to-background border-primary/20 mb-6">
           <CardContent className="p-4">
             <div className="space-y-3">
               <div className="flex flex-wrap gap-3 items-center">
@@ -874,7 +1020,7 @@ export default function ManagerAttendance() {
                       placeholder={tc("بحث بالاسم أو الهاتف...", "Search by name or phone...")}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pr-10 bg-white border-gray-200 text-gray-900"
+                      className="pr-10 bg-[#1a1410] border-primary/20 text-white"
                       data-testid="input-search"
                     />
                   </div>
@@ -886,7 +1032,7 @@ export default function ManagerAttendance() {
                     type="date"
                     value={selectedDate}
                     onChange={(e) => setSelectedDate(e.target.value)}
-                    className="bg-white border-gray-200 text-gray-900 w-40"
+                    className="bg-[#1a1410] border-primary/20 text-white w-40"
                     data-testid="input-date"
                   />
                 </div>
@@ -895,7 +1041,7 @@ export default function ManagerAttendance() {
               <div className="flex flex-wrap gap-3">
                 {(employee.role === 'admin' || employee.role === 'owner') && (
                   <Select value={selectedBranch} onValueChange={setSelectedBranch}>
-                    <SelectTrigger className="w-40 bg-white border-gray-200 text-gray-900" data-testid="select-branch">
+                    <SelectTrigger className="w-40 bg-[#1a1410] border-primary/20 text-white" data-testid="select-branch">
                       <Filter className="w-4 h-4 ml-2" />
                       <SelectValue placeholder={tc("جميع الفروع", "All Branches")} />
                     </SelectTrigger>
@@ -911,29 +1057,29 @@ export default function ManagerAttendance() {
                 )}
 
                 <Select value={selectedRole} onValueChange={setSelectedRole}>
-                  <SelectTrigger className="w-40 bg-white border-gray-200 text-gray-900" data-testid="select-role">
+                  <SelectTrigger className="w-40 bg-[#1a1410] border-primary/20 text-white" data-testid="select-role">
                     <Filter className="w-4 h-4 ml-2" />
                     <SelectValue placeholder={tc("جميع الأدوار", "All Roles")} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">{tc("جميع الأدوار", "All Roles")}</SelectItem>
                     <SelectItem value="cashier">{tc("كاشير", "Cashier")}</SelectItem>
-                    <SelectItem value="manager">مدير</SelectItem>
-                    <SelectItem value="admin">إدمن</SelectItem>
+                    <SelectItem value="manager">{tc("مدير","Manager")}</SelectItem>
+                    <SelectItem value="admin">{tc("إدمن","Admin")}</SelectItem>
                   </SelectContent>
                 </Select>
 
                 <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                  <SelectTrigger className="w-40 bg-white border-gray-200 text-gray-900" data-testid="select-status">
+                  <SelectTrigger className="w-40 bg-[#1a1410] border-primary/20 text-white" data-testid="select-status">
                     <Filter className="w-4 h-4 ml-2" />
-                    <SelectValue placeholder="جميع الحالات" />
+                    <SelectValue placeholder={tc("جميع الحالات","All Statuses")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">جميع الحالات</SelectItem>
-                    <SelectItem value="checked_in">حاضر</SelectItem>
-                    <SelectItem value="checked_out">انصرف</SelectItem>
-                    <SelectItem value="late">متأخر</SelectItem>
-                    <SelectItem value="absent">غياب</SelectItem>
+                    <SelectItem value="all">{tc("جميع الحالات","All Statuses")}</SelectItem>
+                    <SelectItem value="checked_in">{tc("حاضر","Present")}</SelectItem>
+                    <SelectItem value="checked_out">{tc("انصرف","Checked Out")}</SelectItem>
+                    <SelectItem value="late">{tc("متأخر","Late")}</SelectItem>
+                    <SelectItem value="absent">{tc("غياب","Absent")}</SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -951,10 +1097,10 @@ export default function ManagerAttendance() {
         </Card>
 
         {leaveRequests.length > 0 && (
-          <Card className="bg-white border-gray-200 mb-6">
+          <Card className="bg-gradient-to-br from-background to-background border-primary/20 mb-6">
             <CardHeader>
-              <CardTitle className="text-gray-900 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-primary" />
+              <CardTitle className="text-accent flex items-center gap-2">
+                <FileText className="w-5 h-5" />
                 طلبات الجازات المعلقة
               </CardTitle>
             </CardHeader>
@@ -963,12 +1109,12 @@ export default function ManagerAttendance() {
                 {leaveRequests.map((request) => (
                   <div
                     key={request.id}
-                    className="bg-gray-50 rounded-lg p-4 border border-gray-200"
+                    className="bg-[#1a1410] rounded-lg p-4 border border-primary/10"
                     data-testid={`leave-request-card-${request.id}`}
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <h3 className="text-gray-900 font-bold">
+                        <h3 className="text-white font-bold">
                           {request.employee?.fullName || 'موظف غير معروف'}
                         </h3>
                         <p className="text-gray-400 text-sm">{request.reason}</p>
@@ -1028,15 +1174,15 @@ export default function ManagerAttendance() {
           </Card>
         )}
 
-        <Card className="bg-white border-gray-200">
+        <Card className="bg-gradient-to-br from-background to-background border-primary/20">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-gray-900 flex items-center gap-2">
-                <Clock className="w-5 h-5 text-primary" />
+              <CardTitle className="text-accent flex items-center gap-2">
+                <Clock className="w-5 h-5" />
                 {tc("سجلات الحضور", "Attendance Records")}
               </CardTitle>
               <Tabs value={viewMode} onValueChange={(val) => setViewMode(val as 'cards' | 'table')}>
-                <TabsList className="bg-gray-100">
+                <TabsList className="bg-[#1a1410]">
                   <TabsTrigger value="cards">{tc("بطاقات", "Cards")}</TabsTrigger>
                   <TabsTrigger value="table">{tc("جدول", "Table")}</TabsTrigger>
                 </TabsList>
@@ -1071,7 +1217,7 @@ export default function ManagerAttendance() {
                   </thead>
                   <tbody>
                     {filteredRecords.map((record) => (
-                      <tr key={record.id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <tr key={record.id} className="border-b border-primary/10 hover:bg-[#2d1f1a]/50">
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
                             {record.employee?.imageUrl ? (
@@ -1085,7 +1231,7 @@ export default function ManagerAttendance() {
                                 {record.employee?.fullName?.charAt(0) || '?'}
                               </div>
                             )}
-                            <span className="text-gray-900 font-medium">{record.employee?.fullName || 'موظف غير معروف'}</span>
+                            <span className="text-white">{record.employee?.fullName || 'موظف غير معروف'}</span>
                           </div>
                         </td>
                         <td className="py-3 px-4 text-gray-400">{record.employee?.jobTitle || 'موظف'}</td>
@@ -1159,7 +1305,7 @@ export default function ManagerAttendance() {
                 {filteredRecords.map((record) => (
                   <div
                     key={record.id}
-                    className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm"
+                    className="bg-[#1a1410] rounded-lg p-4 border border-primary/10"
                     data-testid={`attendance-record-${record.id}`}
                   >
                     <div className="flex items-start justify-between mb-3">
@@ -1168,17 +1314,17 @@ export default function ManagerAttendance() {
                           <img 
                             src={record.employee.imageUrl} 
                             alt={record.employee.fullName}
-                            className="w-12 h-12 rounded-full object-cover border-2 border-primary/30"
+                            className="w-12 h-12 rounded-full object-cover border-2 border-primary/50"
                           />
                         ) : (
-                          <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center border border-primary/20">
-                            <span className="text-primary font-bold text-lg">
+                          <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
+                            <span className="text-white font-bold text-lg">
                               {record.employee?.fullName?.charAt(0) || '?'}
                             </span>
                           </div>
                         )}
                         <div>
-                          <h3 className="text-gray-900 font-bold">
+                          <h3 className="text-white font-bold">
                             {record.employee?.fullName || 'موظف غير معروف'}
                           </h3>
                           <p className="text-gray-400 text-sm">
@@ -1348,6 +1494,7 @@ export default function ManagerAttendance() {
           </div>
         )}
       </div>
+      <MobileBottomNav />
     </div>
   );
 }

@@ -547,7 +547,7 @@ export default function ErpAccountingPage() {
 
   return (
     <PlanGate feature="erpIntegration">
-    <div dir="rtl" className="min-h-screen bg-background p-4 md:p-6">
+    <div className="min-h-screen bg-background p-4 md:p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -1463,7 +1463,7 @@ export default function ErpAccountingPage() {
       </div>
 
       <Dialog open={showAddAccountDialog} onOpenChange={setShowAddAccountDialog}>
-        <DialogContent className="sm:max-w-[500px]" dir="rtl">
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>إضافة حساب جديد</DialogTitle>
           </DialogHeader>
@@ -1578,7 +1578,7 @@ export default function ErpAccountingPage() {
       </Dialog>
 
       <Dialog open={showInvoiceDialog} onOpenChange={setShowInvoiceDialog}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto" dir="rtl">
+        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Receipt className="h-5 w-5" />
@@ -1719,7 +1719,7 @@ export default function ErpAccountingPage() {
       </Dialog>
 
       <Dialog open={showAddJournalDialog} onOpenChange={setShowAddJournalDialog}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto" dir="rtl">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>إضافة قيد محاسبي</DialogTitle>
           </DialogHeader>
@@ -1823,7 +1823,7 @@ export default function ErpAccountingPage() {
       </Dialog>
 
       <Dialog open={showAddExpenseDialog} onOpenChange={setShowAddExpenseDialog}>
-        <DialogContent className="sm:max-w-[500px]" dir="rtl">
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>إضافة مصروف</DialogTitle>
           </DialogHeader>
@@ -1904,7 +1904,7 @@ export default function ErpAccountingPage() {
       </Dialog>
 
       <Dialog open={showAddVendorDialog} onOpenChange={setShowAddVendorDialog}>
-        <DialogContent className="sm:max-w-[500px]" dir="rtl">
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>إضافة مورد</DialogTitle>
           </DialogHeader>

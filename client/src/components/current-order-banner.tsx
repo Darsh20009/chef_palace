@@ -8,10 +8,12 @@ import OrderTracker from "./order-tracker";
 import type { Order } from "@shared/schema";
 import { useState, useEffect } from "react";
 import { useCustomer } from "@/contexts/CustomerContext";
+import { useTranslate } from "@/lib/useTranslate";
 
 export default function CurrentOrderBanner() {
  const [, setLocation] = useLocation();
  const { customer } = useCustomer();
+ const tc = useTranslate();
  const [dismissed, setDismissed] = useState(false);
  const [customerPhone, setCustomerPhone] = useState("");
 
@@ -73,7 +75,7 @@ export default function CurrentOrderBanner() {
  <button
  onClick={() => setDismissed(true)}
  className="absolute top-2 left-2 p-1 rounded-full hover:bg-amber-100 transition-colors z-10"
- aria-label="إغلاق"
+ aria-label={tc("إغلاق", "Close")}
  >
  <X className="w-5 h-5 text-amber-700" />
  </button>
@@ -82,7 +84,7 @@ export default function CurrentOrderBanner() {
  <div className="flex items-center justify-between mb-3">
  <div className="flex items-center gap-2">
  <Coffee className="w-5 h-5 text-primary" />
- <h3 className="font-bold text-foreground">طلبك الحالي</h3>
+ <h3 className="font-bold text-foreground">{tc("طلبك الحالي", "Your Current Order")}</h3>
  </div>
  <Button
  size="sm"
@@ -90,7 +92,7 @@ export default function CurrentOrderBanner() {
  onClick={() => setLocation("/my-orders")}
  className="text-primary hover:text-primary/80 hover:bg-primary/10"
  >
- عرض التفاصيل
+ {tc("عرض التفاصيل", "View Details")}
  <ArrowLeft className="w-4 h-4 mr-2" />
  </Button>
  </div>

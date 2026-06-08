@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTranslate } from "@/lib/useTranslate";
+import SarIcon from "@/components/sar-icon";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { DeliveryManagement } from "@/components/delivery-management";
 import {
@@ -16,46 +16,43 @@ import {
   RefreshCw, Zap, Globe, BarChart3,
   Navigation, Phone, Star, Signal, SignalLow,
   SignalMedium, AlertCircle, Timer, Route,
-  Coffee, UtensilsCrossed, TableProperties, Activity, Wifi,
-  UserCheck, Bike, Car, Filter, ChevronDown, ChevronUp, Send
+  Coffee, UtensilsCrossed, TableProperties, Activity, Wifi
 } from "lucide-react";
 import { useLocation } from "wouter";
 
-const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  pending: { label: 'بانتظار', color: 'bg-yellow-500' },
-  accepted: { label: 'مقبول', color: 'bg-blue-500' },
-  assigned: { label: 'تم التعيين', color: 'bg-indigo-500' },
-  picking_up: { label: 'جاري الاستلام', color: 'bg-purple-500' },
-  on_the_way: { label: 'في الطريق', color: 'bg-orange-500' },
-  arrived: { label: 'وصل', color: 'bg-teal-500' },
-  delivered: { label: 'تم التوصيل', color: 'bg-green-500' },
-  cancelled: { label: 'ملغي', color: 'bg-red-500' },
-  returned: { label: 'مرتجع', color: 'bg-gray-500' },
+const STATUS_LABELS: Record<string, { labelAr: string; labelEn: string; color: string }> = {
+  pending:    { labelAr: 'بانتظار',        labelEn: 'Pending',      color: 'bg-yellow-500' },
+  accepted:   { labelAr: 'مقبول',          labelEn: 'Accepted',     color: 'bg-blue-500' },
+  assigned:   { labelAr: 'تم التعيين',     labelEn: 'Assigned',     color: 'bg-indigo-500' },
+  picking_up: { labelAr: 'جاري الاستلام',  labelEn: 'Picking Up',   color: 'bg-purple-500' },
+  on_the_way: { labelAr: 'في الطريق',      labelEn: 'On The Way',   color: 'bg-orange-500' },
+  arrived:    { labelAr: 'وصل',            labelEn: 'Arrived',      color: 'bg-teal-500' },
+  delivered:  { labelAr: 'تم التوصيل',     labelEn: 'Delivered',    color: 'bg-green-500' },
+  cancelled:  { labelAr: 'ملغي',           labelEn: 'Cancelled',    color: 'bg-red-500' },
+  returned:   { labelAr: 'مرتجع',          labelEn: 'Returned',     color: 'bg-gray-500' },
 };
 
 const PROVIDER_LABELS: Record<string, string> = {
-  internal: 'توصيل داخلي',
-  noon_food: 'نون فود',
-  hunger_station: 'هنقرستيشن',
-  hungerstation: 'هنقرستيشن',
-  keeta: 'كيتا',
-  jahez: 'جاهز',
-  toyou: 'تو يو',
-  mrsool: 'مرسول',
-  careem: 'كريم',
+  internal:        'Internal',
+  noon_food:       'Noon Food',
+  hunger_station:  'HungerStation',
+  hungerstation:   'HungerStation',
+  keeta:           'Keeta',
+  jahez:           'Jahez',
+  toyou:           'ToYou',
+  mrsool:          'Mrsool',
+  careem:          'Careem',
 };
 
 function formatCurrency(amount: number) {
   return `${amount.toFixed(2)} ر.س`;
 }
 
-const DRIVER_STATUS_CONFIG: Record<string, { label: string; dot: string; ring: string; text: string; animate: boolean }> = {
-  online:    { label: "متاح",     dot: "bg-green-500",  ring: "ring-green-400",  text: "text-green-700",  animate: true },
-  available: { label: "متاح",     dot: "bg-green-500",  ring: "ring-green-400",  text: "text-green-700",  animate: true },
-  busy:      { label: "مشغول",    dot: "bg-orange-500", ring: "ring-orange-400", text: "text-orange-700", animate: true },
-  on_break:  { label: "استراحة", dot: "bg-yellow-400", ring: "ring-yellow-300", text: "text-yellow-700", animate: false },
-  offline:   { label: "غير متصل",dot: "bg-gray-400",   ring: "ring-gray-300",   text: "text-gray-500",   animate: false },
-  inactive:  { label: "غير نشط", dot: "bg-gray-300",   ring: "ring-gray-200",   text: "text-gray-400",   animate: false },
+const DRIVER_STATUS_CONFIG: Record<string, { labelAr: string; labelEn: string; dot: string; ring: string; text: string; animate: boolean }> = {
+  online:   { labelAr: "متاح",      labelEn: "Available", dot: "bg-green-500",  ring: "ring-green-400",  text: "text-green-700",  animate: true },
+  busy:     { labelAr: "مشغول",     labelEn: "Busy",      dot: "bg-orange-500", ring: "ring-orange-400", text: "text-orange-700", animate: true },
+  offline:  { labelAr: "غير متصل", labelEn: "Offline",   dot: "bg-gray-400",   ring: "ring-gray-300",   text: "text-gray-500",   animate: false },
+  inactive: { labelAr: "غير نشط",  labelEn: "Inactive",  dot: "bg-gray-300",   ring: "ring-gray-200",   text: "text-gray-400",   animate: false },
 };
 
 function LiveDriverTracking() {
@@ -64,7 +61,7 @@ function LiveDriverTracking() {
   const { data: driversRaw = [], isLoading: loadingDrivers, refetch } = useQuery({
     queryKey: ["/api/delivery/drivers"],
     queryFn: async () => {
-      const res = await fetch("/api/delivery/drivers", { credentials: "include" });
+      const res = await fetch("/api/delivery/drivers");
       if (!res.ok) return [];
       const d = await res.json();
       return Array.isArray(d) ? d : d.drivers || [];
@@ -75,7 +72,7 @@ function LiveDriverTracking() {
   const { data: ordersRaw = [] } = useQuery({
     queryKey: ["/api/delivery/orders"],
     queryFn: async () => {
-      const res = await fetch("/api/delivery/orders", { credentials: "include" });
+      const res = await fetch("/api/delivery/orders");
       if (!res.ok) return [];
       const d = await res.json();
       return Array.isArray(d) ? d : d.orders || [];
@@ -93,24 +90,23 @@ function LiveDriverTracking() {
   const getDriverOrder = (driverId: string) =>
     activeOrders.find((o: any) => o.driverId === driverId || o.driverName);
 
-  const isAvailable = (d: any) => d.status === "online" || d.status === "available";
-  const online  = drivers.filter(isAvailable);
+  const online  = drivers.filter((d: any) => d.status === "online");
   const busy    = drivers.filter((d: any) => d.status === "busy");
-  const offline = drivers.filter((d: any) => !isAvailable(d) && d.status !== "busy");
+  const offline = drivers.filter((d: any) => !["online","busy"].includes(d.status));
 
   if (loadingDrivers) {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="text-center space-y-3">
           <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-sm text-muted-foreground">جاري تحميل بيانات السائقين...</p>
+          <p className="text-sm text-muted-foreground">{tc("جاري تحميل بيانات السائقين...", "Loading driver data...")}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-5" dir="rtl">
+    <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -119,12 +115,12 @@ function LiveDriverTracking() {
             {tc("تتبع السائقين - مباشر", "Live Driver Tracking")}
           </h2>
           <p className="text-sm text-muted-foreground mt-0.5">
-            يتحدث كل 20 ثانية • {new Date().toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" })}
+            {tc("يتحدث كل 20 ثانية","Updates every 20s")} • {new Date().toLocaleTimeString(tc("ar-SA","en-US"), { hour: "2-digit", minute: "2-digit" })}
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => refetch()}>
           <RefreshCw className="w-4 h-4 ml-1" />
-          تحديث
+          {tc("تحديث","Refresh")}
         </Button>
       </div>
 
@@ -134,21 +130,21 @@ function LiveDriverTracking() {
           <p className="text-3xl font-black text-green-700">{online.length}</p>
           <div className="flex items-center justify-center gap-1.5 mt-1">
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <p className="text-xs font-semibold text-green-700">متاح</p>
+            <p className="text-xs font-semibold text-green-700">{tc("متاح","Available")}</p>
           </div>
         </div>
         <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 text-center">
           <p className="text-3xl font-black text-orange-700">{busy.length}</p>
           <div className="flex items-center justify-center gap-1.5 mt-1">
             <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
-            <p className="text-xs font-semibold text-orange-700">مشغول</p>
+            <p className="text-xs font-semibold text-orange-700">{tc("مشغول","Busy")}</p>
           </div>
         </div>
         <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-center">
           <p className="text-3xl font-black text-gray-600">{offline.length}</p>
           <div className="flex items-center justify-center gap-1.5 mt-1">
             <span className="w-2 h-2 rounded-full bg-gray-400" />
-            <p className="text-xs font-semibold text-gray-500">غير متصل</p>
+            <p className="text-xs font-semibold text-gray-500">{tc("غير متصل","Offline")}</p>
           </div>
         </div>
       </div>
@@ -164,14 +160,14 @@ function LiveDriverTracking() {
           </CardHeader>
           <CardContent className="space-y-2">
             {activeOrders.map((order: any) => {
-              const statusInfo = STATUS_LABELS[order.status] || { label: order.status, color: "bg-gray-500" };
+              const statusInfo = STATUS_LABELS[order.status] || { labelAr: order.status, labelEn: order.status, color: "bg-gray-500" };
               return (
                 <div key={order.id} className="flex items-center gap-3 p-3 bg-background rounded-xl border border-border/50">
                   <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${statusInfo.color} animate-pulse`} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="font-semibold text-sm truncate">{order.customerName || tc("عميل","Customer")}</p>
-                      <Badge className={`${statusInfo.color} text-white text-xs shrink-0`}>{statusInfo.label}</Badge>
+                      <Badge className={`${statusInfo.color} text-white text-xs shrink-0`}>{tc(statusInfo.labelAr, statusInfo.labelEn)}</Badge>
                     </div>
                     <p className="text-xs text-muted-foreground truncate flex items-center gap-1 mt-0.5">
                       <MapPin className="w-3 h-3 shrink-0" />
@@ -218,7 +214,7 @@ function LiveDriverTracking() {
               const cfg = DRIVER_STATUS_CONFIG[driver.status] || DRIVER_STATUS_CONFIG.offline;
               const assignedOrder = getDriverOrder(driver.id);
               return (
-                <Card key={driver.id} className={`border ${(driver.status === "online" || driver.status === "available") ? "border-green-200 bg-green-50/40" : driver.status === "busy" ? "border-orange-200 bg-orange-50/40" : driver.status === "on_break" ? "border-yellow-200 bg-yellow-50/40" : "border-gray-200"}`}>
+                <Card key={driver.id} className={`border ${driver.status === "online" ? "border-green-200 bg-green-50/40" : driver.status === "busy" ? "border-orange-200 bg-orange-50/40" : "border-gray-200"}`}>
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-2.5">
@@ -238,23 +234,22 @@ function LiveDriverTracking() {
                         </div>
                       </div>
                       <Badge className={`text-xs ${cfg.animate ? "animate-pulse" : ""} ${
-                        (driver.status === "online" || driver.status === "available") ? "bg-green-100 text-green-800 border border-green-300" :
+                        driver.status === "online" ? "bg-green-100 text-green-800 border border-green-300" :
                         driver.status === "busy" ? "bg-orange-100 text-orange-800 border border-orange-300" :
-                        driver.status === "on_break" ? "bg-yellow-100 text-yellow-800 border border-yellow-300" :
                         "bg-gray-100 text-gray-600 border border-gray-200"
                       }`}>
-                        {cfg.label}
+                        {tc(cfg.labelAr, cfg.labelEn)}
                       </Badge>
                     </div>
 
                     {/* Stats row */}
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <div className="bg-background rounded-lg p-2 border border-border/50">
-                        <p className="text-muted-foreground">التوصيلات</p>
+                        <p className="text-muted-foreground">{tc("التوصيلات","Deliveries")}</p>
                         <p className="font-bold text-sm">{driver.totalDeliveries || 0}</p>
                       </div>
                       <div className="bg-background rounded-lg p-2 border border-border/50">
-                        <p className="text-muted-foreground">التقييم</p>
+                        <p className="text-muted-foreground">{tc("التقييم","Rating")}</p>
                         <p className="font-bold text-sm flex items-center gap-1">
                           {driver.rating ? driver.rating.toFixed(1) : "—"}
                           {driver.rating && <Star className="w-3 h-3 text-yellow-500" />}
@@ -328,11 +323,11 @@ function TrackingModeSelector() {
 }
 
 const DINE_IN_STATUS_STEPS = [
-  { key: 'pending',    label: 'وارد',        color: 'bg-yellow-400', icon: Clock },
-  { key: 'preparing',  label: 'يُحضَّر',     color: 'bg-blue-500',   icon: Coffee },
-  { key: 'ready',      label: 'جاهز',        color: 'bg-purple-500', icon: CheckCircle },
-  { key: 'serving',    label: 'يُقدَّم',     color: 'bg-orange-500', icon: UtensilsCrossed },
-  { key: 'delivered',  label: 'سُلِّم',      color: 'bg-green-500',  icon: CheckCircle },
+  { key: 'pending',    labelAr: 'وارد',      labelEn: 'Received',    color: 'bg-yellow-400', icon: Clock },
+  { key: 'preparing',  labelAr: 'يُحضَّر',   labelEn: 'Preparing',   color: 'bg-blue-500',   icon: Coffee },
+  { key: 'ready',      labelAr: 'جاهز',      labelEn: 'Ready',       color: 'bg-purple-500', icon: CheckCircle },
+  { key: 'serving',    labelAr: 'يُقدَّم',   labelEn: 'Serving',     color: 'bg-orange-500', icon: UtensilsCrossed },
+  { key: 'delivered',  labelAr: 'سُلِّم',    labelEn: 'Delivered',   color: 'bg-green-500',  icon: CheckCircle },
 ];
 
 function CafeInternalTracking() {
@@ -372,24 +367,24 @@ function CafeInternalTracking() {
       <div className="flex items-center justify-center py-20">
         <div className="text-center space-y-3">
           <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-sm text-gray-500">جاري تحميل الطلبات الداخلية...</p>
+          <p className="text-sm text-gray-500">{tc("جاري تحميل الطلبات الداخلية...","Loading in-cafe orders...")}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-5" dir="rtl">
+    <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-bold flex items-center gap-2 text-gray-900">
             <Coffee className="w-5 h-5 text-green-600 animate-pulse" />
-            {tc("التوصيل الداخلي للمطعم - مباشر", "In-Restaurant Live Delivery")}
+            {tc("التوصيل الداخلي للكافيه - مباشر", "In-Cafe Live Delivery")}
           </h2>
           <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-1">
             <Wifi className="w-3 h-3 text-green-500" />
-            يتحدث كل 15 ثانية • {now.toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" })}
+            {tc("يتحدث كل 15 ثانية","Updates every 15s")} • {now.toLocaleTimeString(tc("ar-SA","en-US"), { hour: "2-digit", minute: "2-digit" })}
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => refetch()} className="border-green-300 text-green-700 hover:bg-green-50">
@@ -406,7 +401,7 @@ function CafeInternalTracking() {
           </p>
           <div className="flex items-center justify-center gap-1.5 mt-1">
             <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
-            <p className="text-xs font-semibold text-yellow-700">قيد التحضير</p>
+            <p className="text-xs font-semibold text-yellow-700">{tc("قيد التحضير","Preparing")}</p>
           </div>
         </div>
         <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 text-center">
@@ -415,7 +410,7 @@ function CafeInternalTracking() {
           </p>
           <div className="flex items-center justify-center gap-1.5 mt-1">
             <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
-            <p className="text-xs font-semibold text-purple-700">جاهز للتقديم</p>
+            <p className="text-xs font-semibold text-purple-700">{tc("جاهز للتقديم","Ready")}</p>
           </div>
         </div>
         <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 text-center">
@@ -424,7 +419,7 @@ function CafeInternalTracking() {
           </p>
           <div className="flex items-center justify-center gap-1.5 mt-1">
             <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
-            <p className="text-xs font-semibold text-orange-700">يُقدَّم الآن</p>
+            <p className="text-xs font-semibold text-orange-700">{tc("يُقدَّم الآن","Serving Now")}</p>
           </div>
         </div>
       </div>
@@ -436,8 +431,8 @@ function CafeInternalTracking() {
             <div className="w-16 h-16 mx-auto bg-green-50 rounded-full flex items-center justify-center">
               <Coffee className="w-8 h-8 text-green-400" />
             </div>
-            <p className="font-semibold text-gray-600">لا توجد طلبات داخلية نشطة حالياً</p>
-            <p className="text-sm text-gray-400">ستظهر طلبات الطاولات هنا بمجرد ورودها</p>
+            <p className="font-semibold text-gray-600">{tc("لا توجد طلبات داخلية نشطة حالياً","No active in-cafe orders")}</p>
+            <p className="text-sm text-gray-400">{tc("ستظهر طلبات الطاولات هنا بمجرد ورودها","Table orders will appear here as they come in")}</p>
           </CardContent>
         </Card>
       ) : (
@@ -464,7 +459,7 @@ function CafeInternalTracking() {
                       </div>
                       <div>
                         <p className="font-bold text-sm text-gray-900">
-                          {order.tableNumber ? `طاولة ${order.tableNumber}` : (order.customerName || 'طلب داخلي')}
+                          {order.tableNumber ? `${tc("طاولة","Table")} ${order.tableNumber}` : (order.customerName || tc('طلب داخلي','In-Cafe Order'))}
                         </p>
                         <p className="text-xs text-gray-500">#{order.orderNumber || order.id?.slice(-6)}</p>
                       </div>
@@ -472,10 +467,10 @@ function CafeInternalTracking() {
                     <div className="text-left">
                       <Badge className={`${step?.color} text-white text-xs flex items-center gap-1 ${order.status === 'ready' || order.status === 'serving' ? 'animate-pulse' : ''}`}>
                         <StepIcon className="w-3 h-3" />
-                        {step?.label}
+                        {step ? tc(step.labelAr, step.labelEn) : ''}
                       </Badge>
                       <p className={`text-xs mt-1 text-left ${isUrgent ? 'text-red-600 font-bold' : 'text-gray-500'}`}>
-                        {elapsed} دقيقة {isUrgent ? '⚠️' : ''}
+                        {elapsed} {tc("دقيقة","min")} {isUrgent ? '⚠️' : ''}
                       </p>
                     </div>
                   </div>
@@ -515,8 +510,8 @@ function CafeInternalTracking() {
 
                   {/* Total */}
                   <div className="mt-2 flex items-center justify-between">
-                    <span className="text-xs text-gray-400">إجمالي الطلب</span>
-                    <span className="font-bold text-sm text-gray-900">{(order.totalAmount || 0).toFixed(2)} ر.س</span>
+                    <span className="text-xs text-gray-400">{tc("إجمالي الطلب","Order Total")}</span>
+                    <span className="font-bold text-sm text-gray-900">{(order.totalAmount || 0).toFixed(2)} <SarIcon size={11} /></span>
                   </div>
                 </CardContent>
               </Card>
@@ -528,171 +523,226 @@ function CafeInternalTracking() {
   );
 }
 
-function ManualAssignDialog({
-  order,
-  drivers,
-  open,
-  onClose,
-}: {
-  order: any;
-  drivers: any[];
-  open: boolean;
-  onClose: () => void;
-}) {
-  const { toast } = useToast();
+function DispatchCenter() {
   const tc = useTranslate();
-  const [selectedDriverId, setSelectedDriverId] = useState("");
+  const { toast } = useToast();
 
-  const assignMutation = useMutation({
-    mutationFn: async (driverId: string) => {
-      const res = await apiRequest("PATCH", `/api/delivery/orders/${order?.id}/assign`, { driverId });
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/delivery/orders"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/delivery/stats"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/delivery/drivers"] });
-      toast({ title: tc("تم تعيين السائق بنجاح", "Driver assigned successfully"), className: "bg-green-600 text-white" });
-      onClose();
-    },
-    onError: (err: any) => {
-      toast({ title: err.message || tc("فشل تعيين السائق", "Failed to assign driver"), variant: "destructive" });
-    },
+  const { data: unassignedRaw, isLoading: loadingUnassigned, refetch: refetchUnassigned } = useQuery({
+    queryKey: ["/api/delivery/orders/unassigned"],
+    refetchInterval: 8000,
   });
 
-  const availableDrivers = drivers.filter((d: any) => d.status === "available" || d.status === "online");
-  const busyDrivers = drivers.filter((d: any) => d.status === "busy");
+  const { data: driversRaw, isLoading: loadingDrivers, refetch: refetchDrivers } = useQuery({
+    queryKey: ["/api/delivery/drivers"],
+    queryFn: async () => {
+      const res = await fetch("/api/delivery/drivers", { credentials: "include" });
+      if (!res.ok) return { drivers: [] };
+      return res.json();
+    },
+    refetchInterval: 8000,
+  });
 
-  const VehicleIcon = (type: string) => {
-    if (type === "motorcycle" || type === "bicycle") return Bike;
-    return Car;
-  };
+  const unassignedOrders: any[] = (unassignedRaw as any)?.orders || [];
+  const allDrivers: any[] = Array.isArray(driversRaw) ? driversRaw : (driversRaw as any)?.drivers || [];
+  const availableDrivers = allDrivers.filter((d) => d.status === "available" || d.status === "online");
+
+  const assignMutation = useMutation({
+    mutationFn: ({ orderId, driverId }: { orderId: string; driverId: string }) =>
+      apiRequest("PATCH", `/api/delivery/orders/${orderId}/assign`, { driverId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/delivery/orders/unassigned"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/delivery/drivers"] });
+      toast({ title: tc("تم تعيين السائق", "Driver assigned"), className: "bg-green-600 text-white" });
+    },
+    onError: (e: any) => toast({ title: e?.message || tc("فشل التعيين", "Assignment failed"), variant: "destructive" }),
+  });
+
+  const autoAssignMutation = useMutation({
+    mutationFn: (orderId: string) => apiRequest("POST", `/api/delivery/orders/${orderId}/auto-assign`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/delivery/orders/unassigned"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/delivery/drivers"] });
+      toast({ title: tc("تم التعيين التلقائي", "Auto-assigned successfully"), className: "bg-green-600 text-white" });
+    },
+    onError: (e: any) => toast({ title: e?.message || tc("لا يوجد سائق متاح", "No available driver"), variant: "destructive" }),
+  });
+
+  const [selectedDrivers, setSelectedDrivers] = useState<Record<string, string>>({});
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-md" dir="rtl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <UserCheck className="w-5 h-5 text-[#2D9B6E]" />
-            تعيين سائق للطلب
-          </DialogTitle>
-        </DialogHeader>
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-bold flex items-center gap-2">
+            <Zap className="w-5 h-5 text-orange-500 animate-pulse" />
+            {tc("مركز الإرسال", "Dispatch Center")}
+          </h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {tc("وزّع الطلبات على السائقين المتاحين", "Assign pending orders to available drivers")}
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={() => { refetchUnassigned(); refetchDrivers(); }}>
+          <RefreshCw className="w-4 h-4 ml-1" />
+          {tc("تحديث", "Refresh")}
+        </Button>
+      </div>
 
-        {order && (
-          <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 mb-4">
-            <div className="flex items-center justify-between mb-1">
-              <p className="font-bold text-sm">{order.customerName || "عميل"}</p>
-              <Badge className="bg-yellow-500 text-white text-xs">بانتظار سائق</Badge>
-            </div>
-            <p className="text-xs text-gray-500 flex items-center gap-1">
-              <MapPin className="w-3 h-3" />
-              {order.customerAddress || "عنوان غير محدد"}
-            </p>
-            <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-              <Phone className="w-3 h-3" />
-              {order.customerPhone || "—"}
-            </p>
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 flex items-center gap-3">
+          <div className="w-10 h-10 bg-orange-500/20 rounded-full flex items-center justify-center">
+            <Package className="w-5 h-5 text-orange-600" />
           </div>
-        )}
+          <div>
+            <p className="text-2xl font-black text-orange-700">{unassignedOrders.length}</p>
+            <p className="text-xs text-orange-600">{tc("طلبات بانتظار سائق", "Awaiting Driver")}</p>
+          </div>
+        </div>
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
+          <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center">
+            <Users className="w-5 h-5 text-green-600" />
+          </div>
+          <div>
+            <p className="text-2xl font-black text-green-700">{availableDrivers.length}</p>
+            <p className="text-xs text-green-600">{tc("سائقون متاحون", "Available Drivers")}</p>
+          </div>
+        </div>
+      </div>
 
-        <div className="space-y-3 max-h-72 overflow-y-auto">
-          {availableDrivers.length === 0 && busyDrivers.length === 0 && (
-            <div className="text-center py-6 text-gray-400">
-              <Truck className="w-10 h-10 mx-auto mb-2 opacity-30" />
-              <p className="text-sm">لا يوجد سائقون متاحون الآن</p>
-              <p className="text-xs mt-1">أضف سائقين من تبويب الإعدادات</p>
-            </div>
-          )}
+      {/* Available Drivers Quick View */}
+      {availableDrivers.length > 0 && (
+        <div>
+          <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-2">
+            {tc("السائقون المتاحون", "Available Drivers")}
+          </p>
+          <div className="flex gap-2 flex-wrap">
+            {availableDrivers.map((d) => (
+              <div key={d.id} className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-full px-3 py-1.5">
+                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-sm font-medium text-green-800">{d.fullName || d.nameAr || d.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
-          {availableDrivers.length > 0 && (
-            <>
-              <p className="text-xs font-semibold text-green-700 uppercase tracking-wide">متاحون للتوصيل ({availableDrivers.length})</p>
-              {availableDrivers.map((driver: any) => {
-                const Icon = VehicleIcon(driver.vehicleType);
-                const isSelected = selectedDriverId === driver.id;
-                return (
-                  <button
-                    key={driver.id}
-                    onClick={() => setSelectedDriverId(driver.id)}
-                    className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-right ${
-                      isSelected
-                        ? "border-[#2D9B6E] bg-[#2D9B6E]/10"
-                        : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-                    }`}
-                    data-testid={`driver-select-${driver.id}`}
-                  >
-                    <div className="relative w-10 h-10 rounded-full bg-green-100 flex items-center justify-center font-bold text-green-700 shrink-0">
-                      {(driver.nameAr || driver.name || "؟")[0]}
-                      <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-white animate-pulse" />
-                    </div>
+      {/* Unassigned Orders */}
+      {loadingUnassigned ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : unassignedOrders.length === 0 ? (
+        <Card className="border-dashed">
+          <CardContent className="py-12 text-center space-y-3">
+            <CheckCircle className="w-12 h-12 mx-auto text-green-500 opacity-50" />
+            <p className="font-semibold text-muted-foreground">{tc("لا توجد طلبات بانتظار التعيين", "No orders awaiting assignment")}</p>
+            <p className="text-sm text-muted-foreground">{tc("جميع الطلبات تم تعيينها", "All orders have been assigned")}</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          <p className="text-sm font-medium text-muted-foreground">
+            {tc("الطلبات غير المعيّنة", "Unassigned Orders")} ({unassignedOrders.length})
+          </p>
+          {unassignedOrders.map((order: any) => {
+            const elapsed = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 60000);
+            const isUrgent = elapsed > 10;
+            return (
+              <Card key={order.id} className={`overflow-hidden border-2 ${isUrgent ? "border-red-300 bg-red-50/20" : "border-orange-200"}`}>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-3">
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm">{driver.nameAr || driver.name}</p>
-                      <p className="text-xs text-gray-500 flex items-center gap-1">
-                        <Phone className="w-3 h-3" />
-                        {driver.phone}
-                      </p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <Icon className="w-3 h-3 text-gray-400" />
-                        <span className="text-xs text-gray-400">
-                          {driver.totalDeliveries || 0} توصيلة
-                          {driver.rating ? ` • ⭐ ${driver.rating.toFixed(1)}` : ""}
-                        </span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-bold">{order.customerName || tc("عميل", "Customer")}</p>
+                        {isUrgent && (
+                          <Badge className="bg-red-100 text-red-700 border border-red-300 text-xs animate-pulse">
+                            ⚠️ {elapsed} {tc("دقيقة انتظار", "min wait")}
+                          </Badge>
+                        )}
                       </div>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                        <MapPin className="w-3 h-3 flex-shrink-0" />
+                        {order.customerAddress || tc("عنوان غير محدد", "Address not set")}
+                      </p>
+                      {order.customerPhone && (
+                        <a href={`tel:${order.customerPhone}`} className="text-xs text-primary flex items-center gap-1 mt-0.5">
+                          <Phone className="w-3 h-3" />
+                          {order.customerPhone}
+                        </a>
+                      )}
                     </div>
-                    {isSelected && <CheckCircle className="w-5 h-5 text-[#2D9B6E] shrink-0" />}
-                  </button>
-                );
-              })}
-            </>
-          )}
+                    <div className="text-left flex-shrink-0 mr-3">
+                      <p className="font-bold text-sm">{(order.totalAmount || 0).toFixed(0)} <SarIcon size={11} className="inline" /></p>
+                      {!isUrgent && <p className="text-xs text-muted-foreground">{elapsed} {tc("د", "min")}</p>}
+                    </div>
+                  </div>
 
-          {busyDrivers.length > 0 && (
-            <>
-              <p className="text-xs font-semibold text-orange-600 uppercase tracking-wide mt-2">مشغولون ({busyDrivers.length})</p>
-              {busyDrivers.map((driver: any) => {
-                const Icon = VehicleIcon(driver.vehicleType);
-                const isSelected = selectedDriverId === driver.id;
-                return (
-                  <button
-                    key={driver.id}
-                    onClick={() => setSelectedDriverId(driver.id)}
-                    className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-right opacity-70 ${
-                      isSelected
-                        ? "border-orange-400 bg-orange-50"
-                        : "border-gray-200 hover:border-orange-300 hover:bg-orange-50/50"
-                    }`}
-                    data-testid={`driver-select-busy-${driver.id}`}
-                  >
-                    <div className="relative w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center font-bold text-orange-700 shrink-0">
-                      {(driver.nameAr || driver.name || "؟")[0]}
-                      <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-orange-500 border-2 border-white" />
+                  {/* Items */}
+                  {order.items && order.items.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-3">
+                      {order.items.slice(0, 4).map((item: any, idx: number) => (
+                        <span key={idx} className="text-xs bg-muted px-2 py-0.5 rounded-full">
+                          {item.name} ×{item.quantity}
+                        </span>
+                      ))}
+                      {order.items.length > 4 && (
+                        <span className="text-xs text-muted-foreground">+{order.items.length - 4}</span>
+                      )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm">{driver.nameAr || driver.name}</p>
-                      <p className="text-xs text-orange-600">مشغول حالياً</p>
-                    </div>
-                    {isSelected && <CheckCircle className="w-5 h-5 text-orange-500 shrink-0" />}
-                  </button>
-                );
-              })}
-            </>
-          )}
-        </div>
+                  )}
 
-        <div className="flex gap-2 pt-2 border-t border-gray-200">
-          <Button
-            className="flex-1 bg-[#2D9B6E] hover:bg-[#258a5e]"
-            disabled={!selectedDriverId || assignMutation.isPending}
-            onClick={() => assignMutation.mutate(selectedDriverId)}
-            data-testid="button-confirm-assign-driver"
-          >
-            <UserCheck className="w-4 h-4 ml-2" />
-            {assignMutation.isPending ? "جاري التعيين..." : "تعيين السائق"}
-          </Button>
-          <Button variant="outline" onClick={onClose}>إلغاء</Button>
+                  {/* Assign actions */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {availableDrivers.length > 0 ? (
+                      <>
+                        <Select
+                          value={selectedDrivers[order.id] || ""}
+                          onValueChange={(v) => setSelectedDrivers((prev) => ({ ...prev, [order.id]: v }))}
+                        >
+                          <SelectTrigger className="h-9 flex-1 min-w-32 text-sm">
+                            <SelectValue placeholder={tc("اختر سائقاً", "Select driver")} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableDrivers.map((d) => (
+                              <SelectItem key={d.id} value={d.id}>
+                                {d.fullName || d.nameAr || d.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            const driverId = selectedDrivers[order.id];
+                            if (driverId) assignMutation.mutate({ orderId: order.id, driverId });
+                          }}
+                          disabled={!selectedDrivers[order.id] || assignMutation.isPending}
+                          className="bg-primary hover:bg-primary/90 h-9"
+                        >
+                          <Truck className="w-3.5 h-3.5 ml-1" />
+                          {tc("تعيين", "Assign")}
+                        </Button>
+                      </>
+                    ) : null}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => autoAssignMutation.mutate(order.id)}
+                      disabled={autoAssignMutation.isPending}
+                      className="h-9 border-orange-300 text-orange-700 hover:bg-orange-50"
+                    >
+                      <Zap className="w-3.5 h-3.5 ml-1" />
+                      {tc("تعيين تلقائي", "Auto Assign")}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
-      </DialogContent>
-    </Dialog>
+      )}
+    </div>
   );
 }
 
@@ -702,39 +752,26 @@ export default function ManagerDelivery() {
   const [, navigate] = useLocation();
   const [period, setPeriod] = useState("today");
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [assignDialogOrder, setAssignDialogOrder] = useState<any>(null);
-  const [ordersFilter, setOrdersFilter] = useState<"all" | "pending" | "active" | "completed">("all");
 
   const { data: statsData, isLoading: statsLoading } = useQuery({
     queryKey: ["/api/delivery/stats", period],
     queryFn: async () => {
-      const res = await fetch(`/api/delivery/stats?period=${period}`, { credentials: "include" });
+      const res = await fetch(`/api/delivery/stats?period=${period}`);
       if (!res.ok) throw new Error("Failed to fetch stats");
       return res.json();
     },
     refetchInterval: 30000,
   });
 
-  const { data: ordersData = [], refetch: refetchOrders } = useQuery({
+  const { data: ordersData = [] } = useQuery({
     queryKey: ["/api/delivery/orders"],
     queryFn: async () => {
-      const res = await fetch("/api/delivery/orders", { credentials: "include" });
+      const res = await fetch("/api/delivery/orders");
       if (!res.ok) return [];
       const data = await res.json();
       return Array.isArray(data) ? data : data.orders || [];
     },
-    refetchInterval: 12000,
-  });
-
-  const { data: driversData = [] } = useQuery({
-    queryKey: ["/api/delivery/drivers"],
-    queryFn: async () => {
-      const res = await fetch("/api/delivery/drivers", { credentials: "include" });
-      if (!res.ok) return [];
-      const d = await res.json();
-      return Array.isArray(d) ? d : d.drivers || [];
-    },
-    refetchInterval: 20000,
+    refetchInterval: 15000,
   });
 
   const autoAssignMutation = useMutation({
@@ -754,20 +791,18 @@ export default function ManagerDelivery() {
 
   const orderStatusMutation = useMutation({
     mutationFn: async ({ orderId, status }: { orderId: string; status: string }) => {
-      const res = await apiRequest("PATCH", `/api/delivery/orders/${orderId}/status`, { status });
+      const res = await apiRequest("PATCH", `/api/orders/${orderId}/status`, { status });
       return res.json();
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ["/api/delivery/orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/delivery/stats"] });
-      const statusLabels: Record<string, string> = {
-        accepted: "تم القبول",
-        picking_up: "جاري استلام الطلب",
-        on_the_way: "السائق في الطريق",
-        delivered: "تم التوصيل بنجاح ✓",
-        cancelled: "تم الإلغاء",
+      const labels: Record<string, string> = {
+        in_progress: tc("طلبك قيد التحضير", "Order is being prepared"),
+        out_for_delivery: tc("الطلب في الطريق", "Order is on the way"),
+        completed: tc("تم تسليم الطلب", "Order delivered"),
       };
-      toast({ title: statusLabels[vars.status] || tc("تم تحديث الحالة", "Status updated"), className: "bg-green-600 text-white" });
+      toast({ title: labels[vars.status] || tc("تم تحديث الحالة", "Status updated"), className: "bg-green-600 text-white" });
     },
     onError: (err: any) => {
       toast({ title: err.message || tc("فشل تحديث الحالة", "Status update failed"), variant: "destructive" });
@@ -775,20 +810,13 @@ export default function ManagerDelivery() {
   });
 
   const stats = statsData?.stats;
-  const allOrders: any[] = ordersData;
-  const activeOrders = allOrders.filter((o: any) =>
+  const activeOrders = ordersData.filter((o: any) =>
     ['pending', 'accepted', 'assigned', 'picking_up', 'on_the_way', 'arrived', 'in_progress', 'out_for_delivery'].includes(o.status)
   );
-  const pendingOrders = allOrders.filter((o: any) => o.status === 'pending' || (!o.driverId && !['delivered','cancelled','returned'].includes(o.status)));
-  const completedOrders = allOrders.filter((o: any) => ['delivered', 'completed', 'cancelled', 'returned'].includes(o.status));
-
-  const filteredOrders = ordersFilter === "pending" ? pendingOrders
-    : ordersFilter === "active" ? activeOrders
-    : ordersFilter === "completed" ? completedOrders
-    : allOrders;
+  const pendingOrders = ordersData.filter((o: any) => o.status === 'pending');
 
   return (
-    <div className="p-4 md:p-6 space-y-6 bg-white text-gray-900 min-h-screen" dir="rtl">
+    <div className="p-4 md:p-6 space-y-6 bg-white text-gray-900 min-h-screen">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate("/manager/dashboard")}>
@@ -815,12 +843,16 @@ export default function ManagerDelivery() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid grid-cols-5 w-full max-w-xl">
-          <TabsTrigger value="dashboard">{tc("الرئيسية", "Dashboard")}</TabsTrigger>
-          <TabsTrigger value="orders">{tc("الطلبات", "Orders")}</TabsTrigger>
-          <TabsTrigger value="tracking">{tc("تتبع مباشر", "Live Track")}</TabsTrigger>
-          <TabsTrigger value="settings">{tc("الإعدادات", "Settings")}</TabsTrigger>
-          <TabsTrigger value="integrations">{tc("الربط", "Integrations")}</TabsTrigger>
+        <TabsList className="flex w-full overflow-x-auto gap-0.5">
+          <TabsTrigger value="dashboard" className="flex-1 min-w-fit">{tc("الرئيسية", "Dashboard")}</TabsTrigger>
+          <TabsTrigger value="dispatch" className="flex-1 min-w-fit">
+            <Zap className="w-3.5 h-3.5 ml-1 text-orange-500" />
+            {tc("إرسال", "Dispatch")}
+          </TabsTrigger>
+          <TabsTrigger value="orders" className="flex-1 min-w-fit">{tc("الطلبات", "Orders")}</TabsTrigger>
+          <TabsTrigger value="tracking" className="flex-1 min-w-fit">{tc("تتبع مباشر", "Live Track")}</TabsTrigger>
+          <TabsTrigger value="settings" className="flex-1 min-w-fit">{tc("الإعدادات", "Settings")}</TabsTrigger>
+          <TabsTrigger value="integrations" className="flex-1 min-w-fit">{tc("الربط", "Integrations")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard" className="space-y-6">
@@ -933,52 +965,37 @@ export default function ManagerDelivery() {
           )}
 
           {pendingOrders.length > 0 && (
-            <Card className="border-orange-400 border-2">
+            <Card className="border-orange-500/30">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm flex items-center gap-2 text-orange-600">
-                  <Zap className="w-4 h-4 animate-pulse" />
-                  طلبات تحتاج تعيين سائق ({pendingOrders.length})
+                  <Zap className="w-4 h-4 animate-pulse" /> {tc("طلبات تحتاج تعيين", "Orders Needing Assignment")} ({pendingOrders.length})
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 {pendingOrders.slice(0, 5).map((order: any) => (
-                  <div key={order.id} className="p-3 bg-orange-50 rounded-xl border border-orange-200">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <p className="font-bold text-sm">{order.customerName || tc('عميل', 'Customer')}</p>
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <MapPin className="w-3 h-3" />
-                          {order.customerAddress || tc('عنوان غير محدد', 'Address not specified')}
-                        </p>
-                        {order.customerPhone && (
-                          <a href={`tel:${order.customerPhone}`} className="text-xs text-[#2D9B6E] flex items-center gap-1 mt-0.5 hover:underline">
-                            <Phone className="w-3 h-3" />
-                            {order.customerPhone}
-                          </a>
-                        )}
-                      </div>
-                      <span className="text-sm font-bold text-gray-800 shrink-0">{formatCurrency(order.totalAmount || 0)}</span>
+                  <div key={order.id} className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-900/10 rounded-lg">
+                    <div>
+                      <p className="font-bold text-sm">{order.customerName || tc('عميل', 'Customer')}</p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        {order.customerAddress || tc('عنوان غير محدد', 'Address not specified')}
+                      </p>
+                      {order.externalProvider && (
+                        <Badge variant="outline" className="text-xs mt-1">
+                          {PROVIDER_LABELS[order.externalProvider] || order.externalProvider}
+                        </Badge>
+                      )}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold">{formatCurrency(order.totalAmount || 0)}</span>
                       <Button
                         size="sm"
-                        className="flex-1 bg-[#2D9B6E] hover:bg-[#258a5e] text-white"
-                        onClick={() => setAssignDialogOrder(order)}
-                        data-testid={`button-manual-assign-dashboard-${order.id}`}
-                      >
-                        <UserCheck className="w-3 h-3 ml-1" />
-                        اختيار سائق
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-orange-400 text-orange-600 hover:bg-orange-100"
                         onClick={() => autoAssignMutation.mutate(order.id)}
                         disabled={autoAssignMutation.isPending}
-                        data-testid={`button-auto-assign-dashboard-${order.id}`}
+                        className="bg-[#2D9B6E] hover:bg-[#258a5e]"
                       >
                         <Zap className="w-3 h-3 ml-1" />
-                        تلقائي
+                        {tc("تعيين تلقائي", "Auto Assign")}
                       </Button>
                     </div>
                   </div>
@@ -986,253 +1003,131 @@ export default function ManagerDelivery() {
               </CardContent>
             </Card>
           )}
-          {/* Manual assign dialog accessible from dashboard */}
-          <ManualAssignDialog
-            order={assignDialogOrder}
-            drivers={driversData}
-            open={!!assignDialogOrder}
-            onClose={() => setAssignDialogOrder(null)}
-          />
+        </TabsContent>
+
+        <TabsContent value="dispatch" className="space-y-4">
+          <DispatchCenter />
         </TabsContent>
 
         <TabsContent value="orders" className="space-y-4">
-          {/* Filter + refresh bar */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex rounded-lg border border-gray-200 bg-gray-50 p-0.5 gap-0.5">
-              {(["all","pending","active","completed"] as const).map((f) => {
-                const labels: Record<string, string> = { all: "الكل", pending: "بانتظار سائق", active: "جارية", completed: "مكتملة" };
-                const counts: Record<string, number> = {
-                  all: allOrders.length,
-                  pending: pendingOrders.length,
-                  active: activeOrders.length,
-                  completed: completedOrders.length,
-                };
-                return (
-                  <button
-                    key={f}
-                    onClick={() => setOrdersFilter(f)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                      ordersFilter === f
-                        ? "bg-[#2D9B6E] text-white shadow-sm"
-                        : "text-gray-600 hover:bg-gray-100"
-                    }`}
-                    data-testid={`filter-orders-${f}`}
-                  >
-                    {labels[f]} ({counts[f]})
-                  </button>
-                );
-              })}
-            </div>
-            <div className="mr-auto flex items-center gap-2">
-              {pendingOrders.length > 0 && (
-                <span className="text-xs text-orange-600 font-semibold animate-pulse flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  {pendingOrders.length} طلب بانتظار سائق
-                </span>
-              )}
-              <Button variant="outline" size="sm" onClick={() => refetchOrders()}>
-                <RefreshCw className="w-4 h-4 ml-1" />
-                تحديث
-              </Button>
-            </div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-bold flex items-center gap-2">
+              <Package className="w-5 h-5" />
+              {tc("الطلبات النشطة", "Active Orders")} ({activeOrders.length})
+            </h2>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                queryClient.invalidateQueries({ queryKey: ["/api/delivery/orders"] });
+              }}
+            >
+              <RefreshCw className="w-4 h-4 ml-1" />
+              {tc("تحديث", "Refresh")}
+            </Button>
           </div>
 
-          {filteredOrders.length === 0 ? (
+          {activeOrders.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center text-muted-foreground">
                 <Truck className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p>{tc("لا توجد طلبات في هذه الفئة", "No orders in this category")}</p>
+                <p>{tc("لا توجد طلبات نشطة حالياً", "No active orders at the moment")}</p>
               </CardContent>
             </Card>
           ) : (
             <div className="space-y-3">
-              {filteredOrders.map((order: any) => {
-                const statusInfo = STATUS_LABELS[order.status] || { label: order.status, color: 'bg-gray-500' };
-                const needsDriver = !order.driverId && !["delivered","cancelled","returned","completed"].includes(order.status);
-                const isCompleted = ["delivered","completed","cancelled","returned"].includes(order.status);
+              {activeOrders.map((order: any) => {
+                const statusInfo = STATUS_LABELS[order.status] || { labelAr: order.status, labelEn: order.status, color: 'bg-gray-500' };
                 return (
-                  <Card key={order.id} className={`overflow-hidden border-2 transition-all ${
-                    needsDriver ? "border-orange-300 bg-orange-50/30"
-                    : isCompleted ? "border-gray-200 opacity-80"
-                    : "border-[#2D9B6E]/30 bg-[#2D9B6E]/5"
-                  }`}>
-                    <div className={`h-1 ${statusInfo.color}`} />
+                  <Card key={order.id} className="overflow-hidden">
                     <CardContent className="p-4">
-                      {/* Header */}
                       <div className="flex items-start justify-between mb-3">
                         <div>
                           <div className="flex items-center gap-2 mb-1">
                             <p className="font-bold">{order.customerName || tc('عميل', 'Customer')}</p>
                             <Badge className={`${statusInfo.color} text-white text-xs`}>
-                              {statusInfo.label}
+                              {tc(statusInfo.labelAr, statusInfo.labelEn)}
                             </Badge>
-                            {needsDriver && (
-                              <Badge className="bg-orange-500 text-white text-xs animate-pulse">
-                                ⚡ يحتاج سائق
-                              </Badge>
-                            )}
                           </div>
                           <p className="text-xs text-muted-foreground flex items-center gap-1">
                             <MapPin className="w-3 h-3" />
                             {order.customerAddress || tc('عنوان غير محدد', 'Address not specified')}
                           </p>
-                          {order.customerPhone && (
-                            <a href={`tel:${order.customerPhone}`} className="text-xs text-[#2D9B6E] flex items-center gap-1 mt-0.5 hover:underline">
-                              <Phone className="w-3 h-3" />
-                              {order.customerPhone}
-                            </a>
-                          )}
                           {order.externalProvider && (
                             <Badge variant="outline" className="text-xs mt-1">
                               {PROVIDER_LABELS[order.externalProvider] || order.externalProvider}
                             </Badge>
                           )}
                         </div>
-                        <div className="text-left shrink-0">
-                          <p className="font-bold text-lg">{formatCurrency(order.totalAmount || 0)}</p>
+                        <div className="text-left">
+                          <p className="font-bold">{formatCurrency(order.totalAmount || 0)}</p>
                           {order.deliveryFee > 0 && (
-                            <p className="text-xs text-muted-foreground">توصيل: {formatCurrency(order.deliveryFee)}</p>
+                            <p className="text-xs text-muted-foreground">{tc("توصيل:", "Delivery:")} {formatCurrency(order.deliveryFee)}</p>
                           )}
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            {new Date(order.createdAt).toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" })}
-                          </p>
                         </div>
                       </div>
 
-                      {/* Items summary */}
-                      {order.items && order.items.length > 0 && (
-                        <div className="bg-gray-50 rounded-lg p-2 mb-3">
-                          {order.items.slice(0, 3).map((item: any, idx: number) => (
-                            <div key={idx} className="flex justify-between text-xs text-gray-600">
-                              <span>{item.name || item.nameAr || "صنف"}</span>
-                              <span className="font-medium">×{item.quantity}</span>
-                            </div>
-                          ))}
-                          {order.items.length > 3 && (
-                            <p className="text-xs text-gray-400 mt-1">+{order.items.length - 3} أصناف أخرى</p>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Driver info */}
                       {order.driverName && (
-                        <div className="flex items-center gap-2 p-2 bg-[#2D9B6E]/10 rounded-lg mb-3 border border-[#2D9B6E]/20">
-                          <Truck className="w-4 h-4 text-[#2D9B6E] shrink-0" />
-                          <div className="flex-1">
-                            <span className="font-semibold text-sm text-[#2D9B6E]">{order.driverName}</span>
-                            {order.driverPhone && (
-                              <a href={`tel:${order.driverPhone}`} className="text-xs text-gray-500 flex items-center gap-1 mt-0.5 hover:underline">
-                                <Phone className="w-3 h-3" />
-                                {order.driverPhone}
-                              </a>
-                            )}
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-xs h-7 border-[#2D9B6E]/40 text-[#2D9B6E]"
-                            onClick={() => setAssignDialogOrder(order)}
-                          >
-                            <RefreshCw className="w-3 h-3 ml-1" />
-                            تغيير
-                          </Button>
+                        <div className="flex items-center gap-2 p-2 bg-muted/50 rounded text-sm">
+                          <Users className="w-4 h-4 text-[#2D9B6E]" />
+                          <span className="font-medium">{order.driverName}</span>
+                          {order.driverPhone && <span className="text-muted-foreground">({order.driverPhone})</span>}
                         </div>
                       )}
 
-                      {/* Action buttons */}
-                      {!isCompleted && (
-                        <div className="flex flex-wrap gap-2">
-                          {needsDriver && (
-                            <>
-                              <Button
-                                size="sm"
-                                className="bg-[#2D9B6E] hover:bg-[#258a5e] text-white"
-                                onClick={() => setAssignDialogOrder(order)}
-                                data-testid={`button-manual-assign-${order.id}`}
-                              >
-                                <UserCheck className="w-3 h-3 ml-1" />
-                                اختيار سائق
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => autoAssignMutation.mutate(order.id)}
-                                disabled={autoAssignMutation.isPending}
-                                className="border-[#2D9B6E]/40 text-[#2D9B6E]"
-                                data-testid={`button-auto-assign-${order.id}`}
-                              >
-                                <Zap className="w-3 h-3 ml-1" />
-                                تعيين تلقائي
-                              </Button>
-                            </>
-                          )}
-                          {order.status === "assigned" && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {order.status === 'pending' && (
+                          <>
                             <Button
                               size="sm"
-                              className="bg-blue-600 hover:bg-blue-700 text-white"
-                              onClick={() => orderStatusMutation.mutate({ orderId: order.id, status: "picking_up" })}
-                              disabled={orderStatusMutation.isPending}
+                              onClick={() => autoAssignMutation.mutate(order.id)}
+                              disabled={autoAssignMutation.isPending}
+                              className="bg-[#2D9B6E] hover:bg-[#258a5e] text-white"
                             >
-                              <Package className="w-3 h-3 ml-1" />
-                              السائق في الطريق للاستلام
+                              <Zap className="w-3 h-3 ml-1" />
+                              {tc("تعيين سائق", "Assign Driver")}
                             </Button>
-                          )}
-                          {order.status === "picking_up" && (
-                            <Button
-                              size="sm"
-                              className="bg-purple-600 hover:bg-purple-700 text-white"
-                              onClick={() => orderStatusMutation.mutate({ orderId: order.id, status: "on_the_way" })}
-                              disabled={orderStatusMutation.isPending}
-                            >
-                              <Truck className="w-3 h-3 ml-1" />
-                              في الطريق للعميل
-                            </Button>
-                          )}
-                          {order.status === "on_the_way" && (
-                            <Button
-                              size="sm"
-                              className="bg-green-600 hover:bg-green-700 text-white"
-                              onClick={() => orderStatusMutation.mutate({ orderId: order.id, status: "delivered" })}
-                              disabled={orderStatusMutation.isPending}
-                            >
-                              <CheckCircle className="w-3 h-3 ml-1" />
-                              تم التوصيل ✓
-                            </Button>
-                          )}
-                          {!["delivered","cancelled","returned"].includes(order.status) && (
                             <Button
                               size="sm"
                               variant="outline"
-                              className="border-red-300 text-red-600 hover:bg-red-50"
-                              onClick={() => orderStatusMutation.mutate({ orderId: order.id, status: "cancelled" })}
+                              onClick={() => orderStatusMutation.mutate({ orderId: order.id, status: 'in_progress' })}
                               disabled={orderStatusMutation.isPending}
+                              className="border-blue-500 text-blue-600 hover:bg-blue-50"
                             >
-                              <XCircle className="w-3 h-3 ml-1" />
-                              إلغاء
+                              <Package className="w-3 h-3 ml-1" />
+                              {tc("بدء التحضير", "Start Preparing")}
                             </Button>
-                          )}
-                        </div>
-                      )}
+                          </>
+                        )}
+                        {order.status === 'in_progress' && (
+                          <Button
+                            size="sm"
+                            onClick={() => orderStatusMutation.mutate({ orderId: order.id, status: 'out_for_delivery' })}
+                            disabled={orderStatusMutation.isPending}
+                            className="bg-orange-500 hover:bg-orange-600 text-white"
+                          >
+                            <Truck className="w-3 h-3 ml-1" />
+                            {tc("في الطريق", "Out for Delivery")}
+                          </Button>
+                        )}
+                        {order.status === 'out_for_delivery' && (
+                          <Button
+                            size="sm"
+                            onClick={() => orderStatusMutation.mutate({ orderId: order.id, status: 'completed' })}
+                            disabled={orderStatusMutation.isPending}
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                          >
+                            <CheckCircle className="w-3 h-3 ml-1" />
+                            {tc("تم التوصيل", "Delivered")}
+                          </Button>
+                        )}
+                      </div>
 
-                      {/* ETA */}
                       {order.estimatedDeliveryTime && (
                         <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          التوصيل المتوقع: {new Date(order.estimatedDeliveryTime).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}
+                          {tc("التوصيل المتوقع:", "Est. delivery:")} {new Date(order.estimatedDeliveryTime).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}
                         </p>
-                      )}
-
-                      {/* Customer tracking link */}
-                      {!isCompleted && (
-                        <a
-                          href={`/delivery/track/${order.orderId || order.id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-[#2D9B6E] flex items-center gap-1 mt-2 hover:underline"
-                        >
-                          <Navigation className="w-3 h-3" />
-                          رابط تتبع العميل
-                        </a>
                       )}
                     </CardContent>
                   </Card>
@@ -1240,21 +1135,34 @@ export default function ManagerDelivery() {
               })}
             </div>
           )}
-
-          {/* Manual assign dialog */}
-          <ManualAssignDialog
-            order={assignDialogOrder}
-            drivers={driversData}
-            open={!!assignDialogOrder}
-            onClose={() => setAssignDialogOrder(null)}
-          />
         </TabsContent>
 
         <TabsContent value="tracking" className="space-y-4">
           <TrackingModeSelector />
         </TabsContent>
 
-        <TabsContent value="settings">
+        <TabsContent value="settings" className="space-y-4">
+          {/* Zone Settings Quick Link */}
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
+                    <MapPin className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-gray-900 text-sm">{tc("إعدادات مناطق التوصيل", "Delivery Zone Settings")}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{tc("أسعار التوصيل، أحياء الرياض، الكيلومتر", "Delivery prices, Riyadh districts, per-km pricing")}</p>
+                  </div>
+                </div>
+                <a href="/manager/delivery-zones">
+                  <Button size="sm" className="bg-primary hover:bg-primary/90 text-xs h-8">
+                    {tc("إدارة المناطق", "Manage Zones")}
+                  </Button>
+                </a>
+              </div>
+            </CardContent>
+          </Card>
           <DeliveryManagement />
         </TabsContent>
 

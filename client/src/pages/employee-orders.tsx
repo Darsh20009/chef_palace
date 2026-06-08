@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
@@ -18,6 +18,9 @@ import SarIcon from "@/components/sar-icon";
 import { useTranslate } from "@/lib/useTranslate";
 import { PaymentReceiptDialog } from "@/components/PaymentReceiptDialog";
 import { PrepCountdown } from "@/components/PrepCountdown";
+import { playNotificationSound, initAudioUnlock, getSoundEnabled, setSoundEnabled } from "@/lib/notification-sounds";
+import { AudioUnlockBanner } from "@/components/audio-unlock-banner";
+import { getPaymentMethodLabel } from "@shared/order-states";
 
 export default function EmployeeOrders() {
   const { toast } = useToast();
@@ -27,6 +30,9 @@ export default function EmployeeOrders() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
+  const [soundEnabled, setSoundEnabledState] = useState(() => getSoundEnabled('employee-orders'));
+  const prevPendingIdsRef = useRef<Set<string>>(new Set());
+  const isFirstLoadRef = useRef(true);
 
   const [showCashDialog, setShowCashDialog] = useState(false);
   const [showPrintDialog, setShowPrintDialog] = useState(false);
@@ -36,43 +42,34 @@ export default function EmployeeOrders() {
   const [receiptDialogOrder, setReceiptDialogOrder] = useState<any>(null);
 
   const BANK_TRANSFER_METHODS = ['mada', 'rajhi', 'alinma', 'ur', 'barq', 'bank_transfer'];
-  const GATEWAY_METHODS = ['paymob', 'paymob-card', 'paymob-wallet', 'geidea', 'apple_pay', 'neoleap', 'neoleap-apple-pay'];
+  const GATEWAY_METHODS = ['paymob', 'paymob-card', 'paymob-wallet', 'paymob-apple-pay', 'geidea', 'apple_pay', 'neoleap', 'neoleap-apple-pay'];
 
   const getPaymentLabel = (method: string) => {
-    const labels: Record<string, { label: string; icon: any }> = {
-      cash:           { label: tc("نقداً", "Cash"),           icon: Banknote },
-      pos:            { label: tc("شبكة", "Network"),         icon: CreditCard },
-      'pos-network':  { label: tc("شبكة", "Network"),         icon: CreditCard },
-      mada:           { label: tc("تحويل بنكي", "Bank Transfer"), icon: Building2 },
-      rajhi:          { label: tc("بنك الراجحي", "Al Rajhi"), icon: Building2 },
-      alinma:         { label: tc("Alinma Pay", "Alinma Pay"), icon: Building2 },
-      ur:             { label: tc("Ur Pay", "Ur Pay"),         icon: Building2 },
-      barq:           { label: tc("Barq", "Barq"),             icon: Building2 },
-      'qahwa-card':   { label: tc("بطاقة مكان الشيف", "مكان الشيف البخاري Card"), icon: CreditCard },
-      'loyalty-card': { label: tc("بطاقة ولاء", "Loyalty Card"), icon: CreditCard },
-      'stc-pay':      { label: tc("STC Pay", "STC Pay"),       icon: CreditCard },
-      'apple_pay':    { label: tc("Apple Pay", "Apple Pay"),   icon: CreditCard },
-    };
-    return labels[method] || { label: method || tc("شبكة", "Card"), icon: CreditCard };
+    const m = (method || '').toLowerCase();
+    // Use shared canonical helper for label text; resolve icon locally
+    const label = getPaymentMethodLabel(method, tc('ar', 'en') === 'en' ? 'en' : 'ar');
+    if (m === 'cash') return { label, icon: Banknote };
+    if (m === 'bank_transfer' || m === 'rajhi' || m === 'alinma' || m === 'ur' || m === 'barq')
+      return { label, icon: Building2 };
+    return { label, icon: CreditCard };
   };
 
   const isPaymentConfirmed = (order: any) =>
     order.paymentStatus === 'paid' ||
-    ['payment_confirmed', 'completed'].includes(order.status);
+    ['payment_confirmed', 'confirmed', 'in_progress', 'ready', 'delivered', 'received', 'completed'].includes(order.status);
 
   useEffect(() => {
     const stored = localStorage.getItem("currentEmployee");
     if (stored) {
       setEmployee(JSON.parse(stored));
     }
-    // Managers accessing via manager dashboard don't need localStorage check
-    // AuthGuard already validates the session
+    initAudioUnlock();
   }, [setLocation]);
 
   const { data: orders = [], refetch, isLoading, isError } = useQuery<any[]>({
     queryKey: ["/api/orders", "management"],
     queryFn: async () => {
-      const res = await fetch("/api/orders?limit=500", { credentials: "include" });
+      const res = await fetch("/api/orders?limit=100", { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch orders");
       return res.json();
     },
@@ -85,6 +82,27 @@ export default function EmployeeOrders() {
   const { data: branches = [] } = useQuery<any[]>({
     queryKey: ["/api/branches"],
   });
+
+  useEffect(() => {
+    if (!orders || orders.length === 0) return;
+    const currentPendingIds = new Set(
+      orders.filter((o: any) => o.status === "pending").map((o: any) => o._id || o.id)
+    );
+    if (isFirstLoadRef.current) {
+      prevPendingIdsRef.current = currentPendingIds;
+      isFirstLoadRef.current = false;
+      return;
+    }
+    let hasNew = false;
+    currentPendingIds.forEach((id) => {
+      if (!prevPendingIdsRef.current.has(id)) hasNew = true;
+    });
+    if (hasNew) {
+      playNotificationSound('newOrder', 0.9).catch(() => {});
+      toast({ title: "🔔 طلب جديد!", description: "وصل طلب جديد يحتاج تأكيداً", duration: 4000 });
+    }
+    prevPendingIdsRef.current = currentPendingIds;
+  }, [orders]);
 
   const handlePrint = (order: any) => {
     setCurrentOrder(order);
@@ -139,8 +157,11 @@ export default function EmployeeOrders() {
         confirmed: 'مؤكد',
         in_progress: 'قيد التحضير',
         ready: 'جاهز للتسليم',
+        delivered: 'تم التسليم',
+        received: 'تم الاستلام',
         completed: 'مكتمل',
         cancelled: 'ملغي',
+        suspended: 'معلق',
       };
       toast({ title: `تم تحديث حالة الطلب إلى: ${statusLabels[variables.status] || variables.status}` });
     },
@@ -209,7 +230,13 @@ export default function EmployeeOrders() {
 
   const filteredOrders = orders.filter((order) => {
     if (selectedBranchId && order.branchId !== selectedBranchId) return false;
-    if (statusFilter !== "all" && order.status !== statusFilter) return false;
+    if (statusFilter !== "all") {
+      if (statusFilter === "refunded") {
+        if (order.status !== 'refunded' && !(order as any).isFullyRefunded && !((order as any).refundedAmount > 0)) return false;
+      } else {
+        if (order.status !== statusFilter) return false;
+      }
+    }
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       const matchOrder = (order.orderNumber || "").toLowerCase().includes(query);
@@ -222,22 +249,31 @@ export default function EmployeeOrders() {
 
   const newOrdersCount = orders.filter(o => o.status === "pending").length;
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, order?: any) => {
+    if (status === 'refunded' || order?.isFullyRefunded) {
+      return <Badge className="bg-red-100 text-red-700 border border-red-300 font-bold">مسترجع ↩</Badge>;
+    }
+    if (order?.refundedAmount > 0 && !order?.isFullyRefunded) {
+      return <Badge className="bg-orange-100 text-orange-700 border border-orange-300 font-bold">مسترجع جزئياً ↩</Badge>;
+    }
     const config: Record<string, { label: string; variant: "destructive" | "default" | "success" | "outline" | "secondary" }> = {
       pending: { label: 'جديد', variant: 'destructive' },
       payment_confirmed: { label: 'تم الدفع', variant: 'default' },
       confirmed: { label: 'مؤكد', variant: 'default' },
       in_progress: { label: 'قيد التحضير', variant: 'secondary' },
       ready: { label: 'جاهز', variant: 'success' },
+      delivered: { label: 'تم التسليم', variant: 'success' },
+      received: { label: 'تم الاستلام', variant: 'success' },
       completed: { label: 'مكتمل', variant: 'outline' },
       cancelled: { label: 'ملغي', variant: 'outline' },
+      suspended: { label: 'معلق', variant: 'secondary' },
     };
     const c = config[status] || { label: status, variant: 'outline' as const };
     return <Badge variant={c.variant}>{c.label}</Badge>;
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 pb-20 sm:pb-4" dir="rtl">
+    <div className="min-h-screen bg-gray-50 p-4 pb-20 sm:pb-4">
       <div className="max-w-7xl mx-auto">
         <div className="space-y-4 mb-6">
           <div className="flex items-center justify-between flex-wrap gap-3">
@@ -269,6 +305,12 @@ export default function EmployeeOrders() {
               </Button>
             </div>
           </div>
+
+          <AudioUnlockBanner
+            pageKey="employee-orders"
+            soundEnabled={soundEnabled}
+            onToggleSound={(v) => { setSoundEnabledState(v); setSoundEnabled('employee-orders', v); }}
+          />
 
           <div className="flex flex-wrap items-center gap-3">
             <Label className="font-semibold">{tc("تصفية حسب الفرع:", "Filter by Branch:")}</Label>
@@ -338,8 +380,12 @@ export default function EmployeeOrders() {
                     <SelectItem value="confirmed">{tc("مؤكد", "Confirmed")}</SelectItem>
                     <SelectItem value="in_progress">{tc("قيد التحضير", "In Progress")}</SelectItem>
                     <SelectItem value="ready">{tc("جاهز", "Ready")}</SelectItem>
+                    <SelectItem value="delivered">{tc("تم التسليم", "Delivered")}</SelectItem>
+                    <SelectItem value="received">{tc("تم الاستلام", "Received")}</SelectItem>
                     <SelectItem value="completed">{tc("مكتمل", "Completed")}</SelectItem>
                     <SelectItem value="cancelled">{tc("ملغي", "Cancelled")}</SelectItem>
+                    <SelectItem value="suspended">{tc("معلق", "Suspended")}</SelectItem>
+                    <SelectItem value="refunded">{tc("مسترجع", "Refunded")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -410,7 +456,7 @@ export default function EmployeeOrders() {
                             {order.createdAt ? new Date(order.createdAt).toLocaleString('ar-SA') : 'تاريخ غير معروف'}
                           </div>
                         </div>
-                        {getStatusBadge(order.status)}
+                        {getStatusBadge(order.status, order)}
                       </div>
 
                       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -487,6 +533,13 @@ export default function EmployeeOrders() {
 
                       <Separator />
 
+                      {(order as any).refundedAmount > 0 && (
+                        <div className="flex items-center justify-between text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">
+                          <span className="text-red-700 font-semibold flex items-center gap-1">↩ {tc("مبلغ الاسترجاع:", "Refunded:")}</span>
+                          <span className="text-red-700 font-black">{Number((order as any).refundedAmount).toFixed(2)} <SarIcon /></span>
+                        </div>
+                      )}
+
                       <div className="flex justify-between items-center">
                         <span className="font-bold text-primary text-lg">{tc("الإجمالي:", "Total:")} {Number(order.totalAmount).toFixed(2)} <SarIcon /></span>
                         <div className="flex items-center gap-2">
@@ -527,23 +580,13 @@ export default function EmployeeOrders() {
                       </div>
 
                       <div className="flex gap-1.5 flex-wrap pt-1">
-                        {order.status === 'pending' && (
+                        {['pending', 'payment_confirmed', 'confirmed', 'accepted'].includes(order.status) && (
                           <Button 
-                            size="sm" 
+                            size="sm"
+                            className="bg-primary text-white hover:bg-primary/90"
                             onClick={() => updateStatusMutation.mutate({ id: orderId, status: 'in_progress' })}
                             disabled={updateStatusMutation.isPending}
                             data-testid={`button-start-${orderId}`}
-                          >
-                            <PlayCircle className="w-3.5 h-3.5 ml-1" />
-                            {tc("بدء التحضير", "Start Prep")}
-                          </Button>
-                        )}
-                        {(order.status === 'payment_confirmed' || order.status === 'confirmed') && (
-                          <Button 
-                            size="sm" 
-                            onClick={() => updateStatusMutation.mutate({ id: orderId, status: 'in_progress' })}
-                            disabled={updateStatusMutation.isPending}
-                            data-testid={`button-start-confirmed-${orderId}`}
                           >
                             <PlayCircle className="w-3.5 h-3.5 ml-1" />
                             {tc("بدء التحضير", "Start Prep")}
@@ -561,8 +604,46 @@ export default function EmployeeOrders() {
                           </Button>
                         )}
                         {order.status === 'ready' && (
-                          <Button 
-                            size="sm" 
+                          <>
+                            {(order.orderType === 'delivery' || order.orderType === 'car_pickup' || order.orderType === 'car-pickup' || order.orderType === 'curbside') ? (
+                              <Button
+                                size="sm"
+                                className="bg-teal-600 hover:bg-teal-700 text-white"
+                                onClick={() => updateStatusMutation.mutate({ id: orderId, status: 'delivered' })}
+                                disabled={updateStatusMutation.isPending}
+                                data-testid={`button-delivered-${orderId}`}
+                              >
+                                <CheckCircle className="w-3.5 h-3.5 ml-1" />
+                                {tc("تم التسليم", "Delivered")}
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                onClick={() => updateStatusMutation.mutate({ id: orderId, status: 'completed' })}
+                                disabled={updateStatusMutation.isPending}
+                                data-testid={`button-complete-${orderId}`}
+                              >
+                                <CheckCircle className="w-3.5 h-3.5 ml-1" />
+                                {tc("إكمال", "Complete")}
+                              </Button>
+                            )}
+                          </>
+                        )}
+                        {order.status === 'delivered' && (
+                          <Button
+                            size="sm"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                            onClick={() => updateStatusMutation.mutate({ id: orderId, status: 'received' })}
+                            disabled={updateStatusMutation.isPending}
+                            data-testid={`button-received-${orderId}`}
+                          >
+                            <CheckCircle className="w-3.5 h-3.5 ml-1" />
+                            {tc("تم الاستلام", "Received")}
+                          </Button>
+                        )}
+                        {order.status === 'received' && (
+                          <Button
+                            size="sm"
                             onClick={() => updateStatusMutation.mutate({ id: orderId, status: 'completed' })}
                             disabled={updateStatusMutation.isPending}
                             data-testid={`button-complete-${orderId}`}
@@ -597,18 +678,19 @@ export default function EmployeeOrders() {
                           </Button>
                         )}
 
-                        {['in_progress', 'ready', 'completed'].includes(order.status) && (
-                          <Button 
-                            size="icon" 
-                            variant="ghost" 
+                        {['in_progress', 'ready', 'delivered', 'received', 'completed'].includes(order.status) && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
                             title="رجوع للخطوة السابقة"
                             onClick={() => {
-                              const prevStatus = 
+                              const prevStatus =
                                 order.status === 'in_progress' ? 'pending' :
                                 order.status === 'ready' ? 'in_progress' :
+                                order.status === 'delivered' ? 'ready' :
+                                order.status === 'received' ? 'delivered' :
                                 order.status === 'completed' ? 'ready' : 'pending';
-                              
-                              const labels: Record<string, string> = { pending: 'جديد', in_progress: 'تحضير', ready: 'جاهز' };
+                              const labels: Record<string, string> = { pending: 'جديد', in_progress: 'تحضير', ready: 'جاهز', delivered: 'تم التسليم', received: 'تم الاستلام' };
                               if (confirm(`هل تريد العودة بحالة الطلب إلى "${labels[prevStatus] || prevStatus}"؟`)) {
                                 updateStatusMutation.mutate({ id: orderId, status: prevStatus });
                               }
@@ -619,10 +701,10 @@ export default function EmployeeOrders() {
                           </Button>
                         )}
 
-                        {['pending', 'in_progress', 'ready'].includes(order.status) && (
-                          <Button 
-                            size="icon" 
-                            variant="ghost" 
+                        {['pending', 'confirmed', 'payment_confirmed', 'in_progress', 'ready', 'suspended'].includes(order.status) && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
                             className="text-destructive"
                             title="إلغاء الطلب"
                             onClick={() => {
@@ -646,7 +728,7 @@ export default function EmployeeOrders() {
       </div>
 
       <Dialog open={showPrintDialog} onOpenChange={setShowPrintDialog}>
-        <DialogContent dir="rtl" className="max-w-md overflow-y-auto max-h-[90vh]">
+        <DialogContent className="max-w-md overflow-y-auto max-h-[90vh]">
           <DialogHeader className="pb-4 border-b">
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
               <Printer className="w-5 h-5 text-primary" />
@@ -662,7 +744,7 @@ export default function EmployeeOrders() {
       </Dialog>
 
       <Dialog open={showCashDialog} onOpenChange={setShowCashDialog}>
-        <DialogContent className="max-w-md" dir="rtl">
+        <DialogContent className="max-w-md">
           <DialogHeader className="space-y-3 pb-4 border-b">
             <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
               <DollarSign className="w-6 h-6 text-primary" />

@@ -48,6 +48,7 @@ import {
   Loader2,
   Calendar,
   Check,
+  BookOpen,
   X,
   CreditCard,
   Banknote,
@@ -57,6 +58,10 @@ import {
   Package,
   ShoppingCart,
   Percent,
+  Sparkles,
+  Bot,
+  Send,
+  ShieldCheck,
   Eye,
   ChevronLeft,
   Download,
@@ -64,7 +69,6 @@ import {
   Printer,
   Filter,
   RefreshCw,
-  RotateCcw,
   PieChart as PieChartIcon,
   LineChart,
   LayoutDashboard,
@@ -180,8 +184,8 @@ interface DashboardData {
   grossProfit: number;
   netProfit: number;
   orderCount: number;
-  refundCount: number;
   invoiceCount: number;
+  refundCount: number;
   profitMargin: number;
   expensesByCategory: Record<string, number>;
   revenueByPayment: Record<string, number>;
@@ -190,17 +194,6 @@ interface DashboardData {
   topSellingItems: TopSellingItem[];
 }
 
-const expenseCategories = [
-  { value: "inventory", label: tc("المخزون والمواد الخام", "Inventory & Raw Materials") },
-  { value: "salaries", label: tc("الرواتب والأجور", "Salaries & Wages") },
-  { value: "rent", label: tc("الإيجار", "Rent") },
-  { value: "utilities", label: tc("المرافق (كهرباء/ماء)", "Utilities (electricity/water)") },
-  { value: "marketing", label: tc("التسويق والإعلان", "Marketing & Advertising") },
-  { value: "maintenance", label: tc("الصيانة", "Maintenance") },
-  { value: "supplies", label: tc("المستلزمات", "Supplies") },
-  { value: "other", label: tc("أخرى", "Other") },
-];
-
 const statusLabels: Record<string, { labelAr: string; labelEn: string; label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
   pending: { labelAr: "قيد الانتظار", labelEn: "Pending", label: "Pending", variant: "secondary" },
   approved: { labelAr: "معتمد", labelEn: "Approved", label: "Approved", variant: "default" },
@@ -208,195 +201,39 @@ const statusLabels: Record<string, { labelAr: string; labelEn: string; label: st
   paid: { labelAr: "مدفوع", labelEn: "Paid", label: "Paid", variant: "default" },
 };
 
-const paymentMethodLabels: Record<string, string> = {
-  cash: tc("نقدي", "Cash"),
-  pos: tc("شبكة", "POS"),
-  bank_transfer: tc("تحويل بنكي", "Bank Transfer"),
-  stc: "STC Pay",
-  alinma: "Alinma Pay",
-};
-
 const CHART_COLORS = ['#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ef4444', '#ec4899'];
-
-const periodLabels: Record<string, string> = {
-  today: tc('اليوم', 'Today'),
-  week: tc('هذا الأسبوع', 'This Week'),
-  month: tc('هذا الشهر', 'This Month'),
-  year: tc('هذه السنة', 'This Year')
-};
-
-// ── Refunds Tab Component ──────────────────────────────────────────────────
-function RefundsTab({ period, selectedBranch }: { period: string; selectedBranch: string }) {
-  const [searchText, setSearchText] = useState("");
-  const [methodFilter, setMethodFilter] = useState<string>("all");
-
-  const { data: refundsData, isLoading } = useQuery<{ refunds: any[]; total: number }>({
-    queryKey: ["/api/refunds", period, selectedBranch],
-    queryFn: async () => {
-      const params = new URLSearchParams({ period, limit: "200" });
-      if (selectedBranch !== "all") params.append("branchId", selectedBranch);
-      const res = await fetch(`/api/refunds?${params}`, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed");
-      return res.json();
-    },
-    staleTime: 30000,
-  });
-
-  const refunds = refundsData?.refunds || [];
-
-  const filtered = refunds.filter((r: any) => {
-    const matchSearch = !searchText ||
-      r.refundNumber?.toLowerCase().includes(searchText.toLowerCase()) ||
-      r.originalOrderNumber?.toLowerCase().includes(searchText.toLowerCase()) ||
-      r.reason?.toLowerCase().includes(searchText.toLowerCase()) ||
-      r.processedByName?.toLowerCase().includes(searchText.toLowerCase());
-    const matchMethod = methodFilter === "all" || r.refundMethod === methodFilter;
-    return matchSearch && matchMethod;
-  });
-
-  const totalRefundAmount = filtered.reduce((s: number, r: any) => s + (r.refundAmount || 0), 0);
-  const cashRefunds = filtered.filter((r: any) => r.refundMethod === 'cash').reduce((s: number, r: any) => s + (r.refundAmount || 0), 0);
-  const cardRefunds = filtered.filter((r: any) => r.refundMethod === 'card').reduce((s: number, r: any) => s + (r.refundAmount || 0), 0);
-  const splitRefunds = filtered.filter((r: any) => r.refundMethod === 'split').reduce((s: number, r: any) => s + (r.refundAmount || 0), 0);
-
-  const methodLabel: Record<string, string> = { cash: '💵 نقدي', card: '💳 بطاقة', split: '💵+💳 مختلط' };
-
-  return (
-    <div className="space-y-4">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="bg-orange-50 dark:bg-orange-900/20 border-orange-200">
-          <CardContent className="p-4 text-center">
-            <p className="text-xs text-muted-foreground">إجمالي الاسترجاعات</p>
-            <p className="text-2xl font-black text-orange-600 mt-1">{totalRefundAmount.toFixed(2)}</p>
-            <p className="text-xs text-muted-foreground">ريال سعودي ({filtered.length} عملية)</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-green-50 dark:bg-green-900/20">
-          <CardContent className="p-4 text-center">
-            <p className="text-xs text-muted-foreground">💵 نقدي</p>
-            <p className="text-2xl font-black text-green-700 mt-1">{cashRefunds.toFixed(2)}</p>
-            <p className="text-xs text-muted-foreground">ريال</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-blue-50 dark:bg-blue-900/20">
-          <CardContent className="p-4 text-center">
-            <p className="text-xs text-muted-foreground">💳 بطاقة</p>
-            <p className="text-2xl font-black text-blue-700 mt-1">{cardRefunds.toFixed(2)}</p>
-            <p className="text-xs text-muted-foreground">ريال</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-purple-50 dark:bg-purple-900/20">
-          <CardContent className="p-4 text-center">
-            <p className="text-xs text-muted-foreground">💵+💳 مختلط</p>
-            <p className="text-2xl font-black text-purple-700 mt-1">{splitRefunds.toFixed(2)}</p>
-            <p className="text-xs text-muted-foreground">ريال</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filter row */}
-      <div className="flex gap-2 flex-wrap">
-        <Input
-          placeholder="بحث برقم الاسترجاع أو الطلب أو السبب..."
-          value={searchText}
-          onChange={e => setSearchText(e.target.value)}
-          className="max-w-xs"
-        />
-        <Select value={methodFilter} onValueChange={setMethodFilter}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="طريقة الاسترجاع" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">جميع الطرق</SelectItem>
-            <SelectItem value="cash">💵 نقدي</SelectItem>
-            <SelectItem value="card">💳 بطاقة</SelectItem>
-            <SelectItem value="split">💵+💳 مختلط</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <RotateCcw className="w-5 h-5 text-orange-600" />
-            سجل الاسترجاعات
-          </CardTitle>
-          <CardDescription>جميع عمليات الاسترجاع والإرجاع المُسجّلة</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center py-8"><Loader2 className="w-8 h-8 animate-spin text-orange-500" /></div>
-          ) : filtered.length === 0 ? (
-            <div className="text-center py-12">
-              <RotateCcw className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-30" />
-              <p className="text-muted-foreground">لا توجد استرجاعات في هذه الفترة</p>
-            </div>
-          ) : (
-            <ScrollArea className="h-[500px]">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>رقم الاسترجاع</TableHead>
-                    <TableHead>رقم الطلب الأصلي</TableHead>
-                    <TableHead>المبلغ</TableHead>
-                    <TableHead>طريقة الإرجاع</TableHead>
-                    <TableHead>السبب</TableHead>
-                    <TableHead>النوع</TableHead>
-                    <TableHead>المعالج</TableHead>
-                    <TableHead>التاريخ</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.map((refund: any) => (
-                    <TableRow key={refund._id || refund.id}>
-                      <TableCell className="font-bold text-orange-600">{refund.refundNumber}</TableCell>
-                      <TableCell className="font-mono text-sm">{refund.originalOrderNumber}</TableCell>
-                      <TableCell>
-                        <span className="font-black text-orange-600">{Number(refund.refundAmount).toFixed(2)}</span>
-                        <span className="text-xs text-muted-foreground mr-1">ر.س</span>
-                        {refund.refundMethod === 'split' && (
-                          <div className="text-xs text-muted-foreground">
-                            💵 {Number(refund.cashAmount||0).toFixed(2)} + 💳 {Number(refund.cardAmount||0).toFixed(2)}
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={`text-xs ${
-                          refund.refundMethod === 'cash' ? 'border-green-500 text-green-700' :
-                          refund.refundMethod === 'card' ? 'border-blue-500 text-blue-700' :
-                          'border-purple-500 text-purple-700'
-                        }`}>
-                          {methodLabel[refund.refundMethod] || refund.refundMethod}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="max-w-[160px] truncate text-sm">{refund.reason}</TableCell>
-                      <TableCell>
-                        <Badge variant={refund.refundType === 'full' ? 'default' : 'secondary'} className="text-xs">
-                          {refund.refundType === 'full' ? 'كامل' : 'جزئي'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm">{refund.processedByName || '-'}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {new Date(refund.createdAt).toLocaleDateString('ar-SA', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </ScrollArea>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
 
 export default function AccountingDashboardPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const tc = useTranslate();
+
+  const expenseCategories = [
+    { value: "inventory",   label: tc("المخزون والمواد الخام", "Inventory & Raw Materials") },
+    { value: "salaries",    label: tc("الرواتب والأجور", "Salaries & Wages") },
+    { value: "rent",        label: tc("الإيجار", "Rent") },
+    { value: "utilities",   label: tc("المرافق (كهرباء/ماء)", "Utilities (electricity/water)") },
+    { value: "marketing",   label: tc("التسويق والإعلان", "Marketing & Advertising") },
+    { value: "maintenance", label: tc("الصيانة", "Maintenance") },
+    { value: "supplies",    label: tc("المستلزمات", "Supplies") },
+    { value: "other",       label: tc("أخرى", "Other") },
+  ];
+
+  const paymentMethodLabels: Record<string, string> = {
+    cash:          tc("نقدي", "Cash"),
+    pos:           tc("شبكة", "POS"),
+    bank_transfer: tc("تحويل بنكي", "Bank Transfer"),
+    stc:           "STC Pay",
+    alinma:        "Alinma Pay",
+  };
+
+  const periodLabels: Record<string, string> = {
+    today: tc('اليوم', 'Today'),
+    week:  tc('هذا الأسبوع', 'This Week'),
+    month: tc('هذا الشهر', 'This Month'),
+    year:  tc('هذه السنة', 'This Year'),
+  };
+
   const [activeTab, setActiveTab] = useState("overview");
   const [period, setPeriod] = useState("today");
   const [selectedBranch, setSelectedBranch] = useState<string>("all");
@@ -415,6 +252,12 @@ export default function AccountingDashboardPage() {
   const [drilldownType, setDrilldownType] = useState<DrilldownType>(null);
   const [drilldownOpen, setDrilldownOpen] = useState(false);
 
+  // AI Audit state
+  const [aiReport, setAiReport] = useState<string>("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiQuestion, setAiQuestion] = useState("");
+  const [aiChatHistory, setAiChatHistory] = useState<Array<{role: string; content: string}>>([]);
+
   const { data: branches = [] } = useQuery<Branch[]>({
     queryKey: ["/api/branches"],
   });
@@ -430,15 +273,15 @@ export default function AccountingDashboardPage() {
       return {
         totalRevenue: data.summary?.totalRevenue || 0,
         totalRefunds: data.summary?.totalRefunds || 0,
-        netRevenue: data.summary?.netRevenue || data.summary?.totalRevenue || 0,
+        netRevenue: data.summary?.netRevenue ?? data.summary?.totalRevenue ?? 0,
         totalVat: data.summary?.totalVatCollected || 0,
         totalExpenses: data.summary?.totalExpenses || 0,
         totalCogs: data.summary?.totalCogs || 0,
         grossProfit: data.summary?.grossProfit || 0,
         netProfit: data.summary?.netProfit || 0,
         orderCount: data.summary?.orderCount || 0,
-        refundCount: data.summary?.refundCount || 0,
         invoiceCount: data.summary?.invoiceCount || 0,
+        refundCount: data.summary?.refundCount || 0,
         profitMargin: data.summary?.profitMargin || 0,
         expensesByCategory: data.expensesByCategory || {},
         revenueByPayment: data.revenueByPayment || {},
@@ -606,31 +449,37 @@ export default function AccountingDashboardPage() {
   };
 
   const exportToPDF = (title: string, data: any) => {
-    try {
-      const lines: string[] = [];
-      lines.push(title);
-      lines.push(`الفترة: ${periodLabels[period]}`);
-      lines.push(`التاريخ: ${format(new Date(), 'yyyy/MM/dd')}`);
-      lines.push('');
+    import(/* @vite-ignore */ 'jspdf').then(({ jsPDF }) => {
+      const doc = new jsPDF({ orientation: 'portrait' });
+      doc.setFont('helvetica');
+      doc.setFontSize(18);
+      doc.text(title, 105, 20, { align: 'center' });
+      doc.setFontSize(12);
+      doc.text(`الفترة: ${periodLabels[period]}`, 105, 30, { align: 'center' });
+      doc.text(`التاريخ: ${format(new Date(), 'yyyy/MM/dd')}`, 105, 38, { align: 'center' });
+      
+      let y = 55;
       if (data.summary) {
-        lines.push('ملخص الأداء المالي');
-        lines.push(`إجمالي الإيرادات: ${data.summary.totalRevenue?.toFixed(2) || 0} ر.س`);
-        lines.push(`تكلفة المكونات: ${data.summary.totalCogs?.toFixed(2) || 0} ر.س`);
-        lines.push(`المصروفات: ${data.summary.totalExpenses?.toFixed(2) || 0} ر.س`);
-        lines.push(`صافي الربح: ${data.summary.netProfit?.toFixed(2) || 0} ر.س`);
-        lines.push(`هامش الربح: ${data.summary.profitMargin?.toFixed(1) || 0}%`);
+        doc.setFontSize(14);
+        doc.text('ملخص الأداء المالي', 105, y, { align: 'center' });
+        y += 12;
+        doc.setFontSize(11);
+        doc.text(`إجمالي الإيرادات: ${data.summary.totalRevenue?.toFixed(2) || 0} ر.س`, 20, y);
+        y += 8;
+        doc.text(`تكلفة المكونات: ${data.summary.totalCogs?.toFixed(2) || 0} ر.س`, 20, y);
+        y += 8;
+        doc.text(`المصروفات: ${data.summary.totalExpenses?.toFixed(2) || 0} ر.س`, 20, y);
+        y += 8;
+        doc.text(`صافي الربح: ${data.summary.netProfit?.toFixed(2) || 0} ر.س`, 20, y);
+        y += 8;
+        doc.text(`هامش الربح: ${data.summary.profitMargin?.toFixed(1) || 0}%`, 20, y);
       }
-      const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${title}_${format(new Date(), 'yyyy-MM-dd')}.txt`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast({ title: tc('تم تصدير التقرير بنجاح', 'Report exported successfully'), description: 'تم حفظ الملف' });
-    } catch {
+      
+      doc.save(`${title}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+      toast({ title: tc('تم تصدير التقرير بنجاح', 'Report exported successfully'), description: 'تم حفظ الملف بصيغة PDF' });
+    }).catch(() => {
       toast({ title: tc('فشل التصدير', 'Export failed'), variant: 'destructive' });
-    }
+    });
   };
 
   const handleExportSummaryExcel = () => {
@@ -706,7 +555,7 @@ export default function AccountingDashboardPage() {
 
   return (
     <PlanGate feature="accountingModule">
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto p-4 md:p-6 max-w-7xl">
         <div className="flex items-center justify-between gap-4 mb-6">
           <Button 
@@ -759,6 +608,39 @@ export default function AccountingDashboardPage() {
             <Plus className="w-4 h-4 ml-2" />
             إضافة مصروف
           </Button>
+
+          <Button
+            variant="outline"
+            onClick={() => setLocation("/erp/accounting")}
+            className="border-primary/40 text-primary hover:bg-primary/5 gap-2"
+            data-testid="button-open-erp"
+          >
+            <BookOpen className="w-4 h-4" />
+            نظام ERP — القيود المحاسبية
+          </Button>
+
+          <Button
+            onClick={async () => {
+              setActiveTab("ai-audit");
+              if (!aiReport) {
+                setAiLoading(true);
+                try {
+                  const res = await apiRequest("POST", "/api/ai/accounting-audit", { period });
+                  const data = await res.json();
+                  setAiReport(data.report || "لم أتمكن من إنشاء التقرير.");
+                } catch {
+                  setAiReport("حدث خطأ في الاتصال بالمساعد الذكي.");
+                } finally {
+                  setAiLoading(false);
+                }
+              }
+            }}
+            className="bg-gradient-to-l from-violet-600 to-primary text-white gap-2 shadow"
+            data-testid="button-ai-audit"
+          >
+            {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
+            راجع حساباتي
+          </Button>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -766,8 +648,11 @@ export default function AccountingDashboardPage() {
             <TabsTrigger value="overview" data-testid="tab-overview">نظرة عامة</TabsTrigger>
             <TabsTrigger value="expenses" data-testid="tab-expenses">المصروفات</TabsTrigger>
             <TabsTrigger value="revenues" data-testid="tab-revenues">الإيرادات</TabsTrigger>
-            <TabsTrigger value="refunds" data-testid="tab-refunds" className="text-orange-300 data-[state=active]:text-orange-700">الاسترجاعات</TabsTrigger>
             <TabsTrigger value="reports" data-testid="tab-reports">التقارير</TabsTrigger>
+            <TabsTrigger value="ai-audit" data-testid="tab-ai-audit" className="gap-1">
+              <Sparkles className="w-3.5 h-3.5" />
+              مراجعة ذكية
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -792,13 +677,7 @@ export default function AccountingDashboardPage() {
                             <Eye className="w-3 h-3" />
                           </p>
                           <p className="text-3xl font-bold mt-1" data-testid="text-total-revenue">{dashboardData.totalRevenue.toFixed(2)}</p>
-                          {dashboardData.totalRefunds > 0 && (
-                            <p className="text-green-200 text-xs mt-1 flex items-center gap-1">
-                              <span>صافي بعد الاسترجاع:</span>
-                              <span className="font-bold text-white">{dashboardData.netRevenue.toFixed(2)}</span>
-                            </p>
-                          )}
-                          <p className="text-green-200 text-xs mt-1">ريال سعودي - انقر للتفاصيل</p>
+                          <p className="text-green-200 text-xs mt-1"><SarIcon size={11} /> - انقر للتفاصيل</p>
                         </div>
                         <TrendingUp className="w-12 h-12 text-green-200" />
                       </div>
@@ -818,7 +697,7 @@ export default function AccountingDashboardPage() {
                             <Eye className="w-3 h-3" />
                           </p>
                           <p className="text-3xl font-bold mt-1" data-testid="text-total-cogs">{dashboardData.totalCogs.toFixed(2)}</p>
-                          <p className="text-accent text-xs mt-1">ريال سعودي - انقر للتفاصيل</p>
+                          <p className="text-accent text-xs mt-1"><SarIcon size={11} /> - انقر للتفاصيل</p>
                         </div>
                         <Package className="w-12 h-12 text-accent" />
                       </div>
@@ -838,7 +717,7 @@ export default function AccountingDashboardPage() {
                             <Eye className="w-3 h-3" />
                           </p>
                           <p className="text-3xl font-bold mt-1" data-testid="text-total-expenses">{dashboardData.totalExpenses.toFixed(2)}</p>
-                          <p className="text-red-200 text-xs mt-1">ريال سعودي - انقر للتفاصيل</p>
+                          <p className="text-red-200 text-xs mt-1"><SarIcon size={11} /> - انقر للتفاصيل</p>
                         </div>
                         <TrendingDown className="w-12 h-12 text-red-200" />
                       </div>
@@ -858,13 +737,35 @@ export default function AccountingDashboardPage() {
                             <Eye className="w-3 h-3" />
                           </p>
                           <p className="text-3xl font-bold mt-1" data-testid="text-total-all-expenses">{(dashboardData.totalCogs + dashboardData.totalExpenses).toFixed(2)}</p>
-                          <p className="text-orange-200 text-xs mt-1">ريال سعودي - انقر للتفاصيل</p>
+                          <p className="text-orange-200 text-xs mt-1"><SarIcon size={11} /> - انقر للتفاصيل</p>
                         </div>
                         <TrendingDown className="w-12 h-12 text-orange-200" />
                       </div>
                     </CardContent>
                   </Card>
                 </div>
+
+                {/* ERP Integration Banner */}
+                <Card
+                  className="border-primary/30 bg-gradient-to-l from-primary/5 via-background to-background cursor-pointer hover:border-primary/60 transition-all"
+                  onClick={() => setLocation("/erp/accounting")}
+                  data-testid="card-erp-banner"
+                >
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+                          <BookOpen className="w-6 h-6 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-bold text-base text-foreground">نظام ERP — القيود المحاسبية</p>
+                          <p className="text-sm text-muted-foreground mt-0.5">القيود المزدوجة • الميزانية العمومية • ربط المصروفات والإيرادات بدفتر الأستاذ</p>
+                        </div>
+                      </div>
+                      <ArrowLeft className="w-5 h-5 text-primary shrink-0 rotate-180" />
+                    </div>
+                  </CardContent>
+                </Card>
 
                 {/* Expenses Breakdown Card */}
                 <Card>
@@ -898,21 +799,6 @@ export default function AccountingDashboardPage() {
                       </div>
                     </div>
                     
-                    {dashboardData.totalRefunds > 0 && (
-                      <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center">
-                            <RefreshCw className="w-4 h-4 text-orange-600" />
-                          </div>
-                          <div>
-                            <p className="font-bold text-sm text-orange-700 dark:text-orange-400">إجمالي الاسترجاعات ({dashboardData.refundCount} عملية)</p>
-                            <p className="text-xs text-muted-foreground">مخصومة من الإيرادات</p>
-                          </div>
-                        </div>
-                        <p className="font-black text-xl text-orange-600">-{dashboardData.totalRefunds.toFixed(2)} <SarIcon /></p>
-                      </div>
-                    )}
-
                     <div className="p-4 bg-muted/50 rounded-lg">
                       <div className="flex flex-col gap-2 text-sm">
                         <div className="flex justify-between">
@@ -921,14 +807,17 @@ export default function AccountingDashboardPage() {
                         </div>
                         {dashboardData.totalRefunds > 0 && (
                           <div className="flex justify-between">
-                            <span className="text-orange-600">المسترجع / المُرتجع</span>
-                            <span className="font-medium text-orange-600">-{dashboardData.totalRefunds.toFixed(2)} <SarIcon /></span>
+                            <span className="flex items-center gap-1">
+                              الاسترجاعات
+                              <span className="text-xs text-muted-foreground">({dashboardData.refundCount} عملية)</span>
+                            </span>
+                            <span className="font-medium text-red-600">-{dashboardData.totalRefunds.toFixed(2)} <SarIcon /></span>
                           </div>
                         )}
                         {dashboardData.totalRefunds > 0 && (
-                          <div className="flex justify-between bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded">
-                            <span className="font-medium">صافي الإيرادات بعد الاسترجاع</span>
-                            <span className="font-bold text-green-700">={dashboardData.netRevenue.toFixed(2)} <SarIcon /></span>
+                          <div className="flex justify-between border-t pt-1">
+                            <span className="font-semibold">{tc("صافي الإيرادات", "Net Revenue")}</span>
+                            <span className="font-semibold text-green-600">{dashboardData.netRevenue.toFixed(2)} <SarIcon /></span>
                           </div>
                         )}
                         <div className="flex justify-between">
@@ -936,7 +825,7 @@ export default function AccountingDashboardPage() {
                           <span className="font-medium text-accent">-{dashboardData.totalVat.toFixed(2)} <SarIcon /></span>
                         </div>
                         <div className="flex justify-between">
-                          <span>تكلفة مخزون الأطباق (مصروف)</span>
+                          <span>تكلفة مخزون المشروبات (مصروف)</span>
                           <span className="font-medium text-orange-600">-{dashboardData.totalCogs.toFixed(2)} <SarIcon /></span>
                         </div>
                         <div className="flex justify-between">
@@ -944,9 +833,9 @@ export default function AccountingDashboardPage() {
                           <span className="font-medium text-red-600">-{dashboardData.totalExpenses.toFixed(2)} <SarIcon /></span>
                         </div>
                         <div className="flex justify-between border-t pt-2 border-primary">
-                          <span className="font-bold">= صافي الربح</span>
-                          <span className={`font-bold text-lg ${dashboardData.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {dashboardData.netProfit.toFixed(2)} <SarIcon />
+                          <span className="font-bold">= إجمالي المصروفات (المخزون + التشغيل)</span>
+                          <span className="font-bold text-lg text-red-600">
+                            {(dashboardData.totalCogs + dashboardData.totalExpenses).toFixed(2)} <SarIcon />
                           </span>
                         </div>
                       </div>
@@ -1030,7 +919,7 @@ export default function AccountingDashboardPage() {
                             <Tooltip formatter={(value: number) => [`${value.toFixed(2)} ر.س`]} />
                             <Legend />
                             <Bar dataKey="revenue" fill="#10b981" name="الإيرادات" />
-                            <Bar dataKey="cogs" fill="#f97316" name="تكلفة مخزون الأطباق" />
+                            <Bar dataKey="cogs" fill="#f97316" name="تكلفة مخزون المشروبات" />
                             <Bar dataKey="expenses" fill="#ef4444" name="المصروفات التشغيلية" />
                           </BarChart>
                         </ResponsiveContainer>
@@ -1338,10 +1227,6 @@ export default function AccountingDashboardPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="refunds" className="space-y-4">
-            <RefundsTab period={period} selectedBranch={selectedBranch} />
-          </TabsContent>
-
           <TabsContent value="reports" className="space-y-6">
             {isDashboardLoading ? (
               <div className="flex justify-center py-12">
@@ -1384,7 +1269,14 @@ export default function AccountingDashboardPage() {
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => window.print()}
+                          onClick={() => {
+                            const printWin = window.open('', '_blank', 'width=800,height=600');
+                            if (printWin) {
+                              printWin.document.write(`<html><head><title>تقرير المحاسبة</title><style>body{font-family:Arial,sans-serif;padding:20px}@media print{button{display:none}}</style></head><body>${document.querySelector('.accounting-report-content')?.innerHTML || document.body.innerHTML}</body></html>`);
+                              printWin.document.close();
+                              setTimeout(() => { printWin.print(); printWin.close(); }, 500);
+                            }
+                          }}
                           className="border-blue-500 text-blue-700 hover:bg-blue-50"
                         >
                           <Printer className="w-4 h-4 ml-2" />
@@ -1460,13 +1352,30 @@ export default function AccountingDashboardPage() {
                             <TableCell className="text-green-600 font-bold">{dashboardData.totalRevenue.toFixed(2)} <SarIcon /></TableCell>
                             <TableCell>100%</TableCell>
                           </TableRow>
+                          {dashboardData.totalRefunds > 0 && (
+                            <TableRow className="bg-red-50/30">
+                              <TableCell className="font-medium text-red-700">
+                                الاسترجاعات والمرتجعات
+                                <span className="text-xs text-muted-foreground mr-1">({dashboardData.refundCount} عملية)</span>
+                              </TableCell>
+                              <TableCell className="text-red-600 font-bold">-{dashboardData.totalRefunds.toFixed(2)} <SarIcon /></TableCell>
+                              <TableCell className="text-red-600">-{dashboardData.totalRevenue > 0 ? ((dashboardData.totalRefunds / dashboardData.totalRevenue) * 100).toFixed(1) : 0}%</TableCell>
+                            </TableRow>
+                          )}
+                          {dashboardData.totalRefunds > 0 && (
+                            <TableRow className="bg-green-50/30">
+                              <TableCell className="font-semibold text-green-700">= صافي الإيرادات</TableCell>
+                              <TableCell className="text-green-700 font-bold">{dashboardData.netRevenue.toFixed(2)} <SarIcon /></TableCell>
+                              <TableCell className="text-green-600">{dashboardData.totalRevenue > 0 ? ((dashboardData.netRevenue / dashboardData.totalRevenue) * 100).toFixed(1) : 0}%</TableCell>
+                            </TableRow>
+                          )}
                           <TableRow>
                             <TableCell className="font-medium">ضريبة القيمة المضافة (المحصلة)</TableCell>
                             <TableCell className="text-accent">{dashboardData.totalVat.toFixed(2)} <SarIcon /></TableCell>
                             <TableCell>{dashboardData.totalRevenue > 0 ? ((dashboardData.totalVat / dashboardData.totalRevenue) * 100).toFixed(1) : 0}%</TableCell>
                           </TableRow>
                           <TableRow>
-                            <TableCell className="font-medium">تكلفة مخزون الأطباق (مصروف)</TableCell>
+                            <TableCell className="font-medium">تكلفة مخزون المشروبات (مصروف)</TableCell>
                             <TableCell className="text-orange-600">{dashboardData.totalCogs.toFixed(2)} <SarIcon /></TableCell>
                             <TableCell>{dashboardData.totalRevenue > 0 ? ((dashboardData.totalCogs / dashboardData.totalRevenue) * 100).toFixed(1) : 0}%</TableCell>
                           </TableRow>
@@ -1730,6 +1639,152 @@ export default function AccountingDashboardPage() {
                 <p className="text-muted-foreground">لا توجد بيانات متاحة</p>
               </div>
             )}
+          </TabsContent>
+
+          {/* AI Audit Tab */}
+          <TabsContent value="ai-audit" className="space-y-4">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-violet-600" />
+              </div>
+              <div>
+                <h2 className="font-bold text-lg">المراجعة المحاسبية الذكية</h2>
+                <p className="text-sm text-muted-foreground">مدقق حسابات ذكي يحلل بياناتك ويكشف الأخطاء والمخاطر</p>
+              </div>
+            </div>
+
+            {/* Auto-audit report */}
+            {aiLoading && (
+              <div className="flex flex-col items-center justify-center py-16 gap-4">
+                <Loader2 className="w-10 h-10 animate-spin text-violet-500" />
+                <p className="text-muted-foreground font-medium">جاري مراجعة الحسابات...</p>
+                <p className="text-xs text-muted-foreground">يقوم المدقق بتحليل المصروفات والإيرادات وكشف الأنماط الشاذة</p>
+              </div>
+            )}
+
+            {!aiLoading && aiReport && (
+              <div className="bg-card border border-violet-200 dark:border-violet-800 rounded-xl p-5">
+                <div className="flex items-center gap-2 mb-3 pb-3 border-b border-border">
+                  <ShieldCheck className="w-5 h-5 text-violet-600" />
+                  <span className="font-bold text-violet-700 dark:text-violet-400">تقرير التدقيق</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mr-auto gap-1.5 text-xs border-violet-300"
+                    onClick={() => { setAiReport(""); setAiLoading(false); }}
+                    data-testid="button-refresh-audit"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    إعادة المراجعة
+                  </Button>
+                </div>
+                <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+                  {aiReport}
+                </div>
+              </div>
+            )}
+
+            {!aiLoading && !aiReport && (
+              <div className="text-center py-12">
+                <ShieldCheck className="w-16 h-16 mx-auto text-muted-foreground/30 mb-4" />
+                <p className="text-muted-foreground mb-4">اضغط "راجع حساباتي" لبدء التدقيق الذكي</p>
+                <Button
+                  onClick={async () => {
+                    setAiLoading(true);
+                    try {
+                      const res = await apiRequest("POST", "/api/ai/accounting-audit", { period });
+                      const data = await res.json();
+                      setAiReport(data.report || "لم أتمكن من إنشاء التقرير.");
+                    } catch {
+                      setAiReport("حدث خطأ في الاتصال بالمساعد الذكي.");
+                    } finally {
+                      setAiLoading(false);
+                    }
+                  }}
+                  className="bg-gradient-to-l from-violet-600 to-primary text-white gap-2"
+                  data-testid="button-start-audit"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  ابدأ المراجعة الذكية
+                </Button>
+              </div>
+            )}
+
+            {/* AI accounting chat */}
+            <div className="border border-border rounded-xl p-4 bg-card space-y-3">
+              <div className="flex items-center gap-2 pb-2 border-b border-border">
+                <Bot className="w-4 h-4 text-primary" />
+                <span className="font-semibold text-sm">المستشار المالي الذكي</span>
+                <span className="text-xs text-muted-foreground mr-auto">اسأل عن أي سؤال محاسبي</span>
+              </div>
+
+              <ScrollArea className="h-48">
+                <div className="space-y-3 pr-1">
+                  {aiChatHistory.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-4">لا توجد محادثات بعد. ابدأ بسؤال محاسبي...</p>
+                  )}
+                  {aiChatHistory.map((m, i) => (
+                    <div key={i} className={`flex gap-2 ${m.role === "user" ? "flex-row-reverse" : ""}`}>
+                      <div className={`max-w-[85%] text-xs rounded-xl px-3 py-2 leading-relaxed ${
+                        m.role === "user"
+                          ? "bg-primary text-primary-foreground rounded-tl-none"
+                          : "bg-muted text-foreground rounded-tr-none"
+                      }`}>
+                        {m.content}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+
+              <div className="flex gap-2">
+                <Input
+                  value={aiQuestion}
+                  onChange={(e) => setAiQuestion(e.target.value)}
+                  onKeyDown={async (e) => {
+                    if (e.key !== "Enter" || !aiQuestion.trim() || aiLoading) return;
+                    const q = aiQuestion.trim();
+                    setAiQuestion("");
+                    const newHistory = [...aiChatHistory, { role: "user", content: q }];
+                    setAiChatHistory(newHistory);
+                    setAiLoading(true);
+                    try {
+                      const res = await apiRequest("POST", "/api/ai/accounting-audit", { question: q, period });
+                      const data = await res.json();
+                      setAiChatHistory([...newHistory, { role: "assistant", content: data.report || "—" }]);
+                    } catch {
+                      setAiChatHistory([...newHistory, { role: "assistant", content: "حدث خطأ." }]);
+                    } finally {
+                      setAiLoading(false);
+                    }
+                  }}
+                  placeholder="مثال: ما هي أكثر فئة مصروفات؟"
+                  className="flex-1 text-sm"
+                  data-testid="input-ai-accounting-question"
+                />
+                <Button size="icon" disabled={!aiQuestion.trim() || aiLoading} data-testid="button-send-ai-question"
+                  onClick={async () => {
+                    const q = aiQuestion.trim();
+                    if (!q || aiLoading) return;
+                    setAiQuestion("");
+                    const newHistory = [...aiChatHistory, { role: "user", content: q }];
+                    setAiChatHistory(newHistory);
+                    setAiLoading(true);
+                    try {
+                      const res = await apiRequest("POST", "/api/ai/accounting-audit", { question: q, period });
+                      const data = await res.json();
+                      setAiChatHistory([...newHistory, { role: "assistant", content: data.report || "—" }]);
+                    } catch {
+                      setAiChatHistory([...newHistory, { role: "assistant", content: "حدث خطأ." }]);
+                    } finally {
+                      setAiLoading(false);
+                    }
+                  }}
+                >
+                  {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                </Button>
+              </div>
+            </div>
           </TabsContent>
         </Tabs>
 

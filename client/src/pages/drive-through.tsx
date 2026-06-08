@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Separator } from "@/components/ui/separator";
 import { AddToCartModal } from "@/components/add-to-cart-modal";
 import SarIcon from "@/components/sar-icon";
-const chefsplaceLogo = "/logo.png";
+import qiroxLogo from "@assets/qirox-logo-customer.png";
 import type { CoffeeItem } from "@shared/schema";
 import {
   Car, ShoppingCart, X, Plus, Minus, ChevronRight,
@@ -248,11 +248,11 @@ export default function DriveThroughPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white" dir="rtl">
+    <div className="min-h-screen bg-[#0a0a0a] text-white">
       {/* Header */}
       <div className="sticky top-0 z-40 bg-black/90 backdrop-blur border-b border-white/10 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <img src={chefsplaceLogo} alt="مكان الشيف البخاري" className="w-8 h-8 rounded-lg" />
+          <img src={qiroxLogo} alt="Black Rose" className="w-8 h-8 rounded-lg" />
           <div>
             <p className="text-white font-bold text-sm leading-tight">مكان الشيف البخاري</p>
             <div className="flex items-center gap-1">
@@ -284,7 +284,7 @@ export default function DriveThroughPage() {
         <div className="relative">
           <Badge className="bg-amber-500 text-black font-bold mb-3 text-xs">🚘 اطلب من سيارتك</Badge>
           <h1 className="text-3xl font-black text-white mb-2 leading-tight">
-            اطلب طلبك<br />
+            اطلب قهوتك<br />
             <span className="text-amber-400">بدون ما تنزل!</span>
           </h1>
           <p className="text-gray-400 text-sm">اختر طلبك وسنوصله لسيارتك مباشرةً</p>
@@ -369,7 +369,7 @@ export default function DriveThroughPage() {
             data-testid="button-checkout"
           >
             <ShoppingCart className="w-5 h-5 ml-2" />
-            اطلب الآن — {cartTotal.toFixed(2)} ر.س
+            اطلب الآن — {cartTotal.toFixed(2)} <SarIcon size={13} />
             <span className="mr-2 bg-black/20 rounded-full px-2 py-0.5 text-xs">{cartCount}</span>
           </Button>
         </div>
@@ -403,7 +403,7 @@ export default function DriveThroughPage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-white text-sm font-medium truncate">{entry.item.nameAr}</p>
                         {entry.selectedSize && <p className="text-gray-500 text-xs">{entry.selectedSize}</p>}
-                        <p className="text-amber-400 text-sm font-bold">{(entry.unitPrice * entry.quantity).toFixed(2)} ر.س</p>
+                        <p className="text-amber-400 text-sm font-bold">{(entry.unitPrice * entry.quantity).toFixed(2)} <SarIcon size={12} /></p>
                       </div>
                       <div className="flex items-center gap-2">
                         <button onClick={() => changeQty(i, -1)} className="w-7 h-7 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20">
@@ -418,7 +418,7 @@ export default function DriveThroughPage() {
                   ))}
                   <div className="flex items-center justify-between pt-4">
                     <span className="text-gray-400">الإجمالي</span>
-                    <span className="text-amber-400 font-bold text-lg">{cartTotal.toFixed(2)} ر.س</span>
+                    <span className="text-amber-400 font-bold text-lg">{cartTotal.toFixed(2)} <SarIcon size={14} /></span>
                   </div>
                   <Button
                     onClick={() => { setShowCart(false); handleCheckout(); }}
@@ -445,7 +445,7 @@ export default function DriveThroughPage() {
 
       {/* ===== Auth Modal ===== */}
       <Dialog open={modalStep === "auth"} onOpenChange={(o) => !o && setModalStep(null)}>
-        <DialogContent className="bg-[#111] border-white/10 text-white max-w-sm mx-4" dir="rtl">
+        <DialogContent className="bg-[#111] border-white/10 text-white max-w-sm mx-4">
           <DialogHeader>
             <DialogTitle className="text-white flex items-center gap-2">
               <Car className="w-5 h-5 text-amber-400" />
@@ -535,7 +535,7 @@ export default function DriveThroughPage() {
 
       {/* ===== Car Info Modal ===== */}
       <Dialog open={modalStep === "car"} onOpenChange={(o) => !o && setModalStep(null)}>
-        <DialogContent className="bg-[#111] border-white/10 text-white max-w-sm mx-4" dir="rtl">
+        <DialogContent className="bg-[#111] border-white/10 text-white max-w-sm mx-4">
           <DialogHeader>
             <DialogTitle className="text-white flex items-center gap-2">
               <Car className="w-5 h-5 text-amber-400" />
@@ -594,7 +594,7 @@ export default function DriveThroughPage() {
 
       {/* ===== Order Confirmation Modal ===== */}
       <Dialog open={modalStep === "confirm"} onOpenChange={(o) => !o && setModalStep(null)}>
-        <DialogContent className="bg-[#111] border-white/10 text-white max-w-sm mx-4" dir="rtl">
+        <DialogContent className="bg-[#111] border-white/10 text-white max-w-sm mx-4">
           <DialogHeader>
             <DialogTitle className="text-white">تأكيد الطلب</DialogTitle>
           </DialogHeader>
@@ -603,13 +603,13 @@ export default function DriveThroughPage() {
             {cart.map((e, i) => (
               <div key={i} className="flex justify-between text-sm">
                 <span className="text-gray-300">{e.item.nameAr} × {e.quantity}</span>
-                <span className="text-amber-400">{(e.unitPrice * e.quantity).toFixed(2)} ر.س</span>
+                <span className="text-amber-400">{(e.unitPrice * e.quantity).toFixed(2)} <SarIcon size={11} /></span>
               </div>
             ))}
             <Separator className="bg-white/10" />
             <div className="flex justify-between font-bold">
               <span>الإجمالي</span>
-              <span className="text-amber-400">{cartTotal.toFixed(2)} ر.س</span>
+              <span className="text-amber-400">{cartTotal.toFixed(2)} <SarIcon size={12} /></span>
             </div>
           </div>
 
@@ -633,7 +633,7 @@ export default function DriveThroughPage() {
             {orderLoading ? (
               <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
-              <>✅ تأكيد الطلب — {cartTotal.toFixed(2)} ر.س</>
+              <>✅ تأكيد الطلب — {cartTotal.toFixed(2)} <SarIcon size={13} /></>
             )}
           </Button>
         </DialogContent>
@@ -641,7 +641,7 @@ export default function DriveThroughPage() {
 
       {/* ===== Done Modal ===== */}
       <Dialog open={modalStep === "done"} onOpenChange={() => {}}>
-        <DialogContent className="bg-[#111] border-white/10 text-white max-w-sm mx-4 text-center" dir="rtl">
+        <DialogContent className="bg-[#111] border-white/10 text-white max-w-sm mx-4 text-center">
           <div className="py-4">
             <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="w-10 h-10 text-green-400" />

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import SarIcon from "@/components/sar-icon";
 import { useTranslate, tc } from "@/lib/useTranslate";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -35,7 +36,164 @@ import {
   ChevronRight,
   History,
   Banknote,
+  Zap,
+  Layers,
+  Download,
+  Share2,
+  SlidersHorizontal,
 } from "lucide-react";
+import { printHtmlInPage, printShiftThermal } from "@/lib/print-utils";
+import { buildShiftPrintFragment, buildMergedPrintFragment } from "@/lib/shift-print-utils";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
+
+// ── Export helpers ────────────────────────────────────────────────────────────
+function exportPeriodsToExcel(periods: any[], dateLabel: string) {
+  import('xlsx').then(XLSX => {
+    const fmtT = (iso: string) => iso ? new Date(iso).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) : '';
+    const fmt = (n: number) => Number((n || 0).toFixed(2));
+
+    // Sheet 1: summary per period
+    const summaryRows = periods.map(p => ({
+      'الفترة':         p.periodLabel || '',
+      'من':             fmtT(p.windowStart),
+      'إلى':            p.isOngoing ? 'جارية' : fmtT(p.windowEnd),
+      'عدد الطلبات':    p.totalOrders || 0,
+      'الإجمالي ر.س':   fmt(p.totalSales),
+      'نقدي ر.س':       fmt(p.totalCash),
+      'شبكة ر.س':       fmt(p.totalCard),
+    }));
+    // Totals row
+    summaryRows.push({
+      'الفترة':         'الإجمالي',
+      'من':             '',
+      'إلى':            '',
+      'عدد الطلبات':    periods.reduce((s, p) => s + (p.totalOrders || 0), 0),
+      'الإجمالي ر.س':   fmt(periods.reduce((s, p) => s + (p.totalSales || 0), 0)),
+      'نقدي ر.س':       fmt(periods.reduce((s, p) => s + (p.totalCash  || 0), 0)),
+      'شبكة ر.س':       fmt(periods.reduce((s, p) => s + (p.totalCard  || 0), 0)),
+    });
+
+    // Sheet 2: products
+    const productRows: any[] = [];
+    periods.forEach(p => {
+      (p.productsByCategory || []).forEach((cat: any) => {
+        cat.items.forEach((item: any) => {
+          productRows.push({
+            'الفترة':     p.periodLabel || '',
+            'الفئة':      cat.categoryNameAr || '',
+            'المنتج':     item.nameAr || '',
+            'الكمية':     item.quantity || 0,
+            'الإجمالي ر.س': fmt(item.totalAmount || 0),
+          });
+        });
+      });
+    });
+
+    const wb = XLSX.utils.book_new();
+    const ws1 = XLSX.utils.json_to_sheet(summaryRows);
+    ws1['!cols'] = [{ wch: 16 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 12 }];
+    XLSX.utils.book_append_sheet(wb, ws1, 'ملخص الورديات');
+
+    if (productRows.length > 0) {
+      const ws2 = XLSX.utils.json_to_sheet(productRows);
+      ws2['!cols'] = [{ wch: 16 }, { wch: 16 }, { wch: 24 }, { wch: 10 }, { wch: 14 }];
+      XLSX.utils.book_append_sheet(wb, ws2, 'المنتجات');
+    }
+
+    const filename = `ورديات-${dateLabel}-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(wb, filename);
+  });
+}
+
+function exportShiftsHistoryToExcel(shifts: any[]) {
+  import('xlsx').then(XLSX => {
+    const fmtT = (iso: string) => iso ? new Date(iso).toLocaleString('ar-SA') : '';
+    const fmt = (n: number) => Number((n || 0).toFixed(2));
+
+    const rows = shifts.map(s => ({
+      'رقم الوردية':     s.shiftNumber || '',
+      'الكاشير':         s.employeeName || '',
+      'الحالة':          s.status === 'open' ? 'مفتوحة' : 'مغلقة',
+      'فتح الوردية':     fmtT(s.openedAt),
+      'إغلاق الوردية':   fmtT(s.closedAt),
+      'عدد الطلبات':     s.totalOrders || 0,
+      'إجمالي المبيعات': fmt(s.totalSales),
+      'نقدي ر.س':        fmt(s.totalCashSales),
+      'شبكة ر.س':        fmt(s.totalCardSales),
+      'ضريبة القيمة ر.س': fmt(s.totalVAT),
+      'الخصومات ر.س':    fmt(s.totalDiscounts),
+      'المرتجعات ر.س':   fmt(s.totalRefunds),
+      'صافي الإيرادات':  fmt(s.netRevenue),
+      'رصيد الافتتاح':   fmt(s.openingCash),
+      'رصيد الإغلاق':    fmt(s.closingCash),
+      'الفرق':           fmt(s.cashDifference),
+    }));
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = Array(16).fill({ wch: 18 });
+    XLSX.utils.book_append_sheet(wb, ws, 'سجل الورديات');
+
+    const filename = `سجل-الورديات-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(wb, filename);
+  });
+}
+
+function sharePeriodsToWhatsApp(periods: any[], dateLabel: string) {
+  const fmt = (n: number) => `${(n || 0).toFixed(2)} ر.س`;
+  const fmtT = (iso: string) => iso ? new Date(iso).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' }) : '';
+
+  const totalOrders = periods.reduce((s, p) => s + (p.totalOrders || 0), 0);
+  const totalSales  = periods.reduce((s, p) => s + (p.totalSales  || 0), 0);
+  const totalCash   = periods.reduce((s, p) => s + (p.totalCash   || 0), 0);
+  const totalCard   = periods.reduce((s, p) => s + (p.totalCard   || 0), 0);
+
+  let msg = `📊 *تقرير الورديات — ${dateLabel}*\n`;
+  msg += `━━━━━━━━━━━━━━━━━\n`;
+
+  periods.forEach((p, i) => {
+    msg += `\n🔹 *${p.periodLabel || `وردية ${i + 1}`}*`;
+    if (p.isOngoing) msg += ` 🟢`;
+    msg += `\n`;
+    msg += `   من: ${fmtT(p.windowStart)} — إلى: ${p.isOngoing ? 'جارية' : fmtT(p.windowEnd)}\n`;
+    msg += `   الطلبات: ${p.totalOrders || 0} | الإجمالي: ${fmt(p.totalSales)}\n`;
+    msg += `   نقدي: ${fmt(p.totalCash)} | شبكة: ${fmt(p.totalCard)}\n`;
+  });
+
+  msg += `\n━━━━━━━━━━━━━━━━━\n`;
+  msg += `📦 *الإجمالي اليومي*\n`;
+  msg += `   عدد الطلبات: ${totalOrders}\n`;
+  msg += `   إجمالي المبيعات: ${fmt(totalSales)}\n`;
+  msg += `   نقدي: ${fmt(totalCash)} | شبكة: ${fmt(totalCard)}\n`;
+  msg += `\n_تم التصدير من نظام مكان الشيف البخاري_`;
+
+  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+function shareShiftToWhatsApp(shift: any) {
+  const fmt = (n: number) => `${(n || 0).toFixed(2)} ر.س`;
+  const fmtT = (iso: string) => iso ? new Date(iso).toLocaleString('ar-SA') : '';
+
+  let msg = `📊 *تقرير وردية — ${shift.shiftNumber || ''}*\n`;
+  msg += `━━━━━━━━━━━━━━━━━\n`;
+  msg += `👤 الكاشير: ${shift.employeeName || ''}\n`;
+  msg += `🕐 فتح: ${fmtT(shift.openedAt)}\n`;
+  if (shift.closedAt) msg += `🕐 إغلاق: ${fmtT(shift.closedAt)}\n`;
+  msg += `\n💰 *ملخص المبيعات*\n`;
+  msg += `   إجمالي: ${fmt(shift.totalSales)}\n`;
+  msg += `   عدد الطلبات: ${shift.totalOrders || 0}\n`;
+  msg += `   نقدي: ${fmt(shift.totalCashSales)} | شبكة: ${fmt(shift.totalCardSales)}\n`;
+  if (shift.totalVAT) msg += `   ضريبة القيمة: ${fmt(shift.totalVAT)}\n`;
+  if (shift.totalRefunds) msg += `   مرتجعات: ${fmt(shift.totalRefunds)}\n`;
+  msg += `   صافي الإيرادات: ${fmt(shift.netRevenue)}\n`;
+  if (shift.cashDifference !== undefined) {
+    const diff = shift.cashDifference || 0;
+    msg += `\n💵 فرق الصندوق: ${diff >= 0 ? '+' : ''}${fmt(diff)}\n`;
+  }
+  msg += `\n_تم التصدير من نظام مكان الشيف البخاري_`;
+
+  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+}
 
 interface CashierShift {
   _id: string;
@@ -98,6 +256,436 @@ function formatDuration(start: string, end?: string) {
   return `${hrs}:${m.toString().padStart(2, '0')} ساعة`;
 }
 
+// ── Shared thermal-print fragment builders ────────────────────────────────────
+// These return HTML *fragments* (no <html>/<body>) for use with printHtmlInPage()
+// which feeds them through the same thermal-print queue used by the POS system.
+
+
+function getTodayLocalStr() {
+  // returns YYYY-MM-DD for client's local date
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function formatDateAr(dateStr: string) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function AutoShiftPeriodsTab() {
+  const todayStr = getTodayLocalStr();
+  const [selectedDate, setSelectedDate] = useState<string>(todayStr);
+  const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
+  const [showDateList, setShowDateList] = useState(false);
+  const [mergeMode, setMergeMode] = useState(false);
+  const [selectedIdxs, setSelectedIdxs] = useState<Set<number>>(new Set());
+  const [showCustomRange, setShowCustomRange] = useState(false);
+  const [customFromTime, setCustomFromTime] = useState("08:00");
+  const [customToTime, setCustomToTime] = useState("16:00");
+  const [customLoading, setCustomLoading] = useState(false);
+  const { toast } = useToast();
+
+  const isToday = selectedDate === todayStr;
+
+  const { data: rawOrderDates, isLoading: datesLoading } = useQuery<string[]>({
+    queryKey: ['/api/shifts/order-dates'],
+    staleTime: 5 * 60 * 1000,
+  });
+  const orderDates: string[] = Array.isArray(rawOrderDates) ? rawOrderDates : [];
+
+  const { data: rawPeriods, isLoading: periodsLoading } = useQuery<any[]>({
+    queryKey: ['/api/shifts/auto-periods', selectedDate],
+    queryFn: async () => {
+      const params = isToday ? '' : `?date=${selectedDate}`;
+      const res = await fetch(`/api/shifts/auto-periods${params}`, { credentials: 'include' });
+      if (!res.ok) return [];
+      const json = await res.json();
+      return Array.isArray(json) ? json : [];
+    },
+    refetchInterval: isToday ? 60000 : false,
+  });
+  const periods: any[] = Array.isArray(rawPeriods) ? rawPeriods : [];
+  const isLoading = datesLoading || periodsLoading;
+
+  const toggleSelect = (i: number) => setSelectedIdxs(prev => {
+    const next = new Set(prev);
+    next.has(i) ? next.delete(i) : next.add(i);
+    return next;
+  });
+
+  const toggleMergeMode = () => { setMergeMode(v => !v); setSelectedIdxs(new Set()); };
+
+  const printPeriod = (p: any) => printShiftThermal(p);
+
+  const printMerged = () => {
+    const selected = [...selectedIdxs].sort((a, b) => a - b).map(i => periods[i]);
+    const merged = selected.reduce((acc, p) => ({
+      totalOrders: (acc.totalOrders || 0) + (p.totalOrders || 0),
+      totalSales:  (acc.totalSales  || 0) + (p.totalSales  || 0),
+      totalCash:   (acc.totalCash   || 0) + (p.totalCash   || 0),
+      totalCard:   (acc.totalCard   || 0) + (p.totalCard   || 0),
+      windowStart: acc.windowStart || p.windowStart,
+      windowEnd:   p.windowEnd,
+      periodLabel: selected.map(s => s.periodLabel).join(' | '),
+      reportTitle: `تقرير مدمج — ${selected.length} ورديات`,
+      productsByCategory: [],
+    }), {} as any);
+    printShiftThermal(merged);
+  };
+
+  const printFullDay = () => {
+    const merged = periods.reduce((acc, p) => ({
+      totalOrders: (acc.totalOrders || 0) + (p.totalOrders || 0),
+      totalSales:  (acc.totalSales  || 0) + (p.totalSales  || 0),
+      totalCash:   (acc.totalCash   || 0) + (p.totalCash   || 0),
+      totalCard:   (acc.totalCard   || 0) + (p.totalCard   || 0),
+      windowStart: acc.windowStart || p.windowStart,
+      windowEnd:   p.windowEnd,
+      reportTitle: `تقرير اليوم الكامل — ${periods.length} ورديات`,
+      productsByCategory: [],
+    }), {} as any);
+    printShiftThermal(merged);
+  };
+
+  const changeDate = (d: string) => { setSelectedDate(d); setExpandedIdx(null); setShowDateList(false); setSelectedIdxs(new Set()); setMergeMode(false); };
+
+  const printCustomRange = async () => {
+    if (!customFromTime || !customToTime) {
+      toast({ title: "يرجى تحديد وقت البداية والنهاية", variant: "destructive" });
+      return;
+    }
+    setCustomLoading(true);
+    try {
+      const params = new URLSearchParams({ date: selectedDate, fromTime: customFromTime, toTime: customToTime });
+      const res = await fetch(`/api/shifts/custom-range?${params}`, { credentials: "include" });
+      if (!res.ok) throw new Error("فشل في جلب البيانات");
+      const data = await res.json();
+      if (data.totalOrders === 0) {
+        toast({ title: "لا توجد طلبات في هذا النطاق الزمني", variant: "destructive" });
+        return;
+      }
+      setShowCustomRange(false);
+      printShiftThermal(data);
+    } catch (err: any) {
+      toast({ title: "حدث خطأ", description: err.message, variant: "destructive" });
+    } finally {
+      setCustomLoading(false);
+    }
+  };
+
+  const currentIdx = orderDates.indexOf(selectedDate);
+  const hasPrev = currentIdx >= 0 && currentIdx < orderDates.length - 1;
+  const hasNext = currentIdx > 0;
+
+  const dayTotal  = periods.reduce((s, p) => s + (p.totalSales || 0), 0);
+  const dayOrders = periods.reduce((s, p) => s + (p.totalOrders || 0), 0);
+  const dayCash   = periods.reduce((s, p) => s + (p.totalCash   || 0), 0);
+  const dayCard   = periods.reduce((s, p) => s + (p.totalCard   || 0), 0);
+
+  return (
+    <div className="space-y-3">
+      {/* ── Date Navigator ── */}
+      <Card>
+        <CardContent className="py-3 px-4">
+          <div className="flex items-center justify-between gap-3">
+            <Button size="sm" variant="outline" className="h-8 px-2" onClick={() => changeDate(orderDates[currentIdx + 1])} disabled={!hasPrev}>
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+            <div className="flex-1 text-center">
+              <div className="flex items-center justify-center gap-2">
+                <Calendar className="w-4 h-4 text-muted-foreground" />
+                <span className="font-semibold text-sm">{isToday ? 'اليوم' : formatDateAr(selectedDate)}</span>
+                {isToday && <Badge className="bg-primary text-white text-[10px] px-1.5 py-0 animate-pulse">مباشر</Badge>}
+              </div>
+              <div className="text-xs text-muted-foreground mt-0.5">{selectedDate}</div>
+            </div>
+            <Button size="sm" variant="outline" className="h-8 px-2" onClick={() => changeDate(orderDates[currentIdx - 1])} disabled={!hasNext}>
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+          </div>
+
+          <div className="mt-2 border-t pt-2">
+            <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground h-6 gap-1" onClick={() => setShowDateList(v => !v)}>
+              <Calendar className="w-3 h-3" />
+              كل الأيام التي بها طلبات ({orderDates.length} يوم)
+              <ChevronRight className={`w-3 h-3 transition-transform ${showDateList ? 'rotate-90' : ''}`} />
+            </Button>
+            {showDateList && (
+              <div className="mt-2 flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
+                {orderDates.map(d => (
+                  <div key={d} role="button" tabIndex={0}
+                    onClick={() => changeDate(d)}
+                    onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && changeDate(d)}
+                    className={`cursor-pointer text-xs px-2 py-1 rounded border transition-colors select-none ${d === selectedDate ? 'bg-primary text-white border-primary' : 'bg-background hover:bg-muted border-border'}`}>
+                    {d === todayStr ? 'اليوم' : d}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Daily summary + action bar ── */}
+      {dayOrders > 0 && (
+        <div className="space-y-2">
+          <div className="grid grid-cols-4 gap-2 text-sm">
+            <div className="bg-muted/50 rounded-lg p-2 text-center">
+              <div className="text-base font-bold">{dayOrders}</div>
+              <div className="text-[10px] text-muted-foreground">إجمالي الطلبات</div>
+            </div>
+            <div className="bg-primary/5 rounded-lg p-2 text-center">
+              <div className="text-base font-bold text-primary">{dayTotal.toFixed(0)}</div>
+              <div className="text-[10px] text-muted-foreground">إجمالي <SarIcon size={10} /></div>
+            </div>
+            <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-2 text-center">
+              <div className="text-base font-bold text-green-700">{dayCash.toFixed(0)}</div>
+              <div className="text-[10px] text-muted-foreground">نقدي</div>
+            </div>
+            <div className="bg-purple-50 dark:bg-purple-950/20 rounded-lg p-2 text-center">
+              <div className="text-base font-bold text-purple-700">{dayCard.toFixed(0)}</div>
+              <div className="text-[10px] text-muted-foreground">شبكة</div>
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex gap-2 flex-wrap">
+            {periods.length > 1 && (
+              <Button size="sm" variant={mergeMode ? 'default' : 'outline'} className="flex-1 h-8 text-xs gap-1" onClick={toggleMergeMode}>
+                <Layers className="w-3 h-3" />
+                {mergeMode ? 'إلغاء الدمج' : 'دمج ورديات'}
+              </Button>
+            )}
+            <Button size="sm" variant="outline" className="flex-1 h-8 text-xs gap-1 border-violet-300 text-violet-700 hover:bg-violet-50 dark:hover:bg-violet-950/20" onClick={() => setShowCustomRange(true)}>
+              <SlidersHorizontal className="w-3 h-3" />
+              نطاق مخصص
+            </Button>
+            <Button size="sm" variant="outline" className="flex-1 h-8 text-xs gap-1" onClick={printFullDay}>
+              <Printer className="w-3 h-3" />
+              طباعة اليوم
+            </Button>
+          </div>
+
+          {/* Export buttons */}
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline"
+              className="flex-1 h-8 text-xs gap-1 border-green-300 text-green-700 hover:bg-green-50 dark:hover:bg-green-950/20"
+              onClick={() => exportPeriodsToExcel(periods, isToday ? 'اليوم' : selectedDate)}>
+              <Download className="w-3 h-3" />
+              تصدير Excel
+            </Button>
+            <Button size="sm" variant="outline"
+              className="flex-1 h-8 text-xs gap-1 border-emerald-400 text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/20"
+              onClick={() => sharePeriodsToWhatsApp(periods, isToday ? 'اليوم' : selectedDate)}>
+              <Share2 className="w-3 h-3" />
+              واتساب
+            </Button>
+          </div>
+
+          {/* Merge selection bar */}
+          {mergeMode && (
+            <div className={`flex items-center gap-2 rounded-lg p-2 border transition-all ${selectedIdxs.size >= 2 ? 'bg-primary/10 border-primary/30' : 'bg-muted/40 border-border'}`}>
+              <span className="text-xs flex-1">
+                {selectedIdxs.size === 0 ? 'اختر ورديتين أو أكثر للدمج' : `تم تحديد ${selectedIdxs.size} ورديات`}
+              </span>
+              {selectedIdxs.size >= 2 && (
+                <Button size="sm" className="h-7 text-xs gap-1" onClick={printMerged}>
+                  <Printer className="w-3 h-3" />
+                  دمج وطباعة
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+        </div>
+      ) : periods.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center py-12">
+            <Zap className="w-12 h-12 text-muted-foreground mb-3" />
+            <p className="text-muted-foreground">لا توجد بيانات لهذا اليوم</p>
+            {orderDates.length > 0 && (
+              <p className="text-xs text-muted-foreground mt-1">جرب تصفح الأيام السابقة</p>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        periods.map((p, i) => (
+          <Card key={i} className={`transition-all ${p.isOngoing ? 'border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/10' : ''} ${mergeMode && selectedIdxs.has(i) ? 'border-primary ring-2 ring-primary/30' : ''}`}>
+            <CardContent className="py-3 px-4">
+              <div className="flex items-center justify-between mb-3 cursor-pointer"
+                onClick={() => mergeMode ? toggleSelect(i) : setExpandedIdx(expandedIdx === i ? null : i)}>
+                <div className="flex items-center gap-2">
+                  {mergeMode && (
+                    <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all ${selectedIdxs.has(i) ? 'bg-primary border-primary' : 'border-muted-foreground'}`}>
+                      {selectedIdxs.has(i) && <span className="text-white text-[9px] font-bold">✓</span>}
+                    </div>
+                  )}
+                  <Zap className="w-4 h-4 text-blue-500" />
+                  <span className="font-semibold">{p.periodLabel}</span>
+                  {p.isOngoing && <Badge className="bg-blue-500 text-white text-[10px] px-1.5 py-0 animate-pulse">جارية</Badge>}
+                </div>
+                <div className="flex items-center gap-2">
+                  {!mergeMode && (
+                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1"
+                      onClick={e => { e.stopPropagation(); printPeriod(p); }}>
+                      <Printer className="w-3 h-3" />طباعة
+                    </Button>
+                  )}
+                  {!mergeMode && (
+                    <ChevronRight className={`w-4 h-4 text-muted-foreground transition-transform ${expandedIdx === i ? 'rotate-90' : ''}`} />
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                <div className="bg-muted/50 rounded p-2 text-center">
+                  <div className="text-lg font-bold">{p.totalOrders}</div>
+                  <div className="text-xs text-muted-foreground">طلب</div>
+                </div>
+                <div className="bg-primary/5 rounded p-2 text-center">
+                  <div className="text-lg font-bold text-primary">{(p.totalSales||0).toFixed(2)}</div>
+                  <div className="text-xs text-muted-foreground">إجمالي <SarIcon size={10} /></div>
+                </div>
+                <div className="bg-green-50 dark:bg-green-950/20 rounded p-2 text-center">
+                  <div className="text-lg font-bold text-green-700">{(p.totalCash||0).toFixed(2)}</div>
+                  <div className="text-xs text-muted-foreground">نقدي <SarIcon size={10} /></div>
+                </div>
+                <div className="bg-purple-50 dark:bg-purple-950/20 rounded p-2 text-center">
+                  <div className="text-lg font-bold text-purple-700">{(p.totalCard||0).toFixed(2)}</div>
+                  <div className="text-xs text-muted-foreground">شبكة <SarIcon size={10} /></div>
+                </div>
+              </div>
+
+              {!mergeMode && expandedIdx === i && (
+                <div className="mt-3 border-t pt-3 space-y-3">
+                  {(!p.productsByCategory || p.productsByCategory.length === 0) ? (
+                    <p className="text-xs text-muted-foreground text-center py-2">لا توجد بيانات منتجات</p>
+                  ) : (
+                    <>
+                      <div className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
+                        <ShoppingCart className="w-3 h-3" />المنتجات المستهلكة
+                      </div>
+                      {p.productsByCategory.map((cat: any, ci: number) => (
+                        <div key={ci} className="rounded-lg border overflow-hidden">
+                          <div className="bg-primary/5 px-3 py-1.5 text-xs font-bold text-primary">{cat.categoryNameAr || 'أخرى'}</div>
+                          <div className="divide-y">
+                            {cat.items.map((item: any, ii: number) => (
+                              <div key={ii} className="flex justify-between items-center px-3 py-1.5 text-xs">
+                                <span>{item.nameAr}</span>
+                                <div className="flex items-center gap-3">
+                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">× {item.quantity}</Badge>
+                                  <span className="text-muted-foreground font-mono">{(item.totalAmount||0).toFixed(1)} <SarIcon size={10} /></span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ))
+      )}
+
+      {/* ── Custom Time-Range Dialog ────────────────────────────────── */}
+      <Dialog open={showCustomRange} onOpenChange={setShowCustomRange}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <SlidersHorizontal className="w-5 h-5 text-violet-600" />
+              دمج مخصص بنطاق زمني
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Date label */}
+            <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg text-sm">
+              <Calendar className="w-4 h-4 text-muted-foreground" />
+              <span className="text-muted-foreground">التاريخ المحدد:</span>
+              <span className="font-semibold">{selectedDate === getTodayLocalStr() ? 'اليوم' : selectedDate}</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold flex items-center gap-1">
+                  <Clock className="w-3 h-3" /> من الساعة
+                </label>
+                <input
+                  type="time"
+                  value={customFromTime}
+                  onChange={e => setCustomFromTime(e.target.value)}
+                  className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-violet-400"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold flex items-center gap-1">
+                  <Clock className="w-3 h-3" /> إلى الساعة
+                </label>
+                <input
+                  type="time"
+                  value={customToTime}
+                  onChange={e => setCustomToTime(e.target.value)}
+                  className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm text-center font-mono focus:outline-none focus:ring-2 focus:ring-violet-400"
+                />
+              </div>
+            </div>
+
+            {/* Quick presets */}
+            <div className="space-y-1.5">
+              <p className="text-xs text-muted-foreground">اختصارات سريعة</p>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { label: 'الصبح', from: '06:00', to: '12:00' },
+                  { label: 'الظهر', from: '12:00', to: '18:00' },
+                  { label: 'المساء', from: '18:00', to: '00:00' },
+                  { label: 'الليل', from: '00:00', to: '06:00' },
+                  { label: 'النهار كامل', from: '06:00', to: '23:59' },
+                ].map(preset => (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => { setCustomFromTime(preset.from); setCustomToTime(preset.to); }}
+                    className={`text-xs px-2 py-1 rounded border transition-colors ${
+                      customFromTime === preset.from && customToTime === preset.to
+                        ? 'bg-violet-600 text-white border-violet-600'
+                        : 'bg-background hover:bg-muted border-border'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowCustomRange(false)}>إلغاء</Button>
+            <Button
+              size="sm"
+              className="gap-1 bg-violet-600 hover:bg-violet-700 text-white"
+              onClick={printCustomRange}
+              disabled={customLoading || !customFromTime || !customToTime}
+            >
+              {customLoading
+                ? <><div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />جارٍ التحميل...</>
+                : <><Printer className="w-3 h-3" />طباعة التقرير</>
+              }
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 export default function ShiftManagement() {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -116,15 +704,6 @@ export default function ShiftManagement() {
   const [movementReason, setMovementReason] = useState("");
   const [selectedZReport, setSelectedZReport] = useState<CashierShift | null>(null);
   const [activeTab, setActiveTab] = useState<'current' | 'history' | 'auto'>('current');
-
-  const { data: autoCurrent } = useQuery<any>({
-    queryKey: ['/api/shifts/auto-current'],
-    refetchInterval: 60000,
-  });
-  const { data: autoPeriodsData } = useQuery<any>({
-    queryKey: ['/api/shifts/auto-periods?days=7'],
-    enabled: activeTab === 'auto',
-  });
 
   const { data: activeShift, isLoading: loadingShift, refetch: refetchShift } = useQuery<CashierShift | null>({
     queryKey: ['/api/shifts/active'],
@@ -193,94 +772,81 @@ export default function ShiftManagement() {
   });
 
   const handlePrintZReport = useCallback((shift: CashierShift) => {
-    const printWindow = window.open('', '_blank', 'width=400,height=800');
-    if (!printWindow) return;
-
-    const cashIn = (shift.cashMovements || []).filter(m => m.type === 'cash_in' || m.type === 'paid_in').reduce((s, m) => s + m.amount, 0);
+    const cashIn  = (shift.cashMovements || []).filter(m => m.type === 'cash_in'  || m.type === 'paid_in' ).reduce((s, m) => s + m.amount, 0);
     const cashOut = (shift.cashMovements || []).filter(m => m.type === 'cash_out' || m.type === 'paid_out').reduce((s, m) => s + m.amount, 0);
     const pb = shift.paymentBreakdown || {};
-    const ob = shift.orderTypeBreakdown || {};
+    const ob = (shift as any).orderTypeBreakdown || {};
+    const diff = shift.cashDifference || 0;
+    const row = (label: string, value: string, bold = false) =>
+      `<div style="display:flex;justify-content:space-between;padding:2px 0;${bold ? 'font-weight:bold;' : ''}"><span>${label}</span><span>${value}</span></div>`;
+    const sec = (title: string, body: string) =>
+      `<div style="border-top:1px dashed #aaa;margin:5px 0;padding-top:5px;"><div style="font-weight:bold;color:#2D9B6E;margin-bottom:3px;font-size:12px;">${title}</div>${body}</div>`;
 
-    printWindow.document.write(`
-      <html dir="rtl"><head><title>Z-Report - ${shift.shiftNumber}</title>
-      <style>
-        body { font-family: 'Cairo', Arial, sans-serif; padding: 15px; max-width: 350px; margin: 0 auto; font-size: 13px; }
-        .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 10px; }
-        .header h1 { font-size: 18px; margin: 5px 0; }
-        .header h2 { font-size: 14px; color: #2D9B6E; margin: 3px 0; }
-        .row { display: flex; justify-content: space-between; padding: 3px 0; }
-        .section { border-top: 1px dashed #999; margin: 8px 0; padding-top: 8px; }
-        .section-title { font-weight: bold; font-size: 14px; margin-bottom: 5px; color: #2D9B6E; }
-        .total-row { font-weight: bold; font-size: 15px; border-top: 2px solid #000; padding-top: 5px; margin-top: 5px; }
-        .diff-positive { color: #2D9B6E; }
-        .diff-negative { color: #dc2626; }
-        .footer { text-align: center; margin-top: 15px; border-top: 1px dashed #999; padding-top: 10px; font-size: 11px; color: #666; }
-        @media print { body { padding: 5px; } }
-      </style></head><body>
-        <div class="header">
-          <h1>مكان الشيف البخاري</h1>
-          <h2>تقرير Z - إغلاق الوردية</h2>
-          <div>${shift.shiftNumber}</div>
-        </div>
-        <div class="row"><span>الكاشير:</span><span>${shift.employeeName}</span></div>
-        <div class="row"><span>الفرع:</span><span>${shift.branchName || 'الرئيسي'}</span></div>
-        <div class="row"><span>فتح الوردية:</span><span>${formatTime(shift.openedAt)}</span></div>
-        <div class="row"><span>إغلاق الوردية:</span><span>${shift.closedAt ? formatTime(shift.closedAt) : '-'}</span></div>
-        <div class="row"><span>المدة:</span><span>${formatDuration(shift.openedAt, shift.closedAt)}</span></div>
-
-        <div class="section">
-          <div class="section-title">ملخص المبيعات</div>
-          <div class="row"><span>إجمالي المبيعات:</span><span>${formatCurrency(shift.totalSales)}</span></div>
-          <div class="row"><span>عدد الطلبات:</span><span>${shift.totalOrders}</span></div>
-          <div class="row"><span>ضريبة القيمة المضافة:</span><span>${formatCurrency(shift.totalVAT)}</span></div>
-          <div class="row"><span>الخصومات:</span><span>${formatCurrency(shift.totalDiscounts)}</span></div>
-          <div class="row"><span>المرتجعات:</span><span>${formatCurrency(shift.totalRefunds)}</span></div>
-          <div class="row"><span>الطلبات الملغاة:</span><span>${shift.totalCancelledOrders}</span></div>
-          <div class="total-row row"><span>صافي الإيرادات:</span><span>${formatCurrency(shift.netRevenue)}</span></div>
-        </div>
-
-        <div class="section">
-          <div class="section-title">طرق الدفع</div>
-          <div class="row"><span>نقدي:</span><span>${formatCurrency(pb.cash || 0)}</span></div>
-          <div class="row"><span>شبكة:</span><span>${formatCurrency(pb.card || 0)}</span></div>
-          ${(pb.loyalty || 0) > 0 ? `<div class="row"><span>بطاقة مكان الشيف:</span><span>${formatCurrency(pb.loyalty)}</span></div>` : ''}
-        </div>
-
-        <div class="section">
-          <div class="section-title">أنواع الطلبات</div>
-          ${(ob.dine_in || 0) > 0 ? `<div class="row"><span>محلي:</span><span>${ob.dine_in}</span></div>` : ''}
-          ${(ob.takeaway || 0) > 0 ? `<div class="row"><span>سفري:</span><span>${ob.takeaway}</span></div>` : ''}
-          ${(ob.car_pickup || 0) > 0 ? `<div class="row"><span>سيارة:</span><span>${ob.car_pickup}</span></div>` : ''}
-          ${(ob.delivery || 0) > 0 ? `<div class="row"><span>توصيل:</span><span>${ob.delivery}</span></div>` : ''}
-          ${(ob.online || 0) > 0 ? `<div class="row"><span>أونلاين:</span><span>${ob.online}</span></div>` : ''}
-        </div>
-
-        <div class="section">
-          <div class="section-title">حركة الصندوق</div>
-          <div class="row"><span>رصيد الافتتاح:</span><span>${formatCurrency(shift.openingCash)}</span></div>
-          ${cashIn > 0 ? `<div class="row"><span>إيداعات نقدية:</span><span>${formatCurrency(cashIn)}</span></div>` : ''}
-          ${cashOut > 0 ? `<div class="row"><span>سحوبات نقدية:</span><span>${formatCurrency(cashOut)}</span></div>` : ''}
-          <div class="row"><span>المبيعات النقدية:</span><span>${formatCurrency(shift.totalCashSales)}</span></div>
-          <div class="row"><span>الرصيد المتوقع:</span><span>${formatCurrency(shift.expectedCash || 0)}</span></div>
-          <div class="row"><span>الرصيد الفعلي:</span><span>${formatCurrency(shift.closingCash || 0)}</span></div>
-          <div class="total-row row">
-            <span>الفرق:</span>
-            <span class="${(shift.cashDifference || 0) >= 0 ? 'diff-positive' : 'diff-negative'}">
-              ${formatCurrency(shift.cashDifference || 0)}
-            </span>
-          </div>
-        </div>
-
-        ${shift.closingNotes ? `<div class="section"><div class="section-title">ملاحظات</div><p>${shift.closingNotes}</p></div>` : ''}
-
-        <div class="footer">
-          <div>مكان الشيف البخاري v3.0</div>
-          <div>${new Date().toLocaleString('ar-SA')}</div>
-        </div>
-      </body></html>
-    `);
-    printWindow.document.close();
-    setTimeout(() => printWindow.print(), 500);
+    const html = `<div style="font-family:'Cairo',Arial,sans-serif;font-size:12px;padding:5px 3px;direction:rtl;color:#000;background:#fff;">
+  <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:6px;">
+    <div style="font-size:15px;font-weight:bold;">مكان الشيف البخاري</div>
+    <div style="font-size:11px;color:#555;">تقرير Z — إغلاق الوردية</div>
+    <div style="font-size:11px;color:#555;">${shift.shiftNumber}</div>
+  </div>
+  ${row('الكاشير:', shift.employeeName)}
+  ${row('الفرع:', (shift as any).branchName || 'الرئيسي')}
+  ${row('فتح الوردية:', formatTime(shift.openedAt))}
+  ${row('إغلاق الوردية:', shift.closedAt ? formatTime(shift.closedAt) : '-')}
+  ${row('المدة:', formatDuration(shift.openedAt, shift.closedAt))}
+  ${sec('ملخص المبيعات',
+    row('إجمالي المبيعات:', formatCurrency(shift.totalSales)) +
+    row('عدد الطلبات:', String(shift.totalOrders)) +
+    row('ضريبة القيمة المضافة:', formatCurrency(shift.totalVAT)) +
+    row('الخصومات:', formatCurrency(shift.totalDiscounts)) +
+    row('المرتجعات:', formatCurrency(shift.totalRefunds)) +
+    row('صافي الإيرادات:', formatCurrency(shift.netRevenue), true)
+  )}
+  ${sec('طرق الدفع',
+    row('نقدي:', formatCurrency(pb.cash || 0)) +
+    row('شبكة:', formatCurrency(pb.card || 0)) +
+    ((pb.loyalty || 0) > 0 ? row('بطاقة:', formatCurrency(pb.loyalty)) : '')
+  )}
+  ${(ob.dine_in || ob.takeaway || ob.delivery) ? sec('أنواع الطلبات',
+    ((ob.dine_in  || 0) > 0 ? row('محلي:',   String(ob.dine_in))  : '') +
+    ((ob.takeaway || 0) > 0 ? row('سفري:',   String(ob.takeaway)) : '') +
+    ((ob.delivery || 0) > 0 ? row('توصيل:',  String(ob.delivery)) : '')
+  ) : ''}
+  ${sec('حركة الصندوق',
+    row('رصيد الافتتاح:', formatCurrency(shift.openingCash)) +
+    (cashIn  > 0 ? row('إيداعات نقدية:', formatCurrency(cashIn))  : '') +
+    (cashOut > 0 ? row('سحوبات نقدية:', formatCurrency(cashOut)) : '') +
+    row('المبيعات النقدية:', formatCurrency(shift.totalCashSales)) +
+    row('الرصيد المتوقع:', formatCurrency(shift.expectedCash || 0)) +
+    row('الرصيد الفعلي:', formatCurrency(shift.closingCash || 0)) +
+    `<div style="display:flex;justify-content:space-between;padding:2px 0;font-weight:bold;border-top:2px solid #000;margin-top:3px;padding-top:3px;"><span>الفرق:</span><span style="color:${diff >= 0 ? '#2D9B6E' : '#dc2626'}">${formatCurrency(diff)}</span></div>`
+  )}
+  ${shift.closingNotes ? sec('ملاحظات', `<p style="margin:0;font-size:11px;">${shift.closingNotes}</p>`) : ''}
+  <div style="text-align:center;margin-top:8px;border-top:1px dashed #aaa;padding-top:6px;font-size:10px;color:#666;">
+    QIROX Systems — ${new Date().toLocaleString('ar-SA')}
+  </div>
+</div>`;
+    const win = window.open('', '_blank', 'width=400,height=700');
+    if (!win) { alert('يرجى السماح بالنوافذ المنبثقة لطباعة التقرير'); return; }
+    win.document.write(`<!DOCTYPE html><html lang="ar"><head><meta charset="UTF-8">
+<title>تقرير Z — ${shift.shiftNumber}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Cairo', Arial, sans-serif; font-size: 13px; direction: rtl; color: #000; background: #fff; padding: 16px; max-width: 320px; margin: 0 auto; }
+  @media print {
+    body { max-width: 100%; padding: 4px; font-size: 12px; }
+    .no-print { display: none !important; }
+    @page { margin: 6mm; size: 80mm auto; }
+  }
+</style></head><body>
+${html}
+<div class="no-print" style="margin-top:20px;text-align:center;display:flex;gap:8px;justify-content:center;">
+  <button onclick="window.print()" style="background:#2D9B6E;color:#fff;border:none;padding:10px 28px;border-radius:8px;font-size:14px;font-family:Cairo,Arial,sans-serif;font-weight:bold;cursor:pointer;">طباعة / حفظ PDF</button>
+  <button onclick="window.close()" style="background:#eee;color:#333;border:none;padding:10px 20px;border-radius:8px;font-size:14px;font-family:Cairo,Arial,sans-serif;cursor:pointer;">إغلاق</button>
+</div>
+</body></html>`);
+    win.document.close();
+    setTimeout(() => { try { win.focus(); } catch(_) {} }, 300);
   }, []);
 
   if (loadingShift) {
@@ -292,7 +858,7 @@ export default function ShiftManagement() {
   }
 
   return (
-    <div className="space-y-4 p-4" dir="rtl">
+    <div className="space-y-4 p-4 pb-20">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold flex items-center gap-2">
@@ -308,15 +874,6 @@ export default function ShiftManagement() {
             الوردية الحالية
           </Button>
           <Button
-            variant={activeTab === 'auto' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setActiveTab('auto')}
-            data-testid="tab-auto-shifts"
-          >
-            <Clock className="w-4 h-4 ml-1" />
-            تلقائية
-          </Button>
-          <Button
             variant={activeTab === 'history' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setActiveTab('history')}
@@ -324,115 +881,19 @@ export default function ShiftManagement() {
             <History className="w-4 h-4 ml-1" />
             السجل
           </Button>
+          <Button
+            variant={activeTab === 'auto' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setActiveTab('auto')}
+            className="gap-1"
+          >
+            <Zap className="w-4 h-4 ml-1" />
+            تلقائية
+          </Button>
         </div>
       </div>
 
-      {activeTab === 'auto' && (
-        <div className="space-y-3">
-          {autoCurrent && autoCurrent.totalOrders > 0 && (
-            <Card className="border-blue-300 bg-blue-50/50">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-blue-600" />
-                  الفترة الحالية: {new Date(autoCurrent.period.start).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })} - الآن
-                  <Badge variant="outline" className="ml-2">كل {autoCurrent.autoShiftHours} ساعة</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="grid grid-cols-4 gap-2 text-center text-sm">
-                  <div className="bg-white rounded p-2"><div className="font-bold text-lg">{autoCurrent.totalOrders}</div><div className="text-xs text-muted-foreground">طلب</div></div>
-                  <div className="bg-white rounded p-2"><div className="font-bold text-lg text-primary">{formatCurrency(autoCurrent.totalSales)}</div><div className="text-xs text-muted-foreground">إجمالي</div></div>
-                  <div className="bg-white rounded p-2"><div className="font-bold text-green-600">{formatCurrency(autoCurrent.paymentBreakdown?.cash || 0)}</div><div className="text-xs text-muted-foreground">نقدي</div></div>
-                  <div className="bg-white rounded p-2"><div className="font-bold text-purple-600">{formatCurrency(autoCurrent.paymentBreakdown?.card || 0)}</div><div className="text-xs text-muted-foreground">شبكة</div></div>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="w-full gap-1"
-                  data-testid="button-print-auto-current"
-                  onClick={async () => {
-                    const { buildShiftReportHtml, printShiftReport } = await import("@/components/shift-quick-bar");
-                    printShiftReport(buildShiftReportHtml({
-                      title: 'تقرير وردية تلقائية',
-                      subtitle: `كل ${autoCurrent.autoShiftHours} ساعة`,
-                      employeeName: 'تجميع تلقائي',
-                      openedAt: autoCurrent.period.start,
-                      closedAt: autoCurrent.period.now,
-                      totalSales: autoCurrent.totalSales,
-                      totalOrders: autoCurrent.totalOrders,
-                      totalCashSales: autoCurrent.totalCashSales,
-                      totalCardSales: autoCurrent.totalCardSales,
-                      totalDigitalSales: autoCurrent.totalDigitalSales,
-                      totalDiscounts: autoCurrent.totalDiscounts,
-                      totalVAT: autoCurrent.totalVAT,
-                      netRevenue: autoCurrent.netRevenue,
-                      paymentBreakdown: autoCurrent.paymentBreakdown,
-                      orderTypeBreakdown: autoCurrent.orderTypeBreakdown,
-                      employees: autoCurrent.employees,
-                      categories: autoCurrent.categories,
-                      topProducts: autoCurrent.topProducts,
-                    }));
-                  }}
-                >
-                  <Printer className="w-3 h-3" />طباعة الفترة الحالية
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-          <h3 className="text-sm font-bold text-muted-foreground">آخر الفترات (7 أيام)</h3>
-          {!autoPeriodsData?.periods?.length ? (
-            <Card><CardContent className="py-8 text-center text-muted-foreground text-sm">لا توجد فترات تلقائية بها طلبات</CardContent></Card>
-          ) : (
-            autoPeriodsData.periods.map((p: any, i: number) => (
-              <Card key={i} className="cursor-pointer hover:border-primary/40" data-testid={`auto-period-${i}`}
-                onClick={async () => {
-                  const { buildShiftReportHtml, printShiftReport } = await import("@/components/shift-quick-bar");
-                  printShiftReport(buildShiftReportHtml({
-                    title: 'تقرير وردية تلقائية',
-                    subtitle: `كل ${autoPeriodsData.autoShiftHours} ساعة`,
-                    employeeName: 'تجميع تلقائي',
-                    openedAt: p.start,
-                    closedAt: p.end,
-                    totalSales: p.totalSales,
-                    totalOrders: p.totalOrders,
-                    totalCashSales: p.totalCashSales,
-                    totalCardSales: p.totalCardSales,
-                    totalDigitalSales: p.totalDigitalSales,
-                    totalDiscounts: p.totalDiscounts,
-                    totalVAT: p.totalVAT,
-                    netRevenue: p.netRevenue,
-                    paymentBreakdown: p.paymentBreakdown,
-                    orderTypeBreakdown: p.orderTypeBreakdown,
-                    employees: p.employees,
-                    categories: p.categories,
-                    topProducts: p.topProducts,
-                  }));
-                }}>
-                <CardContent className="py-3 px-4">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary">تلقائية</Badge>
-                      <span className="text-sm font-medium">
-                        {new Date(p.start).toLocaleDateString('ar-SA', { day: 'numeric', month: 'short' })}
-                        {' '}
-                        {new Date(p.start).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}
-                        {' - '}
-                        {new Date(p.end).toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
-                    <Printer className="w-4 h-4 text-muted-foreground" />
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span>{p.totalOrders} طلب</span>
-                    <span className="font-bold text-primary">{formatCurrency(p.totalSales)}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
-      )}
-      {activeTab !== 'auto' && (activeTab === 'current' ? (
+      {activeTab === 'current' ? (
         <>
           {!activeShift ? (
             /* No Active Shift - Show Open Button */
@@ -625,9 +1086,22 @@ export default function ShiftManagement() {
             </>
           )}
         </>
+      ) : activeTab === 'auto' ? (
+        /* Auto-Shift Periods Tab */
+        <AutoShiftPeriodsTab />
       ) : (
         /* History Tab */
         <div className="space-y-3">
+          {shiftHistory && shiftHistory.length > 0 && (
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline"
+                className="flex-1 h-8 text-xs gap-1 border-green-300 text-green-700 hover:bg-green-50 dark:hover:bg-green-950/20"
+                onClick={() => exportShiftsHistoryToExcel(shiftHistory)}>
+                <Download className="w-3 h-3" />
+                تصدير Excel
+              </Button>
+            </div>
+          )}
           {!shiftHistory || shiftHistory.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center py-12">
@@ -675,11 +1149,11 @@ export default function ShiftManagement() {
             ))
           )}
         </div>
-      ))}
+      )}
 
       {/* Open Shift Dialog */}
       <Dialog open={showOpenDialog} onOpenChange={setShowOpenDialog}>
-        <DialogContent className="sm:max-w-md" dir="rtl">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Play className="w-5 h-5 text-primary" />
@@ -688,7 +1162,7 @@ export default function ShiftManagement() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <label className="text-sm font-medium mb-2 block">رصيد الافتتاح (ر.س)</label>
+              <label className="text-sm font-medium mb-2 block">رصيد الافتتاح (<SarIcon size={12} />)</label>
               <Input
                 type="number"
                 placeholder="0.00"
@@ -724,7 +1198,7 @@ export default function ShiftManagement() {
 
       {/* Close Shift Dialog */}
       <Dialog open={showCloseDialog} onOpenChange={setShowCloseDialog}>
-        <DialogContent className="sm:max-w-md" dir="rtl">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Square className="w-5 h-5 text-red-500" />
@@ -749,7 +1223,7 @@ export default function ShiftManagement() {
               </div>
             )}
             <div>
-              <label className="text-sm font-medium mb-2 block">الرصيد الفعلي في الصندوق (ر.س)</label>
+              <label className="text-sm font-medium mb-2 block">الرصيد الفعلي في الصندوق (<SarIcon size={12} />)</label>
               <Input
                 type="number"
                 placeholder="0.00"
@@ -786,7 +1260,7 @@ export default function ShiftManagement() {
 
       {/* Cash Movement Dialog */}
       <Dialog open={showCashMovementDialog} onOpenChange={setShowCashMovementDialog}>
-        <DialogContent className="sm:max-w-md" dir="rtl">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>حركة نقدية</DialogTitle>
           </DialogHeader>
@@ -808,7 +1282,7 @@ export default function ShiftManagement() {
               ))}
             </div>
             <div>
-              <label className="text-sm font-medium mb-2 block">المبلغ (ر.س)</label>
+              <label className="text-sm font-medium mb-2 block">المبلغ (<SarIcon size={12} />)</label>
               <Input
                 type="number"
                 placeholder="0.00"
@@ -846,7 +1320,7 @@ export default function ShiftManagement() {
 
       {/* Z-Report Dialog */}
       <Dialog open={showZReportDialog} onOpenChange={setShowZReportDialog}>
-        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto" dir="rtl">
+        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="w-5 h-5 text-primary" />
@@ -926,18 +1400,32 @@ export default function ShiftManagement() {
                 </div>
               </div>
 
-              {/* Print Button */}
-              <Button
-                className="w-full gap-2"
-                onClick={() => handlePrintZReport(selectedZReport)}
-              >
-                <Printer className="w-4 h-4" />
-                طباعة تقرير Z
-              </Button>
+              {/* Action Buttons */}
+              <div className="grid grid-cols-1 gap-2">
+                <Button className="w-full gap-2" onClick={() => handlePrintZReport(selectedZReport)}>
+                  <Printer className="w-4 h-4" />
+                  طباعة تقرير Z
+                </Button>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button variant="outline"
+                    className="gap-1 border-green-300 text-green-700 hover:bg-green-50 dark:hover:bg-green-950/20"
+                    onClick={() => exportShiftsHistoryToExcel([selectedZReport])}>
+                    <Download className="w-4 h-4" />
+                    Excel
+                  </Button>
+                  <Button variant="outline"
+                    className="gap-1 border-emerald-400 text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-950/20"
+                    onClick={() => shareShiftToWhatsApp(selectedZReport)}>
+                    <Share2 className="w-4 h-4" />
+                    واتساب
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
+      <MobileBottomNav />
     </div>
   );
 }

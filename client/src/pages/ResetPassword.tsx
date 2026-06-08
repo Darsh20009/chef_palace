@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Lock, CheckCircle, Eye, EyeOff } from "lucide-react";
-const chefsplaceLogoStaff = "/logo.png";
+import qiroxLogoStaff from "@assets/qirox-logo-customer.png";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslate } from "@/lib/useTranslate";
@@ -125,7 +125,7 @@ export default function ResetPassword() {
       <div
         className="min-h-screen flex items-center justify-center p-4"
         style={{ background: "linear-gradient(135deg, hsl(165, 15%, 97%) 0%, hsl(165, 12%, 88%) 50%, hsl(165, 15%, 97%) 100%)" }}
-        dir="rtl"
+       
       >
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
@@ -143,7 +143,7 @@ export default function ResetPassword() {
     <div
       className="min-h-screen flex items-center justify-center p-4"
       style={{ background: "linear-gradient(135deg, hsl(165, 15%, 97%) 0%, hsl(165, 12%, 88%) 50%, hsl(165, 15%, 97%) 100%)" }}
-      dir="rtl"
+     
     >
       <Card className="w-full max-w-md border-primary/30 bg-card backdrop-blur shadow-xl">
         <CardHeader className="space-y-3 text-center pb-6">
@@ -153,7 +153,7 @@ export default function ResetPassword() {
                 <CheckCircle className="w-8 h-8 text-primary" />
               </div>
             ) : (
-              <img src={chefsplaceLogoStaff} alt="مكان الشيف البخاري" className="h-12 object-contain" />
+              <img src={qiroxLogoStaff} alt="مكان الشيف" className="h-12 object-contain" />
             )}
           </div>
           <CardTitle className="text-3xl font-bold text-foreground">

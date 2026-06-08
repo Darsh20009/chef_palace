@@ -150,7 +150,7 @@ export default function PaymentReturnPage() {
 
   if (isInIframe()) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-background" dir="rtl">
+      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
         <div className="text-center space-y-4">
           {status === "loading" && <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto" />}
           {status === "success" && <CheckCircle className="w-12 h-12 text-green-500 mx-auto" />}
@@ -163,7 +163,7 @@ export default function PaymentReturnPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-card to-background flex items-center justify-center p-4" dir="rtl">
+    <div className="min-h-screen bg-gradient-to-br from-background via-card to-background flex items-center justify-center p-4">
       <div className="max-w-md w-full text-center space-y-8">
         <div className="space-y-4">
           {status === "loading" && (

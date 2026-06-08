@@ -65,7 +65,7 @@ interface DrinkCustomizationDialogProps {
 const CATEGORY_INFO: Record<string, { nameAr: string; nameEn: string; icon: typeof Coffee; descAr: string; descEn: string }> = {
   sugar: { nameAr: "السكر", nameEn: "Sugar", icon: Candy, descAr: "اختر مستوى السكر", descEn: "Choose sugar level" },
   milk: { nameAr: "الحليب", nameEn: "Milk", icon: Milk, descAr: "اختر نوع الحليب", descEn: "Choose milk type" },
-  shot: { nameAr: "إضافة خاصة", nameEn: "Special Add-on", icon: Coffee, descAr: "إضافة خاصة للطبق", descEn: "Add special addon" },
+  shot: { nameAr: "شوت القهوة", nameEn: "Espresso Shot", icon: Coffee, descAr: "إضافة شوت إسبريسو", descEn: "Add espresso shot" },
   syrup: { nameAr: "النكهات", nameEn: "Flavors", icon: Droplets, descAr: "إضافة نكهة", descEn: "Add flavor" },
   topping: { nameAr: "الإضافات", nameEn: "Toppings", icon: Plus, descAr: "إضافات إضافية", descEn: "Extra toppings" },
   size: { nameAr: "الحجم", nameEn: "Size", icon: Coffee, descAr: "اختر الحجم", descEn: "Choose size" },
@@ -321,7 +321,7 @@ export default function DrinkCustomizationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose} modal={modal}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col" data-testid="dialog-customization">
+      <DialogContent className="max-w-lg max-h-[92vh] overflow-hidden flex flex-col" data-testid="dialog-customization">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-right">
             <Coffee className="w-5 h-5" />
@@ -334,7 +334,7 @@ export default function DrinkCustomizationDialog({
             <Loader2 className="w-6 h-6 animate-spin" />
           </div>
         ) : (
-          <ScrollArea className="flex-1 max-h-[50vh]">
+          <ScrollArea className="h-[60vh] max-h-[60vh] pr-2">
             <div className="space-y-4 p-1">
               {variants.length > 1 && (
                 <div className="space-y-2">
@@ -502,7 +502,7 @@ export default function DrinkCustomizationDialog({
               {Object.keys(groupedAddons).length === 0 && (
                 <div className="text-center py-4 text-muted-foreground">
                   <CandyOff className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p>{isAr ? "لا توجد خيارات تخصيص إضافية لهذا الطبق" : "No customization options available for this item"}</p>
+                  <p>{isAr ? "لا توجد خيارات تخصيص متاحة لهذا المشروب" : "No customization options available for this drink"}</p>
                 </div>
               )}
             </div>
@@ -534,7 +534,7 @@ export default function DrinkCustomizationDialog({
           </div>
 
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">{isAr ? "سعر الوجبة" : "Item Price"}</span>
+            <span className="text-muted-foreground">{isAr ? "سعر المشروب" : "Drink Price"}</span>
             <span className="flex items-center gap-1">{basePrice.toFixed(2)} <SarIcon /></span>
           </div>
           

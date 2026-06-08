@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Coffee, Utensils } from "lucide-react";
+import SarIcon from "@/components/sar-icon";
+import { useTranslate } from "@/lib/useTranslate";
 
 interface CoffeeItem {
   id: string;
@@ -22,7 +24,8 @@ interface CashierLayoutProps {
 }
 
 export function ClassicCashierLayout({ items, isLoading, getItemDisplayName, onAddItem }: CashierLayoutProps) {
-  if (isLoading) return <div className="text-center text-gray-400 py-8">جاري التحميل...</div>;
+  const tc = useTranslate();
+  if (isLoading) return <div className="text-center text-gray-400 py-8">{tc("جاري التحميل...", "Loading...")}</div>;
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       {items.map((item) => (
@@ -38,7 +41,7 @@ export function ClassicCashierLayout({ items, isLoading, getItemDisplayName, onA
             </div>
             <div className="flex items-center justify-between mt-3">
               <Badge variant="outline" className="border-primary/30 text-accent">
-                {Number(item.price).toFixed(2)} ريال
+                {Number(item.price).toFixed(2)} <SarIcon size={11} />
               </Badge>
               <Button
                 size="sm"
@@ -47,7 +50,7 @@ export function ClassicCashierLayout({ items, isLoading, getItemDisplayName, onA
                 data-testid={`button-add-${item.id}`}
               >
                 <Plus className="w-4 h-4 ml-1" />
-                إضافة
+                {tc("إضافة", "Add")}
               </Button>
             </div>
           </CardContent>
@@ -58,7 +61,8 @@ export function ClassicCashierLayout({ items, isLoading, getItemDisplayName, onA
 }
 
 export function POSCashierLayout({ items, isLoading, getItemDisplayName, onAddItem }: CashierLayoutProps) {
-  if (isLoading) return <div className="text-center text-gray-400 py-8">جاري التحميل...</div>;
+  const tc = useTranslate();
+  if (isLoading) return <div className="text-center text-gray-400 py-8">{tc("جاري التحميل...", "Loading...")}</div>;
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
       {items.map((item) => (
@@ -74,7 +78,7 @@ export function POSCashierLayout({ items, isLoading, getItemDisplayName, onAddIt
                 src={item.imageUrl}
                 className="w-full h-full object-cover group-hover:scale-110 transition-transform"
                 alt={getItemDisplayName(item)}
-                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                onError={(e) => { const img = e.target as HTMLImageElement; img.src = '/images/brand-logo.png'; img.className = img.className.replace('object-cover', 'object-contain') + ' p-1 opacity-40'; }}
               />
             ) : (
               <Coffee className="w-7 h-7 text-primary/40" />
@@ -84,7 +88,7 @@ export function POSCashierLayout({ items, isLoading, getItemDisplayName, onAddIt
             <p className="text-accent font-bold text-xs leading-tight line-clamp-2 text-center mb-1">
               {getItemDisplayName(item)}
             </p>
-            <p className="text-primary font-black text-sm">{Number(item.price).toFixed(2)} <span className="text-[9px] text-gray-500">ريال</span></p>
+            <p className="text-primary font-black text-sm">{Number(item.price).toFixed(2)} <SarIcon size={10} /></p>
           </div>
           <div className="absolute top-2 left-2 w-5 h-5 bg-green-600 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
             <Plus className="w-3 h-3 text-white" />
@@ -95,26 +99,40 @@ export function POSCashierLayout({ items, isLoading, getItemDisplayName, onAddIt
   );
 }
 
-const ALL_CATEGORY = "الكل";
-
 function getCategoryFromItem(item: CoffeeItem): string {
   if (item.category) return item.category;
   const name = (item.nameAr || "").toLowerCase();
-  if (name.includes("بخاري") || name.includes("bukhari")) return "بخاري";
-  if (name.includes("دجاج") || name.includes("chicken")) return "دجاج";
-  if (name.includes("شوكولا") || name.includes("chocolate")) return "شوكولاتة";
-  if (name.includes("مندي") || name.includes("كبسة")) return "مندي";
-  if (name.includes("عصير") || name.includes("juice")) return "عصائر";
-  if (name.includes("شاي") || name.includes("tea")) return "شاي";
-  return "أخرى";
+  if (name.includes("لاتيه") || name.includes("latte")) return "latte";
+  if (name.includes("قهوة") || name.includes("coffee") || name.includes("كوفي")) return "coffee";
+  if (name.includes("شوكولا") || name.includes("chocolate")) return "chocolate";
+  if (name.includes("موهيتو") || name.includes("موكا")) return "drinks";
+  if (name.includes("عصير") || name.includes("juice")) return "juice";
+  if (name.includes("شاي") || name.includes("tea")) return "tea";
+  return "other";
+}
+
+function getCategoryLabel(category: string, tc: (ar: string, en: string) => string): string {
+  const map: Record<string, [string, string]> = {
+    latte: ["لاتيه", "Latte"],
+    coffee: ["قهوة", "Coffee"],
+    chocolate: ["شوكولاتة", "Chocolate"],
+    drinks: ["مشروبات", "Drinks"],
+    juice: ["عصائر", "Juices"],
+    tea: ["شاي", "Tea"],
+    other: ["أخرى", "Other"],
+  };
+  const entry = map[category];
+  return entry ? tc(entry[0], entry[1]) : category;
 }
 
 export function SplitCashierLayout({ items, isLoading, getItemDisplayName, onAddItem }: CashierLayoutProps) {
-  const categories = [ALL_CATEGORY, ...Array.from(new Set(items.map(getCategoryFromItem)))];
-  const [selected, setSelected] = useState(ALL_CATEGORY);
-  const filtered = selected === ALL_CATEGORY ? items : items.filter(i => getCategoryFromItem(i) === selected);
+  const tc = useTranslate();
+  const ALL_KEY = "__all__";
+  const categories = [ALL_KEY, ...Array.from(new Set(items.map(getCategoryFromItem)))];
+  const [selected, setSelected] = useState(ALL_KEY);
+  const filtered = selected === ALL_KEY ? items : items.filter(i => getCategoryFromItem(i) === selected);
 
-  if (isLoading) return <div className="text-center text-gray-400 py-8">جاري التحميل...</div>;
+  if (isLoading) return <div className="text-center text-gray-400 py-8">{tc("جاري التحميل...", "Loading...")}</div>;
 
   return (
     <div className="flex gap-3 h-full">
@@ -130,7 +148,10 @@ export function SplitCashierLayout({ items, isLoading, getItemDisplayName, onAdd
             }`}
             data-testid={`button-category-${cat}`}
           >
-            {cat === ALL_CATEGORY ? <><Utensils className="w-3 h-3" />{cat}</> : cat}
+            {cat === ALL_KEY
+              ? <><Utensils className="w-3 h-3" />{tc("الكل", "All")}</>
+              : getCategoryLabel(cat, tc)
+            }
           </button>
         ))}
       </div>
@@ -144,22 +165,20 @@ export function SplitCashierLayout({ items, isLoading, getItemDisplayName, onAdd
               data-testid={`button-add-${item.id}`}
             >
               <CardContent className="p-3">
-                {item.imageUrl && (
-                  <div className="w-full h-20 rounded-lg overflow-hidden bg-black/30 mb-2">
-                    <img
-                      src={item.imageUrl}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                      alt={getItemDisplayName(item)}
-                      onError={(e) => { (e.target as HTMLImageElement).parentElement!.style.display = 'none'; }}
-                    />
-                  </div>
-                )}
+                <div className="w-full h-20 rounded-lg overflow-hidden bg-black/30 mb-2">
+                  <img
+                    src={item.imageUrl || '/images/brand-logo.png'}
+                    className={`w-full h-full transition-transform group-hover:scale-105 ${item.imageUrl ? 'object-cover' : 'object-contain opacity-30 p-2'}`}
+                    alt={getItemDisplayName(item)}
+                    onError={(e) => { const img = e.target as HTMLImageElement; img.src = '/images/brand-logo.png'; img.className = 'w-full h-full object-contain opacity-30 p-2'; }}
+                  />
+                </div>
                 <p className="text-accent font-bold text-xs line-clamp-2 text-right mb-2">
                   {getItemDisplayName(item)}
                 </p>
                 <div className="flex items-center justify-between">
                   <Badge variant="outline" className="border-primary/30 text-accent text-[10px] px-1.5">
-                    {Number(item.price).toFixed(2)} ريال
+                    {Number(item.price).toFixed(2)} <SarIcon size={10} />
                   </Badge>
                   <button
                     className="w-7 h-7 bg-green-600 hover:bg-green-700 rounded-lg flex items-center justify-center transition-colors"

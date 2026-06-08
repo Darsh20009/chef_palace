@@ -43,28 +43,54 @@ export const generatePDF = async (
  `;
 
   const paymentMethodNames: any = {
-    cash: 'الدفع نقداً',
-    pos: 'جهاز نقاط البيع (POS)',
+    cash: 'نقدي',
+    pos: 'شبكة',
+    'pos-network': 'شبكة',
+    card: 'شبكة',
+    network: 'شبكة',
     delivery: 'الدفع عند التوصيل',
     stc: 'STC Pay',
     alinma: 'Alinma Pay',
     ur: 'Ur Pay',
     barq: 'Barq',
     rajhi: 'بنك الراجحي',
-    'qahwa-card': 'بطاقة مكان الشيف (مجاني)'
+    mada: 'تحويل بنكي (مدى)',
+    bank_transfer: 'تحويل بنكي',
+    apple_pay: 'Apple Pay',
+    'neoleap-apple-pay': 'Apple Pay',
+    'paymob-apple-pay': 'Apple Pay',
+    geidea: 'بطاقة ائتمان',
+    paymob: 'بطاقة ائتمان',
+    'paymob-card': 'بطاقة ائتمان',
+    split: 'نقدي + شبكة',
+    'qahwa-card': 'بطاقة ولاء',
+    'qirox-card': 'بطاقة ولاء',
+    loyalty: 'بطاقة ولاء',
   };
 
-  const branchPhone = '+966536558528';
   const paymentDetails: any = {
-    cash: 'الدفع عند الاستلام',
-    pos: 'الدفع عبر جهاز POS',
+    cash: 'دفع نقدي',
+    pos: 'جهاز نقاط البيع',
+    'pos-network': 'جهاز نقاط البيع',
+    card: 'جهاز نقاط البيع',
     delivery: 'ادفع عند استلام الطلب',
-    stc: branchPhone,
-    alinma: branchPhone,
-    ur: branchPhone,
-    barq: branchPhone,
+    stc: '+966566507666',
+    alinma: '+966566507666',
+    ur: '+966566507666',
+    barq: '+966566507666',
     rajhi: 'SA78 8000 0539 6080 1942 4738',
-    'qahwa-card': 'وجبة مجانية من بطاقة الولاء'
+    mada: 'تحويل بنكي',
+    bank_transfer: 'تحويل بنكي',
+    apple_pay: 'Apple Pay',
+    'neoleap-apple-pay': 'Apple Pay',
+    'paymob-apple-pay': 'Apple Pay',
+    geidea: 'بطاقة ائتمان إلكترونية',
+    paymob: 'بطاقة ائتمان إلكترونية',
+    'paymob-card': 'بطاقة ائتمان إلكترونية',
+    split: 'دفع مختلط',
+    'qahwa-card': 'مشروب مجاني من بطاقة الولاء',
+    'qirox-card': 'بطاقة ولاء',
+    loyalty: 'بطاقة ولاء',
   };
 
  content.innerHTML = `
@@ -73,9 +99,9 @@ export const generatePDF = async (
  <h1 style="font-family: 'Amiri', serif; font-size: 42px; color: #B8860B; margin: 0; font-weight: bold; text-shadow: 2px 2px 4px rgba(184, 134, 11, 0.2);">
   مكان الشيف البخاري 
  </h1>
- <p style="color: #8B6F47; font-size: 18px; margin: 12px 0 8px 0; font-weight: 600;"> تجربة بخاري استثنائية </p>
+ <p style="color: #8B6F47; font-size: 18px; margin: 12px 0 8px 0; font-weight: 600;"> تجربة قهوة استثنائية </p>
  <p style="color: #666; font-size: 16px; margin: 8px 0 0 0; font-style: italic; font-weight: 500;">
- "لكل وجبة بخاري، لحظة نجاح"
+ "لكل لحظة قهوة ، لحظة نجاح"
  </p>
  </div>
  <div style="text-align: center; padding: 0 25px;">
@@ -156,7 +182,7 @@ export const generatePDF = async (
  <div style="margin-bottom: 20px; padding: 20px; background-color: #f8f9fa; border-radius: 8px; border: 1px solid #D4AF37;">
  <h3 style="color: #D4AF37; font-size: 18px; margin-bottom: 15px; font-weight: bold;">معلومات التواصل</h3>
  <div style="text-align: center; font-size: 14px;">
- <p style="margin: 0 0 10px 0;"><span style="font-weight: bold;">الهاتف:</span> +966 53 655 8528</p>
+ <p style="margin: 0 0 10px 0;"><span style="font-weight: bold;">الهاتف:</span> +966566507666</p>
  <p style="margin: 0 0 10px 0;"><span style="font-weight: bold;">الموقع الإلكتروني:</span> www.chefsplace.online</p>
  </div>
  </div>
@@ -164,7 +190,7 @@ export const generatePDF = async (
  <!-- QR Code Information with Slogan -->
  <div style="margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #FFF8DC, #FFFFE0); border-radius: 12px; border: 2px solid #D4AF37; box-shadow: 0 4px 8px rgba(212, 175, 55, 0.2);">
  <p style="margin: 0 0 15px 0; font-size: 18px; text-align: center; color: #B8860B; font-weight: bold; font-family: 'Amiri', serif;">
-  "لكل وجبة بخاري، لحظة نجاح" 
+  "لكل لحظة قهوة ، لحظة نجاح" 
  </p>
  <p style="margin: 0; font-size: 13px; text-align: center; color: #666; font-weight: 600;">
  <span style="font-weight: bold;"> رمز الاستجابة السريع:</span> يحتوي على رابط موقع مكان الشيف البخاري
@@ -177,7 +203,7 @@ export const generatePDF = async (
  <!-- Creative Footer -->
  <div style="text-align: center; margin-top: 35px; padding: 25px; border-top: 4px solid #D4AF37; background: linear-gradient(135deg, #FFF8DC, #FFFBEB); border-radius: 0 0 15px 15px; color: #8B6F47;">
  <p style="margin: 0; font-size: 20px; font-weight: bold; color: #B8860B;"> شكراً لاختياركم مكان الشيف البخاري </p>
- <p style="margin: 8px 0; font-size: 16px; font-style: italic; color: #8B6F47;"> "لكل وجبة بخاري، لحظة نجاح" </p>
+ <p style="margin: 8px 0; font-size: 16px; font-style: italic; color: #8B6F47;"> "لكل لحظة قهوة ، لحظة نجاح" </p>
  <p style="margin: 15px 0 5px 0; font-size: 13px; color: #666; font-weight: 500;">
   تم إنشاء فاتورة الاستلام هذه إلكترونياً
  </p>
@@ -202,28 +228,76 @@ export const generatePDF = async (
  backgroundColor: '#ffffff'
  });
 
- return new Promise<Blob>((resolve) => {
-   canvas.toBlob((blob) => {
-     resolve(blob || new Blob([], { type: 'image/png' }));
-   }, 'image/png');
- });
+ // Convert canvas to PDF using jsPDF
+ const { jsPDF } = await import(/* @vite-ignore */ 'jspdf');
+ const pdf = new jsPDF('p', 'mm', 'a4');
+ 
+ const imgData = canvas.toDataURL('image/png');
+ const imgWidth = 210; // A4 width in mm
+ const pageHeight = 295; // A4 height in mm
+ const imgHeight = (canvas.height * imgWidth) / canvas.width;
+ let heightLeft = imgHeight;
+
+ let position = 0;
+
+ pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+ heightLeft -= pageHeight;
+
+ while (heightLeft >= 0) {
+ position = heightLeft - imgHeight;
+ pdf.addPage();
+ pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+ heightLeft -= pageHeight;
+ }
+
+ return pdf.output('blob');
  } else {
- // Fallback: plain text blob
- const lines = [
-   `مكان الشيف البخاري`,
-   `رقم الطلب: ${order.orderNumber}`,
-   `التاريخ: ${new Date(order.createdAt).toLocaleDateString()}`,
-   `الوقت: ${new Date(order.createdAt).toLocaleTimeString()}`,
-   '',
-   'تفاصيل الطلب:',
-   ...cartItems.map(item =>
-     `${item.coffeeItem?.nameAr || 'منتج'} x${item.quantity} - ${(parseFloat(item.coffeeItem?.price || '0') * item.quantity).toFixed(2)} ر.س`
-   ),
-   '',
-   `الإجمالي: ${order.totalAmount} ر.س`,
-   `طريقة الدفع: ${paymentMethodNames[paymentMethod]}`,
- ];
- return new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+ // Fallback: Create a simple text-based PDF
+ const { jsPDF } = await import(/* @vite-ignore */ 'jspdf');
+ const pdf = new jsPDF('p', 'mm', 'a4');
+ 
+ // Add Arabic font support if available
+ pdf.setFont('helvetica');
+ pdf.setFontSize(16);
+ 
+ let yPosition = 20;
+ const lineHeight = 7;
+ 
+ // Header
+ pdf.text('مكان الشيف البخاري - Coffee Invoice', 105, yPosition, { align: 'center' });
+ yPosition += lineHeight * 2;
+ 
+ // Order details
+ pdf.setFontSize(12);
+ pdf.text(`Order Number: ${order.orderNumber}`, 20, yPosition);
+ yPosition += lineHeight;
+ pdf.text(`Date: ${new Date(order.createdAt).toLocaleDateString()}`, 20, yPosition);
+ yPosition += lineHeight;
+ pdf.text(`Time: ${new Date(order.createdAt).toLocaleTimeString()}`, 20, yPosition);
+ yPosition += lineHeight * 2;
+ 
+ // Items
+ pdf.text('Order Items:', 20, yPosition);
+ yPosition += lineHeight;
+ 
+ cartItems.forEach(item => {
+ const itemText = `${item.coffeeItem?.nameEn || item.coffeeItem?.nameAr || 'Item'} x${item.quantity} - ${(parseFloat(item.coffeeItem?.price || '0') * item.quantity).toFixed(2)} SAR`;
+ pdf.text(itemText, 25, yPosition);
+ yPosition += lineHeight;
+ });
+ 
+ yPosition += lineHeight;
+ pdf.setFontSize(14);
+ pdf.text(`Total: ${order.totalAmount} SAR`, 20, yPosition);
+ yPosition += lineHeight * 2;
+ 
+ // Payment method
+ pdf.setFontSize(12);
+ pdf.text(`Payment Method: ${paymentMethodNames[paymentMethod]}`, 20, yPosition);
+ yPosition += lineHeight;
+ pdf.text(`Details: ${paymentDetails[paymentMethod]}`, 20, yPosition);
+ 
+ return pdf.output('blob');
  }
  } finally {
  // Clean up
@@ -235,15 +309,21 @@ export const generatePDF = async (
 declare global {
  interface Window {
  html2canvas?: any;
+ jsPDF?: any;
  }
 }
 
 // Dynamically load required libraries
 export const loadPDFLibraries = async (): Promise<void> => {
+ // Load jsPDF
+ if (!window.jsPDF) {
+ await import(/* @vite-ignore */ 'jspdf');
+ }
+ 
  // Load html2canvas for better PDF generation
  if (!window.html2canvas) {
  try {
- const html2canvas = await import('html2canvas');
+ const html2canvas = await import(/* @vite-ignore */ 'html2canvas');
  window.html2canvas = html2canvas.default;
  } catch (error) {
  console.warn('html2canvas not available, using fallback PDF generation');

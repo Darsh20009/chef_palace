@@ -1,5 +1,5 @@
-const CACHE_VERSION = 'v20-bukhari-logo';
-const CACHE_NAME = `chefsplace-cache-${CACHE_VERSION}`;
+const CACHE_VERSION = 'v17';
+const CACHE_NAME = `blackrose-cache-${CACHE_VERSION}`;
 
 // Essential shell files to pre-cache during install
 // Vite-built assets (JS/CSS bundles) are cached at runtime via the fetch handler
@@ -160,7 +160,7 @@ function buildOrderStatusNotification(data) {
 }
 
 self.addEventListener('push', function(event) {
-  let data = { title: "مكان الشيف البخاري", body: 'لديك إشعار جديد', url: '/', type: 'general' };
+  let data = { title: 'BLACK ROSE Cafe', body: 'لديك إشعار جديد', url: '/', type: 'general' };
 
   try {
     if (event.data) {
@@ -188,11 +188,13 @@ self.addEventListener('push', function(event) {
     notifBody = notification.body || data.body;
   }
 
-  // Core options — compatible with all platforms including iOS PWA
-  const coreOptions = {
-    body: notifBody,
+  const isNewOrder = data.type === 'new_order';
+  const isOrderStatus = data.type === 'order_status';
+
+  // Minimal options — guaranteed to work on all platforms including iOS PWA
+  const minimalOptions = {
+    body: notifBody.slice(0, 200),
     icon: icon,
-    badge: '/badge-icon.png',
     data: {
       url: data.url || '/',
       orderId: data.orderId,
@@ -201,30 +203,36 @@ self.addEventListener('push', function(event) {
       type: data.type,
       timestamp: Date.now(),
     },
-    tag: data.tag || `notif-${Date.now()}`,
+    tag: data.tag || (isNewOrder ? 'new-order' : `notif-${Date.now()}`),
     dir: 'rtl',
     lang: 'ar',
   };
 
-  // Extended options for platforms that support them (Android Chrome, Desktop)
-  // iOS ignores most of these silently, but they cause no harm
-  const extendedOptions = {
-    ...coreOptions,
-    vibrate: data.type === 'new_order'
-      ? [200, 100, 200, 100, 200]
-      : [300, 100, 300],
+  // Standard options — works on most modern browsers (Android Chrome, Desktop)
+  const standardOptions = {
+    ...minimalOptions,
+    badge: '/badge-icon.png',
     renotify: true,
     silent: false,
     timestamp: data.timestamp || Date.now(),
-    actions: data.type === 'order_status' || data.type === 'new_order'
+  };
+
+  // Full options with actions and vibration (Android Chrome / Desktop Chrome)
+  const fullOptions = {
+    ...standardOptions,
+    requireInteraction: isNewOrder,
+    vibrate: isNewOrder ? [200, 100, 200, 100, 200] : [150, 100, 150],
+    actions: (isOrderStatus || isNewOrder)
       ? buildOrderStatusNotification(data).actions
       : [{ action: 'open', title: '📋 عرض' }],
   };
 
-  // Try extended options first, fall back to minimal if it fails (iOS safety net)
+  // Cascade: try full → standard → minimal, guaranteeing a notification is always shown
   event.waitUntil(
-    self.registration.showNotification(notifTitle, extendedOptions)
-      .catch(() => self.registration.showNotification(notifTitle, coreOptions))
+    self.registration.showNotification(notifTitle, fullOptions)
+      .catch(() => self.registration.showNotification(notifTitle, standardOptions))
+      .catch(() => self.registration.showNotification(notifTitle, minimalOptions))
+      .catch((err) => console.error('[SW] showNotification failed completely:', err))
   );
 });
 
@@ -235,22 +243,27 @@ self.addEventListener('notificationclick', function(event) {
   if (action === 'dismiss') return;
 
   let targetUrl = event.notification.data?.url || '/';
-  
+
   if (action === 'accept' && event.notification.data?.type === 'new_order') {
     targetUrl = '/employee/pos';
   }
 
+  const absoluteUrl = self.location.origin + (targetUrl.startsWith('/') ? targetUrl : '/' + targetUrl);
+
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
+      // Find an existing window/tab for this origin and navigate it
       for (let i = 0; i < clientList.length; i++) {
         const client = clientList[i];
-        if (client.url.includes(self.location.origin) && 'focus' in client) {
-          client.navigate(targetUrl);
-          return client.focus();
+        if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+          return ('navigate' in client ? client.navigate(absoluteUrl) : Promise.resolve(client))
+            .then(() => client.focus())
+            .catch(() => clients.openWindow(absoluteUrl));
         }
       }
-      return clients.openWindow(targetUrl);
-    })
+      // No existing window — open a new one (works even when phone is locked/app closed)
+      return clients.openWindow(absoluteUrl);
+    }).catch(() => clients.openWindow(absoluteUrl))
   );
 });
 

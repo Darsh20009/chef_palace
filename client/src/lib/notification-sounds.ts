@@ -1,16 +1,22 @@
 /**
- * Notification Sound System — مكان الشيف البخاري
+ * Notification Sound System — QIROX Cafe
  *
  * Rules:
  * - Only staff pages (dashboard, POS, kitchen, cashier) call playNotificationSound
  * - websocket.ts NEVER plays sounds
- * - Deduplication via localStorage prevents multi-tab double-plays (3s window)
+ * - Deduplication via in-memory map prevents multi-tab double-plays (600ms window)
  * - newOrder: TING TING bell sound (loud, media channel)
  * - cashierOrder: short double-beep
  * - statusChange: single pulse
  * - success: short 2-note rise
  * - alert: descending 2-note
  * - onlineOrderVoice: plays the real MP4 alert sound + ting ting
+ *
+ * AudioContext Keepalive:
+ * After the first user interaction unlocks the AudioContext, a silent heartbeat
+ * is played every 25 seconds to prevent the browser from suspending it.
+ * This ensures sound alerts work on long-lived tabs (e.g. a POS that has been
+ * open for hours without a click).
  */
 
 export type NotificationSoundType =
@@ -21,17 +27,69 @@ export type NotificationSoundType =
   | 'success'
   | 'alert';
 
+// ─── Channel Sound Config ─────────────────────────────────────────────────────
+// Each "channel" maps to a type of incoming order source.
+
+export type SoundChannel = 'manual' | 'online' | 'car';
+
+export interface ChannelSoundConfig {
+  enabled: boolean;
+  soundType: NotificationSoundType;
+  volume: number; // 0.0 – 1.0
+}
+
+const CHANNEL_SOUND_KEY = 'qirox_channel_sounds';
+
+const CHANNEL_DEFAULTS: Record<SoundChannel, ChannelSoundConfig> = {
+  manual:  { enabled: true, soundType: 'newOrder',        volume: 0.6 },
+  online:  { enabled: true, soundType: 'onlineOrderVoice', volume: 1.0 },
+  car:     { enabled: true, soundType: 'onlineOrderVoice', volume: 1.0 },
+};
+
+export function getChannelConfig(channel: SoundChannel): ChannelSoundConfig {
+  try {
+    const raw = localStorage.getItem(CHANNEL_SOUND_KEY);
+    if (!raw) return { ...CHANNEL_DEFAULTS[channel] };
+    const map = JSON.parse(raw) as Record<SoundChannel, ChannelSoundConfig>;
+    return map[channel] ? { ...CHANNEL_DEFAULTS[channel], ...map[channel] } : { ...CHANNEL_DEFAULTS[channel] };
+  } catch {
+    return { ...CHANNEL_DEFAULTS[channel] };
+  }
+}
+
+export function setChannelConfig(channel: SoundChannel, config: Partial<ChannelSoundConfig>): void {
+  try {
+    const raw = localStorage.getItem(CHANNEL_SOUND_KEY);
+    const map: Record<string, ChannelSoundConfig> = raw ? JSON.parse(raw) : {};
+    map[channel] = { ...CHANNEL_DEFAULTS[channel], ...(map[channel] || {}), ...config };
+    localStorage.setItem(CHANNEL_SOUND_KEY, JSON.stringify(map));
+  } catch {}
+}
+
+export function getAllChannelConfigs(): Record<SoundChannel, ChannelSoundConfig> {
+  return {
+    manual: getChannelConfig('manual'),
+    online: getChannelConfig('online'),
+    car:    getChannelConfig('car'),
+  };
+}
+
+/** Play a sound for a specific channel, respecting its enabled/volume/soundType settings. */
+export async function playChannelSound(channel: SoundChannel): Promise<void> {
+  const cfg = getChannelConfig(channel);
+  if (!cfg.enabled) return;
+  await playNotificationSound(cfg.soundType, cfg.volume);
+}
+
 // ─── AudioContext singleton ───────────────────────────────────────────────────
 
 let sharedCtx: AudioContext | null = null;
+let keepaliveTimer: ReturnType<typeof setInterval> | null = null;
 
 function getCtx(): AudioContext | null {
   try {
     if (!sharedCtx || sharedCtx.state === 'closed') {
       sharedCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-    if (sharedCtx.state === 'suspended') {
-      sharedCtx.resume().catch(() => {});
     }
     return sharedCtx;
   } catch {
@@ -39,15 +97,68 @@ function getCtx(): AudioContext | null {
   }
 }
 
-// Resume AudioContext on user interaction (browser autoplay policy)
+/** Resume the AudioContext and return true if it ends up running. */
+async function ensureRunning(): Promise<boolean> {
+  try {
+    const ctx = getCtx();
+    if (!ctx) return false;
+    if (ctx.state === 'suspended') {
+      await ctx.resume();
+    }
+    return ctx.state === 'running';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Play a completely silent (zero-amplitude) buffer.
+ * This acts as a keepalive ping — browsers keep the AudioContext alive
+ * as long as audio nodes are actively being used.
+ */
+function playSilentPing(): void {
+  try {
+    const ctx = getCtx();
+    if (!ctx || ctx.state !== 'running') return;
+    const buf = ctx.createBuffer(1, 1, 22050);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(ctx.destination);
+    src.start();
+  } catch {}
+}
+
+/**
+ * Start a 25-second heartbeat that keeps the AudioContext alive on long-lived
+ * tabs. Called automatically after the first successful audio unlock.
+ */
+function startKeepalive(): void {
+  if (keepaliveTimer !== null) return; // already running
+  keepaliveTimer = setInterval(() => {
+    if (!sharedCtx || sharedCtx.state === 'closed') {
+      if (keepaliveTimer !== null) clearInterval(keepaliveTimer);
+      keepaliveTimer = null;
+      return;
+    }
+    if (sharedCtx.state === 'suspended') {
+      sharedCtx.resume().then(() => playSilentPing()).catch(() => {});
+    } else {
+      playSilentPing();
+    }
+  }, 25_000);
+}
+
+// Resume AudioContext on any user interaction (browser autoplay policy)
 if (typeof window !== 'undefined') {
-  const resume = () => {
-    if (sharedCtx && sharedCtx.state === 'suspended') {
-      sharedCtx.resume().catch(() => {});
+  const unlock = async () => {
+    const running = await ensureRunning();
+    if (running) {
+      audioUnlocked = true;
+      startKeepalive();
     }
   };
-  ['click', 'keydown', 'touchstart', 'mousedown'].forEach(evt =>
-    document.addEventListener(evt, resume, { capture: true, passive: true })
+  ['click', 'keydown', 'touchstart', 'mousedown', 'pointerdown'].forEach(evt =>
+    document.addEventListener(evt, unlock, { capture: true, passive: true })
   );
 }
 
@@ -61,17 +172,17 @@ export function isAudioUnlocked(): boolean {
 
 export async function initAudioUnlock(): Promise<void> {
   try {
-    const ctx = getCtx();
-    if (ctx) {
-      await ctx.resume();
-      audioUnlocked = ctx.state === 'running';
+    const running = await ensureRunning();
+    if (running) {
+      audioUnlocked = true;
+      startKeepalive();
     }
   } catch {}
 }
 
 // ─── Sound preference persistence ────────────────────────────────────────────
 
-const SOUND_PREF_KEY = 'chefsplace_sound_enabled';
+const SOUND_PREF_KEY = 'qirox_sound_enabled';
 
 export function getSoundEnabled(pageKey = 'default'): boolean {
   try {
@@ -93,62 +204,44 @@ export function setSoundEnabled(pageKey: string, enabled: boolean): void {
   } catch {}
 }
 
-// ─── Deduplication: per-type, 3 second window ────────────────────────────────
+// ─── Deduplication: per-type, 600ms window — in-memory per tab ───────────────
+// Deliberately NOT using localStorage so each tab (POS, Kitchen, etc.) has its
+// own independent dedup state and they don't block each other.
 
-const DEDUP_KEY = 'chefsplace_sound_dedup';
 const DEDUP_WINDOW_MS = 600;
+const dedupMap = new Map<string, number>();
 
 function isDuplicate(type: NotificationSoundType): boolean {
-  try {
-    const raw = localStorage.getItem(DEDUP_KEY);
-    if (!raw) return false;
-    const map = JSON.parse(raw) as Record<string, number>;
-    return !!map[type] && Date.now() - map[type] < DEDUP_WINDOW_MS;
-  } catch {
-    return false;
-  }
+  const last = dedupMap.get(type);
+  return !!last && Date.now() - last < DEDUP_WINDOW_MS;
 }
 
 function markPlayed(type: NotificationSoundType): void {
-  try {
-    const raw = localStorage.getItem(DEDUP_KEY);
-    const map = raw ? (JSON.parse(raw) as Record<string, number>) : {};
-    map[type] = Date.now();
-    localStorage.setItem(DEDUP_KEY, JSON.stringify(map));
-  } catch {}
+  dedupMap.set(type, Date.now());
 }
 
 // ─── TING TING Bell Sound via Web Audio API ────────────────────────────────
-// Kitchen-optimized bell: mid-range frequencies that cut through kitchen noise
+// Classic metallic bell: high fundamental + stretched overtones + long decay
 
 function playTingWebAudio(volume: number): boolean {
   try {
     const ctx = getCtx();
     if (!ctx || ctx.state !== 'running') return false;
 
-    // Kitchen-optimized partials: mid-range freqs carry better through noise
+    // Bell overtone series (slightly stretched for metallic quality)
     const partials = [
-      { freq: 880,  amp: 1.0  },   // A5 — punchy mid fundamental
-      { freq: 1320, amp: 0.70 },   // E6 — strong 2nd partial
-      { freq: 1760, amp: 0.45 },   // A6 — shimmer
-      { freq: 2640, amp: 0.20 },   // high ring
+      { freq: 1760, amp: 1.0 },     // A6 — fundamental
+      { freq: 3136, amp: 0.55 },    // G7 — 2nd partial
+      { freq: 4400, amp: 0.30 },    // ~A7+
+      { freq: 6000, amp: 0.15 },    // high shimmer
     ];
 
-    // Compressor to maximize loudness
-    const compressor = ctx.createDynamicsCompressor();
-    compressor.threshold.value = -6;
-    compressor.knee.value = 3;
-    compressor.ratio.value = 4;
-    compressor.attack.value = 0.001;
-    compressor.release.value = 0.1;
-    compressor.connect(ctx.destination);
-
     const master = ctx.createGain();
-    master.gain.value = Math.min(1.5, volume * 1.8); // boosted for kitchen
-    master.connect(compressor);
+    master.gain.value = Math.min(1.0, volume * 1.4);
+    master.connect(ctx.destination);
 
     const now = ctx.currentTime;
-    const decayTime = 0.9; // longer ring = more noticeable
+    const decayTime = 0.55;
 
     partials.forEach(({ freq, amp }) => {
       const osc = ctx.createOscillator();
@@ -157,9 +250,8 @@ function playTingWebAudio(volume: number): boolean {
       osc.type = 'sine';
       osc.frequency.value = freq;
 
-      // Sharp attack (1ms), then exponential decay
       gain.gain.setValueAtTime(0, now);
-      gain.gain.linearRampToValueAtTime(amp, now + 0.001);
+      gain.gain.linearRampToValueAtTime(amp, now + 0.002);
       gain.gain.exponentialRampToValueAtTime(0.001, now + decayTime);
 
       osc.connect(gain);
@@ -209,14 +301,13 @@ function generateTingWav(volume = 0.9, sampleRate = 22050): string {
   for (let i = 0; i < numSamples; i++) {
     const t = i / sampleRate;
     const attack = Math.min(1, i / (sampleRate * 0.002));
-    const decay = Math.exp(-t * 6.5); // exponential bell decay
+    const decay = Math.exp(-t * 6.5);
     const env = attack * decay * volume;
 
     let sample = 0;
     for (const { freq, amp } of partials) {
       sample += amp * Math.sin(2 * Math.PI * freq * t);
     }
-    // Normalize
     const totalAmp = partials.reduce((s, p) => s + p.amp, 0);
     sample /= totalAmp;
 
@@ -300,7 +391,9 @@ function getAudioDataUrl(type: NotificationSoundType): string {
 // ─── Play a single TING via HTML Audio (media channel) ───────────────────────
 
 async function playTingAudio(volume: number): Promise<void> {
-  // Try Web Audio API first (best quality + volume control)
+  // Ensure AudioContext is running before attempting Web Audio
+  await ensureRunning();
+
   if (playTingWebAudio(volume)) return;
 
   // Fallback: HTML Audio with WAV data URL
@@ -357,6 +450,7 @@ function playBeepWebAudio(type: NotificationSoundType, volume: number): boolean 
 }
 
 async function playBeep(type: NotificationSoundType, volume: number): Promise<void> {
+  await ensureRunning();
   if (playBeepWebAudio(type, volume)) return;
 
   try {
@@ -389,35 +483,83 @@ export async function testSound(type: NotificationSoundType = 'success', volume 
   }
 }
 
+// ─── MP4 asset playback with graceful fallback ───────────────────────────────
+
+/**
+ * Attempt to play `/online-order-alert.mp4`.
+ * Resolves true if the file loads and plays successfully; false otherwise
+ * (file missing, codec unsupported, autoplay blocked, etc.).
+ * The caller should fall back to synthetic tones on false.
+ */
+async function playMp4WithFallback(volume: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    try {
+      const audio = new Audio('/online-order-alert.mp4');
+      audio.volume = Math.max(0, Math.min(1, volume));
+      // Abort after 3 s in case the file stalls (e.g. slow network or redirect)
+      const timeout = setTimeout(() => {
+        audio.pause();
+        audio.src = '';
+        resolve(false);
+      }, 3000);
+      audio.oncanplaythrough = () => {
+        audio.play().then(() => {
+          clearTimeout(timeout);
+          audio.onended = () => resolve(true);
+          audio.onerror = () => { clearTimeout(timeout); resolve(false); };
+        }).catch(() => {
+          clearTimeout(timeout);
+          resolve(false);
+        });
+      };
+      audio.onerror = () => {
+        clearTimeout(timeout);
+        resolve(false);
+      };
+      audio.load();
+    } catch {
+      resolve(false);
+    }
+  });
+}
+
 // ─── Main export: playNotificationSound ──────────────────────────────────────
 
 export async function playNotificationSound(
   type: NotificationSoundType = 'newOrder',
-  volume: number = 1.0
+  volume: number = 0.95
 ): Promise<void> {
   if (isDuplicate(type)) return;
   markPlayed(type);
 
-  // Always use max volume
-  const vol = Math.max(volume, 0.9);
+  // Always attempt to resume the AudioContext before playing.
+  // This handles the case where a browser suspends the context on a long-lived
+  // tab even after the keepalive heartbeat runs (e.g. tab was in background).
+  await ensureRunning();
 
-  if (type === 'newOrder' || type === 'onlineOrderVoice') {
-    // TING TING TING — 3 loud bells for kitchen environment
-    await playTingAudio(vol);
-    await new Promise(r => setTimeout(r, 280));
-    await playTingAudio(vol);
-    await new Promise(r => setTimeout(r, 280));
-    await playTingAudio(vol);
+  if (type === 'onlineOrderVoice') {
+    // Try the real MP4 alert first; fall back to synthetic bell if unavailable.
+    const mp4Played = await playMp4WithFallback(volume);
+    if (!mp4Played) {
+      await playTingAudio(volume);
+      await new Promise(r => setTimeout(r, 320));
+      await playTingAudio(volume);
+      await new Promise(r => setTimeout(r, 320));
+      await playTingAudio(volume * 0.85);
+    }
+  } else if (type === 'newOrder') {
+    // TING ... TING — loud bell sound, plays through media channel
+    await playTingAudio(volume);
+    await new Promise(r => setTimeout(r, 320));
+    await playTingAudio(volume);
+    await new Promise(r => setTimeout(r, 320));
+    await playTingAudio(volume * 0.85);
   } else if (type === 'cashierOrder') {
-    await playBeep('cashierOrder', vol);
-    await new Promise(r => setTimeout(r, 160));
-    await playBeep('cashierOrder', vol);
-    await new Promise(r => setTimeout(r, 160));
-    await playBeep('cashierOrder', vol);
-  } else {
-    await playBeep(type, vol);
+    await playBeep('cashierOrder', volume);
     await new Promise(r => setTimeout(r, 200));
-    await playBeep(type, vol * 0.9);
+    await playBeep('cashierOrder', volume * 0.8);
+  } else {
+    await playBeep(type, volume);
   }
 }
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-const DEFAULT_IMG = "/images/default-coffee.png";
+const DEFAULT_IMG = "/images/brand-logo.png";
 
 interface ProductImageProps {
   src?: string | null;

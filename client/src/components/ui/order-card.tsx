@@ -95,10 +95,10 @@ function getSizeAr(size: string): string {
 
 function getStationAr(station?: string): string {
   const stations: Record<string, string> = {
-    barista: "محضر طعام",
+    barista: "باريستا",
     kitchen: "المطبخ",
-    cold: "الأطباق الباردة",
-    hot: "الأطباق الساخنة",
+    cold: "المشروبات الباردة",
+    hot: "المشروبات الساخنة",
     food: "الطعام",
     desserts: "الحلويات",
   };
@@ -417,7 +417,7 @@ export function OrderCard({
             <div className="mt-3 p-2 rounded-md bg-green-500/10 border border-green-500/20 space-y-1">
               <p className="text-xs font-bold text-green-700 dark:text-green-300 flex items-center gap-1">
                 <UtensilsCrossed className="h-3 w-3" />
-                جلوس في المطعم:
+                جلوس في الكافيه:
               </p>
               <div className="text-[10px] text-green-600 dark:text-green-400">
                 <span>طاولة رقم: {order.tableNumber}</span>

@@ -21,7 +21,7 @@ import { useState, useEffect } from "react";
       if (!isOnline) {
         const timer = setInterval(async () => {
           try {
-            const request = indexedDB.open('chefsplace-offline', 2);
+            const request = indexedDB.open('qirox-offline', 2);
             request.onsuccess = (e) => {
               const db = (e.target as IDBOpenDBRequest).result;
               if (!db.objectStoreNames.contains('pending-writes')) return;

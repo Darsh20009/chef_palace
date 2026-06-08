@@ -4,6 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, CheckCircle, Eye, EyeOff, Shield, ArrowLeft, Lock } from "lucide-react";
+import SarIcon from "@/components/sar-icon";
+import { useTranslate } from "@/lib/useTranslate";
+const stcLogoPath = "/images/stc-pay.png";
+const visaMadaLogoPath = "/images/visa-mada.png";
 
 type CardType = "mada" | "visa" | "mastercard" | "amex" | "unknown";
 type PaymentStep = "form" | "processing" | "success";
@@ -99,6 +103,7 @@ function CardVisual({ cardNumber, cardName, expiry, cvv, cardType, isFlipped }: 
 // ─── Card Payment ────────────────────────────────────────────────────────────
 function CardPayment({ amount, onSuccess, onCancel }: { amount: number; onSuccess: (tx: string) => void; onCancel: () => void }) {
   const { toast } = useToast();
+  const tc = useTranslate();
   const [step, setStep] = useState<PaymentStep>("form");
   const [cardNumber, setCardNumber] = useState("");
   const [cardName, setCardName] = useState("");
@@ -123,11 +128,11 @@ function CardPayment({ amount, onSuccess, onCancel }: { amount: number; onSucces
   const handlePay = () => {
     const cleanNum = cardNumber.replace(/\s/g, "");
     const minLen = cardType === "amex" ? 15 : 16;
-    if (cleanNum.length < minLen) { toast({ variant: "destructive", title: "رقم البطاقة غير مكتمل" }); return; }
-    if (!cardName.trim()) { toast({ variant: "destructive", title: "يرجى إدخال اسم حامل البطاقة" }); return; }
-    if (expiry.length < 5) { toast({ variant: "destructive", title: "تاريخ الانتهاء غير صحيح" }); return; }
+    if (cleanNum.length < minLen) { toast({ variant: "destructive", title: tc("رقم البطاقة غير مكتمل", "Incomplete card number") }); return; }
+    if (!cardName.trim()) { toast({ variant: "destructive", title: tc("يرجى إدخال اسم حامل البطاقة", "Please enter cardholder name") }); return; }
+    if (expiry.length < 5) { toast({ variant: "destructive", title: tc("تاريخ الانتهاء غير صحيح", "Invalid expiry date") }); return; }
     const cvvLen = cardType === "amex" ? 4 : 3;
-    if (cvv.length < cvvLen) { toast({ variant: "destructive", title: `رمز CVV يجب أن يكون ${cvvLen} أرقام` }); return; }
+    if (cvv.length < cvvLen) { toast({ variant: "destructive", title: tc(`رمز CVV يجب أن يكون ${cvvLen} أرقام`, `CVV must be ${cvvLen} digits`) }); return; }
     setStep("processing");
     setTimeout(() => { setStep("success"); setTimeout(() => onSuccess(`CARD-${Date.now()}`), 1200); }, 1800);
   };
@@ -139,12 +144,12 @@ function CardPayment({ amount, onSuccess, onCancel }: { amount: number; onSucces
           <Loader2 className="w-8 h-8 text-primary animate-spin" />
         </div>
         <div className="text-center">
-          <p className="font-bold text-foreground text-base">جاري معالجة الدفع...</p>
-          <p className="text-sm text-muted-foreground mt-1">يُرجى الانتظار، لا تُغلق الصفحة</p>
+          <p className="font-bold text-foreground text-base">{tc("جاري معالجة الدفع...", "Processing payment...")}</p>
+          <p className="text-sm text-muted-foreground mt-1">{tc("يُرجى الانتظار، لا تُغلق الصفحة", "Please wait, do not close the page")}</p>
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted px-3 py-1.5 rounded-full">
           <Shield className="w-3.5 h-3.5 text-green-600" />
-          دفع آمن ومشفّر
+          {tc("دفع آمن ومشفّر", "Secure & encrypted payment")}
         </div>
       </div>
     );
@@ -157,8 +162,8 @@ function CardPayment({ amount, onSuccess, onCancel }: { amount: number; onSucces
           <CheckCircle className="w-9 h-9 text-green-600" />
         </div>
         <div className="text-center">
-          <p className="font-bold text-green-700 text-lg">تمّت عملية الدفع بنجاح ✓</p>
-          <p className="text-sm text-muted-foreground mt-1">جاري تأكيد طلبك...</p>
+          <p className="font-bold text-green-700 text-lg">{tc("تمّت عملية الدفع بنجاح ✓", "Payment successful ✓")}</p>
+          <p className="text-sm text-muted-foreground mt-1">{tc("جاري تأكيد طلبك...", "Confirming your order...")}</p>
         </div>
       </div>
     );
@@ -167,17 +172,13 @@ function CardPayment({ amount, onSuccess, onCancel }: { amount: number; onSucces
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-1">
-        <h3 className="font-bold text-foreground text-base">بطاقة بنكية</h3>
-        <span className="flex gap-1 text-xs font-bold text-gray-600">
-          <span className="border rounded px-1">VISA</span>
-          <span className="border rounded px-1">mada</span>
-          <span className="border rounded px-1">MC</span>
-        </span>
+        <h3 className="font-bold text-foreground text-base">{tc("بطاقة بنكية", "Bank Card")}</h3>
+        <img src={visaMadaLogoPath} alt="Visa Mada Mastercard" className="h-6 object-contain" />
       </div>
       <CardVisual cardNumber={cardNumber} cardName={cardName} expiry={expiry} cvv={cvv} cardType={cardType} isFlipped={isFlipped} />
       <div className="space-y-3 pt-1">
         <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">رقم البطاقة</Label>
+          <Label className="text-xs text-muted-foreground">{tc("رقم البطاقة", "Card Number")}</Label>
           <div className="relative">
             <Input
               value={cardNumber}
@@ -198,7 +199,7 @@ function CardPayment({ amount, onSuccess, onCancel }: { amount: number; onSucces
           </div>
         </div>
         <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">اسم حامل البطاقة</Label>
+          <Label className="text-xs text-muted-foreground">{tc("اسم حامل البطاقة", "Cardholder Name")}</Label>
           <Input
             value={cardName}
             onChange={(e) => setCardName(e.target.value.toUpperCase())}
@@ -211,7 +212,7 @@ function CardPayment({ amount, onSuccess, onCancel }: { amount: number; onSucces
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">تاريخ الانتهاء</Label>
+            <Label className="text-xs text-muted-foreground">{tc("تاريخ الانتهاء", "Expiry Date")}</Label>
             <Input
               value={expiry}
               onChange={handleExpiryChange}
@@ -225,7 +226,7 @@ function CardPayment({ amount, onSuccess, onCancel }: { amount: number; onSucces
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">رمز CVV</Label>
+            <Label className="text-xs text-muted-foreground">{tc("رمز CVV", "CVV Code")}</Label>
             <div className="relative">
               <Input
                 value={cvv}
@@ -252,8 +253,8 @@ function CardPayment({ amount, onSuccess, onCancel }: { amount: number; onSucces
         </div>
       </div>
       <div className="bg-muted/50 rounded-xl p-3 flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">المبلغ المستحق</span>
-        <span className="text-lg font-black text-primary">{Number(amount).toFixed(2)} ر.س</span>
+        <span className="text-sm text-muted-foreground">{tc("المبلغ المستحق", "Amount Due")}</span>
+        <span className="text-lg font-black text-primary">{Number(amount).toFixed(2)} <SarIcon size={14} /></span>
       </div>
       <div className="flex gap-3">
         <Button variant="ghost" size="icon" onClick={onCancel} className="flex-shrink-0 rounded-xl border" data-testid="button-cancel-payment">
@@ -261,12 +262,12 @@ function CardPayment({ amount, onSuccess, onCancel }: { amount: number; onSucces
         </Button>
         <Button onClick={handlePay} className="flex-1 h-12 text-base font-bold" data-testid="button-pay-now">
           <Lock className="w-4 h-4 ml-2" />
-          ادفع الآن — {Number(amount).toFixed(2)} ر.س
+          {tc("ادفع الآن", "Pay Now")} — {Number(amount).toFixed(2)} <SarIcon size={14} className="inline-block align-middle" />
         </Button>
       </div>
       <p className="text-center text-xs text-muted-foreground flex items-center justify-center gap-1">
         <Shield className="w-3 h-3 text-green-600" />
-        بيئة محاكاة — أي بيانات بطاقة مقبولة
+        {tc("بيئة محاكاة — أي بيانات بطاقة مقبولة", "Simulation — any card data accepted")}
       </p>
     </div>
   );
@@ -275,6 +276,7 @@ function CardPayment({ amount, onSuccess, onCancel }: { amount: number; onSucces
 // ─── STC Pay ─────────────────────────────────────────────────────────────────
 function StcPayment({ amount, onSuccess, onCancel }: { amount: number; onSuccess: (tx: string) => void; onCancel: () => void }) {
   const { toast } = useToast();
+  const tc = useTranslate();
   const [step, setStcStep] = useState<StcStep>("phone");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState(["", "", "", ""]);
@@ -299,7 +301,7 @@ function StcPayment({ amount, onSuccess, onCancel }: { amount: number; onSuccess
 
   const handleSendOtp = async () => {
     if (!/^05\d{8}$/.test(phone)) {
-      toast({ variant: "destructive", title: "رقم الجوال غير صحيح", description: "يجب أن يبدأ بـ 05 ويتكون من 10 أرقام" });
+      toast({ variant: "destructive", title: tc("رقم الجوال غير صحيح", "Invalid phone number"), description: tc("يجب أن يبدأ بـ 05 ويتكون من 10 أرقام", "Must start with 05 and be 10 digits") });
       return;
     }
     setSending(true);
@@ -346,13 +348,13 @@ function StcPayment({ amount, onSuccess, onCancel }: { amount: number; onSuccess
         setStcStep("success");
         setTimeout(() => onSuccess(data.transactionId || `STC-${Date.now()}`), 1200);
       } else {
-        toast({ variant: "destructive", title: "رمز التحقق غير صحيح", description: "الرمز الصحيح هو 1234" });
+        toast({ variant: "destructive", title: tc("رمز التحقق غير صحيح", "Invalid OTP"), description: tc("الرمز الصحيح هو 1234", "The correct code is 1234") });
         setOtp(["", "", "", ""]);
         setStcStep("otp");
         setTimeout(() => otpRefs.current[0]?.focus(), 100);
       }
     } catch {
-      toast({ variant: "destructive", title: "حدث خطأ في التحقق" });
+      toast({ variant: "destructive", title: tc("حدث خطأ في التحقق", "Verification error") });
       setOtp(["", "", "", ""]);
       setStcStep("otp");
     }
@@ -364,7 +366,7 @@ function StcPayment({ amount, onSuccess, onCancel }: { amount: number; onSuccess
         <div className="w-16 h-16 rounded-full flex items-center justify-center shadow-2xl" style={{ background: "linear-gradient(135deg, #6B1FA8, #3DBE7C)" }}>
           <Loader2 className="w-8 h-8 text-white animate-spin" />
         </div>
-        <p className="font-bold">جاري التحقق من الرمز...</p>
+        <p className="font-bold">{tc("جاري التحقق من الرمز...", "Verifying code...")}</p>
       </div>
     );
   }
@@ -376,8 +378,8 @@ function StcPayment({ amount, onSuccess, onCancel }: { amount: number; onSuccess
           <CheckCircle className="w-9 h-9 text-green-600" />
         </div>
         <div className="text-center">
-          <p className="font-bold text-green-700 text-lg">تمّ الدفع عبر STC Pay ✓</p>
-          <p className="text-sm text-muted-foreground mt-1">جاري تأكيد طلبك...</p>
+          <p className="font-bold text-green-700 text-lg">{tc("تمّ الدفع عبر STC Pay ✓", "STC Pay payment successful ✓")}</p>
+          <p className="text-sm text-muted-foreground mt-1">{tc("جاري تأكيد طلبك...", "Confirming your order...")}</p>
         </div>
       </div>
     );
@@ -387,17 +389,17 @@ function StcPayment({ amount, onSuccess, onCancel }: { amount: number; onSuccess
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-1">
         <h3 className="font-bold text-foreground text-base">STC Pay</h3>
-        <span className="text-xl font-black text-purple-700">STC Pay</span>
+        <img src={stcLogoPath} alt="STC Pay" className="h-8 object-contain" />
       </div>
 
       {step === "phone" && (
         <>
           <div className="bg-muted/40 rounded-xl p-4 text-center space-y-0.5">
-            <p className="text-xs text-muted-foreground">المبلغ المستحق</p>
-            <p className="text-2xl font-black text-primary">{Number(amount).toFixed(2)} ر.س</p>
+            <p className="text-xs text-muted-foreground">{tc("المبلغ المستحق", "Amount Due")}</p>
+            <p className="text-2xl font-black text-primary">{Number(amount).toFixed(2)} <SarIcon size={18} /></p>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">رقم الجوال المرتبط بـ STC Pay</Label>
+            <Label className="text-xs text-muted-foreground">{tc("رقم الجوال المرتبط بـ STC Pay", "Phone linked to STC Pay")}</Label>
             <Input
               value={phone}
               onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
@@ -419,7 +421,7 @@ function StcPayment({ amount, onSuccess, onCancel }: { amount: number; onSuccess
               style={{ background: "linear-gradient(135deg, #6B1FA8, #3DBE7C)" }}
               data-testid="button-send-otp"
             >
-              {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : "إرسال رمز التحقق"}
+              {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : tc("إرسال رمز التحقق", "Send OTP")}
             </Button>
           </div>
         </>
@@ -428,7 +430,7 @@ function StcPayment({ amount, onSuccess, onCancel }: { amount: number; onSuccess
       {step === "otp" && (
         <>
           <div className="text-center space-y-0.5">
-            <p className="text-sm text-muted-foreground">تم إرسال رمز التحقق إلى</p>
+            <p className="text-sm text-muted-foreground">{tc("تم إرسال رمز التحقق إلى", "OTP sent to")}</p>
             <p className="font-bold text-foreground font-mono" dir="ltr">{phone}</p>
           </div>
           <div className="flex items-center justify-center gap-3 py-2" dir="ltr">
@@ -450,7 +452,7 @@ function StcPayment({ amount, onSuccess, onCancel }: { amount: number; onSuccess
           <div className="text-center space-y-2">
             {timeLeft > 0 ? (
               <p className="text-sm text-muted-foreground">
-                ينتهي الرمز خلال{" "}
+                {tc("ينتهي الرمز خلال", "Code expires in")}{" "}
                 <span className="font-bold text-primary font-mono">{formatTime(timeLeft)}</span>
               </p>
             ) : (
@@ -459,11 +461,11 @@ function StcPayment({ amount, onSuccess, onCancel }: { amount: number; onSuccess
                 onClick={() => { setOtp(["", "", "", ""]); setStcStep("phone"); }}
                 className="text-sm text-primary font-bold hover:underline"
               >
-                طلب رمز جديد
+                {tc("طلب رمز جديد", "Request new code")}
               </button>
             )}
             <div className="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
-              <span className="text-xs text-amber-700">رمز الاختبار:</span>
+              <span className="text-xs text-amber-700">{tc("رمز الاختبار:", "Test code:")}</span>
               <span className="font-bold font-mono text-amber-900 tracking-widest">1 2 3 4</span>
             </div>
           </div>
@@ -475,7 +477,7 @@ function StcPayment({ amount, onSuccess, onCancel }: { amount: number; onSuccess
             data-testid="button-back-stc"
           >
             <ArrowLeft className="w-3.5 h-3.5 ml-1" />
-            العودة
+            {tc("العودة", "Back")}
           </Button>
         </>
       )}
@@ -485,6 +487,7 @@ function StcPayment({ amount, onSuccess, onCancel }: { amount: number; onSuccess
 
 // ─── Apple Pay ───────────────────────────────────────────────────────────────
 function ApplePayment({ amount, onSuccess, onCancel }: { amount: number; onSuccess: (tx: string) => void; onCancel: () => void }) {
+  const tc = useTranslate();
   const [step, setStep] = useState<"idle" | "processing" | "success">("idle");
 
   const handleApplePay = () => {
@@ -499,8 +502,8 @@ function ApplePayment({ amount, onSuccess, onCancel }: { amount: number; onSucce
           <Loader2 className="w-9 h-9 text-white animate-spin" />
         </div>
         <div className="text-center">
-          <p className="font-bold text-foreground text-base">جاري المصادقة البيومترية...</p>
-          <p className="text-sm text-muted-foreground mt-1">انظر إلى الشاشة أو ضع إصبعك</p>
+          <p className="font-bold text-foreground text-base">{tc("جاري المصادقة البيومترية...", "Biometric authentication...")}</p>
+          <p className="text-sm text-muted-foreground mt-1">{tc("انظر إلى الشاشة أو ضع إصبعك", "Look at the screen or place your finger")}</p>
         </div>
       </div>
     );
@@ -513,8 +516,8 @@ function ApplePayment({ amount, onSuccess, onCancel }: { amount: number; onSucce
           <CheckCircle className="w-9 h-9 text-green-600" />
         </div>
         <div className="text-center">
-          <p className="font-bold text-green-700 text-lg">تمّ الدفع عبر Apple Pay ✓</p>
-          <p className="text-sm text-muted-foreground mt-1">جاري تأكيد طلبك...</p>
+          <p className="font-bold text-green-700 text-lg">{tc("تمّ الدفع عبر Apple Pay ✓", "Apple Pay payment successful ✓")}</p>
+          <p className="text-sm text-muted-foreground mt-1">{tc("جاري تأكيد طلبك...", "Confirming your order...")}</p>
         </div>
       </div>
     );
@@ -524,8 +527,8 @@ function ApplePayment({ amount, onSuccess, onCancel }: { amount: number; onSucce
     <div className="space-y-5">
       <h3 className="font-bold text-foreground text-base text-center">Apple Pay</h3>
       <div className="bg-muted/40 rounded-xl p-4 text-center space-y-0.5">
-        <p className="text-xs text-muted-foreground">المبلغ المستحق</p>
-        <p className="text-2xl font-black text-primary">{Number(amount).toFixed(2)} ر.س</p>
+        <p className="text-xs text-muted-foreground">{tc("المبلغ المستحق", "Amount Due")}</p>
+        <p className="text-2xl font-black text-primary">{Number(amount).toFixed(2)} <SarIcon size={18} /></p>
       </div>
       <button
         onClick={handleApplePay}
@@ -539,9 +542,9 @@ function ApplePayment({ amount, onSuccess, onCancel }: { amount: number; onSucce
       </button>
       <Button variant="ghost" size="sm" onClick={onCancel} className="w-full text-muted-foreground" data-testid="button-cancel-apple-pay">
         <ArrowLeft className="w-3.5 h-3.5 ml-1" />
-        إلغاء
+        {tc("إلغاء", "Cancel")}
       </Button>
-      <p className="text-center text-xs text-muted-foreground">محاكاة Apple Pay — لا يوجد خصم حقيقي</p>
+      <p className="text-center text-xs text-muted-foreground">{tc("محاكاة Apple Pay — لا يوجد خصم حقيقي", "Apple Pay simulation — no real charge")}</p>
     </div>
   );
 }

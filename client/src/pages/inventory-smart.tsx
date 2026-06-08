@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PlanGate } from "@/components/plan-gate";
+import SarIcon from "@/components/sar-icon";
 import { useTranslate, tc } from "@/lib/useTranslate";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -24,7 +25,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import SarIcon from "@/components/sar-icon";
 import {
   Plus,
   Minus,
@@ -69,13 +69,14 @@ const UNIT_LABELS: Record<string, string> = {
 };
 
 const NAV_LINKS = [
-  { href: "/manager/inventory/raw-items",  Icon: Coffee,       label: "المواد الخام",  desc: "إدارة المواد" },
-  { href: "/manager/inventory/stock",      Icon: Boxes,        label: "مستوى المخزون",desc: "الكميات الحالية" },
-  { href: "/manager/inventory/recipes",    Icon: BookOpen,     label: "الوصفات",       desc: "وصفات المنتجات" },
-  { href: "/manager/inventory/suppliers",  Icon: Users,        label: "الموردين",      desc: "إدارة الموردين" },
-  { href: "/manager/inventory/purchases",  Icon: ShoppingCart, label: "المشتريات",    desc: "أوامر الشراء" },
-  { href: "/manager/inventory/transfers",  Icon: ArrowRightLeft,label:"التحويلات",    desc: "بين الفروع" },
-  { href: "/manager/inventory/alerts",     Icon: Bell,         label: "التنبيهات",    desc: "تنبيهات المخزون", danger: true },
+  { href: "/manager/inventory/hub",        Icon: Boxes,         label: "المركز المتقدم", desc: "هدر · إنتاج · تنبؤ", highlight: true },
+  { href: "/manager/inventory/raw-items",  Icon: Coffee,        label: "المواد الخام",   desc: "إدارة المواد" },
+  { href: "/manager/inventory/stock",      Icon: Boxes,         label: "مستوى المخزون", desc: "الكميات الحالية" },
+  { href: "/manager/inventory/recipes",    Icon: BookOpen,      label: "الوصفات",        desc: "وصفات المنتجات" },
+  { href: "/manager/inventory/suppliers",  Icon: Users,         label: "الموردين",       desc: "إدارة الموردين" },
+  { href: "/manager/inventory/purchases",  Icon: ShoppingCart,  label: "المشتريات",     desc: "أوامر الشراء" },
+  { href: "/manager/inventory/transfers",  Icon: ArrowRightLeft, label: "التحويلات",     desc: "بين الفروع" },
+  { href: "/manager/inventory/alerts",     Icon: Bell,          label: "التنبيهات",     desc: "تنبيهات المخزون", danger: true },
 ];
 
 // ─── Interfaces ────────────────────────────────────────────────────────────────
@@ -124,7 +125,7 @@ export default function InventorySmartPage() {
     queryFn: async () => {
       const p = new URLSearchParams();
       if (branch && branch !== "all") p.append("branchId", branch);
-      const r = await fetch(`/api/inventory/branch-stocks?${p}`);
+      const r = await fetch(`/api/inventory/branch-stocks?${p}`, { credentials: 'include' });
       if (!r.ok) throw new Error();
       return r.json();
     },
@@ -172,7 +173,7 @@ export default function InventorySmartPage() {
   });
 
   if (loadRI || loadSt) return (
-    <div className="min-h-screen bg-white flex items-center justify-center" dir="rtl">
+    <div className="min-h-screen bg-white flex items-center justify-center">
       <div className="text-center space-y-5">
         <div className="relative mx-auto w-20 h-20">
           <div className="w-20 h-20 rounded-full border-4 border-green-100 border-t-green-600 animate-spin" />
@@ -186,7 +187,7 @@ export default function InventorySmartPage() {
 
   return (
     <PlanGate feature="inventoryManagement">
-      <div className="min-h-screen bg-white" dir="rtl">
+      <div className="min-h-screen bg-white">
 
         {/* ─── Sticky header ───────────────────────────────────── */}
         <div className="bg-white border-b border-gray-100 sticky top-0 z-20 shadow-sm">
@@ -291,10 +292,10 @@ export default function InventorySmartPage() {
                   <div>
                     <p className="font-semibold text-amber-800 text-sm">الخصم التلقائي غير مفعّل لبعض المواد</p>
                     <p className="text-amber-700 text-xs mt-0.5">
-                      {withoutRecipes} مادة لا تحتوي على وصفة مرتبطة — الخصم التلقائي يعمل فقط عند ربط وصفات الأطباق بالمواد الخام.
+                      {withoutRecipes} مادة لا تحتوي على وصفة مرتبطة — الخصم التلقائي يعمل فقط عند ربط وصفات المشروبات بالمواد الخام.
                       {withRecipes > 0 && ` (${withRecipes} مادة مربوطة وتُخصم تلقائياً)`}
                     </p>
-                    <p className="text-xs text-amber-600 mt-1">لربط الوصفات: اذهب إلى إدارة الأطباق ← أضف وصفة لكل طبق.</p>
+                    <p className="text-xs text-amber-600 mt-1">لربط الوصفات: اذهب إلى إدارة المشروبات ← أضف وصفة لكل مشروب.</p>
                   </div>
                 </div>
               ) : (
@@ -302,7 +303,7 @@ export default function InventorySmartPage() {
                   <div className="p-1.5 bg-green-100 rounded-xl flex-shrink-0">
                     <CheckCircle2 className="h-4 w-4 text-green-600" />
                   </div>
-                  <p className="text-green-700 text-sm font-medium">جميع المواد مربوطة بوصفات — الخصم التلقائي يعمل عند بيع الأطباق</p>
+                  <p className="text-green-700 text-sm font-medium">جميع المواد مربوطة بوصفات — الخصم التلقائي يعمل عند بيع المشروبات</p>
                 </div>
               );
             })()
@@ -312,15 +313,21 @@ export default function InventorySmartPage() {
           <div>
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">الأقسام الفرعية</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
-              {NAV_LINKS.map(({ href, Icon, label, desc, danger }) => (
+              {NAV_LINKS.map(({ href, Icon, label, desc, danger, highlight }: any) => (
                 <Link key={href} href={href}>
-                  <div className={`group bg-white border rounded-2xl p-4 flex flex-col items-center gap-2 text-center cursor-pointer transition-all duration-200 hover:shadow-md ${danger ? "border-red-100 hover:border-red-300" : "border-gray-200 hover:border-green-300"}`}>
-                    <div className={`p-2.5 rounded-xl transition-transform group-hover:scale-110 ${danger ? "bg-red-50" : "bg-green-50"}`}>
-                      <Icon className={`h-5 w-5 ${danger ? "text-red-600" : "text-green-600"}`} />
+                  <div className={`group border rounded-2xl p-4 flex flex-col items-center gap-2 text-center cursor-pointer transition-all duration-200 hover:shadow-md ${
+                    highlight ? "bg-primary/5 border-primary/30 hover:border-primary hover:shadow-primary/20" :
+                    danger    ? "bg-white border-red-100 hover:border-red-300" :
+                                "bg-white border-gray-200 hover:border-green-300"
+                  }`}>
+                    <div className={`p-2.5 rounded-xl transition-transform group-hover:scale-110 ${
+                      highlight ? "bg-primary/10" : danger ? "bg-red-50" : "bg-green-50"
+                    }`}>
+                      <Icon className={`h-5 w-5 ${highlight ? "text-primary" : danger ? "text-red-600" : "text-green-600"}`} />
                     </div>
-                    <p className={`font-semibold text-xs ${danger ? "text-red-700" : "text-gray-800"}`}>{label}</p>
+                    <p className={`font-semibold text-xs ${highlight ? "text-primary" : danger ? "text-red-700" : "text-gray-800"}`}>{label}</p>
                     <p className="text-xs text-gray-400 hidden sm:block">{desc}</p>
-                    <ChevronRight className={`h-3 w-3 ${danger ? "text-red-400" : "text-gray-400"} group-hover:translate-x-0.5 transition-transform hidden sm:block`} />
+                    <ChevronRight className={`h-3 w-3 ${highlight ? "text-primary/40" : danger ? "text-red-400" : "text-gray-400"} group-hover:translate-x-0.5 transition-transform hidden sm:block`} />
                   </div>
                 </Link>
               ))}
@@ -463,7 +470,7 @@ export default function InventorySmartPage() {
 
                           {/* Value + recipe badge */}
                           <div className="flex items-center justify-between text-xs text-gray-500">
-                            <span>القيمة: <span className="font-semibold text-gray-800">{val.toFixed(2)} ر.س</span></span>
+                            <span>القيمة: <span className="font-semibold text-gray-800">{val.toFixed(2)} <SarIcon size={11} /></span></span>
                             {rawItemsWithRecipes.has(item.id) ? (
                               <span className="flex items-center gap-1 text-green-600 font-medium"><span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />وصفة مربوطة</span>
                             ) : (
@@ -502,7 +509,7 @@ export default function InventorySmartPage() {
 
         {/* ─── Quick Adjust Dialog ─────────────────────────────── */}
         <Dialog open={adjustOpen} onOpenChange={setAdjustOpen}>
-          <DialogContent className="bg-white border-0 shadow-2xl rounded-2xl max-w-sm" dir="rtl">
+          <DialogContent className="bg-white border-0 shadow-2xl rounded-2xl max-w-sm">
             <DialogHeader>
               <div className="flex items-center gap-3 mb-2">
                 <div className={`p-2.5 rounded-xl ${adjType==="add" ? "bg-green-100" : "bg-red-100"}`}>
@@ -571,7 +578,7 @@ export default function InventorySmartPage() {
 
         {/* ─── Add Batch Dialog ────────────────────────────────── */}
         <Dialog open={addBatchOpen} onOpenChange={setAddBatchOpen}>
-          <DialogContent className="bg-white border-0 shadow-2xl rounded-2xl max-w-md" dir="rtl">
+          <DialogContent className="bg-white border-0 shadow-2xl rounded-2xl max-w-md">
             <DialogHeader>
               <div className="flex items-center gap-3 mb-2">
                 <div className="p-2.5 bg-green-100 rounded-xl">

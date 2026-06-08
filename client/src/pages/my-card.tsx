@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import SarIcon from "@/components/sar-icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ChevronRight, ArrowLeftRight, Star, Wallet } from "lucide-react";
-import ChefBukhariCard from "@/components/ChefBukhariCard";
+import BlackRoseCard from "@/components/BlackRoseCard";
 import { useCustomer } from "@/contexts/CustomerContext";
 import { useLocation } from "wouter";
 import { CustomerLayout } from "@/components/layouts/CustomerLayout";
@@ -13,7 +14,7 @@ import { useTranslate } from "@/lib/useTranslate";
 import { useTranslation } from "react-i18next";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-const chefsplaceLogo = "/logo.png";
+import qiroxLogo from "@assets/qirox-logo-customer.png";
 
 export default function MyCardPage() {
   const { customer } = useCustomer();
@@ -90,14 +91,19 @@ export default function MyCardPage() {
     transferMutation.mutate({ recipientPhone: transferPhone, points: pts, pin: transferPin || undefined });
   };
 
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const isIOS =
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
   const handleAddToAppleWallet = async () => {
     setAddingToWallet(true);
     try {
       if (isIOS) {
-        toast({ title: tc("⏳ جارٍ التحضير...", "⏳ Preparing..."), description: tc("سيفتح Apple Wallet خلال ثوانٍ", "Opening Apple Wallet...") });
-        await new Promise((r) => setTimeout(r, 400));
+        toast({
+          title: tc("⏳ جارٍ التحضير...", "⏳ Preparing…"),
+          description: tc("سيفتح Apple Wallet خلال ثوانٍ", "Opening Apple Wallet shortly…"),
+        });
+        await new Promise((r) => setTimeout(r, 350));
         window.location.href = "/api/wallet/apple-pass";
         return;
       }
@@ -112,12 +118,19 @@ export default function MyCardPage() {
       const blob = await resp.blob();
       const blobUrl = URL.createObjectURL(new Blob([blob], { type: "application/vnd.apple.pkpass" }));
       const a = document.createElement("a");
-      a.href = blobUrl; a.download = "chefsplace-loyalty.pkpass"; a.style.display = "none";
+      a.href = blobUrl; a.download = "qirox-loyalty.pkpass"; a.style.display = "none";
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(blobUrl), 8000);
-      toast({ title: tc("✅ تم التحميل", "✅ Downloaded"), description: tc("افتح ملف .pkpass لإضافته", "Open .pkpass to add to Wallet") });
+      toast({
+        title: tc("✅ تم التحميل", "✅ Downloaded"),
+        description: tc("افتح ملف .pkpass لإضافته لـ Apple Wallet", "Open .pkpass to add to Apple Wallet"),
+      });
     } catch (e: any) {
-      toast({ title: tc("خطأ", "Error"), description: e?.message || tc("تعذّر الوصول للخادم", "Could not reach server"), variant: "destructive" });
+      toast({
+        title: tc("خطأ", "Error"),
+        description: e?.message || tc("تعذّر الوصول للخادم", "Could not reach server"),
+        variant: "destructive",
+      });
     } finally {
       setAddingToWallet(false);
     }
@@ -167,7 +180,7 @@ export default function MyCardPage() {
           <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, fontWeight: 600, letterSpacing: "0.08em" }}>
             {tc("بطاقة الولاء", "Loyalty Card")}
           </p>
-          <img src={chefsplaceLogo} alt="مكان الشيف البخاري" style={{ width: 36, height: 36, borderRadius: 10, objectFit: "cover" }} />
+          <img src={qiroxLogo} alt="Black Rose" style={{ width: 36, height: 36, borderRadius: 10, objectFit: "cover" }} />
         </div>
 
         {/* ── Hero: greeting + points ── */}
@@ -196,7 +209,7 @@ export default function MyCardPage() {
               </p>
               <p style={{ color: "#fff", fontSize: 22, fontWeight: 800, margin: 0, lineHeight: 1 }}>
                 {sarValueNum.toFixed(2)}
-                <span style={{ fontSize: 12, fontWeight: 500, color: "rgba(255,255,255,0.45)", marginInlineStart: 4 }}>ر.س</span>
+                <SarIcon size={12} className="opacity-45 invert" />
               </p>
             </div>
           </div>
@@ -204,7 +217,7 @@ export default function MyCardPage() {
 
         {/* ── The Card ── */}
         <div className="px-4 mb-7">
-          <ChefBukhariCard
+          <BlackRoseCard
             phone={customer?.phone}
             points={points}
             sarValue={sarValueNum}
@@ -231,31 +244,77 @@ export default function MyCardPage() {
         {/* ── Action Buttons ── */}
         <div className="px-4 flex flex-col gap-3">
 
-          {/* Apple Wallet */}
-          <button
-            onClick={handleAddToAppleWallet}
-            disabled={addingToWallet}
-            data-testid="button-add-apple-wallet"
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-              width: "100%", height: 52, borderRadius: 14,
-              background: addingToWallet ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.05)",
-              color: "#fff", border: "1px solid rgba(255,255,255,0.1)",
-              cursor: addingToWallet ? "wait" : "pointer",
-              fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif',
-              transition: "all 0.2s", opacity: addingToWallet ? 0.6 : 1,
-              fontSize: 15, fontWeight: 600,
-            }}
-          >
-            {addingToWallet ? (
-              <div className="w-4 h-4 rounded-full border-2 border-t-transparent animate-spin border-white/70" />
-            ) : (
-              <svg width="14" height="17" viewBox="0 0 814 1000" fill="white">
-                <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-37.6-155.5-127.4C46 790.7 0 663 0 541.8c0-207.5 135.4-317.3 268.5-317.3 71 0 130.3 46.4 174.1 46.4 42.8 0 109.7-49.2 192.7-49.2 31 0 108.2 2.6 168.1 80.6zM552.5 80.3c34.3-41.7 57.8-97.3 57.8-152.9 0-5.8-.7-11.7-1.3-17.5-55.2 2-120.2 37-158.6 83.5-33.7 39.5-63.7 94.8-63.7 151.1 0 6.4.7 12.9 1.3 14.9 3.2.7 8.4 1.3 13.6 1.3 49.8 0 109.7-33.1 150.9-80.4z" />
-              </svg>
-            )}
-            {addingToWallet ? tc("جارٍ التحضير...", "Preparing...") : "Apple Wallet"}
-          </button>
+          {/* Wallet section */}
+          {isIOS ? (
+            /* ── Apple Wallet button (iOS only) ── */
+            <button
+              onClick={handleAddToAppleWallet}
+              disabled={addingToWallet}
+              data-testid="button-add-apple-wallet"
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+                width: "100%", height: 58, borderRadius: 18,
+                background: addingToWallet
+                  ? "rgba(255,255,255,0.04)"
+                  : "linear-gradient(135deg, #000 0%, #1c1c1e 60%, #111 100%)",
+                color: "#fff",
+                border: "1px solid rgba(255,255,255,0.14)",
+                boxShadow: addingToWallet ? "none" : "0 6px 28px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.07)",
+                cursor: addingToWallet ? "wait" : "pointer",
+                fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif',
+                transition: "all 0.2s ease",
+                opacity: addingToWallet ? 0.6 : 1,
+                fontSize: 16, fontWeight: 500,
+                letterSpacing: "-0.01em",
+              }}
+            >
+              {addingToWallet ? (
+                <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin border-white/50" />
+              ) : (
+                <svg width="20" height="24" viewBox="0 0 814 1000" fill="white" style={{ flexShrink: 0 }}>
+                  <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76 0-103.7 40.8-165.9 40.8s-105-37.6-155.5-127.4C46 790.7 0 663 0 541.8c0-207.5 135.4-317.3 268.5-317.3 71 0 130.3 46.4 174.1 46.4 42.8 0 109.7-49.2 192.7-49.2 31 0 108.2 2.6 168.1 80.6zM552.5 80.3c34.3-41.7 57.8-97.3 57.8-152.9 0-5.8-.7-11.7-1.3-17.5-55.2 2-120.2 37-158.6 83.5-33.7 39.5-63.7 94.8-63.7 151.1 0 6.4.7 12.9 1.3 14.9 3.2.7 8.4 1.3 13.6 1.3 49.8 0 109.7-33.1 150.9-80.4z" />
+                </svg>
+              )}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", lineHeight: 1.2 }}>
+                {!addingToWallet && (
+                  <span style={{ fontSize: 11, opacity: 0.55, fontWeight: 400, letterSpacing: "0.02em" }}>
+                    {tc("أضف إلى", "Add to")}
+                  </span>
+                )}
+                <span style={{ fontSize: addingToWallet ? 15 : 18, fontWeight: 600 }}>
+                  {addingToWallet ? tc("جارٍ التحضير...", "Preparing…") : "Apple Wallet"}
+                </span>
+              </div>
+            </button>
+          ) : (
+            /* ── Android / non-iOS: download .pkpass note ── */
+            <div style={{
+              background: "rgba(45,155,110,0.06)",
+              border: "1px solid rgba(45,155,110,0.18)",
+              borderRadius: 16, padding: "14px 16px",
+              display: "flex", alignItems: "center", gap: 14,
+            }}>
+              <div style={{
+                width: 42, height: 42, borderRadius: 12, flexShrink: 0,
+                background: "rgba(45,155,110,0.12)",
+                border: "1px solid rgba(45,155,110,0.2)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <Wallet size={20} color="#2D9B6E" />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ color: "#2D9B6E", fontWeight: 700, fontSize: 13, margin: "0 0 2px" }}>
+                  {tc("بطاقة الولاء الرقمية", "Digital Loyalty Card")}
+                </p>
+                <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, margin: 0, lineHeight: 1.5 }}>
+                  {tc(
+                    "استخدم رمز QR أعلاه لتسجيل نقاطك في الفرع مباشرةً",
+                    "Use the QR code above to collect points at any branch"
+                  )}
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Transfer Points */}
           {points > 0 && (

@@ -29,7 +29,7 @@ export default function AdminReports() {
   const { data: orders = [] } = useQuery({
     queryKey: ['/api/orders'],
     queryFn: async () => {
-      const res = await fetch('/api/orders');
+      const res = await fetch('/api/orders', { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch orders');
       return res.json();
     },
@@ -38,7 +38,7 @@ export default function AdminReports() {
   const { data: employees = [] } = useQuery({
     queryKey: ['/api/employees'],
     queryFn: async () => {
-      const res = await fetch('/api/employees');
+      const res = await fetch('/api/employees', { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch employees');
       return res.json();
     },
@@ -47,7 +47,7 @@ export default function AdminReports() {
   const { data: coffeeItems = [] } = useQuery({
     queryKey: ['/api/coffee-items'],
     queryFn: async () => {
-      const res = await fetch('/api/coffee-items');
+      const res = await fetch('/api/coffee-items', { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch items');
       return res.json();
     },
@@ -221,7 +221,7 @@ export default function AdminReports() {
 
     const payLabels: Record<string, string> = {
       cash: 'نقدي', pos: 'نقاط البيع', stc: 'STC', geidea: 'جهاز', delivery: 'توصيل',
-      alinma: 'الإنماء', ur: 'يور باي', barq: 'برق', rajhi: 'الراجحي', 'qahwa-card': 'بطاقة مكان الشيف',
+      alinma: 'الإنماء', ur: 'يور باي', barq: 'برق', rajhi: 'الراجحي', 'qahwa-card': 'بطاقة قهوة',
     };
 
     const rowsHtml = todayOrders.map((o: any, i: number) => {

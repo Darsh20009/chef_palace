@@ -21,7 +21,7 @@ import {
  Coffee, Users, ShoppingBag, TrendingUp, DollarSign, 
  Package, MapPin, Layers, ArrowLeft, Calendar, Warehouse,
  UserCheck, Receipt, BarChart3, Download, TrendingDown, Activity, Plus, Trash2, ExternalLink, Edit2, Search,
- Gift, Star, Banknote, Menu, Zap, Clock, Target, ChevronUp, ChevronDown
+ Gift, Star, Banknote, Menu, Zap, Clock, Target, ChevronUp, ChevronDown, LogOut
 } from "lucide-react";
 import * as XLSX from 'xlsx';
 import { 
@@ -33,7 +33,7 @@ import {
 import type { Employee, Order, Customer } from "@shared/schema";
 import SarIcon from "@/components/sar-icon";
 import { DemoDataManager } from "@/components/demo-data-manager";
-import { FlaskConical, Sparkles, Brain } from "lucide-react";
+import { FlaskConical, Sparkles, Brain, Globe, Plug, Gauge, Code2 } from "lucide-react";
 import { useTranslate } from "@/lib/useTranslate";
 
 interface EmployeeWithStats extends Employee {
@@ -57,17 +57,33 @@ const SAUDI_CITIES = [
  { name: 'الباحة | Al Bahah', lat: '19.9885', lon: '41.4359' },
  { name: 'عسير | Asir', lat: '18.2147', lon: '42.5053' },
  { name: 'الطائف | Taif', lat: '21.2704', lon: '40.4156' },
- { name: 'الرياض | Riyadh', lat: '24.7136', lon: '46.6753' },
+ { name: 'ينبع | Yanbu', lat: '24.0887', lon: '38.0697' },
  { name: 'الليث | Lith', lat: '20.2381', lon: '40.1797' },
  { name: 'رفحاء | Rafha', lat: '29.6000', lon: '43.4833' },
  { name: 'سكاكا | Sakaka', lat: '29.9709', lon: '40.2056' },
  { name: 'بريدة | Buraydah', lat: '26.3263', lon: '43.9750' },
 ];
 
+type DateFilterType = "today" | "yesterday" | "week" | "thisMonth" | "lastMonth" | "thisYear" | "all" | "custom";
+
+// Saudi time helper: returns Date at start/end of today in UTC+3
+function saudiStartOfDay(d?: Date): Date {
+  const target = d ? new Date(d) : new Date();
+  // UTC offset for Saudi Arabia is +3 hours
+  const utcMs = target.getTime() + (target.getTimezoneOffset() * 60000); // to UTC
+  const saudiMs = utcMs + (3 * 3600000); // to Saudi
+  const saudi = new Date(saudiMs);
+  saudi.setHours(0, 0, 0, 0);
+  return new Date(saudi.getTime() - (3 * 3600000) + (-target.getTimezoneOffset() * 60000));
+}
+
 export default function ManagerDashboard() {
  const [, setLocation] = useLocation();
  const [manager, setManager] = useState<Employee | null>(null);
- const [dateFilter, setDateFilter] = useState<"today" | "week" | "month" | "all">("all");
+ const [dateFilter, setDateFilter] = useState<DateFilterType>("thisMonth");
+ const [customStart, setCustomStart] = useState<string>("");
+ const [customEnd, setCustomEnd] = useState<string>("");
+ const [showCustomRange, setShowCustomRange] = useState(false);
  const tc = useTranslate();
 
  // Set SEO metadata
@@ -579,41 +595,77 @@ export default function ManagerDashboard() {
  }
 
  const getFilteredOrders = () => {
- const now = new Date();
- return orders.filter(order => {
- if (!order.createdAt) return dateFilter === "all";
- 
- const orderDate = new Date(order.createdAt);
- if (isNaN(orderDate.getTime())) return dateFilter === "all";
- 
- switch (dateFilter) {
- case "today":
- return orderDate.toDateString() === now.toDateString();
- case "week":
- const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
- return orderDate >= weekAgo;
- case "month":
- const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
- return orderDate >= monthAgo;
- default:
- return true;
- }
- });
+   const now = new Date();
+   return orders.filter(order => {
+     if (!order.createdAt) return dateFilter === "all";
+     const orderDate = new Date(order.createdAt);
+     if (isNaN(orderDate.getTime())) return dateFilter === "all";
+
+     switch (dateFilter) {
+       case "today": {
+         const start = saudiStartOfDay();
+         const end = new Date(start.getTime() + 24 * 3600000);
+         return orderDate >= start && orderDate < end;
+       }
+       case "yesterday": {
+         const todayStart = saudiStartOfDay();
+         const start = new Date(todayStart.getTime() - 24 * 3600000);
+         return orderDate >= start && orderDate < todayStart;
+       }
+       case "week": {
+         const start = new Date(now.getTime() - 7 * 24 * 3600000);
+         return orderDate >= start;
+       }
+       case "thisMonth": {
+         const y = now.getFullYear(), m = now.getMonth();
+         const start = new Date(y, m, 1);
+         const end   = new Date(y, m + 1, 1);
+         return orderDate >= start && orderDate < end;
+       }
+       case "lastMonth": {
+         const y = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+         const m = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+         const start = new Date(y, m, 1);
+         const end   = new Date(y, m + 1, 1);
+         return orderDate >= start && orderDate < end;
+       }
+       case "thisYear": {
+         const start = new Date(now.getFullYear(), 0, 1);
+         return orderDate >= start;
+       }
+       case "custom": {
+         if (!customStart && !customEnd) return true;
+         const start = customStart ? new Date(customStart + "T00:00:00") : null;
+         const end   = customEnd   ? new Date(customEnd   + "T23:59:59") : null;
+         if (start && orderDate < start) return false;
+         if (end   && orderDate > end)   return false;
+         return true;
+       }
+       default:
+         return true;
+     }
+   });
  };
 
  const filteredOrders = getFilteredOrders();
- const totalRevenue = filteredOrders.reduce((sum, order) => sum + Number(order.totalAmount || 0), 0);
+ // Revenue only counts non-cancelled, non-rejected, non-refunded orders
+ const EXCLUDED_STATUSES = ["cancelled", "rejected", "refunded"];
+ const revenueOrders = filteredOrders.filter(o => !EXCLUDED_STATUSES.includes(o.status || ""));
+ const totalRevenue = revenueOrders.reduce((sum, order) => sum + Number(order.totalAmount || 0), 0);
  const completedOrders = filteredOrders.filter(o => o.status === "completed");
  const completedRevenue = completedOrders.reduce((sum, order) => sum + Number(order.totalAmount || 0), 0);
+ const cancelledOrders = filteredOrders.filter(o => EXCLUDED_STATUSES.includes(o.status || ""));
  
+ const todayStart = saudiStartOfDay();
+ const todayEnd   = new Date(todayStart.getTime() + 24 * 3600000);
  const todayOrders = orders.filter(o => {
- if (!o.createdAt) return false;
- const orderDate = new Date(o.createdAt);
- if (isNaN(orderDate.getTime())) return false;
- const today = new Date();
- return orderDate.toDateString() === today.toDateString();
+   if (!o.createdAt) return false;
+   const d = new Date(o.createdAt);
+   return !isNaN(d.getTime()) && d >= todayStart && d < todayEnd;
  });
- const todayRevenue = todayOrders.reduce((sum, order) => sum + Number(order.totalAmount || 0), 0);
+ const todayRevenue = todayOrders
+   .filter(o => !["cancelled","rejected","refunded"].includes(o.status || ""))
+   .reduce((sum, order) => sum + Number(order.totalAmount || 0), 0);
 
  const employeesWithStats: EmployeeWithStats[] = employees.map(emp => {
  const empId = emp.id?.toString();
@@ -667,7 +719,7 @@ export default function ManagerDashboard() {
  filteredOrders.forEach(order => {
  const orderItems = Array.isArray(order.items) ? order.items : [];
  orderItems.forEach((item: any) => {
- const name = item.coffeeItem?.nameAr || item.nameAr || 'طبق';
+ const name = item.coffeeItem?.nameAr || item.nameAr || 'مشروب';
  if (!items[name]) {
  items[name] = { count: 0, revenue: 0 };
  }
@@ -688,41 +740,56 @@ export default function ManagerDashboard() {
  const COLORS = ['hsl(var(--primary))', 'hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))', 'hsl(var(--accent))', 'hsl(var(--secondary))'];
  
  const growthRate = (() => {
- if (dateFilter === "today" || dateFilter === "all") return 0;
- const now = new Date();
- const periodStart = dateFilter === "week" ? new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) :
- dateFilter === "month" ? new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) : null;
- if (!periodStart) return 0;
- 
- const periodOrders = orders.filter(o => {
- if (!o.createdAt) return false;
- const date = new Date(o.createdAt);
- return !isNaN(date.getTime()) && date >= periodStart;
- });
- 
- const prevPeriodEnd = periodStart;
- const prevPeriodStart = dateFilter === "week" ? new Date(periodStart.getTime() - 7 * 24 * 60 * 60 * 1000) :
- new Date(periodStart.getTime() - 30 * 24 * 60 * 60 * 1000);
- const prevPeriodOrders = orders.filter(o => {
- if (!o.createdAt) return false;
- const date = new Date(o.createdAt);
- return !isNaN(date.getTime()) && date >= prevPeriodStart && date < prevPeriodEnd;
- });
- 
- const currentRevenue = periodOrders.reduce((sum, o) => sum + Number(o.totalAmount || 0), 0);
- const previousRevenue = prevPeriodOrders.reduce((sum, o) => sum + Number(o.totalAmount || 0), 0);
- 
- if (previousRevenue === 0) return currentRevenue > 0 ? 100 : 0;
- return Number((((currentRevenue - previousRevenue) / previousRevenue) * 100).toFixed(1));
+   if (dateFilter === "today" || dateFilter === "all" || dateFilter === "custom" || dateFilter === "thisYear") return 0;
+   const now = new Date();
+   let curStart: Date, curEnd: Date, prevStart: Date, prevEnd: Date;
+   if (dateFilter === "week") {
+     curEnd   = now;
+     curStart = new Date(now.getTime() - 7 * 24 * 3600000);
+     prevEnd  = curStart;
+     prevStart = new Date(curStart.getTime() - 7 * 24 * 3600000);
+   } else if (dateFilter === "yesterday") {
+     const ts = saudiStartOfDay();
+     curStart = new Date(ts.getTime() - 24 * 3600000);
+     curEnd   = ts;
+     prevStart = new Date(curStart.getTime() - 24 * 3600000);
+     prevEnd   = curStart;
+   } else if (dateFilter === "thisMonth") {
+     const y = now.getFullYear(), m = now.getMonth();
+     curStart = new Date(y, m, 1);
+     curEnd   = new Date(y, m + 1, 1);
+     prevStart = new Date(y, m - 1, 1);
+     prevEnd   = curStart;
+   } else if (dateFilter === "lastMonth") {
+     const y = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+     const m = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+     curStart = new Date(y, m, 1);
+     curEnd   = new Date(y, m + 1, 1);
+     prevStart = new Date(y, m - 1, 1);
+     prevEnd   = curStart;
+   } else {
+     return 0;
+   }
+   const EXCL = ["cancelled","rejected","refunded"];
+   const rev = (os: typeof orders) => os.filter(o => !EXCL.includes(o.status||"")).reduce((s,o) => s + Number(o.totalAmount||0), 0);
+   const inRange = (start: Date, end: Date) => orders.filter(o => {
+     if (!o.createdAt) return false;
+     const d = new Date(o.createdAt);
+     return !isNaN(d.getTime()) && d >= start && d < end;
+   });
+   const currentRevenue  = rev(inRange(curStart,  curEnd));
+   const previousRevenue = rev(inRange(prevStart!, prevEnd!));
+   if (previousRevenue === 0) return currentRevenue > 0 ? 100 : 0;
+   return Number((((currentRevenue - previousRevenue) / previousRevenue) * 100).toFixed(1));
  })();
 
  const hourNow = new Date().getHours();
- const greeting = hourNow < 12 ? "صباح الخير" : hourNow < 17 ? "مساء الخير" : "مساء النور";
- const todayLabel = new Date().toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+ const greeting = hourNow < 12 ? tc("صباح الخير", "Good Morning") : hourNow < 17 ? tc("مساء الخير", "Good Afternoon") : tc("مساء النور", "Good Evening");
+ const todayLabel = new Date().toLocaleDateString(tc('ar-SA', 'en-US'), { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
  return (
  <>
- <div className="flex h-screen overflow-hidden bg-background" dir="rtl" style={{ fontFamily: "'Cairo', sans-serif" }}>
+ <div className="flex h-screen overflow-hidden bg-background" style={{ fontFamily: "'Cairo', sans-serif" }}>
 
    {/* ─── SIDEBAR ─── */}
    <ManagerSidebar
@@ -772,25 +839,59 @@ export default function ManagerDashboard() {
              )}
            </div>
          )}
-         <Select value={dateFilter} onValueChange={(value: any) => setDateFilter(value)}>
-           <SelectTrigger className="h-8 w-32 text-xs bg-muted/50 border-border text-foreground/70">
-             <Calendar className="w-3 h-3 ml-1" />
-             <SelectValue />
-           </SelectTrigger>
-           <SelectContent className="bg-card border-border">
-             <SelectItem value="today" className="text-xs">اليوم</SelectItem>
-             <SelectItem value="week" className="text-xs">آخر أسبوع</SelectItem>
-             <SelectItem value="month" className="text-xs">آخر شهر</SelectItem>
-             <SelectItem value="all" className="text-xs">كل الفترات</SelectItem>
-           </SelectContent>
-         </Select>
-         <Button variant="outline" size="sm" onClick={() => setDemoManagerOpen(true)} className="h-8 text-xs border-border bg-muted/50 text-muted-foreground hover:text-foreground hidden sm:flex">
-           <FlaskConical className="w-3 h-3 ml-1" />
-           تجريبي
-         </Button>
+         {/* ── Date filter ── */}
+         <div className="flex items-center gap-1.5 flex-wrap justify-end">
+           <Select value={dateFilter} onValueChange={(value: DateFilterType) => {
+             setDateFilter(value);
+             setShowCustomRange(value === "custom");
+           }}>
+             <SelectTrigger className="h-8 w-36 text-xs bg-muted/50 border-border text-foreground/70" data-testid="select-date-filter">
+               <Calendar className="w-3 h-3 ml-1 shrink-0" />
+               <SelectValue />
+             </SelectTrigger>
+             <SelectContent className="bg-card border-border">
+               <SelectItem value="today"     className="text-xs">اليوم</SelectItem>
+               <SelectItem value="yesterday" className="text-xs">أمس</SelectItem>
+               <SelectItem value="week"      className="text-xs">آخر 7 أيام</SelectItem>
+               <SelectItem value="thisMonth" className="text-xs">هذا الشهر</SelectItem>
+               <SelectItem value="lastMonth" className="text-xs">الشهر الماضي</SelectItem>
+               <SelectItem value="thisYear"  className="text-xs">هذا العام</SelectItem>
+               <SelectItem value="all"       className="text-xs">كل الفترات</SelectItem>
+               <SelectItem value="custom"    className="text-xs">نطاق مخصص …</SelectItem>
+             </SelectContent>
+           </Select>
+           {showCustomRange && (
+             <div className="flex items-center gap-1 bg-muted/50 border border-border rounded-lg px-2 py-1">
+               <input
+                 type="date"
+                 value={customStart}
+                 onChange={e => setCustomStart(e.target.value)}
+                 className="text-[11px] bg-transparent text-foreground outline-none w-28"
+                 data-testid="input-custom-start"
+               />
+               <span className="text-muted-foreground text-[10px] mx-0.5">—</span>
+               <input
+                 type="date"
+                 value={customEnd}
+                 onChange={e => setCustomEnd(e.target.value)}
+                 className="text-[11px] bg-transparent text-foreground outline-none w-28"
+                 data-testid="input-custom-end"
+               />
+             </div>
+           )}
+         </div>
+         {import.meta.env.DEV && (
+           <Button variant="outline" size="sm" onClick={() => setDemoManagerOpen(true)} className="h-8 text-xs border-border bg-muted/50 text-muted-foreground hover:text-foreground hidden sm:flex">
+             <FlaskConical className="w-3 h-3 ml-1" />
+             تجريبي
+           </Button>
+         )}
          <Button variant="outline" size="sm" onClick={handleExportData} className="h-8 text-xs border-border bg-muted/50 text-muted-foreground hover:text-foreground">
            <Download className="w-3 h-3 ml-1" />
            Excel
+         </Button>
+         <Button variant="ghost" size="icon" onClick={handleLogout} className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" title="تسجيل الخروج" data-testid="button-logout">
+           <LogOut className="w-4 h-4" />
          </Button>
        </div>
      </header>
@@ -799,102 +900,131 @@ export default function ManagerDashboard() {
      <main className="flex-1 overflow-y-auto pb-20 lg:pb-6">
        <div className="p-4 lg:p-6 space-y-6 max-w-[1400px] mx-auto">
 
-         {/* ── KPI CARDS ── */}
+         {/* ── KPI CARDS (clean white design) ── */}
          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-           {/* Revenue */}
-           <div className="relative overflow-hidden rounded-2xl p-4 lg:p-5" style={{ background: "linear-gradient(135deg, #0d2b1f 0%, #0a1a13 100%)", border: "1px solid #1a3d29" }}>
-             <div className="absolute top-0 right-0 w-24 h-24 rounded-full opacity-10" style={{ background: "#2D9B6E", filter: "blur(30px)", transform: "translate(30%, -30%)" }} />
-             <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style={{ background: "#2D9B6E22" }}>
-               <DollarSign className="w-5 h-5" style={{ color: "#2D9B6E" }} />
+           {[
+             {
+               label: 'إجمالي المبيعات',
+               value: totalRevenue.toLocaleString('ar-SA', { maximumFractionDigits: 0 }),
+               sub: <><SarIcon /> <span>ريال سعودي</span>{growthRate !== 0 && (
+                 <span className={`mr-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium ${growthRate > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                   {growthRate > 0 ? '↑' : '↓'} {Math.abs(growthRate)}%
+                 </span>
+               )}{cancelledOrders.length > 0 && (
+                 <span className="mr-1 text-[10px] text-rose-500/70" title="لا تشمل الملغية والمرفوضة">
+                   ({cancelledOrders.length} ملغي)
+                 </span>
+               )}</>,
+               icon: DollarSign,
+               iconBg: 'bg-emerald-50',
+               iconColor: 'text-emerald-600',
+               valueColor: 'text-emerald-700',
+             },
+             {
+               label: 'الطلبات',
+               value: filteredOrders.length.toLocaleString('ar-SA'),
+               sub: <><span className="text-emerald-600">{completedOrders.length} مكتمل</span><span className="text-muted-foreground mx-1">·</span><span className="text-amber-600">{filteredOrders.filter(o => !["completed","cancelled","rejected","refunded"].includes(o.status||"")).length} جاري</span>{cancelledOrders.length > 0 && <><span className="text-muted-foreground mx-1">·</span><span className="text-rose-500">{cancelledOrders.length} ملغي</span></>}</>,
+               icon: ShoppingBag,
+               iconBg: 'bg-blue-50',
+               iconColor: 'text-blue-600',
+               valueColor: 'text-foreground',
+             },
+             {
+               label: 'العملاء',
+               value: customers.length.toLocaleString('ar-SA'),
+               sub: <span className="text-muted-foreground">عميل مسجل</span>,
+               icon: Users,
+               iconBg: 'bg-violet-50',
+               iconColor: 'text-violet-600',
+               valueColor: 'text-foreground',
+             },
+             {
+               label: 'متوسط الطلب',
+               value: filteredOrders.length > 0 ? (totalRevenue / filteredOrders.length).toFixed(1) : '0',
+               sub: <><SarIcon /> <span>ريال / طلب</span></>,
+               icon: Target,
+               iconBg: 'bg-amber-50',
+               iconColor: 'text-amber-600',
+               valueColor: 'text-foreground',
+             },
+           ].map(k => (
+             <div key={k.label} className="bg-card border border-border rounded-2xl p-4 lg:p-5 hover:shadow-sm transition-shadow" data-testid={`kpi-${k.label}`}>
+               <div className="flex items-start justify-between mb-3">
+                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${k.iconBg}`}>
+                   <k.icon className={`w-5 h-5 ${k.iconColor}`} />
+                 </div>
+               </div>
+               <div className="text-muted-foreground text-xs mb-1">{k.label}</div>
+               <div className={`text-2xl lg:text-3xl font-bold leading-tight ${k.valueColor}`}>{k.value}</div>
+               <div className="text-xs mt-2 flex items-center gap-1 text-muted-foreground flex-wrap">{k.sub}</div>
              </div>
-             <div className="text-muted-foreground text-xs mb-1">إجمالي المبيعات</div>
-             <div className="text-2xl lg:text-3xl font-bold text-foreground">{totalRevenue.toLocaleString('ar-SA', { maximumFractionDigits: 0 })}</div>
-             <div className="text-[#2D9B6E] text-xs mt-1 flex items-center gap-1">
-               <SarIcon />
-               <span>ريال سعودي</span>
-               {growthRate !== 0 && (
-                 <Badge className="mr-1 text-[10px] h-4 px-1" style={{ background: growthRate > 0 ? "#0d2b1f" : "#2d0d0d", color: growthRate > 0 ? "#2D9B6E" : "#ef4444", border: "none" }}>
-                   {growthRate > 0 ? "↑" : "↓"} {Math.abs(growthRate)}%
-                 </Badge>
-               )}
-             </div>
-           </div>
-
-           {/* Orders */}
-           <div className="relative overflow-hidden rounded-2xl p-4 lg:p-5" style={{ background: "linear-gradient(135deg, #0d1b2b 0%, #0a1420 100%)", border: "1px solid #1a2d3d" }}>
-             <div className="absolute top-0 right-0 w-24 h-24 rounded-full opacity-10" style={{ background: "#3b82f6", filter: "blur(30px)", transform: "translate(30%, -30%)" }} />
-             <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style={{ background: "#3b82f622" }}>
-               <ShoppingBag className="w-5 h-5 text-blue-400" />
-             </div>
-             <div className="text-muted-foreground text-xs mb-1">الطلبات</div>
-             <div className="text-2xl lg:text-3xl font-bold text-foreground">{filteredOrders.length.toLocaleString('ar-SA')}</div>
-             <div className="text-blue-400 text-xs mt-1 flex items-center gap-1">
-               <span>{completedOrders.length} مكتمل</span>
-               <span className="text-muted-foreground mx-1">•</span>
-               <span className="text-amber-400">{filteredOrders.length - completedOrders.length} معلق</span>
-             </div>
-           </div>
-
-           {/* Customers */}
-           <div className="relative overflow-hidden rounded-2xl p-4 lg:p-5" style={{ background: "linear-gradient(135deg, #1a0d2b 0%, #13091a 100%)", border: "1px solid #2d1a3d" }}>
-             <div className="absolute top-0 right-0 w-24 h-24 rounded-full opacity-10" style={{ background: "#8b5cf6", filter: "blur(30px)", transform: "translate(30%, -30%)" }} />
-             <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style={{ background: "#8b5cf622" }}>
-               <Users className="w-5 h-5 text-purple-400" />
-             </div>
-             <div className="text-muted-foreground text-xs mb-1">العملاء</div>
-             <div className="text-2xl lg:text-3xl font-bold text-foreground">{customers.length.toLocaleString('ar-SA')}</div>
-             <div className="text-purple-400 text-xs mt-1">عميل مسجل</div>
-           </div>
-
-           {/* Avg Order */}
-           <div className="relative overflow-hidden rounded-2xl p-4 lg:p-5" style={{ background: "linear-gradient(135deg, #2b1a0d 0%, #1a1009 100%)", border: "1px solid #3d2a1a" }}>
-             <div className="absolute top-0 right-0 w-24 h-24 rounded-full opacity-10" style={{ background: "#f59e0b", filter: "blur(30px)", transform: "translate(30%, -30%)" }} />
-             <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style={{ background: "#f59e0b22" }}>
-               <Target className="w-5 h-5 text-amber-400" />
-             </div>
-             <div className="text-muted-foreground text-xs mb-1">متوسط الطلب</div>
-             <div className="text-2xl lg:text-3xl font-bold text-foreground">
-               {filteredOrders.length > 0 ? (totalRevenue / filteredOrders.length).toFixed(1) : '0'}
-             </div>
-             <div className="text-amber-400 text-xs mt-1 flex items-center gap-1"><SarIcon /> ريال / طلب</div>
-           </div>
+           ))}
          </div>
 
-         {/* ── TODAY MINI STATS ── */}
-         <div className="grid grid-cols-3 gap-3">
-           <div className="bg-card border border-border rounded-xl p-3 text-center">
-             <div className="text-[#2D9B6E] font-bold text-xl">{todayOrders.length}</div>
-             <div className="text-muted-foreground text-xs mt-1">طلبات اليوم</div>
-           </div>
-           <div className="bg-card border border-border rounded-xl p-3 text-center">
-             <div className="text-[#3b82f6] font-bold text-xl">{todayRevenue.toFixed(0)}</div>
-             <div className="text-muted-foreground text-xs mt-1">مبيعات اليوم (ر.س)</div>
-           </div>
-           <div className="bg-card border border-border rounded-xl p-3 text-center">
-             <div className="text-[#f59e0b] font-bold text-xl">{employees.length}</div>
-             <div className="text-muted-foreground text-xs mt-1">الموظفون</div>
-           </div>
+         {/* ── TODAY MINI STATS (pill row) ── */}
+         <div className="bg-card border border-border rounded-2xl p-1 flex items-stretch divide-x divide-border rtl:divide-x-reverse">
+           {[
+             { label: 'طلبات اليوم',         value: todayOrders.length.toString(),       color: 'text-emerald-600' },
+             { label: 'مبيعات اليوم (ر.س)', value: todayRevenue.toFixed(0),              color: 'text-blue-600'    },
+             { label: 'الموظفون',             value: employees.length.toString(),          color: 'text-amber-600'   },
+           ].map(s => (
+             <div key={s.label} className="flex-1 px-3 py-3 text-center">
+               <div className={`font-bold text-xl ${s.color}`}>{s.value}</div>
+               <div className="text-muted-foreground text-[11px] mt-0.5">{s.label}</div>
+             </div>
+           ))}
          </div>
 
-         {/* ── AI BANNER ── */}
+         {/* ── 🧪 المختبر التقني — موحَّد (Phase 5-9) ── */}
+         <details className="group bg-card border border-border rounded-2xl mb-3" data-testid="lab-section">
+           <summary className="cursor-pointer list-none flex items-center gap-3 p-4 hover:bg-muted/30 transition-colors rounded-2xl">
+             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500/15 to-cyan-500/15 border border-violet-500/20 flex items-center justify-center shrink-0">
+               <FlaskConical className="w-5 h-5 text-violet-500" />
+             </div>
+             <div className="text-right flex-1 min-w-0">
+               <div className="text-foreground font-bold text-sm">🧪 {tc("المختبر التقني", "Tech Lab")}</div>
+               <div className="text-muted-foreground text-xs mt-0.5">{tc("أدوات المطور · جودة الكود · الأداء · الذكاء الاصطناعي · التكامل · الموثوقية", "Dev Tools · Code Quality · Performance · AI · Integration · Reliability")}</div>
+             </div>
+             <ChevronDown className="w-4 h-4 text-muted-foreground group-open:rotate-180 transition-transform" />
+           </summary>
+           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 p-3 pt-0">
+             {[
+               { id: "code-quality", label: tc("جودة الكود","Code Quality"),   icon: Code2,    path: "/manager/code-quality", cls: "border-violet-500/20 bg-violet-500/5 hover:bg-violet-500/10 hover:border-violet-500/40",     iconCls: "text-violet-500"  },
+               { id: "performance",  label: tc("الأداء","Performance"),       icon: Gauge,    path: "/manager/performance",  cls: "border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/40",         iconCls: "text-amber-500"   },
+               { id: "ecosystem",    label: tc("التكامل","Integrations"),     icon: Plug,     path: "/manager/ecosystem",    cls: "border-cyan-500/20 bg-cyan-500/5 hover:bg-cyan-500/10 hover:border-cyan-500/40",             iconCls: "text-cyan-500"    },
+               { id: "ai-automation",label: tc("AI أتمتة","AI Automation"),   icon: Brain,    path: "/manager/ai-automation",cls: "border-fuchsia-500/20 bg-fuchsia-500/5 hover:bg-fuchsia-500/10 hover:border-fuchsia-500/40", iconCls: "text-fuchsia-500" },
+               { id: "reliability",  label: tc("الموثوقية","Reliability"),    icon: Sparkles, path: "/manager/reliability",  cls: "border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 hover:border-emerald-500/40", iconCls: "text-emerald-500" },
+             ].map(({ id, label, icon: Icon, path, cls, iconCls }) => (
+               <button
+                 key={id}
+                 onClick={() => setLocation(path)}
+                 data-testid={`link-lab-${id}`}
+                 className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all ${cls}`}
+               >
+                 <Icon className={`w-5 h-5 ${iconCls}`} />
+                 <span className="text-[11px] font-medium text-foreground text-center leading-tight">{label}</span>
+               </button>
+             ))}
+           </div>
+         </details>
+
+         {/* ── AI BANNER (clean) ── */}
          <button
            onClick={() => setLocation("/manager/ai")}
-           className="w-full group relative overflow-hidden bg-gradient-to-l from-violet-950/40 to-purple-950/20 border border-violet-500/20 rounded-2xl p-4 flex items-center gap-4 hover:border-violet-500/40 transition-all"
+           className="w-full group bg-card border border-border rounded-2xl p-4 flex items-center gap-4 hover:border-violet-300 hover:bg-violet-50/30 transition-all"
+           data-testid="link-ai-center"
          >
-           <div className="absolute inset-0 bg-gradient-to-l from-violet-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-           <div className="w-12 h-12 rounded-xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center shrink-0">
-             <Brain className="w-6 h-6 text-violet-400" />
+           <div className="w-12 h-12 rounded-xl bg-violet-50 flex items-center justify-center shrink-0">
+             <Brain className="w-6 h-6 text-violet-600" />
            </div>
            <div className="text-right flex-1 min-w-0">
              <div className="flex items-center gap-2 flex-wrap">
-               <div className="text-foreground font-bold text-sm">مركز الذكاء الاصطناعي</div>
-               <span className="text-[10px] bg-violet-500/20 text-violet-400 border border-violet-500/30 px-2 py-0.5 rounded-full font-medium">جديد</span>
+               <div className="text-foreground font-bold text-sm">{tc("مركز الذكاء الاصطناعي", "AI Center")}</div>
+               <span className="text-[10px] bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full font-medium">{tc("جديد", "New")}</span>
              </div>
-             <div className="text-muted-foreground text-xs mt-0.5">تحليل مبيعاتك، احصل على رؤى ذكية، اسأل المساعد الـ AI عن أي شيء</div>
+             <div className="text-muted-foreground text-xs mt-0.5">{tc("تحليل المبيعات · رؤى ذكية · مساعد محادثة", "Sales Analysis · Smart Insights · Chat Assistant")}</div>
            </div>
-           <div className="text-violet-400 group-hover:translate-x-[-4px] transition-transform">
-             <Sparkles className="w-5 h-5" />
-           </div>
+           <Sparkles className="w-5 h-5 text-violet-500 group-hover:scale-110 transition-transform" />
          </button>
 
          {/* ── CHARTS ── */}
@@ -969,7 +1099,7 @@ export default function ManagerDashboard() {
                    <XAxis type="number" tick={{ fill: '#555', fontSize: 10 }} axisLine={false} tickLine={false} />
                    <YAxis dataKey="name" type="category" tick={{ fill: '#aaa', fontSize: 10 }} axisLine={false} tickLine={false} width={80} />
                    <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', fontSize: 11 }} />
-                   <Bar dataKey="revenue" name="المبيعات" radius={[0, 6, 6, 0]}>
+                   <Bar dataKey="revenue" name={tc("المبيعات","Sales")} radius={[0, 6, 6, 0]}>
                      {topItemsData.slice(0, 5).map((_, i) => (
                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
                      ))}
@@ -982,25 +1112,25 @@ export default function ManagerDashboard() {
 
          {/* ── QUICK ACTIONS GRID ── */}
          <div className="bg-card border border-border rounded-2xl p-4">
-           <div className="text-foreground font-bold text-sm mb-4">⚡ وصول سريع</div>
+           <div className="text-foreground font-bold text-sm mb-4">⚡ {tc("وصول سريع","Quick Access")}</div>
            <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2">
              {[
-               { label: "نقطة البيع", icon: "🛒", path: "/employee/pos", color: "#2D9B6E" },
-               { label: "الطلبات", icon: "📋", path: "/employee/orders", color: "#3b82f6" },
-               { label: "المخزون", icon: "📦", path: "/manager/inventory", color: "#f59e0b" },
-               { label: "المحاسبة", icon: "💰", path: "/manager/accounting", color: "#8b5cf6" },
-               { label: "الموظفون", icon: "👥", path: "/admin/employees", color: "#ec4899" },
-               { label: "التوصيل", icon: "🚚", path: "/manager/delivery", color: "#06b6d4" },
-               { label: "الولاء", icon: "🎁", path: "/manager/loyalty", color: "#f43f5e" },
-               { label: "التقارير", icon: "📊", path: "/manager/unified-reports", color: "#14b8a6" },
-               { label: "الرواتب", icon: "💸", path: "/manager/payroll", color: "#7c3aed" },
-               { label: "العروض", icon: "🏷️", path: "/manager/promotions", color: "#f97316" },
-               { label: "الوصفات", icon: "🧪", path: "/manager/inventory/recipes", color: "#84cc16" },
-               { label: "ZATCA", icon: "🧾", path: "/manager/zatca", color: "#a855f7" },
-               { label: "الحضور", icon: "⏰", path: "/manager/attendance", color: "#e879f9" },
-               { label: "الكيوسك", icon: "🖥️", path: "/kiosk", color: "#22c55e" },
-               { label: "الدعم", icon: "🎧", path: "/manager/support", color: "#64748b" },
-               { label: "الإعدادات", icon: "⚙️", path: "/admin/settings", color: "#94a3b8" },
+               { label: tc("نقطة البيع","POS"),           icon: "🛒", path: "/employee/pos",               color: "#2D9B6E" },
+               { label: tc("الطلبات","Orders"),           icon: "📋", path: "/employee/orders",             color: "#3b82f6" },
+               { label: tc("المخزون","Inventory"),        icon: "📦", path: "/manager/inventory",           color: "#f59e0b" },
+               { label: tc("المحاسبة","Accounting"),      icon: "💰", path: "/manager/accounting",          color: "#8b5cf6" },
+               { label: tc("الموظفون","Employees"),       icon: "👥", path: "/admin/employees",             color: "#ec4899" },
+               { label: tc("التوصيل","Delivery"),         icon: "🚚", path: "/manager/delivery",            color: "#06b6d4" },
+               { label: tc("الولاء","Loyalty"),           icon: "🎁", path: "/manager/loyalty",             color: "#f43f5e" },
+               { label: tc("التقارير","Reports"),         icon: "📊", path: "/manager/unified-reports",     color: "#14b8a6" },
+               { label: tc("الرواتب","Payroll"),          icon: "💸", path: "/manager/payroll",             color: "#7c3aed" },
+               { label: tc("العروض","Promotions"),        icon: "🏷️", path: "/manager/promotions",          color: "#f97316" },
+               { label: tc("الوصفات","Recipes"),          icon: "🧪", path: "/manager/inventory/recipes",   color: "#84cc16" },
+               { label: "ZATCA",                          icon: "🧾", path: "/manager/zatca",               color: "#a855f7" },
+               { label: tc("الحضور","Attendance"),        icon: "⏰", path: "/manager/attendance",          color: "#e879f9" },
+               { label: tc("الكيوسك","Kiosk"),            icon: "🖥️", path: "/kiosk",                      color: "#22c55e" },
+               { label: tc("الدعم","Support"),            icon: "🎧", path: "/manager/support",             color: "#64748b" },
+               { label: tc("الإعدادات","Settings"),       icon: "⚙️", path: "/admin/settings",             color: "#94a3b8" },
              ].map(item => (
                <button
                  key={item.path}
@@ -1199,7 +1329,7 @@ export default function ManagerDashboard() {
  <div>
  <CardTitle className="text-primary">{tc("الفروع", "Branches")}</CardTitle>
  <CardDescription>
- {tc("إدارة فروع المطعم", "Manage cafe branches")}
+ {tc("إدارة فروع المقهى", "Manage cafe branches")}
  </CardDescription>
  </div>
  {isAdmin && (
@@ -1759,7 +1889,7 @@ export default function ManagerDashboard() {
    </div>
  </div>
  <MobileBottomNav manager={manager} />
- <DemoDataManager open={demoManagerOpen} onOpenChange={setDemoManagerOpen} />
+ {import.meta.env.DEV && <DemoDataManager open={demoManagerOpen} onOpenChange={setDemoManagerOpen} />}
  </>
  );
 }

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import SarIcon from "@/components/sar-icon";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -7,7 +8,7 @@ import {
   Coffee, Users, BarChart3, Globe, Shield, Headphones,
   Smartphone, ChefHat, Star
 } from "lucide-react";
-const chefsplaceLogoStaff = "/logo.png";
+import qiroxLogoStaff from "@assets/qirox-logo-customer.png";
 
 const tc = (ar: string, en: string) => ar;
 
@@ -23,7 +24,7 @@ const plans = [
     gradient: "from-blue-500/10 to-blue-500/5",
     border: "border-blue-200 dark:border-blue-800",
     badge: null,
-    descriptionAr: "مثالي للمطاعم الناشئة والمشاريع الصغيرة",
+    descriptionAr: "مثالي للكافيهات الناشئة والمشاريع الصغيرة",
     descriptionEn: "Perfect for startups and small cafes",
     features: [
       { label: "1 فرع", included: true },
@@ -51,7 +52,7 @@ const plans = [
     gradient: "from-emerald-500/15 to-emerald-500/5",
     border: "border-emerald-300 dark:border-emerald-700",
     badge: "الأكثر شعبية",
-    descriptionAr: "الأنسب للمطاعم المتنامية والسلاسل الصغيرة",
+    descriptionAr: "الأنسب للكافيهات المتنامية والسلاسل الصغيرة",
     descriptionEn: "Best for growing cafes and small chains",
     features: [
       { label: "3 فروع", included: true },
@@ -114,12 +115,12 @@ export default function PricingPage() {
   const [billing, setBilling] = useState<"monthly" | "yearly">("monthly");
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-primary/3 to-background" dir="rtl">
+    <div className="min-h-screen bg-gradient-to-b from-background via-primary/3 to-background">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src={chefsplaceLogoStaff} alt="مكان الشيف البخاري" className="h-10 object-contain" />
+            <img src={qiroxLogoStaff} alt="مكان الشيف" className="h-10 object-contain" />
           </div>
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
@@ -203,7 +204,7 @@ export default function PricingPage() {
                   <div className="flex items-end gap-1">
                     <span className="text-4xl font-bold text-foreground">{price.toLocaleString('ar')}</span>
                     <div className="pb-1">
-                      <span className="text-sm font-medium text-muted-foreground"> ر.س</span>
+                      <SarIcon size={12} />
                       <p className="text-xs text-muted-foreground">{tc("/ شهرياً", "/ month")}</p>
                     </div>
                   </div>
@@ -244,7 +245,7 @@ export default function PricingPage() {
 
         {/* Feature Highlights */}
         <div className="text-center space-y-8">
-          <h2 className="text-2xl font-bold text-foreground">{tc("كل ما تحتاجه لإدارة مطعمك", "Everything You Need")}</h2>
+          <h2 className="text-2xl font-bold text-foreground">{tc("كل ما تحتاجه لإدارة كافيهك", "Everything You Need")}</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {highlights.map((h, i) => (
               <div key={i} className="flex flex-col items-center gap-3 p-4 rounded-xl border border-border bg-card hover:shadow-md transition-all">
@@ -262,7 +263,7 @@ export default function PricingPage() {
           <h2 className="text-2xl font-bold text-foreground">{tc("هل تحتاج مساعدة في الاختيار؟", "Need Help Choosing?")}</h2>
           <p className="text-muted-foreground">
             {tc(
-              "فريقنا جاهز لمساعدتك في اختيار الخطة الأنسب لاحتياجات مطعمك.",
+              "فريقنا جاهز لمساعدتك في اختيار الخطة الأنسب لاحتياجات كافيهك.",
               "Our team is ready to help you choose the best plan for your cafe."
             )}
           </p>
@@ -282,7 +283,7 @@ export default function PricingPage() {
 
       {/* Footer */}
       <footer className="border-t border-border mt-12 py-6 text-center text-sm text-muted-foreground">
-        <p>© 2025 مكان الشيف البخاري — {tc("جميع الحقوق محفوظة", "All rights reserved")}</p>
+        <p>© 2025 مكان الشيف — الإدارة — {tc("جميع الحقوق محفوظة", "All rights reserved")}</p>
       </footer>
     </div>
   );

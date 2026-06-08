@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useCartStore } from "@/lib/cart-store";
 import { Badge } from "@/components/ui/badge";
 import { useTranslation } from "react-i18next";
+import { LanguageToggle } from "@/components/language-toggle";
 
 import { CustomerFooter } from "@/components/customer-footer";
 
@@ -40,25 +41,33 @@ export function CustomerLayout({
         <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
           <div className="container flex h-14 items-center justify-between gap-2">
             <h1 className="text-lg font-semibold">{title}</h1>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="relative"
-              onClick={showCart}
-              data-testid="button-cart"
-            >
-              <ShoppingCart className="h-5 w-5" />
-              {cartItemCount > 0 && (
-                <Badge 
-                  variant="destructive" 
-                  className="absolute -top-1 -left-1 h-5 w-5 p-0 flex items-center justify-center text-xs"
-                >
-                  {cartItemCount}
-                </Badge>
-              )}
-            </Button>
+            <div className="flex items-center gap-1">
+              <LanguageToggle />
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="relative"
+                onClick={showCart}
+                data-testid="button-cart"
+              >
+                <ShoppingCart className="h-5 w-5" />
+                {cartItemCount > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-1 -left-1 h-5 w-5 p-0 flex items-center justify-center text-xs"
+                  >
+                    {cartItemCount}
+                  </Badge>
+                )}
+              </Button>
+            </div>
           </div>
         </header>
+      )}
+      {!showHeader && (
+        <div className="fixed top-3 z-50 start-3">
+          <LanguageToggle variant="outline" className="bg-background/90 backdrop-blur shadow-sm border" />
+        </div>
       )}
 
       <main className="flex-1 pb-20">

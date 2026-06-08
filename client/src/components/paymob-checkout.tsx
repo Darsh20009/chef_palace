@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { Loader2, ShieldCheck, X, ExternalLink, CheckCircle2, XCircle, CreditCard, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import SarIcon from "@/components/sar-icon";
+import { useTranslate } from "@/lib/useTranslate";
 
 interface PaymobCheckoutProps {
   orderNumber: string;
@@ -23,6 +25,7 @@ export default function PaymobCheckout({
   onError,
   onCancel,
 }: PaymobCheckoutProps) {
+  const tc = useTranslate();
   const [state, setState] = useState<PaymobState>("loading");
   const [errorMessage, setErrorMessage] = useState("");
   const [visible, setVisible] = useState(false);
@@ -101,7 +104,7 @@ export default function PaymobCheckout({
         } else if (data.type === "PAYMOB_ERROR" || data.success === false || data.type === "PAYMOB_PENDING") {
           // Always verify server-side before showing error/pending
           // Webhook fires concurrently — poll until confirmed or timeout
-          const msg = data.message || "فشلت عملية الدفع. يرجى المحاولة مرة أخرى.";
+          const msg = data.message || tc("فشلت عملية الدفع. يرجى المحاولة مرة أخرى.", "Payment failed. Please try again.");
           setState("verifying");
           (async () => {
             const paid = await verifyPaymentStatus(10, 1200);
@@ -138,7 +141,7 @@ export default function PaymobCheckout({
           (async () => {
             const paid = await verifyPaymentStatus(10, 1200);
             if (paid) triggerSuccess();
-            else if (success === "false") triggerError("لم تكتمل عملية الدفع. يرجى المحاولة مرة أخرى.");
+            else if (success === "false") triggerError(tc("لم تكتمل عملية الدفع. يرجى المحاولة مرة أخرى.", "Payment was not completed. Please try again."));
             else setState("ready");
           })();
         }
@@ -207,16 +210,16 @@ export default function PaymobCheckout({
               <CreditCard className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <p className="font-bold text-sm leading-tight">أكمل الدفع الآن</p>
-              <p className="text-xs text-muted-foreground">بوابة PayMob المعتمدة في السعودية</p>
+              <p className="font-bold text-sm leading-tight">{tc("أكمل الدفع الآن", "Complete Payment")}</p>
+              <p className="text-xs text-muted-foreground">{tc("بوابة PayMob المعتمدة في السعودية", "PayMob certified gateway in Saudi Arabia")}</p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
             <div className="flex flex-col items-end">
-              <span className="text-[11px] text-muted-foreground leading-none">الإجمالي</span>
+              <span className="text-[11px] text-muted-foreground leading-none">{tc("الإجمالي", "Total")}</span>
               <span className="font-black text-base text-primary leading-tight">
-                {amount.toFixed(2)} <span className="text-xs font-medium">ر.س</span>
+                {amount.toFixed(2)} <SarIcon size={12} />
               </span>
             </div>
             {(state === "ready" || state === "error") && (
@@ -237,7 +240,7 @@ export default function PaymobCheckout({
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
-              <p className="text-sm font-medium">جارٍ تحميل صفحة الدفع...</p>
+              <p className="text-sm font-medium">{tc("جارٍ تحميل صفحة الدفع...", "Loading payment page...")}</p>
             </div>
           )}
 
@@ -246,8 +249,8 @@ export default function PaymobCheckout({
               <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
-              <p className="text-sm font-semibold">جارٍ التحقق من حالة الدفع...</p>
-              <p className="text-xs text-muted-foreground">يرجى الانتظار، لا تغلق هذه الصفحة</p>
+              <p className="text-sm font-semibold">{tc("جارٍ التحقق من حالة الدفع...", "Verifying payment status...")}</p>
+              <p className="text-xs text-muted-foreground">{tc("يرجى الانتظار، لا تغلق هذه الصفحة", "Please wait, do not close this page")}</p>
             </div>
           )}
 
@@ -256,8 +259,8 @@ export default function PaymobCheckout({
               <div className="w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
                 <Loader2 className="w-8 h-8 animate-spin text-amber-600" />
               </div>
-              <p className="text-sm font-semibold">تم فتح صفحة الدفع في نافذة جديدة</p>
-              <p className="text-xs text-muted-foreground leading-relaxed">أكمل عملية الدفع، ثم عد هنا.</p>
+              <p className="text-sm font-semibold">{tc("تم فتح صفحة الدفع في نافذة جديدة", "Payment page opened in new window")}</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">{tc("أكمل عملية الدفع، ثم عد هنا.", "Complete the payment, then come back here.")}</p>
             </div>
           )}
 
@@ -269,10 +272,10 @@ export default function PaymobCheckout({
                 </div>
               </div>
               <div>
-                <p className="font-bold text-lg text-green-700 dark:text-green-400">تم الدفع بنجاح!</p>
-                <p className="text-sm text-muted-foreground mt-1">رقم الطلب: <span className="font-mono font-bold">{orderNumber}</span></p>
+                <p className="font-bold text-lg text-green-700 dark:text-green-400">{tc("تم الدفع بنجاح!", "Payment Successful!")}</p>
+                <p className="text-sm text-muted-foreground mt-1">{tc("رقم الطلب:", "Order #:")} <span className="font-mono font-bold">{orderNumber}</span></p>
               </div>
-              <p className="text-xs text-muted-foreground animate-pulse">جارٍ تحويلك لمتابعة طلبك...</p>
+              <p className="text-xs text-muted-foreground animate-pulse">{tc("جارٍ تحويلك لمتابعة طلبك...", "Redirecting to track your order...")}</p>
             </div>
           )}
 
@@ -282,12 +285,12 @@ export default function PaymobCheckout({
                 <XCircle className="w-10 h-10 text-red-500" />
               </div>
               <div>
-                <p className="font-bold text-base text-red-600">فشلت عملية الدفع</p>
-                <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-xs">{errorMessage || "يرجى التحقق من بيانات بطاقتك."}</p>
+                <p className="font-bold text-base text-red-600">{tc("فشلت عملية الدفع", "Payment Failed")}</p>
+                <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-xs">{errorMessage || tc("يرجى التحقق من بيانات بطاقتك.", "Please check your card details.")}</p>
               </div>
               <div className="flex gap-3 w-full max-w-xs">
-                <Button variant="outline" onClick={handleForceClose} className="flex-1">إلغاء</Button>
-                <Button onClick={() => setState("ready")} className="flex-1">إعادة المحاولة</Button>
+                <Button variant="outline" onClick={handleForceClose} className="flex-1">{tc("إلغاء", "Cancel")}</Button>
+                <Button onClick={() => setState("ready")} className="flex-1">{tc("إعادة المحاولة", "Try Again")}</Button>
               </div>
             </div>
           )}
@@ -298,9 +301,9 @@ export default function PaymobCheckout({
                 <AlertCircle className="w-8 h-8 text-amber-600" />
               </div>
               <div>
-                <p className="font-bold text-base">هل تريد إلغاء الدفع؟</p>
+                <p className="font-bold text-base">{tc("هل تريد إلغاء الدفع؟", "Cancel payment?")}</p>
                 <p className="text-sm text-muted-foreground mt-1 leading-relaxed max-w-xs">
-                  إذا كنت قد أكملت الدفع بالفعل، سيظهر طلبك قريباً في "طلباتي".
+                  {tc('إذا كنت قد أكملت الدفع بالفعل، سيظهر طلبك قريباً في "طلباتي".', 'If you already completed payment, your order will appear in "My Orders" shortly.')}
                 </p>
               </div>
               <div className="flex gap-3 w-full max-w-xs">
@@ -309,14 +312,14 @@ export default function PaymobCheckout({
                   onClick={() => { setConfirmCancel(false); setState("ready"); }}
                   className="flex-1"
                 >
-                  العودة للدفع
+                  {tc("العودة للدفع", "Back to Payment")}
                 </Button>
                 <Button
                   variant="destructive"
                   onClick={handleForceClose}
                   className="flex-1"
                 >
-                  إلغاء الدفع
+                  {tc("إلغاء الدفع", "Cancel Payment")}
                 </Button>
               </div>
             </div>
@@ -346,12 +349,12 @@ export default function PaymobCheckout({
             disabled={state === "success" || state === "processing" || state === "verifying"}
           >
             <ExternalLink className="w-3.5 h-3.5" />
-            <span className="text-xs">فتح صفحة الدفع في متصفحي</span>
+            <span className="text-xs">{tc("فتح صفحة الدفع في متصفحي", "Open payment page in browser")}</span>
           </Button>
 
           <div className="flex items-center justify-center gap-1.5 text-[10px] text-muted-foreground">
             <ShieldCheck className="w-3 h-3 text-green-500" />
-            <span>جميع المعاملات مشفرة ومؤمّنة — مدى · فيزا · ماستركارد</span>
+            <span>{tc("جميع المعاملات مشفرة ومؤمّنة — مدى · فيزا · ماستركارد", "All transactions encrypted — Mada · Visa · Mastercard")}</span>
           </div>
         </div>
       </div>

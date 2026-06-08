@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Volume2, VolumeX, Bell, PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslate } from "@/lib/useTranslate";
 import { isAudioUnlocked, initAudioUnlock, getSoundEnabled, setSoundEnabled, testSound } from "@/lib/notification-sounds";
 
 interface AudioUnlockBannerProps {
@@ -11,6 +12,7 @@ interface AudioUnlockBannerProps {
 }
 
 export function AudioUnlockBanner({ pageKey, soundEnabled, onToggleSound, compact = false }: AudioUnlockBannerProps) {
+  const tc = useTranslate();
   const [unlocked, setUnlocked] = useState(isAudioUnlocked());
   const [checking, setChecking] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -25,7 +27,6 @@ export function AudioUnlockBanner({ pageKey, soundEnabled, onToggleSound, compac
   const handleUnlock = async () => {
     setChecking(true);
     await initAudioUnlock();
-    // Test play a soft sound to confirm unlock worked
     await testSound('success', 0.5);
     setUnlocked(isAudioUnlocked());
     setChecking(false);
@@ -46,7 +47,6 @@ export function AudioUnlockBanner({ pageKey, soundEnabled, onToggleSound, compac
     setSoundEnabled(pageKey, next);
   };
 
-  // Show unlock prompt if audio context not unlocked yet and sound is enabled
   if (!unlocked && soundEnabled) {
     return (
       <div className="flex items-center gap-2">
@@ -57,7 +57,9 @@ export function AudioUnlockBanner({ pageKey, soundEnabled, onToggleSound, compac
           data-testid="button-unlock-audio"
         >
           <Bell className="w-3.5 h-3.5 animate-pulse" />
-          {checking ? "جاري التفعيل..." : "اضغط لتفعيل الصوت"}
+          {checking
+            ? tc("جاري التفعيل...", "Activating...")
+            : tc("اضغط لتفعيل الصوت", "Tap to enable sound")}
         </button>
       </div>
     );
@@ -76,14 +78,14 @@ export function AudioUnlockBanner({ pageKey, soundEnabled, onToggleSound, compac
           data-testid="button-toggle-sound"
         >
           {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
-          {soundEnabled ? "الصوت" : "صامت"}
+          {soundEnabled ? tc("الصوت", "Sound") : tc("صامت", "Muted")}
         </button>
         {soundEnabled && (
           <button
             onClick={handleTest}
             disabled={testing}
             className="flex items-center gap-1 px-2 py-1.5 rounded-full border border-muted-foreground/20 text-muted-foreground hover:text-primary hover:border-primary/40 text-xs transition-colors"
-            title="اختبار الصوت"
+            title={tc("اختبار الصوت", "Test sound")}
             data-testid="button-test-sound"
           >
             <PlayCircle className={`w-3.5 h-3.5 ${testing ? 'animate-pulse text-primary' : ''}`} />
@@ -103,7 +105,7 @@ export function AudioUnlockBanner({ pageKey, soundEnabled, onToggleSound, compac
         data-testid="button-toggle-sound"
       >
         {soundEnabled ? <Volume2 className="h-4 w-4 ml-1" /> : <VolumeX className="h-4 w-4 ml-1" />}
-        {soundEnabled ? "الصوت" : "صامت"}
+        {soundEnabled ? tc("الصوت", "Sound") : tc("صامت", "Muted")}
       </Button>
       {soundEnabled && (
         <Button
@@ -112,7 +114,7 @@ export function AudioUnlockBanner({ pageKey, soundEnabled, onToggleSound, compac
           onClick={handleTest}
           disabled={testing}
           className="text-muted-foreground hover:text-primary px-2"
-          title="اختبار الصوت"
+          title={tc("اختبار الصوت", "Test sound")}
           data-testid="button-test-sound"
         >
           <PlayCircle className={`h-4 w-4 ${testing ? 'animate-pulse text-primary' : ''}`} />

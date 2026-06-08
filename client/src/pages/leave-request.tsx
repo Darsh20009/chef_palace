@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowRight, Calendar, FileText, Clock, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
 
 interface LeaveRequest {
   id: string;
@@ -151,7 +152,7 @@ export default function LeaveRequestPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-background p-4" dir="rtl">
+    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-background p-4 pb-20">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
@@ -325,6 +326,7 @@ export default function LeaveRequestPage() {
           </CardContent>
         </Card>
       </div>
+      <MobileBottomNav />
     </div>
   );
 }

@@ -1,8 +1,7 @@
 import { forwardRef, useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import QRCode from "qrcode";
 import JsBarcode from "jsbarcode";
-const chefsplaceLogo = "/logo.png";
+import qiroxLogo from "@assets/qirox-logo-customer.png";
 import SarIcon from "@/components/sar-icon";
 import { brand } from "@/lib/brand";
 import { VAT_RATE } from "@/lib/constants";
@@ -37,17 +36,15 @@ interface TaxInvoiceProps {
   date: string;
   branchName?: string;
   branchAddress?: string;
-  orderType?: string;
-  deliveryType?: string;
 }
 
-const FALLBACK_VAT = brand.taxNumber;
-const FALLBACK_COMPANY_NAME = brand.shortNameAr;
-const FALLBACK_COMPANY_NAME_EN = brand.nameEn;
-const FALLBACK_CR = brand.commercialRegister;
-const COMPANY_VAT_NAME = "شركة مكان الشيف للخدمات الغذائية"; // Added for ZATCA compliance
-const DEFAULT_BRANCH = "الفرع الرئيسي - الرياض"; // Default branch
-const DEFAULT_ADDRESS = "الرياض، المملكة العربية السعودية"; // Default address
+const VAT_NUMBER = "312718675800003";
+const COMPANY_NAME = brand.shortNameAr;
+const COMPANY_NAME_EN = brand.nameEn;
+const COMPANY_CR = "1163184110";
+const COMPANY_VAT_NAME = "شركة مكان الشيف البخاري للخدمات الغذائية"; // Added for ZATCA compliance
+const DEFAULT_BRANCH = "الفرع الرئيسي - ينبع"; // Default branch
+const DEFAULT_ADDRESS = "ينبع، المملكة العربية السعودية"; // Default address
 
 function generateZATCAQRCode(data: {
   sellerName: string;
@@ -114,15 +111,10 @@ function parseNumber(value: number | string | undefined): number {
 }
 
 export const TaxInvoicePrint = forwardRef<HTMLDivElement, TaxInvoiceProps>(
-  ({ orderNumber, invoiceNumber, customerName, customerPhone, items, subtotal, discount, invoiceDiscount, total, paymentMethod, employeeName, tableNumber, date, branchName, branchAddress, orderType, deliveryType }, ref) => {
+  ({ orderNumber, invoiceNumber, customerName, customerPhone, items, subtotal, discount, invoiceDiscount, total, paymentMethod, employeeName, tableNumber, date, branchName, branchAddress }, ref) => {
     const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
     const [barcodeUrl, setBarcodeUrl] = useState<string>("");
     const [trackingQrUrl, setTrackingQrUrl] = useState<string>("");
-    const { data: bizConfig } = useQuery<any>({ queryKey: ["/api/business-config"] });
-    const VAT_NUMBER = bizConfig?.vatNumber || FALLBACK_VAT;
-    const COMPANY_CR = bizConfig?.commercialRegister || FALLBACK_CR;
-    const COMPANY_NAME = bizConfig?.tradeNameAr || FALLBACK_COMPANY_NAME;
-    const COMPANY_NAME_EN = bizConfig?.tradeNameEn || FALLBACK_COMPANY_NAME_EN;
 
     const totalAmount = parseNumber(total);
     
@@ -201,7 +193,7 @@ export const TaxInvoicePrint = forwardRef<HTMLDivElement, TaxInvoiceProps>(
         <div className="max-w-[80mm] mx-auto bg-white text-black p-3 font-sans" dir="rtl">
           <div className="text-center mb-4 pb-4 border-b-2 border-dashed border-gray-800">
             <img
-              src={chefsplaceLogo}
+              src={qiroxLogo}
               alt="مكان الشيف البخاري"
               style={{ filter: 'invert(1)', mixBlendMode: 'multiply', width: '90px', height: '90px', objectFit: 'contain', margin: '0 auto 6px' }}
             />
@@ -271,21 +263,6 @@ export const TaxInvoicePrint = forwardRef<HTMLDivElement, TaxInvoiceProps>(
                   <span className="font-medium">{tableNumber}</span>
                 </div>
               )}
-              {(orderType || deliveryType) && (() => {
-                const ot = String(orderType || deliveryType || '');
-                const label = ot === 'dine-in' || ot === 'dine_in' ? 'محلي'
-                  : ot === 'pickup' || ot === 'takeaway' || ot === 'scheduled-pickup' ? 'سفري'
-                  : ot === 'delivery' ? 'توصيل'
-                  : ot === 'car-pickup' || ot === 'car_pickup' || ot === 'curbside' ? 'استلام بالسيارة'
-                  : ot === 'table' ? 'طاولة'
-                  : '';
-                return label ? (
-                  <div className="flex justify-between col-span-2">
-                    <span className="text-gray-600">نوع الطلب:</span>
-                    <span className="font-medium">{label}</span>
-                  </div>
-                ) : null;
-              })()}
               <div className="flex justify-between">
                 <span className="text-gray-600">الكاشير:</span>
                 <span className="font-medium">{employeeName}</span>
@@ -309,37 +286,20 @@ export const TaxInvoicePrint = forwardRef<HTMLDivElement, TaxInvoiceProps>(
                   const lineTotal = unitPrice * item.quantity;
                   const itemDiscount = parseNumber(item.itemDiscount);
                   const lineAfterDiscount = lineTotal - itemDiscount;
-                  const cz: any = (item as any).customization || {};
-                  const sz = (item as any).selectedSize || cz.selectedSize || cz.size || '';
-                  const addons = (cz.selectedItemAddons || cz.selectedAddons || (item as any).selectedItemAddons || []) as any[];
-                  const noteText = (cz.notes || (item as any).notes || '').toString().trim();
                   return (
-                    <tr key={index} className="border-b-2 border-dashed border-gray-300">
-                      <td className="py-3">
-                        <div className="font-bold text-gray-900 text-[12px]">{item.coffeeItem.nameAr}</div>
+                    <tr key={index} className="border-b border-gray-200">
+                      <td className="py-2">
+                        <div className="font-medium text-gray-900">{item.coffeeItem.nameAr}</div>
                         {item.coffeeItem.nameEn && (
                           <div className="text-[10px] text-gray-500">{item.coffeeItem.nameEn}</div>
                         )}
-                        {sz && (
-                          <div className="text-[10px] text-gray-700 mt-1">📏 الحجم: <span className="font-semibold">{sz}</span></div>
-                        )}
-                        {addons.length > 0 && (
-                          <div className="text-[10px] text-gray-700 mt-1 pr-2">
-                            {addons.map((a, i) => (
-                              <div key={i}>+ {a.nameAr || a.name || ''}</div>
-                            ))}
-                          </div>
-                        )}
-                        {noteText && (
-                          <div className="text-[10px] text-gray-600 mt-1 italic">📝 {noteText}</div>
-                        )}
                         {itemDiscount > 0 && (
-                          <div className="text-[10px] text-green-600 mt-1">خصم: {itemDiscount.toFixed(2)}-</div>
+                          <div className="text-[10px] text-green-600">خصم: {itemDiscount.toFixed(2)}-</div>
                         )}
                       </td>
-                      <td className="text-center py-3 align-top">{item.quantity}</td>
-                      <td className="text-center py-3 align-top">{unitPrice.toFixed(2)}</td>
-                      <td className="text-left py-3 align-top font-medium">{lineAfterDiscount.toFixed(2)}</td>
+                      <td className="text-center py-2">{item.quantity}</td>
+                      <td className="text-center py-2">{unitPrice.toFixed(2)}</td>
+                      <td className="text-left py-2 font-medium">{lineAfterDiscount.toFixed(2)}</td>
                     </tr>
                   );
                 })}
@@ -395,7 +355,20 @@ export const TaxInvoicePrint = forwardRef<HTMLDivElement, TaxInvoiceProps>(
           <div className="mb-4 pb-3 border-b border-dashed border-gray-400">
             <div className="flex justify-between items-center bg-blue-50 px-3 py-2 rounded text-sm">
               <span className="text-gray-600">طريقة الدفع:</span>
-              <span className="font-bold text-blue-800">{paymentMethod}</span>
+              <span className="font-bold text-blue-800">{
+                (() => {
+                  const m = (paymentMethod || 'cash').toLowerCase();
+                  if (m === 'cash') return 'نقدي';
+                  if (m === 'card' || m === 'network' || m === 'pos' || m === 'pos-network') return 'شبكة';
+                  if (m === 'apple_pay' || m === 'neoleap-apple-pay' || m === 'paymob-apple-pay') return 'Apple Pay';
+                  if (m === 'geidea' || m === 'paymob' || m === 'paymob-card') return 'بطاقة ائتمان';
+                  if (m === 'mada' || m === 'bank_transfer') return 'تحويل بنكي';
+                  if (m === 'rajhi') return 'بنك الراجحي';
+                  if (m === 'split') return 'نقدي + شبكة';
+                  if (m === 'loyalty' || m === 'qahwa-card' || m === 'qirox-card') return 'بطاقة ولاء';
+                  return paymentMethod;
+                })()
+              }</span>
             </div>
           </div>
 

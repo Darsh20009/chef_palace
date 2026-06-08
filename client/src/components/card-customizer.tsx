@@ -52,7 +52,7 @@ export const CARD_DESIGNS: CardDesign[] = [
   },
   {
     id: 'espresso-dark',
-    name: 'الليل الداكن',
+    name: 'الإسبريسو الداكن',
     style: 'gradient',
     colors: {
       primary: '#2F1B0C',
@@ -94,7 +94,7 @@ export const CARD_DESIGNS: CardDesign[] = [
   },
   {
     id: 'midnight-mocha',
-    name: 'البني المتوسط',
+    name: 'موكا منتصف الليل',
     style: 'gradient',
     colors: {
       primary: '#3C2415',
@@ -108,7 +108,7 @@ export const CARD_DESIGNS: CardDesign[] = [
   },
   {
     id: 'rose-latte',
-    name: 'الوردي الفاتح',
+    name: 'لاتيه الوردة',
     style: 'gradient',
     colors: {
       primary: '#D4A5A5',
@@ -122,7 +122,7 @@ export const CARD_DESIGNS: CardDesign[] = [
   },
   {
     id: 'forest-matcha',
-    name: 'الأخضر الطبيعي',
+    name: 'ماتشا الغابة',
     style: 'gradient',
     colors: {
       primary: '#6B8E23',

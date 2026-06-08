@@ -118,7 +118,9 @@ const businessConfigSchema = new mongoose.Schema({
       integrationIds: [Number],
     },
   },
-  updatedAt: { type: Date, default: Date.now }
+  updatedAt: { type: Date, default: Date.now },
+  shiftPeriods: [{ start: Number, end: Number }],
+  timezoneOffsetHours: { type: Number, default: 3 },
 });
 
 export const BusinessConfigModel = mongoose.models.BusinessConfig || mongoose.model('BusinessConfig', businessConfigSchema);

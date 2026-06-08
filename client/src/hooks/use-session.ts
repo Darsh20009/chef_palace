@@ -111,7 +111,7 @@ export function useSession() {
   const logout = useCallback(() => {
     localStorage.removeItem("currentCustomer");
     localStorage.removeItem("currentEmployee");
-    localStorage.removeItem("chefsplace-restore-key");
+    localStorage.removeItem("qirox-restore-key");
     localStorage.removeItem("qahwa-customer");
     localStorage.removeItem("customer-phone");
     localStorage.removeItem("customer-id");

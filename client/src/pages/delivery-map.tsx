@@ -165,8 +165,8 @@ export default function DeliveryMapPage() {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto max-w-4xl px-4 py-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold mb-2" dir="rtl">{tc("حدد موقع التوصيل", "Set Delivery Location")}</h1>
-          <p className="text-muted-foreground" dir="rtl">
+          <h1 className="text-2xl font-bold mb-2">{tc("حدد موقع التوصيل", "Set Delivery Location")}</h1>
+          <p className="text-muted-foreground">
             {tc("اضغط على الخريطة لتحديد موقعك", "Tap on the map to set your location")}
           </p>
         </div>
@@ -209,14 +209,14 @@ export default function DeliveryMapPage() {
           data-testid="button-current-location"
         >
           <Navigation className="w-4 h-4 ml-2" />
-          <span dir="rtl">{tc("استخدم موقعي الحالي", "Use My Current Location")}</span>
+          <span>{tc("استخدم موقعي الحالي", "Use My Current Location")}</span>
         </Button>
 
         <Card className="mb-6">
           <CardContent className="p-5">
             <div className="space-y-5">
               <div>
-                <Label htmlFor="address" className="mb-3 block text-base font-semibold" dir="rtl">
+                <Label htmlFor="address" className="mb-3 block text-base font-semibold">
                   {tc("عنوان التوصيل", "Delivery Address")}
                 </Label>
                 <Input
@@ -224,14 +224,14 @@ export default function DeliveryMapPage() {
                   placeholder={tc("مثال: شارع الأمير محمد بن عبدالعزيز، البديعة", "e.g. Prince Mohammed bin Abdulaziz Street, Al-Badia")}
                   value={fullAddress}
                   onChange={(e) => setFullAddress(e.target.value)}
-                  dir="rtl"
+                 
                   className="text-base"
                   data-testid="input-address"
                 />
               </div>
 
               <div className={`p-4 rounded-md ${isInFreeZone ? 'bg-green-50 dark:bg-green-950' : 'bg-yellow-50 dark:bg-yellow-950'}`}>
-                <div className="flex items-start gap-3" dir="rtl">
+                <div className="flex items-start gap-3">
                   <MapPin className={`w-6 h-6 mt-0.5 flex-shrink-0 ${isInFreeZone ? 'text-green-600' : 'text-yellow-600'}`} />
                   <div className="flex-1 min-w-0">
                     <p className={`font-semibold mb-1 ${isInFreeZone ? 'text-green-700 dark:text-green-300' : 'text-yellow-700 dark:text-yellow-300'}`}>
@@ -253,7 +253,7 @@ export default function DeliveryMapPage() {
           size="lg"
           data-testid="button-confirm"
         >
-          <span dir="rtl">{tc("تأكيد الموقع والمتابعة للدفع", "Confirm Location & Continue to Payment")}</span>
+          <span>{tc("تأكيد الموقع والمتابعة للدفع", "Confirm Location & Continue to Payment")}</span>
           <Check className="w-5 h-5 mr-2" />
         </Button>
       </div>

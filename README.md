@@ -135,7 +135,7 @@ POST   /api/accounting/snapshot          Save daily snapshot
 **Create a new recipe with ingredient costs**
 
 ```bash
-curl -X POST https://chefsplace.online/api/recipes \
+curl -X POST https://qiroxstudio.online/api/recipes \
   -H "Authorization: Bearer TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -166,7 +166,7 @@ curl -X POST https://chefsplace.online/api/recipes \
 **Get today's financial snapshot**
 
 ```bash
-curl https://chefsplace.online/api/accounting/daily-snapshot/branch-1 \
+curl https://qiroxstudio.online/api/accounting/daily-snapshot/branch-1 \
   -H "Authorization: Bearer TOKEN"
 ```
 
@@ -190,7 +190,7 @@ curl https://chefsplace.online/api/accounting/daily-snapshot/branch-1 \
 **Get profit breakdown by drink item**
 
 ```bash
-curl "https://chefsplace.online/api/accounting/profit-by-item/branch-1?startDate=2025-12-01&endDate=2025-12-28" \
+curl "https://qiroxstudio.online/api/accounting/profit-by-item/branch-1?startDate=2025-12-01&endDate=2025-12-28" \
   -H "Authorization: Bearer TOKEN"
 ```
 

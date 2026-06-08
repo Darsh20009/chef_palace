@@ -122,7 +122,7 @@ export default function InventoryMovementsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white text-gray-900 p-4 lg:p-6 space-y-5" dir="rtl">
+    <div className="min-h-screen bg-white text-gray-900 p-4 lg:p-6 space-y-5">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">

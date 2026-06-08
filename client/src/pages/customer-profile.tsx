@@ -42,7 +42,7 @@ export default function CustomerProfilePage() {
     }
     const stored = customerStorage.getProfile();
     if (stored) setProfile(stored);
-    else setProfile({ id: "", createdAt: new Date().toISOString(), name: customer.name || "", phone: customer.phone || "", email: customer.email || "", stamps: 0, freeDishes: 0 } as CustomerProfile);
+    else setProfile({ id: "", createdAt: new Date().toISOString(), name: customer.name || "", phone: customer.phone || "", email: customer.email || "", stamps: 0, freeDrinks: 0 } as CustomerProfile);
   }, [customer, setLocation]);
 
   const handleLogout = () => {
@@ -107,7 +107,7 @@ export default function CustomerProfilePage() {
   allOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return (
-    <div className="min-h-screen bg-background pb-20" dir="rtl">
+    <div className="min-h-screen bg-background pb-20">
       {/* Header */}
       <div className="bg-gradient-to-r from-primary to-primary/80 p-4 shadow-lg">
         <div className="container mx-auto flex justify-between items-center gap-2">
@@ -217,10 +217,14 @@ export default function CustomerProfilePage() {
                         {t("orders.order_number")} {order.orderNumber}
                       </CardTitle>
                       <CardDescription className="text-muted-foreground text-xs">
-                        {new Date(order.createdAt).toLocaleDateString('ar-SA', {
-                          year: 'numeric', month: 'long', day: 'numeric',
-                          hour: '2-digit', minute: '2-digit'
-                        })}
+                        {order.createdAt ? (() => {
+                          try {
+                            return new Date(order.createdAt).toLocaleDateString('ar-SA', {
+                              year: 'numeric', month: 'long', day: 'numeric',
+                              hour: '2-digit', minute: '2-digit'
+                            });
+                          } catch { return '—'; }
+                        })() : '—'}
                       </CardDescription>
                     </div>
                     <div className="flex flex-col items-end gap-1">

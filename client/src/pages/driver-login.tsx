@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Truck, Phone, ArrowLeft } from "lucide-react";
-const chefsplaceLogoStaff = "/logo.png";
+import qiroxLogoStaff from "@assets/qirox-logo-customer.png";
 import { useTranslate } from "@/lib/useTranslate";
 
 export default function DriverLogin() {
@@ -53,11 +53,11 @@ export default function DriverLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-primary/5 flex items-center justify-center p-4" dir="rtl">
+    <div className="min-h-screen bg-gradient-to-b from-background to-primary/5 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-3">
-            <img src={chefsplaceLogoStaff} alt="مكان الشيف البخاري" className="w-14 h-14 object-contain rounded-xl" />
+            <img src={qiroxLogoStaff} alt="مكان الشيف — الإدارة" className="w-14 h-14 object-contain rounded-xl" />
           </div>
           <div className="w-14 h-14 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-2">
             <Truck className="w-7 h-7 text-primary" />

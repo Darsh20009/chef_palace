@@ -5,11 +5,11 @@ import {
   LayoutDashboard, ShoppingCart, ClipboardList, Package, Warehouse,
   Wallet, Users, Truck, BarChart3, Building2, Brain, Tag, Settings,
   ChefHat, Clock, Coffee, Gift, Star, Banknote, FileText, Globe,
-  HardDrive, Code2, Store, Handshake, Shield, HeadphonesIcon,
+  HardDrive, Code2, Store, Handshake, Shield,
   TrendingUp, MapPin, Receipt, ChevronDown, ChevronRight,
   LogOut, Menu, X, BarChart2, Zap, Box, FlaskConical, 
   ArrowRightLeft, Bell, Table, BookOpen, UserCheck, CreditCard, Monitor,
-  Sparkles, MessageSquare
+  Sparkles, MessageSquare, ShieldCheck, RefreshCw, Calculator
 } from "lucide-react";
 import { brand } from "@/lib/brand";
 import { cn } from "@/lib/utils";
@@ -47,7 +47,7 @@ const NAV_GROUPS: { label: string; labelEn: string; color: string; items: NavIte
     items: [
       { label: "إدارة الطلبات", labelEn: "Orders", icon: ClipboardList, path: "/manager/orders", color: "#3b82f6" },
       { label: "الطاولات", labelEn: "Tables", icon: Table, path: "/manager/tables", color: "#60a5fa" },
-      { label: "إدارة قائمة الطعام", labelEn: "Menu", icon: Coffee, path: "/employee/menu-management", color: "#818cf8" },
+      { label: "إدارة المأكولات والمشروبات", labelEn: "Menu", icon: Coffee, path: "/employee/menu-management", color: "#818cf8" },
       { label: "حجوزات الطاولات", labelEn: "Table Reservations", icon: BookOpen, path: "/manager/reservations", color: "#6366f1" },
       { label: "حجوزات المنتجات", labelEn: "Product Reservations", icon: Star, path: "/manager/product-reservations", color: "#8b5cf6" },
       { label: "الورديات", labelEn: "Shifts", icon: Clock, path: "/manager/shifts", color: "#a78bfa" },
@@ -56,6 +56,9 @@ const NAV_GROUPS: { label: string; labelEn: string; color: string; items: NavIte
   {
     label: "المخزون", labelEn: "Inventory", color: "#f59e0b",
     items: [
+      { label: "دورة المخزون الذكي", labelEn: "Inventory Cycle", icon: RefreshCw, path: "/manager/inventory/cycle", color: "#10b981" },
+      { label: "الجرد الذكي", labelEn: "Smart Stocktake", icon: ClipboardList, path: "/manager/inventory/stocktake", color: "#059669" },
+      { label: "ذكاء المخزون AI", labelEn: "Inventory AI", icon: Sparkles, path: "/manager/inventory/ai", color: "#7c3aed" },
       { label: "نظرة المخزون", labelEn: "Inventory", icon: Warehouse, path: "/manager/inventory", color: "#f59e0b" },
       { label: "المواد الخام", labelEn: "Raw Items", icon: Box, path: "/manager/inventory/raw-items", color: "#fbbf24" },
       { label: "الوصفات", labelEn: "Recipes", icon: FlaskConical, path: "/manager/inventory/recipes", color: "#f97316" },
@@ -78,6 +81,7 @@ const NAV_GROUPS: { label: string; labelEn: string; color: string; items: NavIte
     items: [
       { label: "الموظفون", labelEn: "Employees", icon: Users, path: "/admin/employees", color: "#ec4899" },
       { label: "الحضور", labelEn: "Attendance", icon: UserCheck, path: "/manager/attendance", color: "#f472b6" },
+      { label: "كيوسك الحضور", labelEn: "Attendance Kiosk", icon: Monitor, path: "/attendance-kiosk", color: "#6366f1" },
     ]
   },
   {
@@ -85,21 +89,26 @@ const NAV_GROUPS: { label: string; labelEn: string; color: string; items: NavIte
     items: [
       { label: "إدارة التوصيل", labelEn: "Delivery", icon: Truck, path: "/manager/delivery", color: "#06b6d4" },
       { label: "السائقون", labelEn: "Drivers", icon: MapPin, path: "/manager/drivers", color: "#22d3ee" },
-      { label: "حالة التوصيل", labelEn: "Delivery Status", icon: Zap, path: "/manager/delivery-services", color: "#67e8f9" },
     ]
   },
   {
     label: "الذكاء الاصطناعي", labelEn: "AI Center", color: "#a855f7",
     items: [
-      { label: "مركز الذكاء الاصطناعي", labelEn: "AI Center", icon: Sparkles, path: "/manager/ai", color: "#a855f7" },
+      { label: "CEO AI — مستشار الأعمال", labelEn: "CEO AI", icon: Brain, path: "/manager/ceo-ai", color: "#6d28d9" },
+      { label: "محاكي قرارات الأعمال", labelEn: "Business Simulator", icon: Calculator, path: "/manager/simulator", color: "#7c3aed" },
+      { label: "التوأم الرقمي للفروع", labelEn: "Digital Twin", icon: Building2, path: "/manager/digital-twin", color: "#a855f7" },
+      { label: "مساعد الذكاء الاصطناعي", labelEn: "AI Assistant", icon: Zap, path: "/manager/ai", color: "#c084fc" },
+      { label: "تقارير ذكية", labelEn: "Smart Reports", icon: FileText, path: "/manager/smart-reports", color: "#d8b4fe" },
     ]
   },
   {
     label: "التحليلات والتقارير", labelEn: "Analytics", color: "#14b8a6",
     items: [
+      { label: "تحاليلي اليومي", labelEn: "My Daily Analytics", icon: TrendingUp, path: "/manager/tahalyli", color: "#f59e0b", badge: "✨" },
       { label: "التقارير", labelEn: "Reports", icon: FileText, path: "/admin/reports", color: "#14b8a6" },
       { label: "التقارير الموحدة", labelEn: "Unified Reports", icon: Building2, path: "/manager/unified-reports", color: "#2dd4bf" },
       { label: "تحليلات BI", labelEn: "BI Analytics", icon: Brain, path: "/manager/bi-analytics", color: "#99f6e4" },
+      { label: "سجل الأحداث", labelEn: "Audit Logs", icon: ShieldCheck, path: "/manager/audit-logs", color: "#6366f1", roles: ["owner", "admin", "manager"] },
     ]
   },
   {
@@ -117,7 +126,6 @@ const NAV_GROUPS: { label: string; labelEn: string; color: string; items: NavIte
       { label: "إعدادات الفروع", labelEn: "Branches", icon: Building2, path: "/admin/branches", color: "#64748b", roles: ["admin", "owner"] },
       { label: "الإعدادات", labelEn: "Settings", icon: Settings, path: "/admin/settings", color: "#94a3b8" },
       { label: "التكاملات", labelEn: "Integrations", icon: Globe, path: "/manager/integrations", color: "#cbd5e1", roles: ["admin", "owner"] },
-      { label: "الدعم الفني", labelEn: "Support", icon: HeadphonesIcon, path: "/manager/support", color: "#e2e8f0" },
     ]
   },
   {
@@ -134,6 +142,9 @@ const NAV_GROUPS: { label: string; labelEn: string; color: string; items: NavIte
 
 function SidebarNavItem({ item, collapsed, depth = 0 }: { item: NavItem; collapsed: boolean; depth?: number }) {
   const [location, navigate] = useLocation();
+  const { i18n } = useTranslation();
+  const isAr = i18n.language === "ar";
+  const label = isAr ? item.label : item.labelEn;
   const isActive = location === item.path;
 
   if (item.children) {
@@ -147,7 +158,7 @@ function SidebarNavItem({ item, collapsed, depth = 0 }: { item: NavItem; collaps
           )}
         >
           <item.icon className="w-4 h-4 flex-shrink-0" style={{ color: item.color }} />
-          {!collapsed && <span className="flex-1 truncate">{item.label}</span>}
+          {!collapsed && <span className="flex-1 truncate">{label}</span>}
           {!collapsed && <ChevronDown className="w-3 h-3 opacity-50" />}
         </button>
         {!collapsed && (
@@ -172,7 +183,7 @@ function SidebarNavItem({ item, collapsed, depth = 0 }: { item: NavItem; collaps
         depth > 0 && "pl-6"
       )}
       style={isActive ? { background: `linear-gradient(135deg, ${item.color}22, ${item.color}11)`, border: `1px solid ${item.color}33` } : {}}
-      title={collapsed ? item.label : undefined}
+      title={collapsed ? label : undefined}
     >
       {isActive && (
         <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full" style={{ background: item.color }} />
@@ -180,7 +191,7 @@ function SidebarNavItem({ item, collapsed, depth = 0 }: { item: NavItem; collaps
       <item.icon className={cn("w-4 h-4 flex-shrink-0 transition-transform group-hover:scale-110", isActive && "scale-110")} style={{ color: isActive ? item.color : undefined }} />
       {!collapsed && (
         <>
-          <span className="flex-1 truncate text-right">{item.label}</span>
+          <span className={cn("flex-1 truncate", isAr ? "text-right" : "text-left")}>{label}</span>
           {item.badge && (
             <span className="w-4 h-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center font-bold flex-shrink-0">
               {item.badge}
@@ -264,14 +275,29 @@ export function ManagerSidebar({ manager, onLogout, mobileOpen, onMobileClose, r
       </div>
 
       {/* Footer */}
-      <div className="border-t border-[#1a1a1a] p-2 flex-shrink-0">
+      <div className="border-t border-[#1a1a1a] p-2 flex-shrink-0 space-y-1">
+        <button
+          onClick={() => {
+            const newLang = isAr ? "en" : "ar";
+            i18n.changeLanguage(newLang);
+            try { localStorage.setItem("i18nextLng", newLang); } catch {}
+            document.documentElement.dir = newLang === "ar" ? "rtl" : "ltr";
+            document.documentElement.lang = newLang;
+          }}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[#666] hover:text-white hover:bg-[#1a1a1a] transition-all text-sm"
+          title={collapsed ? (isAr ? "English" : "عربي") : undefined}
+          data-testid="button-sidebar-language-toggle"
+        >
+          <Globe className="w-4 h-4 flex-shrink-0" />
+          {!collapsed && <span className="font-medium">{isAr ? "English" : "عربي"}</span>}
+        </button>
         <button
           onClick={onLogout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[#666] hover:text-red-400 hover:bg-red-500/10 transition-all text-sm"
-          title={collapsed ? "تسجيل الخروج" : undefined}
+          title={collapsed ? (isAr ? "تسجيل الخروج" : "Logout") : undefined}
         >
           <LogOut className="w-4 h-4 flex-shrink-0" />
-          {!collapsed && <span className="font-medium">تسجيل الخروج</span>}
+          {!collapsed && <span className="font-medium">{isAr ? "تسجيل الخروج" : "Logout"}</span>}
         </button>
       </div>
     </div>

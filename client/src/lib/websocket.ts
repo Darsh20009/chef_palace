@@ -178,29 +178,6 @@ export function useOrderWebSocket({
                 };
               }
               break;
-            case "prep_alert":
-              if (Notification.permission === 'granted') {
-                const n = new Notification(message.title || '🔔 ابدأ التحضير', {
-                  body: message.body || `الطلب ${message.orderNumber} — موعد العميل بعد 10 دقائق`,
-                  icon: '/logo.png',
-                  tag: `prep-${message.orderId}`,
-                  requireInteraction: true,
-                });
-                n.onclick = () => { window.focus(); window.location.href = '/employee/kitchen'; };
-              }
-              try {
-                const audio = new Audio('/notification-sound.mp3');
-                audio.play().catch(() => {});
-              } catch {}
-              onNotificationRef.current?.({
-                id: `prep-${message.orderId}-${Date.now()}`,
-                title: message.title || '🔔 ابدأ التحضير',
-                body: message.body || `الطلب ${message.orderNumber} موعد العميل بعد 10 دقائق`,
-                type: 'prep_alert',
-                orderNumber: message.orderNumber,
-                createdAt: new Date().toISOString(),
-              } as any);
-              break;
             case "push_alert":
               if (Notification.permission === 'granted') {
                 const n = new Notification(message.title, {

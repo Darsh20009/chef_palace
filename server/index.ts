@@ -4,6 +4,7 @@ import MongoStore from "connect-mongo";
 import compression from "compression";
 import path from "path";
 import { cache } from "./cache";
+import { queue } from "./queue";
 import { fileURLToPath } from "url";
 import mongoose from "mongoose";
 import { registerRoutes } from "./routes";
@@ -19,7 +20,12 @@ import hpp from "hpp";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const MONGODB_URI = (process.env.MONGODB_URI || "mongodb+srv://Vercel-Admin-atlas-crimson-desert:IijZOj693svjVN4f@atlas-crimson-desert.j0ix2zv.mongodb.net/?retryWrites=true&w=majority").trim();
+const MONGODB_URI = process.env.MONGODB_URI;
+
+if (!MONGODB_URI) {
+  console.error("❌ ERROR: MONGODB_URI environment variable is not set");
+  process.exit(1);
+}
 
 // Track database connection status
 let isDbConnected = false;
@@ -33,16 +39,15 @@ async function connectDatabase() {
   isInitializing = true;
   
   const options = {
-    serverSelectionTimeoutMS: 10000,
+    serverSelectionTimeoutMS: 5000,
     socketTimeoutMS: 45000,
     heartbeatFrequencyMS: 10000,
-    maxPoolSize: 10,
-    minPoolSize: 2,
-    waitQueueTimeoutMS: 15000,
-    connectTimeoutMS: 15000,
+    maxPoolSize: 200,
+    minPoolSize: 20,
+    waitQueueTimeoutMS: 10000,
+    connectTimeoutMS: 10000,
     maxIdleTimeMS: 60000,
-    retryWrites: true,
-    retryReads: true,
+    compressors: ['zlib'] as any,
   };
 
   try {
@@ -57,76 +62,62 @@ async function connectDatabase() {
       await OrderModel.collection.dropIndex("orderNumber_1").catch(() => {});
       console.log("✅ Order number uniqueness migrated to allow counter wrap-around");
     } catch (_) {}
-    // Ensure admin/owner accounts exist with correct credentials and full permissions
+    // ── Connection warming: pre-fetch common collections to populate Atlas pool ──
+    // Without this, the first requests after restart hit a 3–6 s cold-start penalty.
+    setImmediate(async () => {
+      try {
+        const {
+          CoffeeItemModel, MenuCategoryModel, ProductAddonModel,
+          BusinessConfigModel,
+        } = await import("@shared/schema");
+        await Promise.all([
+          CoffeeItemModel.findOne({}).lean(),
+          MenuCategoryModel.findOne({}).lean(),
+          ProductAddonModel.findOne({}).lean(),
+          BusinessConfigModel.findOne({}).lean(),
+        ]);
+        console.log("✅ DB connection pool warmed — first requests will be fast");
+      } catch (_) {
+        // warming is best-effort, never block startup
+      }
+    });
+    // Ensure admin/owner accounts exist and use the portal password
     try {
       const bcrypt = await import("bcryptjs");
       const { v4: uuidv4 } = await import("uuid");
       const { EmployeeModel } = await import("@shared/schema");
+      const portalPassword = await bcrypt.hash("123456", 10);
 
-      const allPermissions = [
-        'order.create','order.view','order.void','order.refund','order.apply_discount','order.modify',
-        'kitchen.view_queue','kitchen.update_status',
-        'inventory.view','inventory.stock_in','inventory.stock_out','inventory.waste','inventory.adjustment',
-        'menu.view','menu.create','menu.edit','menu.delete',
-        'recipe.view','recipe.create','recipe.edit',
-        'reports.daily','reports.branch','reports.all_branches','reports.export',
-        'employees.view','employees.create','employees.edit','employees.delete',
-        'settings.branch','settings.cafe','settings.billing',
-        'shift.open','shift.close','shift.view_history','shift.cash_movement',
-        'pos.open_drawer','pos.apply_coupon',
-        'tables.manage','delivery.manage',
-        'accounting.view','accounting.export'
-      ];
-      const allPages = [
-        'dashboard','cashier','pos','shifts','orders','kitchen','tables',
-        'menu_management','inventory','reports','accounting','employees','settings',
-        'delivery','unified_reports','bi_analytics','promotions','kiosk','notifications'
-      ];
+      // Sync admin password if exists
+      const adminResult = await EmployeeModel.updateOne(
+        { username: "admin" },
+        { $set: { password: portalPassword } }
+      );
+      if (adminResult.matchedCount > 0) {
+        console.log(`✅ Portal account 'admin' password synced`);
+      }
 
-      const mongoose = await import("mongoose");
-      const branch = await mongoose.default.connection.collection('branches').findOne({}, { projection: { id: 1 } });
-      const branchId = (branch as any)?.id || '';
-
-      // Sync OWNER account — password: 123456
-      const ownerPassword = await bcrypt.hash("123456", 10);
+      // Create owner account if it doesn't exist
       const ownerExists = await EmployeeModel.findOne({ username: "owner" });
       if (!ownerExists) {
         await EmployeeModel.create({
-          id: uuidv4(), tenantId: "demo-tenant", username: "owner",
-          password: ownerPassword, fullName: "المالك", role: "owner",
-          phone: "0000000001", jobTitle: "المالك",
-          branchId, permissions: allPermissions, allowedPages: allPages,
-          isActivated: 1, isActive: 1,
+          id: uuidv4(),
+          tenantId: "demo-tenant",
+          username: "owner",
+          password: portalPassword,
+          fullName: "المالك",
+          role: "owner",
+          phone: "0000000001",
+          jobTitle: "المالك",
+          isActivated: 1,
+          isActive: 1,
         });
-        console.log(`✅ Owner account created`);
+        console.log(`✅ Owner account created with password 123456`);
       } else {
-        await EmployeeModel.updateOne(
-          { username: "owner" },
-          { $set: { password: ownerPassword, role: "owner", branchId, permissions: allPermissions, allowedPages: allPages, isActivated: 1, isActive: 1 } }
-        );
-        console.log(`✅ Portal account 'owner' synced`);
+        await EmployeeModel.updateOne({ username: "owner" }, { $set: { password: portalPassword, isActivated: 1, isActive: 1 } });
+        console.log(`✅ Portal account 'owner' password synced`);
       }
-
-      // Sync ADMIN account — password: admin
-      const adminPassword = await bcrypt.hash("admin", 10);
-      const adminExists = await EmployeeModel.findOne({ username: "admin" });
-      if (!adminExists) {
-        await EmployeeModel.create({
-          id: uuidv4(), tenantId: "demo-tenant", username: "admin",
-          password: adminPassword, fullName: "المسؤول", role: "admin",
-          phone: "0000000002", jobTitle: "مسؤول النظام",
-          branchId, permissions: allPermissions, allowedPages: allPages,
-          isActivated: 1, isActive: 1,
-        });
-        console.log(`✅ Admin account created`);
-      } else {
-        await EmployeeModel.updateOne(
-          { username: "admin" },
-          { $set: { password: adminPassword, role: "admin", branchId, permissions: allPermissions, allowedPages: allPages, isActivated: 1, isActive: 1 } }
-        );
-        console.log(`✅ Portal account 'admin' synced`);
-      }
-    } catch (err) { console.error("Owner/Admin sync error:", err); }
+    } catch (err) { console.error("Owner sync error:", err); }
     // Ensure demo-tenant has Infinity plan — all features unlocked
     try {
       const { SubscriptionConfigModel } = await import("./qirox-admin");
@@ -168,15 +159,15 @@ async function connectDatabase() {
       );
       console.log("✅ Subscription: Infinity plan — all features unlocked");
     } catch (_) {}
-    // Seed promotional discount code CHEFSPLACE10 (10% off, shareable promo link)
+    // Seed promotional discount code BRCAFE10 (10% off, shareable promo link)
     // Hidden from customers by default — admin can toggle visibility from admin settings.
     try {
       const { DiscountCodeModel } = await import("@shared/schema");
       await DiscountCodeModel.findOneAndUpdate(
-        { code: "CHEFSPLACE10" },
+        { code: "BRCAFE10" },
         {
           $setOnInsert: {
-            code: "CHEFSPLACE10",
+            code: "BRCAFE10",
             discountPercentage: 10,
             reason: "كوبون ترويجي 10% - رابط خاص",
             employeeId: "system",
@@ -191,14 +182,14 @@ async function connectDatabase() {
       // One-time migration: hide previously auto-visible seeded code without
       // overriding any subsequent manual change (marker prevents re-applying).
       await DiscountCodeModel.updateOne(
-        { code: "CHEFSPLACE10", _seedHiddenV1: { $exists: false } },
+        { code: "BRCAFE10", _seedHiddenV1: { $exists: false } },
         { $set: { visibleToCustomers: false, _seedHiddenV1: true } }
       );
-      console.log("✅ Promo code CHEFSPLACE10 (10% off) is ready (hidden by default)");
+      console.log("✅ Promo code BRCAFE10 (10% off) is ready (hidden by default)");
     } catch (err) {
-      console.error("CHEFSPLACE10 seed error:", err);
+      console.error("BRCAFE10 seed error:", err);
     }
-    // Seed discount code CHEF10 — خصم موظفي مكان الشيف (10% off, POS use)
+    // Seed discount code TECH10 — كلية التقنية للبنات بينبع (10% off, POS use)
     // Hidden from customers by default — admin can toggle visibility from admin settings.
     try {
       const { DiscountCodeModel } = await import("@shared/schema");
@@ -208,7 +199,7 @@ async function connectDatabase() {
           $setOnInsert: {
             code: "TECH10",
             discountPercentage: 10,
-            reason: "خصم موظفي مكان الشيف",
+            reason: "كلية التقنية للبنات بينبع",
             employeeId: "system",
             isActive: 1,
             usageCount: 0,
@@ -224,7 +215,7 @@ async function connectDatabase() {
         { code: "TECH10", _seedHiddenV1: { $exists: false } },
         { $set: { visibleToCustomers: false, _seedHiddenV1: true } }
       );
-      console.log("✅ Discount code TECH10 (خصم موظفي مكان الشيف — 10% off) is ready (hidden by default)");
+      console.log("✅ Discount code TECH10 (كلية التقنية للبنات بينبع — 10% off) is ready (hidden by default)");
     } catch (err) {
       console.error("TECH10 seed error:", err);
     }
@@ -265,6 +256,69 @@ connectDatabase();
 
 // Initialize Web Push
 initWebPush();
+
+// ── Register background job queue handlers ────────────────────────────────────
+queue.register("invalidate_cache", async (job) => {
+  const pattern = job.payload.pattern as string;
+  if (pattern) cache.invalidate(pattern);
+});
+
+queue.register("send_notification", async (job) => {
+  // Delegate to push-service — non-blocking best-effort
+  try {
+    const { sendPushToCustomer } = await import("./push-service");
+    const { customerId, title, body, data } = job.payload;
+    if (customerId) await sendPushToCustomer(customerId, { title, body, data });
+  } catch (err: any) {
+    console.warn("[Queue:send_notification]", err?.message);
+  }
+});
+
+queue.register("deduct_inventory", async (job) => {
+  // Async inventory deduction — runs after order is confirmed
+  try {
+    const { RawItemModel, CoffeeItemModel } = await import("@shared/schema");
+    const { items, tenantId } = job.payload as { items: Array<{ coffeeItemId: string; quantity: number }>; tenantId: string };
+    for (const { coffeeItemId, quantity } of items) {
+      const item = await CoffeeItemModel.findOne({ id: coffeeItemId, tenantId }).lean() as any;
+      if (!item?.recipe?.length) continue;
+      for (const ingredient of item.recipe) {
+        const deduct = (ingredient.amountPerUnit || 0) * quantity;
+        if (deduct > 0) {
+          await RawItemModel.findOneAndUpdate(
+            { id: ingredient.rawItemId, tenantId },
+            { $inc: { currentStock: -deduct, currentStockLevel: -deduct } }
+          );
+        }
+      }
+    }
+    cache.invalidate(`inventory:${tenantId}`);
+  } catch (err: any) {
+    console.warn("[Queue:deduct_inventory]", err?.message);
+  }
+});
+
+queue.register("recalc_loyalty", async (job) => {
+  // Lightweight loyalty tier update
+  try {
+    const { CustomerModel } = await import("@shared/schema");
+    const { customerId, pointsDelta } = job.payload;
+    await CustomerModel.findOneAndUpdate(
+      { id: customerId },
+      { $inc: { totalPoints: pointsDelta, availablePoints: pointsDelta } }
+    );
+  } catch (err: any) {
+    console.warn("[Queue:recalc_loyalty]", err?.message);
+  }
+});
+
+queue.register("generate_report", async (_job) => {
+  // Placeholder — future: pre-generate PDF reports and store in object storage
+  console.log("[Queue:generate_report] Report generation job received (stub)");
+});
+
+console.log("✅ Background job queue initialized with 5 handlers");
+// ─────────────────────────────────────────────────────────────────────────────
 
 // Start smart notification scheduler (runs after 5s to allow DB to connect)
 import("./smart-scheduler").then(({ startSmartScheduler }) => {
@@ -432,8 +486,12 @@ app.use(compression({
   }
 }));
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: false, limit: '10mb' }));
+// API performance & error monitoring (Phase 5: Reliability)
+import { apiMetricsMiddleware } from "./middleware/api-metrics";
+app.use(apiMetricsMiddleware);
+
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: false, limit: '50mb' }));
 
 // 4. NoSQL Injection protection (strips $ and . from request body/query/params)
 app.use(mongoSanitize({
@@ -549,6 +607,15 @@ app.use('/attached_assets', express.static(path.resolve(__dirname, '..', 'attach
   }
 }));
 
+// Fallback: serve brand logo for any missing /attached_assets/ file instead of 404
+app.get('/attached_assets/*', (req, res) => {
+  const brandLogo = path.resolve(__dirname, '..', 'public', 'images', 'brand-logo.png');
+  res.set('Cache-Control', 'public, max-age=60');
+  res.sendFile(brandLogo, (err) => {
+    if (err) res.status(404).json({ error: 'Image not found' });
+  });
+});
+
 // Serve public static files (audio, images, icons) explicitly so Vite dev middleware doesn't intercept
 app.use(express.static(path.resolve(__dirname, '..', 'public'), {
   setHeaders: (res, filePath) => {
@@ -594,6 +661,12 @@ app.use((req, res, next) => {
 (async () => {
   registerQiroxRoutes(app);
   const server = await registerRoutes(app);
+
+  // 404 guard for unknown /api/* paths — must come BEFORE Vite SPA fallback
+  // so unmatched API routes return JSON 404 instead of being swallowed by index.html
+  app.use("/api", (_req: Request, res: Response) => {
+    res.status(404).json({ error: "API endpoint not found" });
+  });
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

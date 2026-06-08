@@ -12,11 +12,12 @@ import {
   Coffee, Database, Trash2, RefreshCw, AlertTriangle, 
   ShoppingCart, Users, Package, GitBranch, Settings,
   Calendar, CreditCard, Table, Clock, ChevronLeft, ChevronRight,
-  Eye, BarChart3, Shield, ArrowRight, Utensils, Printer
+  Eye, BarChart3, Shield, ArrowRight, Utensils, Menu
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import type { Employee } from "@shared/schema";
 import SarIcon from "@/components/sar-icon";
+import { ManagerSidebar, MobileBottomNav } from "@/components/manager-sidebar";
 
 interface CollectionStats {
   count: number;
@@ -27,8 +28,18 @@ interface DatabaseStats {
   collections: Record<string, CollectionStats>;
   summary: {
     todayOrders: number;
+    dayOrders?: number;
+    dayRevenue?: number;
     totalRevenue: number;
+    dayStart?: string;
+    dayEnd?: string;
+    dayStartHour?: number;
   };
+}
+
+function formatLocalDateISO(d: Date): string {
+  const saudi = new Date(d.getTime() + 3 * 60 * 60 * 1000);
+  return saudi.toISOString().slice(0, 10);
 }
 
 interface CollectionData {
@@ -61,6 +72,7 @@ export default function OwnerDashboard() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [employee, setEmployee] = useState<Employee | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [stats, setStats] = useState<DatabaseStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
@@ -70,6 +82,11 @@ export default function OwnerDashboard() {
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [resetConfirm, setResetConfirm] = useState('');
+  const [selectedDate, setSelectedDate] = useState<string>(() => formatLocalDateISO(new Date()));
+  const [dayStartHour, setDayStartHour] = useState<number>(() => {
+    const v = parseInt(localStorage.getItem('qirox_day_start_hour') || '0', 10);
+    return isNaN(v) ? 0 : Math.max(0, Math.min(23, v));
+  });
 
   useEffect(() => {
     const storedEmployee = localStorage.getItem("currentEmployee");
@@ -89,7 +106,11 @@ export default function OwnerDashboard() {
     if (employee) {
       fetchStats();
     }
-  }, [employee]);
+  }, [employee, selectedDate, dayStartHour]);
+
+  useEffect(() => {
+    localStorage.setItem('qirox_day_start_hour', String(dayStartHour));
+  }, [dayStartHour]);
 
   useEffect(() => {
     if (selectedCollection) {
@@ -100,7 +121,8 @@ export default function OwnerDashboard() {
   const fetchStats = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/owner/database-stats', { credentials: 'include' });
+      const url = `/api/owner/database-stats?date=${encodeURIComponent(selectedDate)}&dayStartHour=${dayStartHour}`;
+      const response = await fetch(url, { credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
         setStats(data);
@@ -111,6 +133,8 @@ export default function OwnerDashboard() {
       setIsLoading(false);
     }
   };
+
+  const isToday = selectedDate === formatLocalDateISO(new Date());
 
   const fetchCollectionData = async (collection: string, page: number) => {
     try {
@@ -126,11 +150,14 @@ export default function OwnerDashboard() {
     }
   };
 
+  const deleteKeyword = tc('حذف', 'DELETE');
+  const resetKeyword = tc('احذف جميع البيانات', 'DELETE ALL DATA');
+
   const handleDeleteCollection = async (collection: string) => {
-    if (deleteConfirm !== 'حذف') {
+    if (deleteConfirm !== deleteKeyword) {
       toast({
         title: tc("خطأ", "Error"),
-        description: "يرجى كتابة 'حذف' للتأكيد",
+        description: tc(`يرجى كتابة '${deleteKeyword}' للتأكيد`, `Please type '${deleteKeyword}' to confirm`),
         variant: "destructive"
       });
       return;
@@ -182,7 +209,7 @@ export default function OwnerDashboard() {
   };
 
   const handleResetOrdersOnly = async () => {
-    if (!confirm("سيتم حذف جميع الطلبات والمحاسبة. المنتجات والموظفون والصور ستبقى. هل أنت متأكد؟")) return;
+    if (!confirm(tc("سيتم حذف جميع الطلبات والمحاسبة. المنتجات والموظفون والصور ستبقى. هل أنت متأكد؟", "All orders and accounting will be deleted. Products, employees and images will be preserved. Are you sure?"))) return;
     try {
       const response = await apiRequest('DELETE', '/api/admin/reset-orders-only');
       const data = await response.json();
@@ -201,10 +228,10 @@ export default function OwnerDashboard() {
   };
 
   const handleResetDatabase = async () => {
-    if (resetConfirm !== 'احذف جميع البيانات') {
+    if (resetConfirm !== resetKeyword) {
       toast({
         title: tc("خطأ", "Error"),
-        description: "يرجى كتابة العبارة الصحيحة للتأكيد",
+        description: tc("يرجى كتابة العبارة الصحيحة للتأكيد", "Please type the correct confirmation phrase"),
         variant: "destructive"
       });
       return;
@@ -238,138 +265,140 @@ export default function OwnerDashboard() {
   }
 
   return (
-    <div className="dark min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 p-4" dir="rtl">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-700 rounded-full flex items-center justify-center">
-              <Shield className="w-5 h-5 text-white" />
+    <div className="flex h-screen overflow-hidden bg-background" dir={tc('rtl','ltr')} style={{ fontFamily: "'Cairo', sans-serif" }}>
+      <ManagerSidebar
+        manager={employee as any}
+        onLogout={() => { localStorage.removeItem("currentEmployee"); setLocation("/employee/gateway"); }}
+        mobileOpen={mobileMenuOpen}
+        onMobileClose={() => setMobileMenuOpen(false)}
+        role={employee?.role}
+      />
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+      <header className="flex-shrink-0 bg-background border-b border-border px-4 lg:px-6 py-3 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <button
+            className="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl bg-muted text-muted-foreground hover:text-foreground"
+            onClick={() => setMobileMenuOpen(true)}
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <div>
+            <div className="flex items-center gap-2">
+              <div className="text-foreground font-bold text-sm">{tc("مرحباً،", "Hello,")} <span className="text-[#2D9B6E]">{employee?.fullName}</span></div>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium border ${
+                employee?.role === 'admin' ? 'bg-purple-500/15 text-purple-400 border-purple-500/30' :
+                'bg-amber-500/15 text-amber-400 border-amber-500/30'
+              }`}>
+                {employee?.role === 'admin' ? tc('مدير عام', 'Admin') : tc('مالك', 'Owner')}
+              </span>
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-red-500">لوحة تحكم المالك</h1>
-              <p className="text-gray-400 text-xs">إدارة قاعدة البيانات</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setLocation("/employee/menu-management")}
-              className="border-green-500/50 text-green-300 hover:bg-green-500/10"
-              data-testid="button-owner-manage-drinks"
-            >
-              <Coffee className="w-4 h-4 ml-2" />
-              إدارة الأطباق
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setLocation("/employee/menu-management?type=food")}
-              className="border-orange-500/50 text-orange-300 hover:bg-orange-500/10"
-              data-testid="button-owner-manage-food"
-            >
-              <Utensils className="w-4 h-4 ml-2" />
-              إدارة المأكولات
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setLocation("/manager/printer-setup")}
-              className="border-cyan-500/50 text-cyan-300 hover:bg-cyan-500/10"
-              data-testid="button-printer-setup"
-            >
-              <Printer className="w-4 h-4 ml-2" />
-              إعداد الطابعات
-            </Button>
-            <Button
-              variant="outline"
-              onClick={fetchStats}
-              className="border-primary/50 text-accent"
-              data-testid="button-refresh"
-            >
-              <RefreshCw className="w-4 h-4 ml-2" />
-              تحديث
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setLocation("/manager/dashboard")}
-              className="border-primary/50 text-accent"
-              data-testid="button-back"
-            >
-              <ArrowRight className="w-4 h-4 ml-2" />
-              العودة
-            </Button>
+            <p className="text-xs text-muted-foreground">{tc("إدارة قاعدة البيانات والصلاحيات", "Database & permissions management")}</p>
           </div>
         </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={() => setLocation("/employee/menu-management")} data-testid="button-owner-manage-drinks">
+            <Coffee className="w-4 h-4 ml-2" />{tc("المشروبات", "Drinks")}
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setLocation("/employee/menu-management?type=food")} data-testid="button-owner-manage-food">
+            <Utensils className="w-4 h-4 ml-2" />{tc("المأكولات", "Food")}
+          </Button>
+          <Button variant="outline" size="sm" onClick={fetchStats} data-testid="button-refresh">
+            <RefreshCw className="w-4 h-4 ml-2" />{tc("تحديث", "Refresh")}
+          </Button>
+        </div>
+      </header>
+      <main className="flex-1 overflow-y-auto pb-20 lg:pb-6">
+      <div className="p-4 lg:p-6 space-y-6 max-w-[1400px] mx-auto">
+
+        {/* Day-period selector */}
+        <Card className="bg-card border border-border mb-6">
+          <CardContent className="p-4">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5" /> {tc("اختر اليوم", "Select day")}
+                </label>
+                <Input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value || formatLocalDateISO(new Date()))}
+                  max={formatLocalDateISO(new Date())}
+                  className="h-9 w-44"
+                  data-testid="input-stats-date"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5" /> {tc("اليوم يبدأ من الساعة", "Day starts at hour")}
+                </label>
+                <select
+                  value={dayStartHour}
+                  onChange={(e) => setDayStartHour(parseInt(e.target.value, 10) || 0)}
+                  className="h-9 w-32 rounded-md border border-input bg-background px-2 text-sm"
+                  data-testid="select-day-start-hour"
+                >
+                  {Array.from({ length: 24 }, (_, h) => (
+                    <option key={h} value={h}>{String(h).padStart(2, '0')}:00</option>
+                  ))}
+                </select>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedDate(formatLocalDateISO(new Date()))}
+                disabled={isToday}
+                data-testid="button-stats-today"
+              >
+                {tc("اليوم", "Today")}
+              </Button>
+              {stats?.summary.dayStart && (
+                <div className="text-xs text-muted-foreground mr-auto">
+                  {tc("الفترة:", "Window:")}{" "}
+                  <span className="font-mono" dir="ltr">
+                    {new Date(stats.summary.dayStart).toLocaleString('en-GB', { timeZone: 'Asia/Riyadh', hour12: false })}
+                    {" → "}
+                    {new Date(stats.summary.dayEnd!).toLocaleString('en-GB', { timeZone: 'Asia/Riyadh', hour12: false })}
+                  </span>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {isLoading ? (
           <div className="text-center py-12">
             <div className="animate-spin w-10 h-10 border-2 border-primary border-t-transparent rounded-full mx-auto"></div>
-            <p className="text-gray-400 mt-4">جاري التحميل...</p>
+            <p className="text-muted-foreground mt-4">{tc("جاري التحميل...", "Loading...")}</p>
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <Card className="bg-gradient-to-br from-blue-500/20 to-blue-600/10 border-blue-500/20">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5 text-blue-400" />
-                    <div>
-                      <p className="text-blue-400 text-2xl font-bold">{stats?.summary.todayOrders || 0}</p>
-                      <p className="text-gray-400 text-xs">{tc("طلبات اليوم", "Today's Orders")}</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 lg:gap-4 mb-6">
+              {[
+                { label: isToday ? tc("طلبات اليوم", "Today's Orders") : tc("طلبات اليوم المحدد", "Orders (selected day)"), value: stats?.summary.dayOrders ?? stats?.summary.todayOrders ?? 0, icon: BarChart3, iconBg: 'bg-blue-50', iconColor: 'text-blue-600' },
+                { label: isToday ? tc("إيرادات اليوم", "Today's Revenue") : tc("إيرادات اليوم المحدد", "Revenue (selected day)"), value: <>{(stats?.summary.dayRevenue || 0).toLocaleString()} <SarIcon /></>, icon: CreditCard, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600' },
+                { label: tc("إجمالي الإيرادات", "Total Revenue"), value: <>{(stats?.summary.totalRevenue || 0).toLocaleString()} <SarIcon /></>, icon: CreditCard, iconBg: 'bg-violet-50', iconColor: 'text-violet-600' },
+                { label: tc("الطلبات", "Orders"), value: stats?.collections.orders?.count || 0, icon: ShoppingCart, iconBg: 'bg-amber-50', iconColor: 'text-amber-600' },
+              ].map((k, i) => (
+                <Card key={i} className="bg-card border border-border hover:shadow-sm transition-shadow">
+                  <CardContent className="p-4">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${k.iconBg}`}>
+                      <k.icon className={`w-5 h-5 ${k.iconColor}`} />
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-green-500/20 to-green-600/10 border-green-500/20">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2">
-                    <CreditCard className="w-5 h-5 text-green-400" />
-                    <div>
-                      <p className="text-green-400 text-2xl font-bold">
-                        {(stats?.summary.totalRevenue || 0).toLocaleString()} <SarIcon />
-                      </p>
-                      <p className="text-gray-400 text-xs">{tc("إجمالي الإيرادات", "Total Revenue")}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-purple-500/20 to-purple-600/10 border-purple-500/20">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2">
-                    <Users className="w-5 h-5 text-purple-400" />
-                    <div>
-                      <p className="text-purple-400 text-2xl font-bold">
-                        {stats?.collections.customers?.count || 0}
-                      </p>
-                      <p className="text-gray-400 text-xs">{tc("العملاء", "Customers")}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2">
-                    <ShoppingCart className="w-5 h-5 text-accent" />
-                    <div>
-                      <p className="text-accent text-2xl font-bold">
-                        {stats?.collections.orders?.count || 0}
-                      </p>
-                      <p className="text-gray-400 text-xs">{tc("الطلبات", "Orders")}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                    <p className="text-muted-foreground text-xs mb-1">{k.label}</p>
+                    <p className="text-2xl font-bold text-foreground leading-tight">{k.value}</p>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
 
-            <Card className="bg-gradient-to-br from-background to-background border-primary/20 mb-6">
+            <Card className="bg-card border border-border mb-6">
               <CardHeader>
-                <CardTitle className="text-accent flex items-center gap-2">
-                  <Database className="w-5 h-5" />
-                  مجموعات قاعدة البيانات
+                <CardTitle className="text-foreground flex items-center gap-2">
+                  <Database className="w-5 h-5 text-primary" />
+                  {tc("مجموعات قاعدة البيانات", "Database Collections")}
                 </CardTitle>
-                <CardDescription className="text-gray-400">
-                  اضغط على أي مجموعة لعرض بياناتها
+                <CardDescription className="text-muted-foreground">
+                  {tc("اضغط على أي مجموعة لعرض بياناتها", "Click any collection to view its data")}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -404,14 +433,14 @@ export default function OwnerDashboard() {
             </Card>
 
             {selectedCollection && (
-              <Card className="bg-gradient-to-br from-background to-background border-primary/20 mb-6">
+              <Card className="bg-card border border-border mb-6">
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
-                    <CardTitle className="text-accent">
+                    <CardTitle className="text-foreground">
                       {stats?.collections[selectedCollection]?.nameAr || selectedCollection}
                     </CardTitle>
-                    <CardDescription className="text-gray-400">
-                      {collectionData?.pagination.total || 0} سجل
+                    <CardDescription className="text-muted-foreground">
+                      {collectionData?.pagination.total || 0} {tc("سجل", "records")}
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
@@ -420,21 +449,21 @@ export default function OwnerDashboard() {
                         <DialogTrigger asChild>
                           <Button variant="destructive" size="sm" data-testid="button-delete-collection">
                             <Trash2 className="w-4 h-4 ml-2" />
-                            حذف الكل
+                            {tc("حذف الكل", "Delete All")}
                           </Button>
                         </DialogTrigger>
                         <DialogContent className="bg-[#2d1f1a] border-primary/20">
                           <DialogHeader>
-                            <DialogTitle className="text-red-500">تأكيد الحذف</DialogTitle>
+                            <DialogTitle className="text-red-500">{tc("تأكيد الحذف", "Confirm Delete")}</DialogTitle>
                             <DialogDescription className="text-gray-400">
-                              سيتم حذف جميع سجلات {stats?.collections[selectedCollection]?.nameAr}.
-                              اكتب "حذف" للتأكيد.
+                              {tc(`سيتم حذف جميع سجلات ${stats?.collections[selectedCollection]?.nameAr}. اكتب "${deleteKeyword}" للتأكيد.`,
+                                  `All records of ${selectedCollection} will be deleted. Type "${deleteKeyword}" to confirm.`)}
                             </DialogDescription>
                           </DialogHeader>
                           <Input
                             value={deleteConfirm}
                             onChange={(e) => setDeleteConfirm(e.target.value)}
-                            placeholder="اكتب: حذف"
+                            placeholder={tc(`اكتب: ${deleteKeyword}`, `Type: ${deleteKeyword}`)}
                             className="bg-[#1a1410] border-red-500/50 text-white"
                             data-testid="input-delete-confirm"
                           />
@@ -442,10 +471,10 @@ export default function OwnerDashboard() {
                             <Button
                               variant="destructive"
                               onClick={() => handleDeleteCollection(selectedCollection)}
-                              disabled={isDeleting || deleteConfirm !== 'حذف'}
+                              disabled={isDeleting || deleteConfirm !== deleteKeyword}
                               data-testid="button-confirm-delete"
                             >
-                              {isDeleting ? 'جاري الحذف...' : 'تأكيد الحذف'}
+                              {isDeleting ? tc('جاري الحذف...', 'Deleting...') : tc('تأكيد الحذف', 'Confirm Delete')}
                             </Button>
                           </DialogFooter>
                         </DialogContent>
@@ -461,7 +490,7 @@ export default function OwnerDashboard() {
                       className="text-gray-400"
                       data-testid="button-close-collection"
                     >
-                      إغلاق
+                      {tc("إغلاق", "Close")}
                     </Button>
                   </div>
                 </CardHeader>
@@ -477,7 +506,7 @@ export default function OwnerDashboard() {
                                   {key}
                                 </th>
                               ))}
-                              <th className="text-right py-2 px-3 text-gray-400 font-medium">إجراءات</th>
+                              <th className="text-right py-2 px-3 text-gray-400 font-medium">{tc("إجراءات", "Actions")}</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -520,7 +549,7 @@ export default function OwnerDashboard() {
                             <ChevronRight className="w-4 h-4" />
                           </Button>
                           <span className="text-gray-400">
-                            صفحة {currentPage} من {collectionData.pagination.pages}
+                            {tc(`صفحة ${currentPage} من ${collectionData.pagination.pages}`, `Page ${currentPage} of ${collectionData.pagination.pages}`)}
                           </span>
                           <Button
                             variant="outline"
@@ -538,7 +567,7 @@ export default function OwnerDashboard() {
                   ) : (
                     <div className="text-center py-8">
                       <Database className="w-12 h-12 text-gray-500 mx-auto mb-2" />
-                      <p className="text-gray-400">لا توجد بيانات</p>
+                      <p className="text-gray-400">{tc("لا توجد بيانات", "No data")}</p>
                     </div>
                   )}
                 </CardContent>
@@ -546,29 +575,29 @@ export default function OwnerDashboard() {
             )}
 
             {(employee.role === 'owner' || employee.role === 'admin') && (
-              <Card className="bg-gradient-to-br from-red-900/20 to-red-950/10 border-red-500/20">
+              <Card className="bg-rose-50/40 border border-rose-200">
                 <CardHeader>
-                  <CardTitle className="text-red-500 flex items-center gap-2">
+                  <CardTitle className="text-rose-700 flex items-center gap-2">
                     <AlertTriangle className="w-5 h-5" />
-                    منطقة الخطر
+                    {tc("منطقة الخطر", "Danger Zone")}
                   </CardTitle>
-                  <CardDescription className="text-gray-400">
-                    عمليات لا يمكن التراجع عنها
+                  <CardDescription className="text-muted-foreground">
+                    {tc("عمليات لا يمكن التراجع عنها", "Operations that cannot be undone")}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {/* Reset Orders Only */}
-                  <div className="p-3 bg-amber-900/20 border border-amber-500/20 rounded-lg">
-                    <p className="text-amber-400 text-sm font-medium mb-1">تصفير الطلبات والمكاسب</p>
-                    <p className="text-gray-500 text-xs mb-3">يحذف الطلبات والمحاسبة فقط — المنتجات، الموظفون، والصور تبقى</p>
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-amber-700 text-sm font-medium mb-1">{tc("تصفير الطلبات والمكاسب", "Reset Orders & Revenue")}</p>
+                    <p className="text-muted-foreground text-xs mb-3">{tc("يحذف الطلبات والمحاسبة فقط — المنتجات، الموظفون، والصور تبقى", "Deletes orders & accounting only — products, employees, images remain")}</p>
                     <Button
                       variant="outline"
-                      className="w-full border-amber-500/30 text-amber-400 hover:bg-amber-900/30"
+                      className="w-full border-amber-300 text-amber-700 hover:bg-amber-100"
                       onClick={handleResetOrdersOnly}
                       data-testid="button-reset-orders-only"
                     >
                       <ShoppingCart className="w-4 h-4 ml-2" />
-                      تصفير الطلبات فقط
+                      {tc("تصفير الطلبات فقط", "Reset Orders Only")}
                     </Button>
                   </div>
 
@@ -576,29 +605,30 @@ export default function OwnerDashboard() {
                     <DialogTrigger asChild>
                       <Button variant="destructive" className="w-full" data-testid="button-reset-database">
                         <Trash2 className="w-4 h-4 ml-2" />
-                        إعادة تعيين قاعدة البيانات الكاملة
+                        {tc("إعادة تعيين قاعدة البيانات الكاملة", "Full Database Reset")}
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="bg-[#2d1f1a] border-red-500/20">
                       <DialogHeader>
                         <DialogTitle className="text-red-500 flex items-center gap-2">
                           <AlertTriangle className="w-5 h-5" />
-                          تحذير خطير
+                          {tc("تحذير خطير", "Critical Warning")}
                         </DialogTitle>
                         <DialogDescription className="text-gray-400">
-                          سيتم حذف جميع بيانات العمليات (الطلبات، العملاء، أكواد الخصم، بطاقات الولاء، سجلات الحضور).
+                          {tc("سيتم حذف جميع بيانات العمليات (الطلبات، العملاء، أكواد الخصم، بطاقات الولاء، سجلات الحضور).",
+                              "All operational data will be deleted (orders, customers, discount codes, loyalty cards, attendance records).")}
                           <br />
                           <br />
-                          <strong className="text-red-400">هذه العملية لا يمكن التراجع عنها!</strong>
+                          <strong className="text-red-400">{tc("هذه العملية لا يمكن التراجع عنها!", "This action cannot be undone!")}</strong>
                           <br />
                           <br />
-                          اكتب "احذف جميع البيانات" للتأكيد.
+                          {tc(`اكتب "${resetKeyword}" للتأكيد.`, `Type "${resetKeyword}" to confirm.`)}
                         </DialogDescription>
                       </DialogHeader>
                       <Input
                         value={resetConfirm}
                         onChange={(e) => setResetConfirm(e.target.value)}
-                        placeholder="اكتب: احذف جميع البيانات"
+                        placeholder={tc(`اكتب: ${resetKeyword}`, `Type: ${resetKeyword}`)}
                         className="bg-[#1a1410] border-red-500/50 text-white"
                         data-testid="input-reset-confirm"
                       />
@@ -608,15 +638,15 @@ export default function OwnerDashboard() {
                           onClick={() => setResetDialogOpen(false)}
                           className="border-gray-500/50 text-gray-400"
                         >
-                          إلغاء
+                          {tc("إلغاء", "Cancel")}
                         </Button>
                         <Button
                           variant="destructive"
                           onClick={handleResetDatabase}
-                          disabled={resetConfirm !== 'احذف جميع البيانات'}
+                          disabled={resetConfirm !== resetKeyword}
                           data-testid="button-confirm-reset"
                         >
-                          تأكيد إعادة التعيين
+                          {tc("تأكيد إعادة التعيين", "Confirm Reset")}
                         </Button>
                       </DialogFooter>
                     </DialogContent>
@@ -626,6 +656,9 @@ export default function OwnerDashboard() {
             )}
           </>
         )}
+        </div>
+        </main>
+        <MobileBottomNav manager={employee as any} />
       </div>
     </div>
   );

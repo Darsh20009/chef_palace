@@ -83,6 +83,7 @@ export interface PushPayload {
   actions?: Array<{ action: string; title: string }>;
   stageIndex?: number;
   totalStages?: number;
+  data?: Record<string, any>;
 }
 
 async function sendPushToSubscriptions(
@@ -113,11 +114,19 @@ async function sendPushToSubscriptions(
     timestamp: Date.now(),
   });
 
+  const isNewOrder = payload.type === 'new_order';
+  const pushOptions: webpush.RequestOptions = {
+    TTL: 86400,
+    urgency: isNewOrder ? 'high' : 'normal',
+    topic: payload.tag || payload.type || 'notification',
+  };
+
   const results = await Promise.allSettled(
     subscriptions.map((sub) =>
       webpush.sendNotification(
         { endpoint: sub.endpoint, keys: sub.keys },
-        pushPayload
+        pushPayload,
+        pushOptions
       )
     )
   );

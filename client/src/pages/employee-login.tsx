@@ -2,18 +2,19 @@ import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { preCacheOnLogin } from "@/lib/offline-cashier";
+import { requestAndSubscribeEmployee } from "@/lib/push-utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AtSign, Lock, Loader2, Eye, EyeOff, QrCode, Download } from "lucide-react";
 import type { Employee } from "@shared/schema";
 import { Html5QrcodeScanner } from "html5-qrcode";
-const chefsplaceLogoStaff = "/logo.png";
+import qiroxLogoStaff from "@assets/qirox-logo-customer.png";
 import { useTranslate } from "@/lib/useTranslate";
 
 function useAutoRedirectIfLoggedIn() {
   const [, setLocation] = useLocation();
-  useState(() => {
+  useEffect(() => {
     const stored = localStorage.getItem("currentEmployee");
     if (stored) {
       try {
@@ -27,7 +28,8 @@ function useAutoRedirectIfLoggedIn() {
         }
       } catch {}
     }
-  });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 }
 
 export default function EmployeeLogin() {
@@ -44,7 +46,7 @@ export default function EmployeeLogin() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   useEffect(() => {
-    document.title = tc("تسجيل دخول الموظفين - مكان الشيف البخاري", "تسجيل دخول الموظفين - مكان الشيف البخاري");
+    document.title = tc("تسجيل دخول الموظفين - مكان الشيف — الإدارة", "Employee Login - مكان الشيف — الإدارة");
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -83,11 +85,12 @@ export default function EmployeeLogin() {
     },
     onSuccess: (employee: any) => {
       if (employee.restoreKey) {
-        localStorage.setItem("chefsplace-restore-key", employee.restoreKey);
+        localStorage.setItem("qirox-restore-key", employee.restoreKey);
         delete employee.restoreKey;
       }
       localStorage.setItem("currentEmployee", JSON.stringify(employee));
       preCacheOnLogin().catch(() => {});
+      requestAndSubscribeEmployee(employee).catch(() => {});
       const role = employee.role;
       if (role === "admin") window.location.href = "/admin/dashboard";
       else if (role === "owner") window.location.href = "/owner/dashboard";
@@ -137,13 +140,13 @@ export default function EmployeeLogin() {
   }, [showQRScanner]);
 
   return (
-    <div dir="rtl" className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-4 sm:mb-6">
           <div className="inline-flex items-center justify-center w-20 h-14 sm:w-32 sm:h-20 mb-2 sm:mb-3">
-            <img src={chefsplaceLogoStaff} alt="مكان الشيف البخاري" className="w-full h-full object-contain" />
+            <img src={qiroxLogoStaff} alt="مكان الشيف — الإدارة" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-1 font-playfair">مكان الشيف البخاري</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-1 font-playfair">مكان الشيف — الإدارة</h1>
           <p className="text-muted-foreground text-sm font-cairo">{tc("تسجيل دخول الموظف", "Employee Login")}</p>
         </div>
 
@@ -254,6 +257,10 @@ export default function EmployeeLogin() {
                   <Button type="button" variant="secondary" onClick={() => { setError(""); setShowQRScanner(true); }} className="w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground" data-testid="button-scan-qr">
                     <QrCode className="w-4 h-4 ml-2" />
                     {tc("مسح بطاقة الموظف", "Scan Employee Card")}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => setLocation("/employee/general-checkin")} className="w-full border-primary/30 text-primary hover:bg-primary/5" data-testid="button-general-checkin">
+                    <QrCode className="w-4 h-4 ml-2" />
+                    {tc("صفحة التحضير العامة", "General Check-in Terminal")}
                   </Button>
                   <p className="text-sm text-muted-foreground text-center">{tc("موظف جديد؟", "New employee?")}</p>
                   <Button type="button" variant="outline" onClick={() => setLocation("/employee/activate")} className="w-full border-primary/20 text-primary" data-testid="button-activate">

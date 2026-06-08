@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { Plus, Search, Edit2, Trash2, ChevronDown, X, Download, Trash, Clock } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, ChevronDown, X, Download, Trash, Clock, Shield, QrCode } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -134,7 +134,7 @@ export default function AdminEmployees() {
       { id: 'employees.edit', name: 'تعديل موظف' },
       { id: 'employees.delete', name: 'حذف موظف' },
       { id: 'settings.branch', name: 'إعدادات الفرع' },
-      { id: 'settings.cafe', name: 'إعدادات المطعم' },
+      { id: 'settings.cafe', name: 'إعدادات المقهى' },
     ]},
   ];
 
@@ -680,6 +680,16 @@ export default function AdminEmployees() {
                             data-testid={`button-edit-${emp.id}`}
                           >
                             <Edit2 className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className={`${(emp as any).faceEnrolledAt ? "text-emerald-600 hover:bg-emerald-50" : "text-gray-400 hover:text-indigo-600 hover:bg-indigo-50"}`}
+                            onClick={() => navigate(`/admin/employees/${emp.id}/face-enrollment`)}
+                            title={(emp as any).faceEnrolledAt ? "بصمة الوجه مسجلة — انقر لتحديثها" : "تسجيل بصمة الوجه"}
+                            data-testid={`button-face-${emp.id}`}
+                          >
+                            <Shield className="w-4 h-4" />
                           </Button>
                           <Button
                             variant="ghost"

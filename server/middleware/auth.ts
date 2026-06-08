@@ -52,12 +52,6 @@ async function tryRestoreFromHeaders(req: AuthRequest, res?: any): Promise<boole
     const storedKey = (employee as any).lastRestoreKey;
     if (!storedKey || storedKey !== restoreKey) return false;
     
-    const newRestoreKey = require('crypto').randomBytes(32).toString('hex');
-    await EmployeeCollection.updateOne(
-      { _id: employee._id },
-      { $set: { lastRestoreKey: newRestoreKey } }
-    );
-    
     const sessionEmployee = {
       id: employee.id || employee._id.toString(),
       username: employee.username,
@@ -68,9 +62,7 @@ async function tryRestoreFromHeaders(req: AuthRequest, res?: any): Promise<boole
     };
     
     req.session.employee = sessionEmployee;
-    req.session.restoreKey = newRestoreKey;
-    
-    if (res) res.setHeader('X-New-Restore-Key', newRestoreKey);
+    req.session.restoreKey = restoreKey;
     
     req.employee = sessionEmployee;
     return true;

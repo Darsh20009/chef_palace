@@ -77,13 +77,13 @@ export default function PayrollManagementPage() {
   // Live payroll calculation (always fetched but only used when no snapshot exists)
   const { data: liveData, isLoading: isLoadingLive } = useQuery<PayrollReport>({
     queryKey: ["/api/payroll/report", month, year],
-    queryFn: () => fetch(`/api/payroll/report?month=${month}&year=${year}`).then(r => r.json()),
+    queryFn: () => fetch(`/api/payroll/report?month=${month}&year=${year}`, { credentials: 'include' }).then(r => r.json()),
   });
 
   // Check for existing frozen snapshot
   const { data: snapshots = [], isLoading: isLoadingSnapshot } = useQuery<PayrollSnapshot[]>({
     queryKey: ["/api/payroll/snapshots", month, year],
-    queryFn: () => fetch(`/api/payroll/snapshots?month=${month}&year=${year}`).then(r => r.json()),
+    queryFn: () => fetch(`/api/payroll/snapshots?month=${month}&year=${year}`, { credentials: 'include' }).then(r => r.json()),
   });
 
   const snapshot: PayrollSnapshot | undefined = snapshots[0];
@@ -157,7 +157,7 @@ export default function PayrollManagementPage() {
 
   return (
     <PlanGate feature="payrollManagement">
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto p-4 md:p-6 max-w-5xl">
 
         {/* Header */}

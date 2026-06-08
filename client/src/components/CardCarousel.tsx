@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { LoyaltyCard } from "@shared/schema";
 import { brand } from "@/lib/brand";
+import { useTranslate } from "@/lib/useTranslate";
 
 interface CardCarouselProps {
   cards: LoyaltyCard[];
@@ -12,6 +13,7 @@ interface CardCarouselProps {
 }
 
 export default function CardCarousel({ cards, activeCard, onSelectCard }: CardCarouselProps) {
+  const tc = useTranslate();
   const [direction, setDirection] = useState(0);
 
   if (cards.length <= 1) {
@@ -54,8 +56,8 @@ export default function CardCarousel({ cards, activeCard, onSelectCard }: CardCa
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-bold text-amber-100">بطاقاتك</h3>
-        <span className="text-sm text-amber-400/70">{currentIndex + 1} من {cards.length}</span>
+        <h3 className="text-lg font-bold text-amber-100">{tc("بطاقاتك", "Your Cards")}</h3>
+        <span className="text-sm text-amber-400/70">{currentIndex + 1} {tc("من", "of")} {cards.length}</span>
       </div>
 
       <div className="relative h-64 md:h-72">
@@ -87,26 +89,26 @@ export default function CardCarousel({ cards, activeCard, onSelectCard }: CardCa
               </div>
 
               <div className="relative z-10 space-y-2">
-                <p className="text-sm opacity-75">رقم البطاقة</p>
+                <p className="text-sm opacity-75">{tc("رقم البطاقة", "Card #")}</p>
                 <p className="font-mono text-lg tracking-wider font-bold">
                   {activeCard.cardNumber.replace(/(.{4})/g, '$1 ').trim()}
                 </p>
                 <p className="text-xs opacity-60 mt-4">
-                  {activeCard.customerName || "عميل مميز"}
+                  {activeCard.customerName || tc("عميل مميز", "Valued Member")}
                 </p>
               </div>
 
               <div className="relative z-10 grid grid-cols-3 gap-2 text-center">
                 <div className="bg-white/10 rounded-lg p-2 backdrop-blur">
-                  <p className="text-xs opacity-70">اختام</p>
+                  <p className="text-xs opacity-70">{tc("اختام", "Stamps")}</p>
                   <p className="font-bold text-lg">{activeCard.stamps % 6}</p>
                 </div>
                 <div className="bg-white/10 rounded-lg p-2 backdrop-blur">
-                  <p className="text-xs opacity-70">مجاني</p>
+                  <p className="text-xs opacity-70">{tc("مجاني", "Free")}</p>
                   <p className="font-bold text-lg">{Math.max(0, activeCard.freeCupsEarned - activeCard.freeCupsRedeemed)}</p>
                 </div>
                 <div className="bg-white/10 rounded-lg p-2 backdrop-blur">
-                  <p className="text-xs opacity-70">نقاط</p>
+                  <p className="text-xs opacity-70">{tc("نقاط", "Points")}</p>
                   <p className="font-bold text-lg">{activeCard.points}</p>
                 </div>
               </div>

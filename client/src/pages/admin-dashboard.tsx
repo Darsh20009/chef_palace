@@ -29,7 +29,7 @@ export default function AdminDashboard() {
   const [loadingInsights, setLoadingInsights] = useState(false);
 
   useEffect(() => {
-    document.title = "لوحة تحكم الإدارة - مكان الشيف البخاري";
+    document.title = tc("لوحة تحكم الإدارة", "Admin Dashboard") + " - مكان الشيف البخاري";
     const stored = localStorage.getItem("currentEmployee");
     if (stored) {
       try { setManager(JSON.parse(stored)); } catch {}
@@ -169,7 +169,7 @@ export default function AdminDashboard() {
   );
 
   return (
-    <div className="dark flex h-screen overflow-hidden bg-[#070707]" dir="rtl" style={{ fontFamily: "'Cairo', sans-serif" }}>
+    <div className="flex h-screen overflow-hidden bg-background" dir={tc('rtl','ltr')} style={{ fontFamily: "'Cairo', sans-serif" }}>
       <ManagerSidebar
         manager={manager}
         onLogout={handleLogout}
@@ -189,8 +189,17 @@ export default function AdminDashboard() {
               <BarChart3 className="w-4 h-4" />
             </button>
             <div>
-              <h1 className="text-base font-bold text-foreground">{tc("لوحة التحكم", "Dashboard")}</h1>
-              <p className="text-xs text-muted-foreground">{tc("نظرة شاملة على أداء المطعم", "Complete cafe overview")}</p>
+              <div className="flex items-center gap-2">
+                <div className="text-foreground font-bold text-sm">{tc("مرحباً،", "Hello,")} <span className="text-[#2D9B6E]">{manager?.fullName || tc("المدير", "Manager")}</span></div>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium border ${
+                  manager?.role === 'admin' ? 'bg-purple-500/15 text-purple-400 border-purple-500/30' :
+                  manager?.role === 'owner' ? 'bg-amber-500/15 text-amber-400 border-amber-500/30' :
+                  'bg-[#2D9B6E]/15 text-[#2D9B6E] border-[#2D9B6E]/30'
+                }`}>
+                  {manager?.role === 'admin' ? tc('مدير عام', 'Admin') : manager?.role === 'owner' ? tc('مالك', 'Owner') : tc('مدير', 'Manager')}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">{tc("نظرة شاملة على أداء الكافيه", "Complete cafe overview")}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">

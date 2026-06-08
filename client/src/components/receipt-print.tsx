@@ -1,8 +1,7 @@
 import { forwardRef, useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import QRCode from "qrcode";
 import JsBarcode from "jsbarcode";
-const chefsplaceLogo = "/logo.png";
+import qiroxLogo from "@assets/qirox-logo-customer.png";
 import { brand } from "@/lib/brand";
 import SarIcon from "@/components/sar-icon";
 import { VAT_RATE } from "@/lib/constants";
@@ -12,9 +11,27 @@ interface OrderItem {
     nameAr: string;
     nameEn?: string;
     price: string;
+    availableSizes?: Array<{ nameAr: string; price: number }>;
   };
   quantity: number;
+  selectedSize?: string;
   itemDiscount?: number;
+  customization?: {
+    selectedItemAddons?: Array<{ nameAr: string; nameEn?: string; price?: number }>;
+    [key: string]: any;
+  };
+}
+
+function getItemUnitPriceForReceipt(item: OrderItem): number {
+  const stored = parseNumber((item as any).price ?? (item as any).unitPrice);
+  if (stored > 0) return stored;
+  let base = parseNumber(item.coffeeItem.price);
+  if (item.selectedSize && item.coffeeItem.availableSizes) {
+    const sz = item.coffeeItem.availableSizes.find(s => s.nameAr === item.selectedSize);
+    if (sz) base = Number(sz.price) || base;
+  }
+  const addonsTotal = (item.customization?.selectedItemAddons || []).reduce((s, a) => s + (parseNumber(a.price) || 0), 0);
+  return base + addonsTotal;
 }
 
 interface ReceiptProps {
@@ -38,17 +55,15 @@ interface ReceiptProps {
   branchName?: string;
   branchAddress?: string;
   isKitchenCopy?: boolean;
-  orderType?: string;
-  deliveryType?: string;
 }
 
-const FALLBACK_VAT = brand.taxNumber;
-const FALLBACK_COMPANY_NAME = brand.shortNameAr;
-const FALLBACK_COMPANY_NAME_EN = brand.nameEn;
-const FALLBACK_CR = brand.commercialRegister;
-const COMPANY_VAT_NAME = "شركة مكان الشيف للخدمات الغذائية"; // Added for ZATCA compliance
-const DEFAULT_BRANCH = "الفرع الرئيسي - الرياض";
-const DEFAULT_ADDRESS = "الرياض، المملكة العربية السعودية";
+const VAT_NUMBER = "312718675800003";
+const COMPANY_NAME = brand.shortNameAr;
+const COMPANY_NAME_EN = brand.nameEn;
+const COMPANY_CR = "1163184110";
+const COMPANY_VAT_NAME = "شركة مكان الشيف البخاري للخدمات الغذائية"; // Added for ZATCA compliance
+const DEFAULT_BRANCH = "الفرع الرئيسي - ينبع";
+const DEFAULT_ADDRESS = "ينبع، المملكة العربية السعودية";
 
 function generateZATCAQRCode(data: {
   sellerName: string;
@@ -115,14 +130,9 @@ function parseNumber(value: number | string | undefined): number {
 }
 
 export const ReceiptPrint = forwardRef<HTMLDivElement, ReceiptProps>(
-  ({ orderNumber, invoiceNumber, customerName, customerPhone, items, subtotal, discount, invoiceDiscount, total, paymentMethod, employeeName, tableNumber, date, branchName, branchAddress, isKitchenCopy, orderType, deliveryType }, ref) => {
+  ({ orderNumber, invoiceNumber, customerName, customerPhone, items, subtotal, discount, invoiceDiscount, total, paymentMethod, employeeName, tableNumber, date, branchName, branchAddress, isKitchenCopy }, ref) => {
     const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
     const [barcodeUrl, setBarcodeUrl] = useState<string>("");
-    const { data: bizConfig } = useQuery<any>({ queryKey: ["/api/business-config"] });
-    const VAT_NUMBER = bizConfig?.vatNumber || FALLBACK_VAT;
-    const COMPANY_CR = bizConfig?.commercialRegister || FALLBACK_CR;
-    const COMPANY_NAME = bizConfig?.tradeNameAr || FALLBACK_COMPANY_NAME;
-    const COMPANY_NAME_EN = bizConfig?.tradeNameEn || FALLBACK_COMPANY_NAME_EN;
 
     const displayOrderNumber = orderNumber;
     const totalAmount = parseNumber(total);
@@ -218,12 +228,19 @@ export const ReceiptPrint = forwardRef<HTMLDivElement, ReceiptProps>(
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((item, index) => (
+                  {items.map((item, index) => {
+                    const addons = (item.customization?.selectedItemAddons || []).map((a: any) => a.nameAr).join('، ');
+                    return (
                     <tr key={index} className="border-b border-gray-300">
-                      <td className="text-right py-2 font-bold">{item.coffeeItem.nameAr}</td>
+                      <td className="text-right py-2 font-bold">
+                        <div>{item.coffeeItem.nameAr}</div>
+                        {item.selectedSize && <div className="text-base font-normal text-gray-600">الحجم: {item.selectedSize}</div>}
+                        {addons && <div className="text-base font-normal text-gray-600">+ {addons}</div>}
+                      </td>
                       <td className="text-center py-2 text-2xl font-black">{item.quantity}</td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -240,7 +257,7 @@ export const ReceiptPrint = forwardRef<HTMLDivElement, ReceiptProps>(
         <div className="max-w-[80mm] mx-auto bg-white text-black p-3 font-sans" dir="rtl">
           <div className="text-center mb-4 pb-4 border-b-2 border-dashed border-gray-800">
             <img
-              src={chefsplaceLogo}
+              src={qiroxLogo}
               alt="مكان الشيف البخاري"
               style={{ filter: 'invert(1)', mixBlendMode: 'multiply', width: '90px', height: '90px', objectFit: 'contain', margin: '0 auto 6px' }}
             />
@@ -313,21 +330,6 @@ export const ReceiptPrint = forwardRef<HTMLDivElement, ReceiptProps>(
                   <span className="font-medium">{tableNumber}</span>
                 </div>
               )}
-              {(orderType || deliveryType) && (() => {
-                const ot = String(orderType || deliveryType || '');
-                const label = ot === 'dine-in' || ot === 'dine_in' ? 'محلي'
-                  : ot === 'pickup' || ot === 'takeaway' || ot === 'scheduled-pickup' ? 'سفري'
-                  : ot === 'delivery' ? 'توصيل'
-                  : ot === 'car-pickup' || ot === 'car_pickup' || ot === 'curbside' ? 'استلام بالسيارة'
-                  : ot === 'table' ? 'طاولة'
-                  : '';
-                return label ? (
-                  <div className="flex justify-between col-span-2">
-                    <span className="text-gray-600">نوع الطلب:</span>
-                    <span className="font-medium">{label}</span>
-                  </div>
-                ) : null;
-              })()}
             </div>
           </div>
 
@@ -343,41 +345,31 @@ export const ReceiptPrint = forwardRef<HTMLDivElement, ReceiptProps>(
               </thead>
               <tbody>
                 {items.map((item, index) => {
-                  const unitPrice = parseNumber(item.coffeeItem.price);
+                  const unitPrice = getItemUnitPriceForReceipt(item);
                   const lineTotal = unitPrice * item.quantity;
                   const itemDiscount = parseNumber(item.itemDiscount);
                   const lineAfterDiscount = lineTotal - itemDiscount;
-                  const cz: any = (item as any).customization || {};
-                  const sz = (item as any).selectedSize || cz.selectedSize || cz.size || '';
-                  const addons = (cz.selectedItemAddons || cz.selectedAddons || (item as any).selectedItemAddons || []) as any[];
-                  const noteText = (cz.notes || (item as any).notes || '').toString().trim();
+                  const addons = (item.customization?.selectedItemAddons || []).map((a: any) => a.nameAr).join('، ');
                   return (
-                    <tr key={index} className="border-b-2 border-dashed border-gray-300">
-                      <td className="py-3">
-                        <div className="font-bold text-gray-900 text-[12px]">{item.coffeeItem.nameAr}</div>
+                    <tr key={index} className="border-b border-gray-200">
+                      <td className="py-2">
+                        <div className="font-medium text-gray-900">{item.coffeeItem.nameAr}</div>
                         {item.coffeeItem.nameEn && (
                           <div className="text-[10px] text-gray-500">{item.coffeeItem.nameEn}</div>
                         )}
-                        {sz && (
-                          <div className="text-[10px] text-gray-700 mt-1">📏 الحجم: <span className="font-semibold">{sz}</span></div>
+                        {item.selectedSize && (
+                          <div className="text-[10px] text-blue-600">الحجم: {item.selectedSize}</div>
                         )}
-                        {addons.length > 0 && (
-                          <div className="text-[10px] text-gray-700 mt-1 pr-2">
-                            {addons.map((a, i) => (
-                              <div key={i}>+ {a.nameAr || a.name || ''}</div>
-                            ))}
-                          </div>
-                        )}
-                        {noteText && (
-                          <div className="text-[10px] text-gray-600 mt-1 italic">📝 {noteText}</div>
+                        {addons && (
+                          <div className="text-[10px] text-gray-500">+ {addons}</div>
                         )}
                         {itemDiscount > 0 && (
-                          <div className="text-[10px] text-green-600 mt-1">خصم: {itemDiscount.toFixed(2)}-</div>
+                          <div className="text-[10px] text-green-600">خصم: {itemDiscount.toFixed(2)}-</div>
                         )}
                       </td>
-                      <td className="text-center py-3 align-top">{item.quantity}</td>
-                      <td className="text-center py-3 align-top">{unitPrice.toFixed(2)}</td>
-                      <td className="text-left py-3 align-top font-medium">{lineAfterDiscount.toFixed(2)}</td>
+                      <td className="text-center py-2">{item.quantity}</td>
+                      <td className="text-center py-2">{unitPrice.toFixed(2)}</td>
+                      <td className="text-left py-2 font-medium">{lineAfterDiscount.toFixed(2)}</td>
                     </tr>
                   );
                 })}

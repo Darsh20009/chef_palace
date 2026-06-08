@@ -8,6 +8,7 @@ import { queryClient } from "@/lib/queryClient";
 import type { CoffeeItem } from "@shared/schema";
 import { Coffee } from "lucide-react";
 import { useTranslate } from "@/lib/useTranslate";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
 
 export default function EmployeeAvailability() {
   const { toast } = useToast();
@@ -32,13 +33,13 @@ export default function EmployeeAvailability() {
       queryClient.invalidateQueries({ queryKey: ["/api/coffee-items"] });
       toast({
         title: tc("تم التحديث", "Updated"),
-        description: tc("تم تحديث حالة الطبق بنجاح", "Item availability updated successfully"),
+        description: tc("تم تحديث حالة المشروب بنجاح", "Drink availability updated successfully"),
       });
     },
     onError: () => {
       toast({
         title: tc("خطأ", "Error"),
-        description: tc("فشل تحديث حالة الطبق", "Failed to update item status"),
+        description: tc("فشل تحديث حالة المشروب", "Failed to update drink status"),
         variant: "destructive",
       });
     }
@@ -53,15 +54,15 @@ export default function EmployeeAvailability() {
   }
 
   return (
-    <div dir="rtl" className="min-h-screen bg-gray-50 p-4 md:p-6">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-6 pb-20">
       <div className="max-w-6xl mx-auto">
         <div className="mb-6">
           <h1 className="font-amiri text-3xl font-bold text-primary flex items-center gap-2">
             <Coffee className="w-8 h-8" />
-            {tc("إدارة توفر الأطباق", "Manage Drink Availability")}
+            {tc("إدارة توفر المشروبات", "Manage Drink Availability")}
           </h1>
           <p className="text-muted-foreground mt-2">
-            {tc("تغيير حالة توفر الأطباق (متاح / نفذت الكمية / قريباً)", "Change drink availability (Available / Out of Stock / Coming Soon)")}
+            {tc("تغيير حالة توفر المشروبات (متاح / نفذت الكمية / قريباً)", "Change drink availability (Available / Out of Stock / Coming Soon)")}
           </p>
         </div>
 
@@ -119,10 +120,11 @@ export default function EmployeeAvailability() {
         {items.length === 0 && (
           <div className="text-center py-12">
             <Coffee className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground text-lg">{tc("لا توجد أطباق", "No items found")}</p>
+            <p className="text-muted-foreground text-lg">{tc("لا توجد مشروبات", "No drinks found")}</p>
           </div>
         )}
       </div>
+      <MobileBottomNav />
     </div>
   );
 }

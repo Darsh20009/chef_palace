@@ -1,144 +1,77 @@
 {
   "id": "/",
-  "name": "مكان الشيف البخاري",
-  "short_name": "مكان الشيف",
-  "description": "أشهى بخاري الرياض — اطلب الآن",
-  "start_url": "/",
+  "name": "QIROX Cafe",
+  "short_name": "QIROX",
+  "description": "اطلب مشروبك المفضل، تتبع طلبك، وجمّع نقاط الولاء مع QIROX Cafe",
+  "start_url": "/?utm_source=pwa",
   "scope": "/",
   "display": "standalone",
-  "display_override": [
-    "standalone",
-    "minimal-ui",
-    "browser"
-  ],
-  "background_color": "#0a0a0a",
-  "theme_color": "#C06520",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "background_color": "#0D0D0D",
+  "theme_color": "#2D9B6E",
   "orientation": "any",
   "lang": "ar",
   "dir": "rtl",
-  "categories": [
-    "food",
-    "productivity"
-  ],
+  "categories": ["food", "lifestyle"],
   "prefer_related_applications": false,
   "icons": [
-    {
-      "src": "/icon-16.png",
-      "sizes": "16x16",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icon-32.png",
-      "sizes": "32x32",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icon-48.png",
-      "sizes": "48x48",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icon-72.png",
-      "sizes": "72x72",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icon-96.png",
-      "sizes": "96x96",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icon-120.png",
-      "sizes": "120x120",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icon-144.png",
-      "sizes": "144x144",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icon-152.png",
-      "sizes": "152x152",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icon-167.png",
-      "sizes": "167x167",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icon-180.png",
-      "sizes": "180x180",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/logo-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/logo-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/icon-1024.png",
-      "sizes": "1024x1024",
-      "type": "image/png",
-      "purpose": "any"
-    }
+    { "src": "/icon-16.png",    "sizes": "16x16",    "type": "image/png", "purpose": "any" },
+    { "src": "/icon-32.png",    "sizes": "32x32",    "type": "image/png", "purpose": "any" },
+    { "src": "/icon-48.png",    "sizes": "48x48",    "type": "image/png", "purpose": "any" },
+    { "src": "/icon-72.png",    "sizes": "72x72",    "type": "image/png", "purpose": "any" },
+    { "src": "/icon-96.png",    "sizes": "96x96",    "type": "image/png", "purpose": "any" },
+    { "src": "/icon-120.png",   "sizes": "120x120",  "type": "image/png", "purpose": "any" },
+    { "src": "/icon-144.png",   "sizes": "144x144",  "type": "image/png", "purpose": "any" },
+    { "src": "/icon-152.png",   "sizes": "152x152",  "type": "image/png", "purpose": "any" },
+    { "src": "/icon-167.png",   "sizes": "167x167",  "type": "image/png", "purpose": "any" },
+    { "src": "/icon-180.png",   "sizes": "180x180",  "type": "image/png", "purpose": "any" },
+    { "src": "/logo-192.png",   "sizes": "192x192",  "type": "image/png", "purpose": "any maskable" },
+    { "src": "/logo-512.png",   "sizes": "512x512",  "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-1024.png",  "sizes": "1024x1024","type": "image/png", "purpose": "any" }
   ],
   "screenshots": [
     {
-      "src": "/logo-192.png",
+      "src": "/logo-512.png",
       "type": "image/png",
-      "sizes": "192x192",
+      "sizes": "512x512",
       "form_factor": "narrow",
-      "label": "مكان الشيف البخاري"
+      "label": "QIROX Cafe — قائمة المشروبات"
     },
     {
       "src": "/logo-512.png",
       "type": "image/png",
       "sizes": "512x512",
       "form_factor": "wide",
-      "label": "مكان الشيف البخاري"
+      "label": "QIROX Cafe — لوحة التحكم"
     }
   ],
   "shortcuts": [
     {
-      "name": "قائمة الطعام",
+      "name": "القائمة",
       "short_name": "Menu",
-      "url": "/menu",
-      "icons": [
-        {
-          "src": "/logo-192.png",
-          "sizes": "192x192"
-        }
-      ]
+      "description": "تصفح قائمة المشروبات والطعام",
+      "url": "/menu?utm_source=shortcut",
+      "icons": [{ "src": "/logo-192.png", "sizes": "192x192" }]
     },
     {
       "name": "طلباتي",
       "short_name": "Orders",
-      "url": "/my-orders",
-      "icons": [
-        {
-          "src": "/logo-192.png",
-          "sizes": "192x192"
-        }
-      ]
+      "description": "تتبع طلباتك الحالية",
+      "url": "/my-orders?utm_source=shortcut",
+      "icons": [{ "src": "/logo-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "بطاقتي",
+      "short_name": "Card",
+      "description": "نقاط الولاء والمكافآت",
+      "url": "/my-card?utm_source=shortcut",
+      "icons": [{ "src": "/logo-192.png", "sizes": "192x192" }]
     }
-  ]
+  ],
+  "related_applications": [],
+  "share_target": {
+    "action": "/share-target",
+    "method": "GET",
+    "params": { "title": "title", "text": "text", "url": "url" }
+  }
 }

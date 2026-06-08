@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LoadingState } from "@/components/ui/states";
-import { useOrderWebSocket } from "@/lib/websocket";
+import { useRealtimeEvent, useRealtimeStatus } from "@/hooks/useRealtimeEngine";
 import { 
   Coffee, 
   CheckCircle2, 
@@ -134,12 +134,9 @@ export default function OrderStatusDisplayPage() {
     // Sound alert removed as requested by user
   };
 
-  const { isConnected } = useOrderWebSocket({
-    clientType: "display",
-    onOrderUpdated: handleOrderUpdated,
-    onOrderReady: handleOrderReady,
-    enabled: true,
-  });
+  const { connected: isConnected } = useRealtimeStatus();
+  useRealtimeEvent("order_updated", handleOrderUpdated);
+  useRealtimeEvent("order_ready",   handleOrderReady);
 
   const orders = ordersData || [];
   const inProgressOrders = orders.filter(o => o.status === "in_progress" || o.status === "preparing");
@@ -182,14 +179,14 @@ export default function OrderStatusDisplayPage() {
 
   if (isLoading) {
     return (
-      <div dir="rtl" className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <LoadingState message={tc("جاري تحميل الطلبات...", "Loading orders...")} />
       </div>
     );
   }
 
   return (
-    <div dir="rtl" className={`min-h-screen bg-background ${isFullscreen ? 'p-8' : 'p-6'}`}>
+    <div className={`min-h-screen bg-background ${isFullscreen ? 'p-8' : 'p-6'}`}>
       <div className={`mx-auto ${isFullscreen ? 'max-w-none' : 'max-w-7xl'}`}>
         <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
           <div className="flex items-center gap-4">

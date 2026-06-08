@@ -1,4 +1,5 @@
 import { useState, memo, useMemo } from "react";
+import SarIcon from "@/components/sar-icon";
 import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useCartStore } from "@/lib/cart-store";
 import { getCoffeeImage } from "@/lib/coffee-data-clean";
 import { Plus, Eye, ChevronDown, Check } from "lucide-react";
+import { useTranslate } from "@/lib/useTranslate";
 import type { CoffeeItem } from "@shared/schema";
 import CoffeeStrengthBadge from "@/components/coffee-strength-badge";
 import DrinkCustomizationDialog, { type DrinkCustomization } from "./drink-customization-dialog";
@@ -24,6 +26,7 @@ interface CoffeeCardProps {
 function CoffeeCard({ item, variants = [] }: CoffeeCardProps) {
   const [, setLocation] = useLocation();
   const { addToCart } = useCartStore();
+  const tc = useTranslate();
   const [isAnimating, setIsAnimating] = useState(false);
   const [isCustomizing, setIsCustomizing] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<CoffeeItem>(item);
@@ -67,7 +70,7 @@ function CoffeeCard({ item, variants = [] }: CoffeeCardProps) {
       return (
         <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center z-20">
           <Badge className="bg-red-600 text-white text-base py-2 px-6 rounded-full shadow-2xl border-2 border-white/20">
-            نفذت الكمية
+            {tc("نفذت الكمية", "Out of Stock")}
           </Badge>
         </div>
       );
@@ -76,7 +79,7 @@ function CoffeeCard({ item, variants = [] }: CoffeeCardProps) {
       return (
         <div className="absolute inset-0 bg-primary/20 backdrop-blur-[1px] flex items-center justify-center z-20">
           <Badge className="bg-blue-600 text-white text-base py-2 px-6 rounded-full shadow-2xl border-2 border-white/20">
-            قريباً
+            {tc("قريباً", "Coming Soon")}
           </Badge>
         </div>
       );
@@ -88,7 +91,7 @@ function CoffeeCard({ item, variants = [] }: CoffeeCardProps) {
         return (
           <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-[1px] flex items-center justify-center z-20">
             <Badge className="bg-destructive text-destructive-foreground text-base py-2 px-6 rounded-full shadow-2xl border-2 border-white/20">
-              غير متوفر حالياً
+              {tc("غير متوفر حالياً", "Currently Unavailable")}
             </Badge>
           </div>
         );
@@ -120,19 +123,14 @@ function CoffeeCard({ item, variants = [] }: CoffeeCardProps) {
           />
 
           <div className="absolute top-2 sm:top-3 left-2 sm:left-3 flex flex-col gap-1.5 sm:gap-2 z-30">
-            {selectedVariant.availabilityStatus === 'new' || (selectedVariant as any).isNewProduct === 1 ? (
-              <Badge className="bg-purple-600 text-white border-purple-400 animate-pulse shadow-lg text-[10px] sm:text-xs">
-                جديد ✨
-              </Badge>
-            ) : null}
-            {((selectedVariant as any).isBestSeller === true) && (
-              <Badge className="bg-orange-500 text-white text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full shadow-lg flex items-center gap-1">
-                🔥 الأكثر طلباً
+            {selectedVariant.availabilityStatus === 'new' && (
+              <Badge className="bg-purple-600 text-white border-purple-400 animate-pulse shadow-lg">
+                {tc("جديد", "New")}
               </Badge>
             )}
             {allVariants.length > 1 && (
-              <Badge variant="secondary" className="bg-primary/20 text-primary border-primary/30 text-[10px] sm:text-xs">
-                {allVariants.length} خيارات
+              <Badge variant="secondary" className="bg-primary/20 text-primary border-primary/30">
+                {allVariants.length} {tc("خيارات", "options")}
               </Badge>
             )}
             {discount > 0 && (
@@ -141,7 +139,7 @@ function CoffeeCard({ item, variants = [] }: CoffeeCardProps) {
                 className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-xs sm:text-sm font-bold px-2 sm:px-3 py-0.5 sm:py-1 rounded-full shadow-lg glow-effect"
                 data-testid={`badge-discount-${selectedVariant.id}`}
               >
-                خصم {discount}%
+                {tc("خصم", "Off")} {discount}%
               </Badge>
             )}
           </div>
@@ -211,11 +209,11 @@ function CoffeeCard({ item, variants = [] }: CoffeeCardProps) {
             <div className="text-right">
               {selectedVariant.oldPrice && (
                 <div className="price-old text-xs sm:text-sm text-muted-foreground">
-                  {selectedVariant.oldPrice} ريال
+                  {selectedVariant.oldPrice} <SarIcon size={12} />
                 </div>
               )}
               <div className="text-primary font-bold text-lg sm:text-xl md:text-2xl font-amiri">
-                {displayPrice} ريال
+                {displayPrice} <SarIcon size={16} />
               </div>
             </div>
 
@@ -230,16 +228,16 @@ function CoffeeCard({ item, variants = [] }: CoffeeCardProps) {
             >
               <Plus className="w-3 h-3 sm:w-4 sm:h-4 ml-1" />
               <span className="hidden sm:inline">
-                {selectedVariant.availabilityStatus === 'out_of_stock' ? ' نفذت الكمية' :
-                selectedVariant.availabilityStatus === 'coming_soon' ? ' قريباً' :
-                selectedVariant.availabilityStatus === 'temporarily_unavailable' ? ' غير متوفر' :
-                isAnimating ? ' تم الإضافة ' : 'تخصيص'}
+                {selectedVariant.availabilityStatus === 'out_of_stock' ? tc(' نفذت الكمية', ' Out of Stock') :
+                selectedVariant.availabilityStatus === 'coming_soon' ? tc(' قريباً', ' Coming Soon') :
+                selectedVariant.availabilityStatus === 'temporarily_unavailable' ? tc(' غير متوفر', ' Unavailable') :
+                isAnimating ? tc(' تم الإضافة ', ' Added ') : tc('تخصيص', 'Customize')}
               </span>
               <span className="sm:hidden">
-                {selectedVariant.availabilityStatus === 'out_of_stock' ? 'نفذ' :
-                selectedVariant.availabilityStatus === 'coming_soon' ? 'قريباً' :
+                {selectedVariant.availabilityStatus === 'out_of_stock' ? tc('نفذ', 'Out') :
+                selectedVariant.availabilityStatus === 'coming_soon' ? tc('قريباً', 'Soon') :
                 selectedVariant.availabilityStatus === 'temporarily_unavailable' ? '⏸' :
-                isAnimating ? '' : 'تخصيص'}
+                isAnimating ? '' : tc('تخصيص', 'Customize')}
               </span>
             </Button>
           </div>

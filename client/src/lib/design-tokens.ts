@@ -96,6 +96,24 @@ export const designTokens = {
       border: 'border-red-500/30',
       label: 'ملغي',
     },
+    delivered: {
+      bg: 'bg-teal-500/20',
+      text: 'text-teal-600 dark:text-teal-400',
+      border: 'border-teal-500/30',
+      label: 'تم التسليم',
+    },
+    received: {
+      bg: 'bg-emerald-600/20',
+      text: 'text-emerald-700 dark:text-emerald-400',
+      border: 'border-emerald-600/30',
+      label: 'تم الاستلام',
+    },
+    suspended: {
+      bg: 'bg-yellow-500/20',
+      text: 'text-yellow-700 dark:text-yellow-400',
+      border: 'border-yellow-500/30',
+      label: 'معلق',
+    },
     refunded: {
       bg: 'bg-gray-500/20',
       text: 'text-gray-600 dark:text-gray-400',
@@ -140,21 +158,27 @@ export const ORDER_STATUSES = [
   'payment_confirmed',
   'in_progress',
   'ready',
+  'delivered',
+  'received',
   'completed',
   'cancelled',
+  'suspended',
   'refunded',
 ] as const;
 
 export type OrderStatus = typeof ORDER_STATUSES[number];
 
 export const ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  pending: ['confirmed', 'payment_confirmed', 'cancelled'],
-  confirmed: ['payment_confirmed', 'in_progress', 'cancelled'],
-  payment_confirmed: ['in_progress', 'cancelled'],
-  in_progress: ['ready', 'cancelled'],
-  ready: ['completed', 'cancelled'],
+  pending: ['confirmed', 'payment_confirmed', 'in_progress', 'cancelled', 'suspended'],
+  confirmed: ['payment_confirmed', 'in_progress', 'cancelled', 'suspended'],
+  payment_confirmed: ['in_progress', 'cancelled', 'suspended'],
+  in_progress: ['ready', 'cancelled', 'suspended'],
+  ready: ['delivered', 'completed', 'cancelled'],
+  delivered: ['received', 'completed', 'cancelled'],
+  received: ['completed'],
   completed: ['refunded'],
   cancelled: [],
+  suspended: ['pending', 'cancelled'],
   refunded: [],
 };
 

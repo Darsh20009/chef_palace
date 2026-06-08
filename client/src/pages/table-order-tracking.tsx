@@ -198,7 +198,7 @@ export default function TableOrderTracking() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="text-lg">{tc("جاري التحميل...", "Loading...")}</div>
         </div>
@@ -208,7 +208,7 @@ export default function TableOrderTracking() {
 
   if (!order) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="max-w-md">
           <CardHeader>
             <CardTitle>{tc("طلب غير موجود", "Order Not Found")}</CardTitle>
@@ -227,7 +227,7 @@ export default function TableOrderTracking() {
   const canCancel = currentStatus === "pending";
 
   return (
-    <div className="min-h-screen bg-background p-4" dir="rtl">
+    <div className="min-h-screen bg-background p-4">
       <div className="max-w-2xl mx-auto space-y-6">
         <Card>
           <CardHeader>
@@ -323,7 +323,7 @@ export default function TableOrderTracking() {
                 {tc("إلغاء الطلب", "Cancel Order")}
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent dir="rtl">
+            <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>{tc("هل أنت متأكد؟", "Are you sure?")}</AlertDialogTitle>
                 <AlertDialogDescription>

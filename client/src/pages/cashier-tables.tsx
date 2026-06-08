@@ -381,7 +381,7 @@ export default function CashierTables() {
 
   if (!employeeBranchId && !isAdminUser) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="max-w-md">
           <CardHeader>
             <CardTitle>{tc("خطأ", "Error")}</CardTitle>
@@ -396,7 +396,7 @@ export default function CashierTables() {
 
   if (isAdminUser && !selectedBranchId) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4" dir="rtl">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="max-w-md">
           <CardHeader>
             <CardTitle>{tc("اختر الفرع", "Select Branch")}</CardTitle>
@@ -430,7 +430,7 @@ export default function CashierTables() {
   const activeBranchId = selectedBranchId || employeeBranchId;
 
   return (
-    <div className="min-h-screen bg-background pb-16 sm:pb-0" dir="rtl">
+    <div className="min-h-screen bg-background pb-16 sm:pb-0">
       <div className="max-w-7xl mx-auto p-4 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -640,7 +640,7 @@ export default function CashierTables() {
 
         {/* Reserve Dialog */}
         <Dialog open={reserveDialogOpen} onOpenChange={setReserveDialogOpen}>
-          <DialogContent className="sm:max-w-md bg-[#11936c]" dir="rtl">
+          <DialogContent className="sm:max-w-md bg-[#11936c]">
             <DialogHeader>
               <DialogTitle>
                 {tc("حجز طاولة", "Reserve Table")} {selectedTable?.tableNumber}

@@ -71,7 +71,7 @@ export default function AdvancedAnalyticsPage() {
 
   const { data, isLoading, refetch } = useQuery<AnalyticsResponse>({
     queryKey: ["/api/analytics/advanced", period],
-    queryFn: () => fetch(`/api/analytics/advanced?period=${period}`).then(r => r.json()),
+    queryFn: () => fetch(`/api/analytics/advanced?period=${period}`, { credentials: 'include' }).then(r => r.json()),
   });
 
   const summary = data?.summary;
@@ -112,7 +112,7 @@ export default function AdvancedAnalyticsPage() {
 
   return (
     <PlanGate feature="advancedAnalytics">
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto p-4 md:p-6 max-w-7xl">
         <div className="flex items-center justify-between gap-4 mb-6">
           <Button variant="ghost" onClick={() => setLocation("/manager/dashboard")} className="text-muted-foreground hover:text-foreground" data-testid="btn-back">
@@ -348,7 +348,7 @@ export default function AdvancedAnalyticsPage() {
                       <CardContent className="p-4 text-center">
                         <p className="text-muted-foreground text-sm">متوسط طلبات / موظف</p>
                         <p className="text-3xl font-bold text-cyan-400 mt-2">
-                          {Math.round(employeePerformance.reduce((s,e) => s + e.orders, 0) / employeePerformance.length)}
+                          {employeePerformance.length > 0 ? Math.round(employeePerformance.reduce((s,e) => s + e.orders, 0) / employeePerformance.length) : 0}
                         </p>
                       </CardContent>
                     </Card>

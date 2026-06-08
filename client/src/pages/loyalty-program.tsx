@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { PlanGate } from "@/components/plan-gate";
+import SarIcon from "@/components/sar-icon";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -188,7 +189,7 @@ export default function LoyaltyProgram() {
 
   // Export CSV
   const exportCSV = () => {
-    const headers = ["الاسم", "رقم الجوال", "النقاط", "الطوابع", "المستوى", "الأطباق المجانية", "تاريخ الإنشاء"];
+    const headers = ["الاسم", "رقم الجوال", "النقاط", "الطوابع", "المستوى", "المشروبات المجانية", "تاريخ الإنشاء"];
     const rows = cards.map(c => [
       c.customerName || "",
       c.phoneNumber || "",
@@ -210,7 +211,7 @@ export default function LoyaltyProgram() {
 
   return (
     <PlanGate feature="loyaltyProgram">
-    <div dir="rtl" className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background border-b">
         <div className="max-w-5xl mx-auto flex items-center justify-between px-4 py-3">
@@ -262,7 +263,7 @@ export default function LoyaltyProgram() {
             <CardContent className="pt-4 pb-4 text-center">
               <Coffee className="w-6 h-6 text-purple-600 mx-auto mb-1" />
               <p className="text-2xl font-black text-purple-600">{totalFreeCupsRedeemed}</p>
-              <p className="text-xs text-muted-foreground">{tc("وجبات مجانية", "Free Dishes")}</p>
+              <p className="text-xs text-muted-foreground">{tc("مشروبات مجانية", "Free Drinks")}</p>
             </CardContent>
           </Card>
         </div>
@@ -438,7 +439,7 @@ export default function LoyaltyProgram() {
                         <p className="text-xs text-muted-foreground">مثال: 0.05 = 20 نقطة = ريال واحد</p>
                       </div>
                       <div className="space-y-2">
-                        <Label className="font-bold">نقاط للحصول على وجبة مجانية</Label>
+                        <Label className="font-bold">نقاط للحصول على مشروب مجاني</Label>
                         <Input
                           type="number"
                           min="1"
@@ -446,7 +447,7 @@ export default function LoyaltyProgram() {
                           onChange={(e) => setPointsForFreeDrink(e.target.value)}
                           data-testid="input-points-free-drink"
                         />
-                        <p className="text-xs text-muted-foreground">عدد النقاط اللازمة للحصول على وجبة مجانية</p>
+                        <p className="text-xs text-muted-foreground">عدد النقاط اللازمة للحصول على مشروب مجاني</p>
                       </div>
                     </div>
 
@@ -454,9 +455,9 @@ export default function LoyaltyProgram() {
                     <div className="bg-primary/5 border border-primary/10 rounded-xl p-4 space-y-2">
                       <p className="font-bold text-sm">معاينة الإعدادات</p>
                       <div className="text-sm space-y-1 text-muted-foreground">
-                        <p>• العميل الذي ينفق <span className="font-bold text-foreground">100 ريال</span> يكسب <span className="font-bold text-primary">{(100 * Number(pointsEarnedPerSar || 1)).toFixed(0)} نقطة</span></p>
-                        <p>• <span className="font-bold text-foreground">100 نقطة</span> = <span className="font-bold text-primary">{(100 * Number(pointsValueInSar || 0.05)).toFixed(2)} ريال</span> خصم</p>
-                        <p>• الوجبة المجانية تتطلب <span className="font-bold text-foreground">{pointsForFreeDrink} نقطة</span></p>
+                        <p>• العميل الذي ينفق <span className="font-bold text-foreground">100 <SarIcon size={11} /></span> يكسب <span className="font-bold text-primary">{(100 * Number(pointsEarnedPerSar || 1)).toFixed(0)} نقطة</span></p>
+                        <p>• <span className="font-bold text-foreground">100 نقطة</span> = <span className="font-bold text-primary">{(100 * Number(pointsValueInSar || 0.05)).toFixed(2)} <SarIcon size={11} /></span> خصم</p>
+                        <p>• المشروب المجاني يتطلب <span className="font-bold text-foreground">{pointsForFreeDrink} نقطة</span></p>
                       </div>
                     </div>
 
@@ -502,7 +503,7 @@ export default function LoyaltyProgram() {
 
       {/* Adjust Points Dialog */}
       <Dialog open={isAdjustOpen} onOpenChange={setIsAdjustOpen}>
-        <DialogContent className="max-w-sm" dir="rtl">
+        <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Coins className="w-5 h-5 text-primary" />
@@ -584,7 +585,7 @@ export default function LoyaltyProgram() {
 
       {/* Transaction History Dialog */}
       <Dialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col" dir="rtl">
+        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <History className="w-5 h-5 text-primary" />
@@ -642,7 +643,7 @@ export default function LoyaltyProgram() {
 
       {/* Create Card Dialog */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="max-w-sm" dir="rtl">
+        <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="w-5 h-5 text-primary" />

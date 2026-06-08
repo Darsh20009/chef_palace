@@ -23,8 +23,8 @@ export interface CustomerProfile {
  createdAt: string;
  cardNumber?: string;
  stamps: number;
- freeDishes: number;
- usedFreeDishes?: number;
+ freeDrinks: number;
+ usedFreeDrinks?: number;
  cardDesign?: CardDesignPreference;
  cardPassword?: string;
  cardBalance?: number;
@@ -177,7 +177,7 @@ export const customerStorage = {
       email,
       cardNumber: assignCardNumber(),
       stamps: 0,
-      freeDishes: 0,
+      freeDrinks: 0,
       createdAt: new Date().toISOString()
     };
     localStorage.setItem(STORAGE_KEYS.CUSTOMER_PROFILE, JSON.stringify(profile));
@@ -203,29 +203,29 @@ export const customerStorage = {
     this.setGuestMode(false);
   },
 
-  // Add stamp (6 stamps = free meal)
+  // Add stamp (6 stamps = free drink)
   addStamp(): CustomerProfile | null {
     const profile = this.getProfile();
     if (!profile) return null;
 
     let newStamps = profile.stamps + 1;
-    let newFreeDishes = profile.freeDishes;
+    let newFreeDrinks = profile.freeDrinks;
 
-    // Every 6 stamps = 1 free meal
+    // Every 6 stamps = 1 free drink
     if (newStamps >= 6) {
-      newFreeDishes += 1;
-      newStamps = 0; // Reset stamps after getting free meal
+      newFreeDrinks += 1;
+      newStamps = 0; // Reset stamps after getting free drink
     }
 
-    return this.updateProfile({ stamps: newStamps, freeDishes: newFreeDishes });
+    return this.updateProfile({ stamps: newStamps, freeDrinks: newFreeDrinks });
   },
 
-  // Use free meal
+  // Use free drink
   useFreeDrink(): CustomerProfile | null {
     const profile = this.getProfile();
-    if (!profile || profile.freeDishes <= 0) return null;
+    if (!profile || profile.freeDrinks <= 0) return null;
 
-    return this.updateProfile({ freeDishes: profile.freeDishes - 1 });
+    return this.updateProfile({ freeDrinks: profile.freeDrinks - 1 });
   },
 
   // Orders Management
@@ -244,7 +244,7 @@ export const customerStorage = {
     orders.unshift(newOrder); // Add to beginning
     localStorage.setItem(STORAGE_KEYS.CUSTOMER_ORDERS, JSON.stringify(orders));
 
-    // Add stamp if customer is registered and not used free meal
+    // Add stamp if customer is registered and not used free drink
     if (!this.isGuestMode() && !order.usedFreeDrink) {
       this.addStamp();
     }

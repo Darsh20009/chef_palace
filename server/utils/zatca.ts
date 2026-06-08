@@ -3,8 +3,8 @@ import { TaxInvoiceModel, type ITaxInvoice } from '@shared/schema';
 
 // ZATCA Configuration from environment variables for security
 const VAT_RATE = parseFloat(process.env.VAT_RATE || '0.15');
-const SELLER_NAME = process.env.ZATCA_SELLER_NAME || "مكان الشيف البخاري";
-const SELLER_NAME_EN = process.env.ZATCA_SELLER_NAME_EN || "Chef Bukhari's Place";
+const SELLER_NAME = process.env.ZATCA_SELLER_NAME || 'مكان الشيف البخاري';
+const SELLER_NAME_EN = process.env.ZATCA_SELLER_NAME_EN || 'مكان الشيف البخاري';
 const SELLER_VAT_NUMBER = process.env.ZATCA_VAT_NUMBER || '311234567890003';
 const SELLER_ADDRESS = process.env.ZATCA_SELLER_ADDRESS || 'الرياض، المملكة العربية السعودية';
 const SELLER_CR_NUMBER = process.env.ZATCA_CR_NUMBER || '';

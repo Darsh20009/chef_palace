@@ -42,26 +42,26 @@ export default function AdminNotificationsPage() {
     mutationFn: (data: typeof broadcastForm) =>
       apiRequest("POST", "/api/notifications/broadcast", data),
     onSuccess: () => {
-      toast({ title: "✅ تم الإرسال", description: "تم إرسال الإشعار بنجاح لجميع المشتركين" });
+      toast({ title: tc("✅ تم الإرسال","✅ Sent"), description: tc("تم إرسال الإشعار بنجاح لجميع المشتركين","Notification sent to all subscribers") });
       setBroadcastForm({ title: "", body: "", link: "/", target: "all" });
       refetch();
     },
-    onError: () => toast({ title: "❌ خطأ", description: "فشل إرسال الإشعار", variant: "destructive" }),
+    onError: () => toast({ title: tc("❌ خطأ","❌ Error"), description: tc("فشل إرسال الإشعار","Failed to send notification"), variant: "destructive" }),
   });
 
   const userNotifMutation = useMutation({
     mutationFn: (data: typeof userForm) =>
       apiRequest("POST", "/api/notifications/send", data),
     onSuccess: () => {
-      toast({ title: "✅ تم الإرسال", description: "تم إرسال الإشعار للمستخدم" });
+      toast({ title: tc("✅ تم الإرسال","✅ Sent"), description: tc("تم إرسال الإشعار للمستخدم","Notification sent to user") });
       setUserForm({ userId: "", userType: "customer", title: "", body: "", link: "/" });
     },
-    onError: () => toast({ title: "❌ خطأ", description: "فشل إرسال الإشعار", variant: "destructive" }),
+    onError: () => toast({ title: tc("❌ خطأ","❌ Error"), description: tc("فشل إرسال الإشعار","Failed to send notification"), variant: "destructive" }),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => apiRequest("DELETE", `/api/notifications/${id}`, {}),
-    onSuccess: () => { refetch(); toast({ title: "تم الحذف" }); },
+    onSuccess: () => { refetch(); toast({ title: tc("تم الحذف","Deleted") }); },
   });
 
   const [promoForm, setPromoForm] = useState({ title: "", body: "", url: "/menu" });
@@ -69,16 +69,22 @@ export default function AdminNotificationsPage() {
   const promoMutation = useMutation({
     mutationFn: (data: typeof promoForm) => apiRequest("POST", "/api/push/send-promo", data),
     onSuccess: () => {
-      toast({ title: "✅ تم الإرسال", description: "تم إرسال العرض لجميع المشتركين عبر Web Push" });
+      toast({ title: tc("✅ تم الإرسال","✅ Sent"), description: tc("تم إرسال العرض لجميع المشتركين عبر Web Push","Promo sent to all subscribers via Web Push") });
       setPromoForm({ title: "", body: "", url: "/menu" });
     },
-    onError: () => toast({ title: "❌ خطأ في الإرسال", variant: "destructive" }),
+    onError: () => toast({ title: tc("❌ خطأ في الإرسال","❌ Send Error"), variant: "destructive" }),
   });
 
   const summarMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/push/admin-summary", {}),
-    onSuccess: () => toast({ title: "✅ تم إرسال التقرير", description: "تم إرسال ملخص اليوم لجميع المديرين" }),
-    onError: () => toast({ title: "❌ فشل إرسال التقرير", variant: "destructive" }),
+    onSuccess: () => toast({ title: tc("✅ تم إرسال التقرير","✅ Report Sent"), description: tc("تم إرسال ملخص اليوم لجميع المديرين","Daily summary sent to all managers") }),
+    onError: () => toast({ title: tc("❌ فشل إرسال التقرير","❌ Report Send Failed"), variant: "destructive" }),
+  });
+
+  const testPushMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/push/test", {}),
+    onSuccess: (data: any) => toast({ title: data.success ? "✅ اختبار ناجح" : "⚠️ لا يوجد اشتراك", description: data.message }),
+    onError: () => toast({ title: tc("❌ خطأ في الاختبار","❌ Test Failed"), variant: "destructive" }),
   });
 
   const markReadMutation = useMutation({
@@ -104,7 +110,7 @@ export default function AdminNotificationsPage() {
   const unreadCount = notifications.filter((n) => !n.isRead || n.isRead === 0).length;
 
   return (
-    <div className="min-h-screen bg-muted/30" dir="rtl">
+    <div className="min-h-screen bg-muted/30">
       <div className="max-w-6xl mx-auto p-4 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -287,21 +293,21 @@ export default function AdminNotificationsPage() {
             {/* Schedule Overview */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {[
-                { time: "3:30 ص", label: "تذكير السحور", note: "رمضان فقط", icon: "🌙" },
-                { time: "8:00 ص", label: "تحية الصباح", note: "مخصصة بالطبق المفضل", icon: "☀️" },
-                { time: "10:30 ص", label: "تشجيع منتصف الصباح", note: "أيام الأسبوع فقط", icon: "☕" },
-                { time: "5:30 م", label: "تذكير الإفطار", note: "رمضان فقط", icon: "🌅" },
-                { time: "9:00 م", label: "رسالة المساء", note: "مع وجبتك المفضلة", icon: "🌙" },
-                { time: "11:00 م", label: "تقرير الإدارة", note: "الإيرادات + المخزون", icon: "📊" },
+                { timeAr: "3:30 ص",  timeEn: "3:30 AM",  labelAr: "تذكير السحور",          labelEn: "Suhoor Reminder",     noteAr: "رمضان فقط",                  noteEn: "Ramadan only",            icon: "🌙" },
+                { timeAr: "8:00 ص",  timeEn: "8:00 AM",  labelAr: "تحية الصباح",            labelEn: "Morning Greeting",    noteAr: "مخصصة بالمشروب المفضل",     noteEn: "Personalized with fav drink", icon: "☀️" },
+                { timeAr: "10:30 ص", timeEn: "10:30 AM", labelAr: "تشجيع منتصف الصباح",    labelEn: "Mid-Morning Boost",   noteAr: "أيام الأسبوع فقط",          noteEn: "Weekdays only",           icon: "☕" },
+                { timeAr: "5:30 م",  timeEn: "5:30 PM",  labelAr: "تذكير الإفطار",          labelEn: "Iftar Reminder",      noteAr: "رمضان فقط",                  noteEn: "Ramadan only",            icon: "🌅" },
+                { timeAr: "9:00 م",  timeEn: "9:00 PM",  labelAr: "رسالة المساء",            labelEn: "Evening Message",     noteAr: "مع المشروب المفضل",         noteEn: "With fav drink",          icon: "🌙" },
+                { timeAr: "11:00 م", timeEn: "11:00 PM", labelAr: "تقرير الإدارة",           labelEn: "Management Report",   noteAr: "الإيرادات + المخزون",       noteEn: "Revenue + Inventory",     icon: "📊" },
               ].map((item) => (
-                <div key={item.time} className="flex items-center gap-2 bg-background rounded-lg p-2.5 border">
+                <div key={item.timeEn} className="flex items-center gap-2 bg-background rounded-lg p-2.5 border">
                   <span className="text-lg">{item.icon}</span>
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-bold text-primary">{item.time}</span>
-                      <span className="text-xs font-medium truncate">{item.label}</span>
+                      <span className="text-xs font-bold text-primary">{tc(item.timeAr, item.timeEn)}</span>
+                      <span className="text-xs font-medium truncate">{tc(item.labelAr, item.labelEn)}</span>
                     </div>
-                    <p className="text-[10px] text-muted-foreground">{item.note}</p>
+                    <p className="text-[10px] text-muted-foreground">{tc(item.noteAr, item.noteEn)}</p>
                   </div>
                 </div>
               ))}
@@ -330,7 +336,7 @@ export default function AdminNotificationsPage() {
                 </div>
                 <div className="space-y-2">
                   <Textarea
-                    placeholder={tc("نص الرسالة — مثال: زورونا اليوم واستمتع بخصم خاص على وجبتك المفضلة 🍛", "Message text — e.g.: Visit us today for a special discount on your favorite dish 🍛")}
+                    placeholder={tc("نص الرسالة — مثال: زورونا اليوم واحظ بخصم خاص على مشروبك المفضل 🥤", "Message text — e.g.: Visit us today for a special discount on your favorite drink 🥤")}
                     value={promoForm.body}
                     onChange={(e) => setPromoForm((f) => ({ ...f, body: e.target.value }))}
                     rows={3}
@@ -369,6 +375,21 @@ export default function AdminNotificationsPage() {
                   <BarChart3 className="h-4 w-4 text-primary" />
                 )}
                 {tc("إرسال تقرير اليوم الآن", "Send Today's Report Now")}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => testPushMutation.mutate()}
+                disabled={testPushMutation.isPending}
+                data-testid="button-test-push"
+                className="flex items-center gap-2 border-primary text-primary hover:bg-primary/10"
+              >
+                {testPushMutation.isPending ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Bell className="h-4 w-4" />
+                )}
+                {tc("اختبار Push لجهازي", "Test Push on My Device")}
               </Button>
               <p className="text-xs text-muted-foreground self-center">
                 {tc("يشمل عدد الطلبات، الإيرادات، الأكثر مبيعاً، وتنبيهات المخزون", "Includes order count, revenue, top sellers, and inventory alerts")}

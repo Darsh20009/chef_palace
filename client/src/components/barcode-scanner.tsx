@@ -162,7 +162,7 @@ export default function BarcodeScanner({
     lookupCard(manualCode);
   };
 
-  const availableFreeDishes = result?.card 
+  const availableFreeDrinks = result?.card 
     ? Math.max(0, (result.card.freeCupsEarned || 0) - (result.card.freeCupsRedeemed || 0))
     : 0;
 
@@ -270,10 +270,10 @@ export default function BarcodeScanner({
                 <div className="text-xs text-muted-foreground">أختام</div>
               </div>
 
-              <div className={`text-center p-2 rounded-md ${availableFreeDishes > 0 ? 'bg-green-100 dark:bg-green-900/30' : 'bg-background'}`}>
+              <div className={`text-center p-2 rounded-md ${availableFreeDrinks > 0 ? 'bg-green-100 dark:bg-green-900/30' : 'bg-background'}`}>
                 <Gift className="w-4 h-4 mx-auto mb-1 text-green-600" />
-                <div className={`font-bold ${availableFreeDishes > 0 ? 'text-green-600' : ''}`} data-testid="text-result-free">
-                  {availableFreeDishes}
+                <div className={`font-bold ${availableFreeDrinks > 0 ? 'text-green-600' : ''}`} data-testid="text-result-free">
+                  {availableFreeDrinks}
                 </div>
                 <div className="text-xs text-muted-foreground">مجاني</div>
               </div>
@@ -285,9 +285,9 @@ export default function BarcodeScanner({
               </div>
             </div>
 
-            {availableFreeDishes > 0 && (
+            {availableFreeDrinks > 0 && (
               <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-lg text-center text-green-700 dark:text-green-400 font-bold">
-                هذا العميل لديه {availableFreeDishes} وجبة مجانية!
+                هذا العميل لديه {availableFreeDrinks} مشروب مجاني!
               </div>
             )}
           </div>

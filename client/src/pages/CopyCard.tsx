@@ -199,7 +199,7 @@ export default function CopyCard() {
   const totalOrders = orders.length;
   
   // حساب الأختام من جميع الطلبات (ما عدا الملغاة)
-  // كل طلب = عدد الأطباق في الطلب × ختم واحد
+  // كل طلب = عدد المشروبات في الطلب × ختم واحد
   const stamps = orders
     .filter((order: any) => order.status !== 'cancelled')
     .reduce((total: number, order: any) => {
@@ -214,7 +214,7 @@ export default function CopyCard() {
   // Calculate free cups earned from TOTAL stamps (from all orders), not just the remainder
   const freeCupsEarned = Math.floor(stampsProgress / 6);
   const freeCupsRedeemed = loyaltyCard?.freeCupsRedeemed || 0;
-  const availableFreeDishes = Math.max(0, freeCupsEarned - freeCupsRedeemed);
+  const availableFreeDrinks = Math.max(0, freeCupsEarned - freeCupsRedeemed);
   const tier = loyaltyCard?.tier || 'bronze';
   const points = loyaltyCard?.points || customer.points || 0;
   const pendingPoints = loyaltyCard?.pendingPoints || 0;
@@ -232,23 +232,23 @@ export default function CopyCard() {
     return sum + (parseFloat(order.totalAmount?.toString() || '0'));
   }, 0);
   
-  const totalDishesCount = completedOrders.reduce((total: number, order: any) => {
+  const totalDrinksCount = completedOrders.reduce((total: number, order: any) => {
     const items = Array.isArray(order.items) ? order.items : (typeof order.items === 'string' ? JSON.parse(order.items) : []);
     const drinksCount = items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
     return total + drinksCount;
   }, 0);
 
   // Calculate average price per drink, or use default if no completed orders
-  const actualAveragePricePerDrink = totalDishesCount > 0 ? Math.round((totalSpentAmount / totalDishesCount) * 10) / 10 : 20;
-  const savingsFromFreeDishes = availableFreeDishes * actualAveragePricePerDrink;
-  const totalSavings = Math.round(savingsFromFreeDishes * 100) / 100;
+  const actualAveragePricePerDrink = totalDrinksCount > 0 ? Math.round((totalSpentAmount / totalDrinksCount) * 10) / 10 : 20;
+  const savingsFromFreeDrinks = availableFreeDrinks * actualAveragePricePerDrink;
+  const totalSavings = Math.round(savingsFromFreeDrinks * 100) / 100;
   
   // Debug logging
   if (process.env.NODE_ENV === 'development') {
     console.log('CopyCard Debug:', {
       loyaltyCard: loyaltyCard ? { freeCupsEarned, freeCupsRedeemed, stamps: loyaltyCard.stamps } : 'null',
-      availableFreeDishes,
-      totalDishesCount,
+      availableFreeDrinks,
+      totalDrinksCount,
       totalSpentAmount,
       actualAveragePricePerDrink,
       totalSavings
@@ -279,7 +279,7 @@ export default function CopyCard() {
     ctx.fillStyle = '#4a3728';
     ctx.font = 'bold 48px Cairo, Arial';
     ctx.textAlign = 'right';
-    ctx.fillText("مكان الشيف البخاري", canvas.width - 50, 70);
+    ctx.fillText('مكان الشيف البخاري', canvas.width - 50, 70);
     ctx.font = '24px Georgia, serif';
     ctx.fillStyle = '#6b4f3c';
     ctx.fillText('مكان الشيف البخاري Loyalty', canvas.width - 50, 105);
@@ -875,7 +875,7 @@ export default function CopyCard() {
             <div className="mt-3 pt-3 border-t border-amber-900/20 flex justify-center gap-1.5 items-center relative z-10">
               <SarIcon />
               <span className="font-black text-lg text-amber-900">{(points / 20).toFixed(2)}</span>
-              <span className="text-xs text-amber-900/60">قيمة النقاط (ريال)</span>
+              <span className="text-xs text-amber-900/60">قيمة النقاط (<SarIcon size={10} />)</span>
             </div>
           </div>
 
@@ -913,7 +913,7 @@ export default function CopyCard() {
                 </div>
                 <div className="flex justify-between mt-1.5">
                   <span className="text-[9px] text-white/30">{points.toLocaleString()} نقطة</span>
-                  <span className="text-[9px] text-amber-400/60">{threshold.toLocaleString()} نقطة ≈ {sarValue} ريال</span>
+                  <span className="text-[9px] text-amber-400/60">{threshold.toLocaleString()} نقطة ≈ {sarValue} <SarIcon size={9} /></span>
                 </div>
               </div>
             );
@@ -927,7 +927,7 @@ export default function CopyCard() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-black text-orange-300">{pendingPoints.toLocaleString()} نقطة قيد المعالجة</p>
-                <p className="text-[10px] text-orange-400/60 mt-0.5 leading-snug">ستُضاف لرصيدك فور اكتمال طلبك • 20 نقطة = 1 ريال</p>
+                <p className="text-[10px] text-orange-400/60 mt-0.5 leading-snug">ستُضاف لرصيدك فور اكتمال طلبك • 20 نقطة = 1 <SarIcon size={9} /></p>
               </div>
             </div>
           )}
@@ -941,12 +941,12 @@ export default function CopyCard() {
             </div>
             <div className="bg-gradient-to-br from-amber-950/50 to-amber-900/30 rounded-2xl p-3 md:p-4 text-center border border-amber-500/30">
               <p className="text-xl md:text-2xl font-black text-amber-400 mb-0.5">{totalSpentAmount.toFixed(0)}</p>
-              <p className="text-[9px] md:text-[10px] text-amber-500/70 font-semibold uppercase tracking-wider">ريال</p>
+              <p className="text-[9px] md:text-[10px] text-amber-500/70 font-semibold uppercase tracking-wider"><SarIcon size={9} /></p>
               <p className="text-[8px] md:text-[9px] text-amber-500/50 mt-0.5">إجمالي الإنفاق</p>
             </div>
             <div className="bg-gradient-to-br from-violet-950/50 to-violet-900/30 rounded-2xl p-3 md:p-4 text-center border border-violet-500/30">
               <p className="text-xl md:text-2xl font-black text-violet-400 mb-0.5">{(totalSpentAmount / 20).toFixed(1)}</p>
-              <p className="text-[9px] md:text-[10px] text-violet-500/70 font-semibold uppercase tracking-wider">ريال</p>
+              <p className="text-[9px] md:text-[10px] text-violet-500/70 font-semibold uppercase tracking-wider"><SarIcon size={9} /></p>
               <p className="text-[8px] md:text-[9px] text-violet-500/50 mt-0.5">توفير ممكن</p>
             </div>
           </div>
@@ -989,7 +989,7 @@ export default function CopyCard() {
               <div className="space-y-2">
                 <div className="flex items-start gap-2 text-[11px] text-white/60">
                   <span className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 font-black text-[10px] flex-shrink-0 mt-0.5">١</span>
-                  <span>اطلب من التطبيق أو أعطِ الكاشير رقم جوالك — تُضاف نقاط لكل وجبة تطلبها</span>
+                  <span>اطلب من التطبيق أو أعطِ الكاشير رقم جوالك — تُضاف نقاط لكل مشروب تطلبه</span>
                 </div>
                 <div className="flex items-start gap-2 text-[11px] text-white/60">
                   <span className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 font-black text-[10px] flex-shrink-0 mt-0.5">٢</span>
@@ -997,7 +997,7 @@ export default function CopyCard() {
                 </div>
                 <div className="flex items-start gap-2 text-[11px] text-white/60">
                   <span className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center text-green-400 font-black text-[10px] flex-shrink-0 mt-0.5">٣</span>
-                  <span><span className="text-green-400 font-bold">20 نقطة = 1 ريال</span> يمكن خصمها من طلباتك القادمة</span>
+                  <span><span className="text-green-400 font-bold">20 نقطة = 1 <SarIcon size={10} /></span> يمكن خصمها من طلباتك القادمة</span>
                 </div>
               </div>
             </div>
@@ -1014,7 +1014,7 @@ export default function CopyCard() {
                 </div>
                 <div className="flex items-start gap-2 text-[11px] text-white/60">
                   <span className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 font-black text-[10px] flex-shrink-0 mt-0.5">٣</span>
-                  <span>تُخصم قيمة النقاط من إجمالي طلبك تلقائياً <span className="text-amber-400 font-bold">(20 نقطة = 1 ريال)</span></span>
+                  <span>تُخصم قيمة النقاط من إجمالي طلبك تلقائياً <span className="text-amber-400 font-bold">(20 نقطة = 1 <SarIcon size={10} />)</span></span>
                 </div>
               </div>
             </div>

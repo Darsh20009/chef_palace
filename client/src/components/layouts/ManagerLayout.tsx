@@ -1,5 +1,7 @@
 import { ReactNode, useEffect, useState } from "react";
 import { useLocation, Link } from "wouter";
+import { LanguageToggle } from "@/components/language-toggle";
+import { useTranslation } from "react-i18next";
 import { 
   LayoutDashboard, 
   Users, 
@@ -62,6 +64,7 @@ export function ManagerLayout({
   const [location, setLocation] = useLocation();
   const [manager, setManager] = useState<Manager | null>(null);
   const [inventoryOpen, setInventoryOpen] = useState(location.includes("/manager/inventory"));
+  const { i18n } = useTranslation();
 
   useEffect(() => {
     const storedManager = localStorage.getItem("currentManager");
@@ -110,7 +113,7 @@ export function ManagerLayout({
 
   return (
     <SidebarProvider style={sidebarStyle as React.CSSProperties}>
-      <div className="flex h-screen w-full" dir="rtl">
+      <div className="flex h-screen w-full" dir={i18n.language === "ar" ? "rtl" : "ltr"}>
         <Sidebar side="right" collapsible="icon">
           <SidebarHeader className="border-b p-4">
             <div className="flex items-center gap-3">
@@ -230,6 +233,7 @@ export function ManagerLayout({
             </div>
             {manager && (
               <div className="flex items-center gap-2">
+                <LanguageToggle />
                 <span className="text-sm text-muted-foreground hidden sm:block">
                   {manager.nameAr}
                 </span>

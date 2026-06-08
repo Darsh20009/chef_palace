@@ -7,9 +7,8 @@
  */
 
 import mongoose from "mongoose";
-import { PushSubscriptionModel, sendPushBySubscriptions, PushPayload, sendPushToEmployee } from "./push-service";
+import { PushSubscriptionModel, sendPushBySubscriptions, PushPayload } from "./push-service";
 import { fireNotifyAdmins } from "./notification-engine";
-import { OrderModel } from "@shared/schema";
 import { wsManager } from "./websocket";
 
 // ───────────────────────────────────────────────
@@ -83,7 +82,7 @@ function detectOccasion(): Occasion | null {
     return {
       name: "اليوم الوطني السعودي",
       emoji: "🇸🇦",
-      morningMsg: "كل عام وأنتم بخير بمناسبة اليوم الوطني! 🇸🇦 احتفل بيوم وطنك مع وجبة بخاري مميزة من مكان الشيف",
+      morningMsg: "كل عام وأنتم بخير بمناسبة اليوم الوطني! 🇸🇦 احتفل بيوم وطنك مع وجبة بخاري شهية من مكان الشيف البخاري",
       eveningMsg: "ليلة وطنية سعيدة! 🎆 سهرتك في ليلة اليوم الوطني ما تكتمل إلا بوجبتك المفضلة من مكان الشيف البخاري",
     };
   }
@@ -93,8 +92,8 @@ function detectOccasion(): Occasion | null {
     return {
       name: "يوم التأسيس",
       emoji: "🌟",
-      morningMsg: "يوم التأسيس مبارك! 🌟 احتفل مع فخر الانتماء لهذه الأرض الطيبة بوجبة بخاري أصيلة",
-      eveningMsg: "تمسّك بجذورك وتذكّر عراقة هذه الأرض 🌿 وسهرتك ما تكتمل إلا بوجبة دافئة من مكان الشيف البخاري",
+      morningMsg: "يوم التأسيس مبارك! 🌟 اشرب قهوتك مع فخر الانتماء لهذه الأرض الطيبة ☕",
+      eveningMsg: "تمسّك بجذورك وتذكّر عراقة هذه الأرض 🌿 وسهرتك ما تكتمل إلا بكوب دافئ من مكان الشيف البخاري",
     };
   }
 
@@ -107,8 +106,8 @@ function detectOccasion(): Occasion | null {
     return {
       name: "عيد الفطر المبارك",
       emoji: "🌙",
-      morningMsg: "عيد فطر مبارك! 🌙✨ كل عام وأنتم بأتم الصحة والسعادة، زورونا واتمتعوا بأشهى وجبات البخاري",
-      eveningMsg: "مساء العيد فرحة ومسرة ✨ لا تنسوا زيارتنا وتمتعوا بوجبتكم الشهية من مكان الشيف البخاري 🍚",
+      morningMsg: "عيد فطر مبارك! 🌙✨ كل عام وأنتم بأتم الصحة والسعادة، زورونا واحتفلوا معنا بأجمل الوجبات",
+      eveningMsg: "مساء العيد فرحة ومسرة ✨ لا تنسوا زيارتنا وتحلية سهرتكم بطبق رائع من مكان الشيف البخاري 🥤",
     };
   }
 
@@ -117,8 +116,8 @@ function detectOccasion(): Occasion | null {
     return {
       name: "عيد الأضحى المبارك",
       emoji: "🐑",
-      morningMsg: "عيد أضحى مبارك! 🐑 كل عام وأنتم بخير، استقبلوا يوم العيد بأشهى بخاري لحم من مكان الشيف 🍚",
-      eveningMsg: "سهرة العيد أجمل مع العيلة والأهل 💛 ووجبتكم المفضلة من مكان الشيف البخاري في انتظاركم 🍖",
+      morningMsg: "عيد أضحى مبارك! 🐑 كل عام وأنتم بخير، استقبلوا يوم العيد بقهوة صافية من مكان الشيف البخاري ☕",
+      eveningMsg: "سهرة العيد أجمل مع العيلة والأهل 💛 ومشروبكم المفضل من مكان الشيف البخاري في انتظاركم 🥤",
     };
   }
 
@@ -130,33 +129,33 @@ function detectOccasion(): Occasion | null {
 // ───────────────────────────────────────────────
 
 const MORNING_MESSAGES = [
-  { title: "☀️ صباح أحلى", body: "صباح الخير! يومك يبدأ بشكل أفضل مع وجبة بخاري شهية — مكان الشيف البخاري في انتظارك 🍚" },
-  { title: "🌅 صباح النور", body: "صباحك نور 🌟 ابدأ يومك بنشاط مع وجبة مميزة من مكان الشيف البخاري" },
-  { title: "🍚 وقت الغداء", body: "لا يفوتك أشهى بخاري في الرياض! مكان الشيف البخاري حاضر لك بأفضل الوجبات" },
-  { title: "🌸 صباح السعادة", body: "كل صباح جديد فرصة جديدة 💛 ووجبة من مكان الشيف البخاري تجعله أجمل" },
-  { title: "✨ صباح مميز", body: "صباحك ما يكتمل إلا بوجبة بخاري مصنوعة بحب من مكان الشيف البخاري 🍖" },
+  { title: "☀️ صباح أحلى", body: "صباح الخير! يومك يبدأ بشكل أفضل مع وجبتك المفضلة ☕ — مكان الشيف البخاري في انتظارك" },
+  { title: "🌅 صباح النور", body: "صباحك نور وقهوتك أنور 🌟 ابدأ يومك بنشاط مع وجبة مميزة من مكان الشيف البخاري" },
+  { title: "☕ وقت القهوة", body: "لا تبدأ يومك بدون قهوتك! ☕ مكان الشيف البخاري حاضر لك بأشهى الوجبات" },
+  { title: "🌸 صباح السعادة", body: "كل صباح جديد فرصة جديدة 💛 وقهوة من مكان الشيف البخاري تجعله أجمل" },
+  { title: "✨ صباح مميز", body: "صباحك ما يكتمل إلا بكوب قهوة مصنوع بحب من مكان الشيف البخاري ☕" },
 ];
 
 const RAMADAN_SUHOOR_MESSAGES = [
-  { title: "🌙 وقت السحور", body: "لا تفوّت السحور! 🌙 مكان الشيف البخاري يرحب بك في وقت السحور بوجباتنا الشهية" },
+  { title: "🌙 وقت السحور", body: "لا تفوّت السحور! 🌙 مكان الشيف البخاري يرحب بك في وقت السحور بوجباتنا الدافئة" },
   { title: "⭐ تسحّر معنا", body: "السحور بركة ومشروب من مكان الشيف البخاري يجعله أحلى 🌟 تعال تسحّر معنا" },
 ];
 
 const RAMADAN_IFTAR_MESSAGES = [
-  { title: "🌙 قرب وقت الإفطار", body: "بعد لحظات ينادي المؤذن 🌙 ومكان الشيف البخاري جاهز بأشهى وجبات البخاري لإفطارك" },
+  { title: "🌙 قرب وقت الإفطار", body: "بعد لحظات ينادي المؤذن 🌙 ومكان الشيف البخاري جاهز بأجمل الوجبات لإفطارك" },
   { title: "🌅 استعد للإفطار", body: "على مائدة الإفطار، لا ينقصها إلا وجبتك المفضلة من مكان الشيف البخاري ✨" },
 ];
 
 const EVENING_MESSAGES = [
-  { title: "🌙 مساء الخير", body: "ما جاك نوم؟ 😄 سهرتك ما تحلى إلا بوجبتك المفضلة من مكان الشيف البخاري 🥤" },
+  { title: "🌙 مساء الخير", body: "ما جاك نوم؟ 😄 سهرتك ما تحلى إلا بوجبتك المفضلة من عندنا في مكان الشيف البخاري 🥤" },
   { title: "✨ سهرة حلوة", body: "الليل طويل والسهرة أحلى بوجبة مميزة من مكان الشيف البخاري ☕ نحن في انتظارك" },
-  { title: "🌟 سهرتك ناقصة", body: "شعورك إن سهرتك ناقص شي؟ 😊 الجواب عندنا في مكان الشيف البخاري — وجبتك المفضلة جاهزة" },
-  { title: "🌙 الليل دا لك", body: "بعد يوم طويل، كافئ نفسك بوجبتك المفضلة 🍚 مكان الشيف البخاري مفتوح لك الآن" },
+  { title: "🌟 سهرتك ناقصة", body: "شعورك إن سهرتك ناقص شي؟ 😊 الجواب عندنا في مكان الشيف البخاري — وجبتك المفضلة جاهز" },
+  { title: "🌙 الليل دا لك", body: "بعد يوم طويل، كافئ نفسك بوجبتك المفضلة 🥤 مكان الشيف البخاري مفتوح لك الآن" },
 ];
 
 const WEEKEND_MESSAGES = [
-  { title: "🎉 نهاية الأسبوع", body: "ويك إند سعيد! 🎉 زُر مكان الشيف البخاري مع أهلك وأصحابك واستمتعوا بأشهى الوجبات" },
-  { title: "☕ يوم عطلة", body: "يوم إجازة ما يكتمل إلا بوجبة هادئة من مكان الشيف البخاري 🍚 — تعال وخذ وقتك" },
+  { title: "🎉 نهاية الأسبوع", body: "ويك إند سعيد! 🎉 زُر مكان الشيف البخاري مع أهلك وأصحابك واستمتعوا بأجمل الوجبات" },
+  { title: "☕ يوم عطلة", body: "يوم إجازة ما يكتمل إلا بوجبة بخاري لذيذة من مكان الشيف البخاري ☕ — تعال وخذ وقتك" },
 ];
 
 function pickRandom<T>(arr: T[]): T {
@@ -186,7 +185,7 @@ async function buildPersonalizedMessage(
       const favDrink = result[0]._id as string;
       return {
         title: baseTitle,
-        body: baseBody.replace("مشروبك المفضل", `${favDrink} المميز`) + ` 🎯`,
+        body: baseBody.replace("وجبتك المفضلة", `${favDrink} المميز`) + ` 🎯`,
       };
     }
   } catch {
@@ -419,7 +418,7 @@ export function startSmartScheduler() {
         if (!isWeekend) {
           await broadcastToCustomers({
             title: "☕ وقتك الآن!",
-            body: "الساعة العاشرة والنص — وقت مثالي لوجبتك المفضلة من مكان الشيف البخاري 🍚",
+            body: "الساعة العاشرة والنص — وقت مثالي لوجبتك المفضلة من مكان الشيف البخاري ☕",
             url: "/menu",
             tag: "midmorning-nudge",
             type: "promo",
@@ -450,7 +449,7 @@ export function startSmartScheduler() {
       else if (hour === 21 && minute === 0 && !alreadySent("evening") && !occasion) {
         markSent("evening");
         const msg = ramadan
-          ? { title: "🌙 ليلة رمضانية", body: "ليلة رمضان تستحق مشروباً مميزاً ✨ زُر مكان الشيف البخاري واستمتع بأجواء رمضان مع وجباتنا الشهية" }
+          ? { title: "🌙 ليلة رمضانية", body: "ليلة رمضان تستحق مشروباً مميزاً ✨ زُر مكان الشيف البخاري واستمتع بأجواء رمضان" }
           : pickRandom(EVENING_MESSAGES);
         await broadcastToCustomers({ ...msg, url: "/menu", tag: "evening-greeting", type: "promo" }, true);
       }
@@ -467,9 +466,8 @@ export function startSmartScheduler() {
         await checkAndAlertLowStock();
       }
 
-      // ─── DINE-IN APPOINTMENT PRE-PREP ALERT (every minute) ───
-      // Alert kitchen + POS 10 minutes before customer's appointment time.
-      await checkDineInAppointments();
+      // ─── CAR ORDER PREPARATION ALERT (every minute) ───────────────────────
+      await checkCarOrderPreparationAlerts();
 
     } catch (err) {
       console.error("[SCHEDULER] Tick error:", err);
@@ -477,106 +475,56 @@ export function startSmartScheduler() {
   }, 60_000); // every minute
 }
 
-// ───────────────────────────────────────────────
-// Dine-in appointment pre-prep alert
-// Fires once per order ~10 min before arrivalTime
-// ───────────────────────────────────────────────
-
-async function checkDineInAppointments() {
+// ── Car Order 10-Minute Preparation Alert ────────────────────────────────────
+async function checkCarOrderPreparationAlerts() {
   try {
-    if (mongoose.connection.readyState !== 1) return;
-
+    const OrderModel = mongoose.models["Order"] || mongoose.model("Order", new mongoose.Schema({}, { strict: false }));
     const now = new Date();
-    const saudi = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Riyadh" }));
+    const nowSaudi = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Riyadh" }));
+    const currentHHMM = `${nowSaudi.getHours().toString().padStart(2, "0")}:${nowSaudi.getMinutes().toString().padStart(2, "0")}`;
 
-    // Dine-in (any status) + car-pickup/table (only if pre-paid)
-    const orders = await OrderModel.find({
-      $and: [
-        { arrivalTime: { $exists: true, $ne: "" } },
-        { status: { $in: ["pending", "payment_confirmed", "confirmed"] } },
-        { prepAlertSentAt: { $exists: false } },
-        {
-          $or: [
-            { orderType: { $in: ["dine-in", "dine_in"] } },
-            {
-              orderType: { $in: ["car-pickup", "car_pickup", "curbside", "table"] },
-              paymentStatus: "paid",
-            },
-          ],
-        },
-      ],
-    }).limit(100).lean();
+    // Find car_pickup orders with an arrivalTime set, not yet alerted, still active
+    const pendingCarOrders = await OrderModel.find({
+      $or: [{ orderType: "car_pickup" }, { orderType: "car-pickup" }, { carPickup: true }],
+      arrivalTime: { $exists: true, $nin: [null, ""] },
+      preparationAlertSent: { $ne: true },
+      status: { $in: ["pending", "payment_confirmed", "confirmed", "in_progress"] },
+    }).lean();
 
-    for (const order of orders as any[]) {
-      const arrival = String(order.arrivalTime || "");
-      const m = arrival.match(/^(\d{1,2}):(\d{2})/);
-      if (!m) continue;
-      const arrH = parseInt(m[1], 10);
-      const arrMin = parseInt(m[2], 10);
+    for (const order of pendingCarOrders) {
+      const arrivalTime = (order as any).arrivalTime as string;
+      if (!arrivalTime || !/^\d{2}:\d{2}$/.test(arrivalTime)) continue;
 
-      // Try same-day arrival; if it's already in the past by >2h, assume next day (handles midnight rollover)
-      let arrivalDate = new Date(saudi);
-      arrivalDate.setHours(arrH, arrMin, 0, 0);
-      let diffMin = Math.round((arrivalDate.getTime() - saudi.getTime()) / 60000);
-      if (diffMin < -120) {
-        arrivalDate = new Date(arrivalDate.getTime() + 24 * 60 * 60 * 1000);
-        diffMin = Math.round((arrivalDate.getTime() - saudi.getTime()) / 60000);
+      const [arrH, arrM] = arrivalTime.split(":").map(Number);
+      const arrivalToday = new Date(nowSaudi);
+      arrivalToday.setHours(arrH, arrM, 0, 0);
+
+      const diffMs = arrivalToday.getTime() - nowSaudi.getTime();
+      const diffMin = Math.floor(diffMs / 60000);
+
+      // Trigger when 10 minutes or less before arrival (but not past it)
+      if (diffMin <= 10 && diffMin >= -5) {
+        await OrderModel.updateOne({ _id: (order as any)._id }, { $set: { preparationAlertSent: true } });
+
+        // Broadcast via WebSocket manager
+        wsManager.broadcastCarPreparationAlert({
+          _id: String((order as any)._id),
+          orderNumber: (order as any).orderNumber,
+          dailyNumber: (order as any).dailyNumber,
+          customerName: (order as any).customerName,
+          customerPhone: (order as any).customerPhone,
+          arrivalTime,
+          carType: (order as any).carType,
+          carColor: (order as any).carColor,
+          plateNumber: (order as any).plateNumber || (order as any).carPlate,
+          items: (order as any).items,
+          totalAmount: (order as any).totalAmount,
+          diffMin,
+        });
+        console.log(`[SCHEDULER] 🚗 Car order prep alert sent: #${(order as any).orderNumber} arrives at ${arrivalTime} (${diffMin} min)`);
       }
-      if (diffMin < 9 || diffMin > 11) continue;
-
-      // Persistent idempotency — atomic flag write so restarts/parallel ticks won't double-fire
-      const claimed = await OrderModel.updateOne(
-        { _id: order._id, prepAlertSentAt: { $exists: false } },
-        { $set: { prepAlertSentAt: new Date() } }
-      );
-      if (!claimed.modifiedCount) continue;
-
-      const branchId = order.branchId || "all";
-      const orderNumber = order.orderNumber || `#${order.dailyNumber || ""}`;
-      const ot = String(order.orderType || "");
-      const typeLabel =
-        ot === "dine-in" || ot === "dine_in" ? "محلي"
-        : ot === "car-pickup" || ot === "car_pickup" || ot === "curbside" ? "استلام بالسيارة"
-        : ot === "table" ? `طاولة${order.tableNumber ? ` ${order.tableNumber}` : ""}`
-        : "";
-      const title = "🔔 ابدأ التحضير الآن";
-      const body = `الطلب ${orderNumber}${typeLabel ? ` (${typeLabel})` : ""} — موعد العميل بعد 10 دقائق (${arrival})`;
-
-      // Push to employees on this branch (kitchen + POS share employee subs)
-      try {
-        await sendPushToEmployee(branchId, {
-          title,
-          body,
-          tag: `prep-alert-${order._id}`,
-          type: "new_order",
-          url: "/employee/kitchen",
-          data: { orderId: String(order._id), orderNumber, arrivalTime: arrival },
-        } as PushPayload);
-      } catch (e) {
-        console.error("[SCHEDULER] prep-alert push failed:", e);
-      }
-
-      // Real-time toast to kitchen + POS via WebSocket
-      // Broadcast to branch AND to "all" so kitchen displays without branchId still receive it
-      try {
-        const payload = {
-          type: "prep_alert",
-          orderId: String(order._id),
-          orderNumber,
-          arrivalTime: arrival,
-          branchId,
-          title,
-          body,
-        };
-        wsManager.broadcastToBranch(branchId, payload);
-        if (branchId !== "all") wsManager.broadcastToBranch("all", payload);
-      } catch (e) {
-        console.error("[SCHEDULER] prep-alert broadcast failed:", e);
-      }
-
-      console.log(`[SCHEDULER] 🔔 Prep alert sent for order ${orderNumber} (arrival ${arrival})`);
     }
   } catch (err) {
-    console.error("[SCHEDULER] checkDineInAppointments error:", err);
+    console.error("[SCHEDULER] Car prep alert error:", err);
   }
 }

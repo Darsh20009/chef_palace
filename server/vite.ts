@@ -27,11 +27,11 @@ function injectStaffManifest(html: string): string {
     )
     .replace(
       /<meta name="apple-mobile-web-app-title" content="[^"]*">/,
-      "<meta name=\"apple-mobile-web-app-title\" content=\"مكان الشيف البخاري\">"
+      '<meta name="apple-mobile-web-app-title" content="مكان الشيف البخاري">'
     )
     .replace(
       /<meta name="application-name" content="[^"]*">/,
-      "<meta name=\"application-name\" content=\"مكان الشيف البخاري\">"
+      '<meta name="application-name" content="مكان الشيف — الإدارة">'
     )
     .replace(
       /href="\/apple-touch-icon\.png[^"]*"/g,

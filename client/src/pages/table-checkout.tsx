@@ -195,7 +195,7 @@ export default function TableCheckout() {
 
   if (!tableId || !tableNumber || cart.length === 0) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4" dir="rtl">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6 text-center">
             <Coffee className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
@@ -209,7 +209,7 @@ export default function TableCheckout() {
   }
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen bg-background">
       <div className="max-w-2xl mx-auto p-4 sm:p-6 lg:p-8 min-h-screen flex flex-col justify-center">
         <div className="mb-8 text-center bg-card p-8 rounded-2xl border border-border shadow-sm">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-background rounded-full mb-4 shadow-md">

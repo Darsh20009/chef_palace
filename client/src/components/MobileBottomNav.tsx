@@ -43,7 +43,7 @@ export function MobileBottomNav({ employeeRole, onLogout }: MobileBottomNavProps
       onLogout();
     } else {
       localStorage.removeItem("currentEmployee");
-      localStorage.removeItem("chefsplace-restore-key");
+      localStorage.removeItem("qirox-restore-key");
       window.location.href = "/employee/gateway";
     }
   };
@@ -122,6 +122,15 @@ export function MobileBottomNav({ employeeRole, onLogout }: MobileBottomNavProps
             </Link>
           );
         })}
+
+        <button
+          onClick={handleLogout}
+          className="flex flex-col items-center gap-0.5 min-w-[56px] px-2 py-1.5 rounded-xl text-[10px] whitespace-nowrap shrink-0 transition-all active:scale-95 text-destructive hover:bg-destructive/10 mr-auto"
+          data-testid="mobile-nav-logout"
+        >
+          <LogOut className="h-5 w-5" />
+          <span className="leading-none mt-0.5">{t('mobile_nav.logout')}</span>
+        </button>
 
         <Sheet open={showMenu} onOpenChange={setShowMenu}>
           <SheetTrigger asChild>

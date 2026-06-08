@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Bell, Loader2, Share2, PlusSquare, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
-const chefsplaceLogo = "/logo.png";
+import qiroxLogo from "@assets/qirox-logo-customer.png";
+import { useTranslate } from "@/lib/useTranslate";
 
 function isIOS() {
   return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
@@ -20,6 +21,7 @@ interface NotificationPermissionBannerProps {
 export function NotificationPermissionBanner({
   onRequestPermission,
 }: NotificationPermissionBannerProps) {
+  const tc = useTranslate();
   const [visible, setVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [denied, setDenied] = useState(false);
@@ -92,10 +94,10 @@ export function NotificationPermissionBanner({
           </div>
           <div className="px-6 pt-3 pb-6">
             <div className="flex items-center gap-3 mb-4">
-              <img src={chefsplaceLogo} alt="مكان الشيف" className="w-14 h-14 rounded-2xl shadow-md" />
+              <img src={qiroxLogo} alt="مكان الشيف البخاري" className="w-14 h-14 rounded-2xl shadow-md" />
               <div>
-                <h2 className="text-lg font-black text-gray-900">فعّل الإشعارات</h2>
-                <p className="text-xs text-gray-500 mt-0.5">أضف التطبيق لشاشتك الرئيسية أولاً</p>
+                <h2 className="text-lg font-black text-gray-900">{tc("فعّل الإشعارات", "Enable Notifications")}</h2>
+                <p className="text-xs text-gray-500 mt-0.5">{tc("أضف التطبيق لشاشتك الرئيسية أولاً", "Add the app to your Home Screen first")}</p>
               </div>
             </div>
 
@@ -156,8 +158,8 @@ export function NotificationPermissionBanner({
           <div className="flex flex-col items-center text-center mb-6">
             <div className="relative mb-3">
               <img
-                src={chefsplaceLogo}
-                alt="مكان الشيف"
+                src={qiroxLogo}
+                alt="مكان الشيف البخاري"
                 className="w-20 h-20 rounded-3xl shadow-xl border border-white/10"
               />
               <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-primary rounded-full flex items-center justify-center shadow-lg border-2 border-[#111827]">

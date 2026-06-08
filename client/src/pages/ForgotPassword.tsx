@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PhoneInput } from "@/components/phone-input";
 import { Mail, Phone, User, ArrowRight, Eye, EyeOff, ArrowLeft } from "lucide-react";
-const chefsplaceLogoStaff = "/logo.png";
+import qiroxLogoStaff from "@assets/qirox-logo-customer.png";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslate } from "@/lib/useTranslate";
@@ -204,12 +204,12 @@ export default function ForgotPassword() {
     <div
       className="min-h-screen flex items-center justify-center p-4"
       style={{ background: "linear-gradient(135deg, hsl(165, 15%, 97%) 0%, hsl(165, 12%, 88%) 50%, hsl(165, 15%, 97%) 100%)" }}
-      dir="rtl"
+     
     >
       <Card className="w-full max-w-md border-primary/30 bg-card backdrop-blur shadow-xl">
         <CardHeader className="space-y-3 text-center pb-4">
           <div className="flex justify-center mb-1">
-            <img src={chefsplaceLogoStaff} alt="مكان الشيف البخاري" className="h-12 object-contain" />
+            <img src={qiroxLogoStaff} alt="مكان الشيف" className="h-12 object-contain" />
           </div>
           <CardTitle className="text-2xl font-bold text-foreground">{titles[step]}</CardTitle>
           <CardDescription className="text-muted-foreground">{descs[step]}</CardDescription>

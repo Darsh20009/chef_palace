@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useTranslate } from "@/lib/useTranslate";
+import SarIcon from "@/components/sar-icon";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -388,6 +389,23 @@ export default function ManagerEmployees() {
  </Button>
  </div>
  </div>
+
+ <button
+   onClick={() => setLocation("/manager/employees/hub")}
+   data-testid="link-employees-hub"
+   className="w-full mb-6 group bg-gradient-to-l from-primary/10 via-primary/5 to-white border border-primary/30 hover:border-primary rounded-2xl p-4 flex items-center justify-between transition-all hover:shadow-md"
+ >
+   <div className="flex items-center gap-3 text-right">
+     <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
+       <svg className="h-6 w-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+     </div>
+     <div>
+       <p className="font-bold text-base text-gray-900">المركز الموحد للموظفين</p>
+       <p className="text-xs text-gray-600">حضور · مهام · مخالفات · أداء · صدارة المبيعات · صلاحيات · رواتب</p>
+     </div>
+   </div>
+   <svg className="h-5 w-5 text-primary group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+ </button>
 
  <div className="mb-6">
  <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -788,8 +806,8 @@ export default function ManagerEmployees() {
 
  {(employee as any).salary !== undefined && (employee as any).salary > 0 && (
  <div className="flex items-center gap-2 text-gray-300">
- <span className="text-accent text-xs font-bold">ر.س</span>
- <span className="text-sm">الراتب: {(employee as any).salary.toLocaleString()} ريال</span>
+ <SarIcon size={11} />
+ <span className="text-sm">الراتب: {(employee as any).salary.toLocaleString()} <SarIcon size={11} /></span>
  </div>
  )}
 

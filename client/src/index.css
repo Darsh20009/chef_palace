@@ -119,7 +119,7 @@ a, button, input, select, textarea, label, [role="button"] {
   --elevate-2: rgba(0,0,0, .08);
 
   /* ═══════════════════════════════════════════════════════════════
-     🎨 مكان الشيف البخاري - Elegant Modern Design
+     🎨 BLACK ROSE - Elegant Modern Design
      Light Grey Background with Dark Accents
      ═══════════════════════════════════════════════════════════════ */
   
@@ -242,7 +242,7 @@ a, button, input, select, textarea, label, [role="button"] {
   --elevate-2: rgba(255,255,255, .09);
 
   /* ═══════════════════════════════════════════════════════════════
-     🌙 DARK MODE - Modern Night Theme
+     🌙 BLACK ROSE DARK MODE - Modern Night Theme
      ═══════════════════════════════════════════════════════════════ */
   
   --background: 220 25% 10%; /* Deep navy */
@@ -254,10 +254,10 @@ a, button, input, select, textarea, label, [role="button"] {
 
   --sidebar: 180 40% 12%; /* Deep teal sidebar */
   --sidebar-foreground: 0 0% 92%; /* Light text */
-  --sidebar-border: 180 35% 16%; /* Dark teal border */
+  --sidebar-border: 180 35% 16%; /* Dark border */
   --sidebar-primary: 160 55% 50%; /* Bright green */
   --sidebar-primary-foreground: 0 0% 100%; /* White text */
-  --sidebar-accent: 180 30% 20%; /* Elevated teal accent */
+  --sidebar-accent: 180 30% 20%; /* Elevated accent */
   --sidebar-accent-foreground: 0 0% 90%; /* Light text */
   --sidebar-ring: 160 55% 50%; /* Green ring */
 

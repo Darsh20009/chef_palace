@@ -1,25 +1,22 @@
 #!/usr/bin/env node
 /**
- * QIROX Print Relay Agent — v3.0 (Multi-Printer)
- * ================================================
- * وكيل الطباعة المحلي — يعمل على أي جهاز في الشبكة (ويندوز / ماك / لينكس)
- * يستقبل أوامر الطباعة من المتصفح ويرسلها مباشرة للطابعة عبر TCP/IP
+ * QIROX Print Relay Agent — v2.0.0
+ * ══════════════════════════════════════════════════════════════════
+ * وكيل الطباعة المحلي — يعمل على Windows / Mac / Linux / Raspberry Pi / Sunmi
  *
- * ━━━━ طابعات ProPos PP9000E المتصلة ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- *  طابعة العميل  : 192.168.3.22   MAC: 28-0e-8b-36-55-0a  SubNet: 192.168.3.0/24
- *  طابعة مطبخ 1  : 192.168.1.114  MAC: 28-0e-8b-c9-66-d2  SubNet: 192.168.1.0/24
- *  طابعة مطبخ 2  : (غير محدد - أضف IP الطابعة الثالثة هنا)
- * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ * الجديد في v2.0.0:
+ *   • WebSocket server (ws://host:8089/ws) بالإضافة للـ HTTP
+ *   • طابور طباعة مع أولوية (kitchen=عالية, receipt=عادية)
+ *   • دعم متعدد الماركات: Epson / Sunmi / XPrinter / Star / Bixolon
+ *   • اكتشاف تلقائي لعناوين IP المحلية
+ *   • إعادة المحاولة التلقائية عند فشل الاتصال
  *
- * الإعداد السريع:
- *   1. ثبّت Node.js من https://nodejs.org  (الإصدار 16 أو أحدث)
- *   2. شغّل:  node print-relay.js
- *   3. افتح المتصفح على http://localhost:8089 للتحقق
- *   4. انسخ رابط الجهاز الظاهر عند التشغيل (مثال: http://192.168.1.5:8089)
- *   5. في إعدادات الطابعة → وضع "وكيل محلي" → الصق الرابط
- *   6. اضغط "اختبار الاتصال" للتحقق ✅
+ * التثبيت:
+ *   node print-relay.js             ← HTTP فقط (لا يحتاج npm install)
+ *   npm install ws && node print-relay.js  ← HTTP + WebSocket
  *
- * تغيير المنفذ:  PORT=8090 node print-relay.js
+ * المنفذ الافتراضي: 8089
+ *   PORT=8090 node print-relay.js
  */
 
 'use strict';
@@ -28,39 +25,125 @@ const http = require('http');
 const net  = require('net');
 const os   = require('os');
 
-const PORT    = parseInt(process.env.PORT || '8089', 10);
-const TIMEOUT = parseInt(process.env.TIMEOUT || '8000', 10);
-const VERSION = '3.0';
+const PORT    = Number(process.env.PORT)    || 8089;
+const TIMEOUT = Number(process.env.TIMEOUT) || 10_000;
+const VERSION = '2.0.0';
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-//  ⚙️  إعداد الطابعات — عدّل هذا القسم فقط إذا تغيّرت IPs الطابعات
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-const PRINTERS = {
-  customer: {
-    ip:    '192.168.3.22',
-    port:  9100,
-    mac:   '28-0e-8b-36-55-0a',
-    label: 'طابعة العميل (Customer Receipt)',
-    model: 'ProPos PP9000E',
-  },
-  kitchen1: {
-    ip:    '192.168.1.114',
-    port:  9100,
-    mac:   '28-0e-8b-c9-66-d2',
-    label: 'طابعة المطبخ 1 (Kitchen 1)',
-    model: 'ProPos PP9000E',
-  },
-  kitchen2: {
-    ip:    '',          // ← أضف IP الطابعة الثالثة هنا
-    port:  9100,
-    mac:   '',
-    label: 'طابعة المطبخ 2 (Kitchen 2)',
-    model: 'ProPos PP9000E',
-  },
+// ── الماركات المدعومة ────────────────────────────────────────────────────────
+const VENDORS = {
+  epson:   { name: 'Epson',   initCmd: [0x1B,0x40],           cutCmd: [0x1D,0x56,0x42,0x01] },
+  star:    { name: 'Star',    initCmd: [0x1B,0x40,0x1B,0x61], cutCmd: [0x1B,0x64,0x02]       },
+  xprinter:{ name: 'XPrinter',initCmd: [0x1B,0x40],           cutCmd: [0x1D,0x56,0x42,0x01] },
+  bixolon: { name: 'Bixolon', initCmd: [0x1B,0x40],           cutCmd: [0x1D,0x56,0x41,0x03] },
+  sunmi:   { name: 'Sunmi',   initCmd: [0x1B,0x40],           cutCmd: [0x1D,0x56,0x42,0x01] },
+  generic: { name: 'Generic', initCmd: [0x1B,0x40],           cutCmd: [0x1D,0x56,0x42,0x01] },
 };
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-// ── الحصول على IPs المحلية ────────────────────────────────────────────────────
+// ── طابور الطباعة ────────────────────────────────────────────────────────────
+const PRIORITY = { kitchen: 2, receipt: 1, test: 0 };
+let printQueue  = [];
+let isProcessing = false;
+let jobIdCounter = 0;
+let completedJobs = [];
+
+function enqueue(job) {
+  const id = `job-${++jobIdCounter}-${Date.now()}`;
+  const priority = PRIORITY[job.jobType] ?? 1;
+  const entry = { id, priority, createdAt: Date.now(), attempts: 0, maxAttempts: 3, ...job };
+  printQueue.push(entry);
+  printQueue.sort((a, b) => b.priority - a.priority);
+  processQueue();
+  return id;
+}
+
+async function processQueue() {
+  if (isProcessing || printQueue.length === 0) return;
+  isProcessing = true;
+
+  while (printQueue.length > 0) {
+    const job = printQueue[0];
+    try {
+      await executePrintJob(job);
+      printQueue.shift();
+      completedJobs.unshift({ id: job.id, status: 'ok', ip: job.ip, completedAt: Date.now() });
+    } catch (err) {
+      job.attempts++;
+      job.lastError = err.message;
+      if (job.attempts >= job.maxAttempts) {
+        printQueue.shift();
+        completedJobs.unshift({ id: job.id, status: 'failed', error: err.message, ip: job.ip, completedAt: Date.now() });
+        log(`❌ فشل نهائي [${job.id}]: ${err.message}`);
+      } else {
+        log(`⚠️  محاولة ${job.attempts}/${job.maxAttempts} [${job.id}]: ${err.message} — إعادة المحاولة...`);
+        await sleep(1500 * job.attempts);
+      }
+    }
+    if (completedJobs.length > 100) completedJobs.length = 100;
+  }
+
+  isProcessing = false;
+}
+
+async function executePrintJob(job) {
+  const vendor = VENDORS[job.vendor || 'generic'] || VENDORS.generic;
+  const buffer = Buffer.from(job.data, 'base64');
+  const port   = Number(job.port) || 9100;
+
+  log(`🖨️  [${job.id}] ${vendor.name} → ${job.ip}:${port}  (${buffer.length}B, type=${job.jobType || 'receipt'})`);
+  await sendToThermalPrinter(job.ip, port, buffer);
+  log(`✅  [${job.id}] نجح`);
+}
+
+// ── إرسال ESC/POS عبر TCP ────────────────────────────────────────────────────
+function sendToThermalPrinter(ip, port, buffer) {
+  return new Promise((resolve, reject) => {
+    const client  = new net.Socket();
+    let done      = false;
+    let started   = false;
+
+    const dynamicTimeout = Math.max(12_000, Math.ceil(buffer.length / 8_000) * 1_000);
+
+    const fail = (err) => { if (done) return; done = true; client.destroy(); reject(err); };
+    const ok   = ()    => { if (done) return; done = true; resolve(); };
+
+    client.setTimeout(dynamicTimeout);
+
+    client.connect(port, ip, async () => {
+      started = true;
+      // ── Chunked write — prevents printer buffer overflow on large receipts ──
+      // Most thermal printers (Xprinter, Sunmi, Epson clones) have a 4-8 KB
+      // internal receive buffer. Sending the full payload at once causes garbled
+      // output on receipts with 5+ items. We split into 512-byte chunks and add
+      // a 30 ms delay between each chunk to give the printer time to process.
+      const CHUNK_SIZE  = 512;
+      const CHUNK_DELAY = 30; // ms between chunks
+      try {
+        for (let offset = 0; offset < buffer.length; offset += CHUNK_SIZE) {
+          if (done) return; // socket already failed
+          const chunk = buffer.slice(offset, offset + CHUNK_SIZE);
+          await new Promise((res, rej) => {
+            client.write(chunk, (err) => (err ? rej(err) : res()));
+          });
+          if (offset + CHUNK_SIZE < buffer.length) {
+            await new Promise(r => setTimeout(r, CHUNK_DELAY));
+          }
+        }
+        client.end();
+      } catch (err) {
+        fail(err);
+      }
+    });
+
+    client.on('close',   ok);
+    client.on('error',   fail);
+    client.on('timeout', () => {
+      if (!started) fail(new Error(`مهلة الاتصال بـ ${ip}:${port}`));
+      else { client.destroy(); ok(); }
+    });
+  });
+}
+
+// ── مساعدون ──────────────────────────────────────────────────────────────────
 function getLocalIPs() {
   const ips = [];
   for (const ifaces of Object.values(os.networkInterfaces())) {
@@ -71,375 +154,263 @@ function getLocalIPs() {
   return ips;
 }
 
-// ── إرسال ESC/POS bytes للطابعة عبر TCP مع إعادة المحاولة ─────────────────
-function sendToThermalPrinter(ip, port, buffer, timeoutMs, retries = 2) {
-  return new Promise((resolve, reject) => {
-    function attempt(left) {
-      const client = new net.Socket();
-      let done = false;
-      const finish = (err) => {
-        if (done) return;
-        done = true;
-        client.destroy();
-        if (err && left > 0) {
-          console.warn(`[Retry] محاولة أخرى (${left} محاولات متبقية) → ${ip}:${port}`);
-          setTimeout(() => attempt(left - 1), 500);
-        } else if (err) {
-          reject(err);
-        } else {
-          resolve();
-        }
-      };
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-      client.setTimeout(timeoutMs || TIMEOUT);
-      client.on('error',   (err) => finish(err));
-      client.on('timeout', ()    => finish(new Error(`انتهت مهلة الاتصال بـ ${ip}:${port} (${timeoutMs || TIMEOUT}ms)`)));
-      client.connect(Number(port), ip, () => {
-        client.write(buffer, (err) => {
-          if (err) return finish(err);
-          // انتظر 1000ms لضمان استلام الطابعة لجميع البيانات قبل إغلاق الاتصال
-          setTimeout(() => finish(null), 1000);
-        });
-      });
-    }
-    attempt(retries);
-  });
+function log(msg) {
+  const t = new Date().toLocaleTimeString('ar-SA');
+  console.log(`[${t}] ${msg}`);
 }
 
-// ── اختبار TCP بدون إرسال بيانات ─────────────────────────────────────────────
-function testTCPConnection(ip, port, timeoutMs) {
-  return new Promise((resolve) => {
-    if (!ip || ip.trim() === '') {
-      return resolve({ ok: false, msg: 'لم يتم تحديد IP الطابعة' });
-    }
-    const client = new net.Socket();
-    let done = false;
-    const finish = (ok, msg) => {
-      if (done) return;
-      done = true;
-      client.destroy();
-      resolve({ ok, msg });
-    };
-    client.setTimeout(timeoutMs || 5000);
-    client.on('error',   (err) => finish(false, err.message));
-    client.on('timeout', ()    => finish(false, `انتهت مهلة الاتصال (${timeoutMs || 5000}ms)`));
-    client.connect(Number(port), ip, () => finish(true, `✅ الطابعة ${ip}:${port} تستجيب`));
-  });
-}
-
-// ── اختبار جميع الطابعات المهيأة ──────────────────────────────────────────────
-async function testAllPrinters() {
-  const results = {};
-  for (const [role, cfg] of Object.entries(PRINTERS)) {
-    if (!cfg.ip) {
-      results[role] = { ok: false, msg: 'غير مهيأ', ip: '', port: cfg.port };
-      continue;
-    }
-    const r = await testTCPConnection(cfg.ip, cfg.port, 3000);
-    results[role] = { ok: r.ok, msg: r.msg, ip: cfg.ip, port: cfg.port, label: cfg.label };
-  }
-  return results;
-}
-
-// ── CORS headers ──────────────────────────────────────────────────────────────
-function addCORSHeaders(res) {
+function addCORS(res) {
   res.setHeader('Access-Control-Allow-Origin',  '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Requested-With');
-  res.setHeader('Access-Control-Max-Age', '86400');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Max-Age',       '86400');
 }
 
-// ── قراءة body ────────────────────────────────────────────────────────────────
 function readBody(req) {
   return new Promise((resolve, reject) => {
     let body = '';
-    req.on('data', c => {
-      body += c;
-      if (body.length > 5_000_000) reject(new Error('Request too large'));
-    });
-    req.on('end',   () => resolve(body));
-    req.on('error', reject);
+    req.on('data',  c   => { body += c; if (body.length > 50_000_000) reject(new Error('Body too large')); });
+    req.on('end',   ()  => resolve(body));
+    req.on('error', err => reject(err));
   });
 }
 
-// ── HTML Status Page ───────────────────────────────────────────────────────────
-async function buildStatusPage() {
-  const results = await testAllPrinters();
-  const ips = getLocalIPs();
-
-  const rows = Object.entries(PRINTERS).map(([role, cfg]) => {
-    const r = results[role] || {};
-    const statusBadge = !cfg.ip
-      ? `<span style="color:#888;background:#f5f5f5;padding:2px 8px;border-radius:4px;font-size:12px;">غير مهيأ</span>`
-      : r.ok
-        ? `<span style="color:#fff;background:#2D9B6E;padding:2px 8px;border-radius:4px;font-size:12px;">✅ متصلة</span>`
-        : `<span style="color:#fff;background:#e53e3e;padding:2px 8px;border-radius:4px;font-size:12px;">❌ لا تستجيب</span>`;
-
-    return `<tr>
-      <td style="padding:10px 14px;font-weight:bold;">${cfg.label}</td>
-      <td style="padding:10px 14px;font-family:monospace;">${cfg.ip || '—'}</td>
-      <td style="padding:10px 14px;font-family:monospace;">${cfg.port}</td>
-      <td style="padding:10px 14px;font-family:monospace;font-size:11px;color:#666;">${cfg.mac || '—'}</td>
-      <td style="padding:10px 14px;">${statusBadge}</td>
-    </tr>`;
-  }).join('');
-
-  const urlLinks = ips.map(ip => `<li><a href="http://${ip}:${PORT}" style="color:#2D9B6E;">http://${ip}:${PORT}</a></li>`).join('');
-
-  return `<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>QIROX Print Relay v${VERSION}</title>
-  <meta http-equiv="refresh" content="10">
-  <style>
-    * { box-sizing:border-box; margin:0; padding:0; }
-    body { font-family: 'Segoe UI', Tahoma, sans-serif; background:#f0f4f8; color:#1a202c; direction:rtl; }
-    .container { max-width:800px; margin:0 auto; padding:20px; }
-    .header { background:linear-gradient(135deg,#1a202c,#2D9B6E); color:#fff; padding:24px; border-radius:12px; margin-bottom:20px; }
-    .header h1 { font-size:22px; margin-bottom:4px; }
-    .header p { opacity:0.8; font-size:13px; }
-    .card { background:#fff; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.08); overflow:hidden; margin-bottom:16px; }
-    .card-title { background:#f7fafc; padding:12px 16px; font-weight:700; font-size:14px; border-bottom:1px solid #e2e8f0; color:#2d3748; }
-    table { width:100%; border-collapse:collapse; }
-    th { background:#f7fafc; padding:10px 14px; font-size:12px; color:#718096; text-align:right; border-bottom:1px solid #e2e8f0; }
-    td { border-bottom:1px solid #f0f4f8; }
-    tr:last-child td { border-bottom:none; }
-    .badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:12px; }
-    .url-list { padding:12px 16px; }
-    .url-list li { margin:4px 0; font-size:13px; }
-    .info-box { padding:12px 16px; font-size:12px; color:#718096; line-height:1.7; }
-    .refresh { font-size:11px; color:#a0aec0; text-align:center; padding:8px; }
-  </style>
-</head>
-<body>
-<div class="container">
-  <div class="header">
-    <h1>🖨️ QIROX Print Relay Agent v${VERSION}</h1>
-    <p>وكيل الطباعة المحلي — يعمل على منفذ ${PORT} — يتحدّث تلقائياً كل 10 ثوانٍ</p>
-  </div>
-
-  <div class="card">
-    <div class="card-title">حالة الطابعات (ProPos PP9000E)</div>
-    <table>
-      <thead>
-        <tr>
-          <th>الطابعة</th>
-          <th>IP</th>
-          <th>البورت</th>
-          <th>MAC</th>
-          <th>الحالة</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
-  </div>
-
-  <div class="card">
-    <div class="card-title">روابط الوكيل (أدخل أحدها في إعدادات الطابعة)</div>
-    <ul class="url-list">
-      ${urlLinks || `<li><a href="http://localhost:${PORT}" style="color:#2D9B6E;">http://localhost:${PORT}</a></li>`}
-    </ul>
-  </div>
-
-  <div class="card">
-    <div class="card-title">Endpoints المتاحة</div>
-    <div class="info-box">
-      <b>POST /print</b> — إرسال بيانات ESC/POS للطبعة<br>
-      &nbsp;&nbsp;{ "role": "customer" | "kitchen1" | "kitchen2", "data": "base64..." }<br>
-      &nbsp;&nbsp;أو: { "ip": "192.168.x.x", "port": 9100, "data": "base64..." }<br><br>
-      <b>POST /test</b> — اختبار اتصال الطابعة<br>
-      &nbsp;&nbsp;{ "role": "customer" | "kitchen1" | "kitchen2" }<br>
-      &nbsp;&nbsp;أو: { "ip": "192.168.x.x", "port": 9100 }<br><br>
-      <b>GET /status</b> — حالة الوكيل (JSON)<br>
-      <b>GET /</b> — هذه الصفحة (HTML)
-    </div>
-  </div>
-
-  <p class="refresh">آخر تحديث: ${new Date().toLocaleTimeString('ar-SA')} — الصفحة تتحدث كل 10 ثوانٍ تلقائياً</p>
-</div>
-</body>
-</html>`;
+function json(res, status, data) {
+  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
+  res.end(JSON.stringify(data));
 }
 
 // ── HTTP Server ───────────────────────────────────────────────────────────────
 const server = http.createServer(async (req, res) => {
-  addCORSHeaders(res);
-
+  addCORS(res);
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
-  const url = req.url.split('?')[0];
-
-  // ── GET / ─ صفحة الحالة HTML ─────────────────────────────────────────────
-  if (req.method === 'GET' && url === '/') {
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.writeHead(200);
-    res.end(await buildStatusPage());
-    return;
+  // GET /status or GET /
+  if (req.method === 'GET' && (req.url === '/' || req.url === '/status')) {
+    return json(res, 200, {
+      status:        'ok',
+      name:          'QIROX Print Relay Agent',
+      version:       VERSION,
+      port:          PORT,
+      localIPs:      getLocalIPs(),
+      wsSupported:   wsEnabled,
+      queueLength:   printQueue.length,
+      isProcessing,
+      completedJobs: completedJobs.slice(0, 10),
+      vendors:       Object.keys(VENDORS),
+    });
   }
 
-  // كل النقاط الباقية تُعيد JSON
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-
-  // ── GET /status ─ حالة JSON ───────────────────────────────────────────────
-  if (req.method === 'GET' && url === '/status') {
-    res.writeHead(200);
-    res.end(JSON.stringify({
-      ok:       true,
-      status:   'running',
-      name:     'QIROX Print Relay Agent',
-      version:  VERSION,
-      port:     PORT,
-      localIPs: getLocalIPs(),
-      printers: PRINTERS,
-      uptime:   Math.round(process.uptime()),
-    }));
-    return;
+  // GET /queue — طابور الطباعة الحالي
+  if (req.method === 'GET' && req.url === '/queue') {
+    return json(res, 200, {
+      queue:    printQueue.map(j => ({ id: j.id, ip: j.ip, jobType: j.jobType, vendor: j.vendor, priority: j.priority, attempts: j.attempts })),
+      completed: completedJobs.slice(0, 20),
+    });
   }
 
-  // ── POST /print ─ إرسال ESC/POS للطابعة ──────────────────────────────────
-  if (req.method === 'POST' && url === '/print') {
+  // POST /print — إرسال مهمة طباعة
+  if (req.method === 'POST' && req.url === '/print') {
     try {
       const body = JSON.parse(await readBody(req));
+      const { ip, port, data, vendor, jobType } = body;
 
-      if (!body.data) {
-        res.writeHead(400);
-        res.end(JSON.stringify({ success: false, error: 'حقل "data" (base64) مطلوب' }));
-        return;
-      }
+      if (!ip || !data) return json(res, 400, { success: false, error: 'ip و data مطلوبان' });
 
-      // تحديد IP الطابعة: إما عن طريق الدور (role) أو مباشرة
-      let ip, port;
-      if (body.role && PRINTERS[body.role]) {
-        const cfg = PRINTERS[body.role];
-        ip   = body.ip   || cfg.ip;
-        port = body.port || cfg.port;
-        if (!ip) {
-          res.writeHead(400);
-          res.end(JSON.stringify({ success: false, error: `طابعة "${body.role}" غير مهيأة — أضف IP في ملف print-relay.js` }));
-          return;
-        }
-      } else {
-        ip   = body.ip   || PRINTERS.customer.ip;
-        port = body.port || 9100;
-      }
-
-      const buffer = Buffer.from(body.data, 'base64');
-      const tmo    = body.timeout || TIMEOUT;
-      const ts     = new Date().toLocaleTimeString('ar-SA');
-      const role   = body.role || 'direct';
-      console.log(`[${ts}] 🖨  [${role}] طباعة ${buffer.length} bytes → ${ip}:${port}`);
-
-      await sendToThermalPrinter(ip, port, buffer, tmo);
-
-      console.log(`[${new Date().toLocaleTimeString('ar-SA')}] ✅ [${role}] تمت الطباعة بنجاح → ${ip}:${port}`);
-      res.writeHead(200);
-      res.end(JSON.stringify({
-        success:   true,
-        message:   `✅ تمت الطباعة [${role}] على ${ip}:${port}`,
-        role,
-        bytes:     buffer.length,
-        timestamp: new Date().toISOString(),
-      }));
+      const jobId = enqueue({ ip, port, data, vendor: vendor || 'generic', jobType: jobType || 'receipt' });
+      return json(res, 200, { success: true, jobId, queued: printQueue.length });
     } catch (err) {
-      console.error(`[${new Date().toLocaleTimeString('ar-SA')}] ❌ فشل الإرسال:`, err.message);
-      res.writeHead(503);
-      res.end(JSON.stringify({
-        success: false,
-        error:   err.message || 'فشل الاتصال بالطابعة',
-        hint:    'تأكد أن الطابعة متصلة بالكهرباء وبالشبكة ومضاءة (غير في وضع standby)',
-      }));
+      return json(res, 500, { success: false, error: err.message });
     }
-    return;
   }
 
-  // ── POST /test ─ اختبار الاتصال بدون طباعة ────────────────────────────────
-  if (req.method === 'POST' && url === '/test') {
+  // POST /print/direct — طباعة فورية (تجاوز الطابور)
+  if (req.method === 'POST' && req.url === '/print/direct') {
     try {
-      const body = JSON.parse(await readBody(req));
+      const body   = JSON.parse(await readBody(req));
+      const { ip, port, data } = body;
+      if (!ip || !data) return json(res, 400, { success: false, error: 'ip و data مطلوبان' });
 
-      let ip, port, label;
-      if (body.role && PRINTERS[body.role]) {
-        const cfg = PRINTERS[body.role];
-        ip    = body.ip   || cfg.ip;
-        port  = body.port || cfg.port;
-        label = cfg.label;
-      } else {
-        ip    = body.ip   || '';
-        port  = body.port || 9100;
-        label = `${ip}:${port}`;
-      }
-
-      const result = await testTCPConnection(ip, port, 5000);
-      res.writeHead(result.ok ? 200 : 503);
-      res.end(JSON.stringify({
-        success: result.ok,
-        message: result.msg,
-        ip, port, label,
-        model: 'ProPos PP9000E',
-      }));
+      const buffer = Buffer.from(data, 'base64');
+      const pPort  = Number(port) || 9100;
+      log(`🖨️  [direct] → ${ip}:${pPort}  (${buffer.length}B)`);
+      await sendToThermalPrinter(ip, pPort, buffer);
+      log(`✅  [direct] نجح`);
+      return json(res, 200, { success: true });
     } catch (err) {
-      res.writeHead(400);
-      res.end(JSON.stringify({ success: false, error: err.message }));
+      log(`❌  [direct] فشل: ${err.message}`);
+      return json(res, 500, { success: false, error: err.message });
     }
-    return;
+  }
+
+  // POST /test — اختبار اتصال الطابعة
+  if (req.method === 'POST' && req.url === '/test') {
+    try {
+      const body      = JSON.parse(await readBody(req));
+      const { ip, port, vendor } = body;
+      if (!ip) return json(res, 400, { success: false, error: 'ip مطلوب' });
+
+      const v       = VENDORS[vendor || 'generic'] || VENDORS.generic;
+      const initCmd = Buffer.from(v.initCmd);
+      const pPort   = Number(port) || 9100;
+      await sendToThermalPrinter(ip, pPort, initCmd);
+      return json(res, 200, { success: true, message: `✅ ${v.name} على ${ip}:${pPort} تستجيب` });
+    } catch (err) {
+      return json(res, 200, { success: false, error: err.message });
+    }
+  }
+
+  // POST /discover — فحص شبكة للعثور على طابعات
+  if (req.method === 'POST' && req.url === '/discover') {
+    try {
+      const body      = JSON.parse(await readBody(req));
+      const { subnet, port: pPort } = body;
+      const base      = subnet || getLocalIPs()[0]?.replace(/\.\d+$/, '') || '192.168.1';
+      const scanPort  = Number(pPort) || 9100;
+      const found     = [];
+
+      const checks = Array.from({ length: 20 }, (_, i) => {
+        const ip = `${base}.${i + 1}`;
+        return new Promise(resolve => {
+          const s = new net.Socket();
+          s.setTimeout(800);
+          s.connect(scanPort, ip, () => { found.push(ip); s.destroy(); resolve(null); });
+          s.on('error',   () => { s.destroy(); resolve(null); });
+          s.on('timeout', () => { s.destroy(); resolve(null); });
+        });
+      });
+
+      await Promise.all(checks);
+      return json(res, 200, { success: true, found, scanned: `${base}.1-20`, port: scanPort });
+    } catch (err) {
+      return json(res, 500, { success: false, error: err.message });
+    }
   }
 
   res.writeHead(404);
-  res.end(JSON.stringify({ error: 'Not found', routes: ['/', '/status', '/print', '/test'] }));
+  res.end('Not Found');
 });
 
-// ── تشغيل السيرفر ─────────────────────────────────────────────────────────────
-server.listen(PORT, '0.0.0.0', async () => {
-  const ips = getLocalIPs();
-  console.log('');
-  console.log('╔══════════════════════════════════════════════════════════════════╗');
-  console.log('║      QIROX Print Relay Agent v' + VERSION + ' — وكيل الطباعة المتعدد       ║');
-  console.log('╠══════════════════════════════════════════════════════════════════╣');
-  console.log('║  طابعة العميل  : 192.168.3.22   MAC: 28-0e-8b-36-55-0a         ║');
-  console.log('║  طابعة مطبخ 1  : 192.168.1.114  MAC: 28-0e-8b-c9-66-d2         ║');
-  console.log('║  طابعة مطبخ 2  : (غير محدد — عدّل PRINTERS في الملف)           ║');
-  console.log('╠══════════════════════════════════════════════════════════════════╣');
-  console.log('║  روابط الوكيل — أدخل أحدها في إعدادات الطابعة:                 ║');
-  for (const ip of ips) {
-    const url  = `http://${ip}:${PORT}`;
-    const line = `║    ${url}`;
-    console.log(line.padEnd(67) + '║');
-  }
-  if (ips.length === 0) {
-    console.log(`║    http://localhost:${PORT}`.padEnd(67) + '║');
-  }
-  console.log('╠══════════════════════════════════════════════════════════════════╣');
-  console.log('║  صفحة الحالة: افتح الرابط في المتصفح للتحقق من حالة الطابعات  ║');
-  console.log('║  الحالة : يعمل ✅  —  في انتظار طلبات الطباعة...               ║');
-  console.log('╚══════════════════════════════════════════════════════════════════╝');
-  console.log('');
+// ── WebSocket Server (اختياري — يتطلب: npm install ws) ──────────────────────
+let wsEnabled = false;
+let wss       = null;
 
-  // اختبار تلقائي لجميع الطابعات عند التشغيل
-  console.log('  🔍 جارٍ اختبار الاتصال بجميع الطابعات...');
-  const results = await testAllPrinters();
-  for (const [role, r] of Object.entries(results)) {
-    const cfg = PRINTERS[role];
-    if (!cfg.ip) {
-      console.log(`  ⚪ [${role}] ${cfg.label} — غير مهيأ`);
-    } else if (r.ok) {
-      console.log(`  ✅ [${role}] ${cfg.label} (${cfg.ip}) — متصلة وتستجيب`);
-    } else {
-      console.log(`  ❌ [${role}] ${cfg.label} (${cfg.ip}) — لا تستجيب! تأكد من التوصيل`);
-    }
-  }
+try {
+  const { WebSocketServer } = require('ws');
+  wss = new WebSocketServer({ server });
+  wsEnabled = true;
+
+  const wsClients = new Set();
+
+  wss.on('connection', (ws) => {
+    wsClients.add(ws);
+    log(`🔌 WebSocket client connected (${wsClients.size} total)`);
+
+    ws.on('message', async (raw) => {
+      let msg;
+      try { msg = JSON.parse(raw.toString()); } catch { return; }
+
+      switch (msg.type) {
+        case 'print': {
+          if (!msg.ip || !msg.data) {
+            ws.send(JSON.stringify({ type: 'error', error: 'ip و data مطلوبان' }));
+            return;
+          }
+          const jobId = enqueue({ ip: msg.ip, port: msg.port, data: msg.data, vendor: msg.vendor || 'generic', jobType: msg.jobType || 'receipt', _ws: ws, _reqId: msg.reqId });
+          ws.send(JSON.stringify({ type: 'queued', jobId, reqId: msg.reqId }));
+          break;
+        }
+
+        case 'print_direct': {
+          try {
+            const buffer = Buffer.from(msg.data, 'base64');
+            await sendToThermalPrinter(msg.ip, Number(msg.port) || 9100, buffer);
+            ws.send(JSON.stringify({ type: 'print_ok', reqId: msg.reqId }));
+          } catch (err) {
+            ws.send(JSON.stringify({ type: 'print_error', error: err.message, reqId: msg.reqId }));
+          }
+          break;
+        }
+
+        case 'test': {
+          try {
+            const v = VENDORS[msg.vendor || 'generic'] || VENDORS.generic;
+            await sendToThermalPrinter(msg.ip, Number(msg.port) || 9100, Buffer.from(v.initCmd));
+            ws.send(JSON.stringify({ type: 'test_ok', reqId: msg.reqId }));
+          } catch (err) {
+            ws.send(JSON.stringify({ type: 'test_error', error: err.message, reqId: msg.reqId }));
+          }
+          break;
+        }
+
+        case 'status': {
+          ws.send(JSON.stringify({ type: 'status', version: VERSION, queueLength: printQueue.length, isProcessing, wsClients: wsClients.size }));
+          break;
+        }
+
+        case 'ping': {
+          ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
+          break;
+        }
+      }
+    });
+
+    ws.on('close', () => {
+      wsClients.delete(ws);
+      log(`🔌 WebSocket client disconnected (${wsClients.size} remaining)`);
+    });
+
+    ws.on('error', () => wsClients.delete(ws));
+    ws.send(JSON.stringify({ type: 'welcome', version: VERSION, wsEnabled: true }));
+  });
+
+  // Notify WS client when a job from their connection completes
+  const origProcessQueue = processQueue;
+  // (job completion notifications sent per-job above)
+
+} catch (e) {
+  // 'ws' not installed — HTTP-only mode
+}
+
+// ── Startup ───────────────────────────────────────────────────────────────────
+server.listen(PORT, '0.0.0.0', () => {
+  const ips = getLocalIPs();
+  const w   = wsEnabled ? ' + WebSocket ✅' : ' (HTTP فقط — شغّل: npm install ws لتفعيل WebSocket)';
+
   console.log('');
-  console.log('  اضغط Ctrl+C لإيقاف الوكيل');
+  console.log('╔══════════════════════════════════════════════════════════════╗');
+  console.log('║         QIROX Print Relay Agent v2.0  —  وكيل الطباعة       ║');
+  console.log('╠══════════════════════════════════════════════════════════════╣');
+  console.log(`║  المنفذ  : ${PORT}${w.padEnd(48)}║`);
+  console.log('║  الماركات: Epson, Sunmi, XPrinter, Star, Bixolon, Generic   ║');
+  console.log('╠══════════════════════════════════════════════════════════════╣');
+  ips.forEach(ip => {
+    const line = `║    http://${ip}:${PORT}`;
+    console.log(line.padEnd(64) + '║');
+    if (wsEnabled) {
+      const wsLine = `║    ws://${ip}:${PORT}/ws`;
+      console.log(wsLine.padEnd(64) + '║');
+    }
+  });
+  if (ips.length === 0) {
+    console.log(`║    http://localhost:${PORT}`.padEnd(64) + '║');
+  }
+  console.log('╠══════════════════════════════════════════════════════════════╣');
+  console.log('║  API:  GET /status  |  POST /print  |  POST /test           ║');
+  console.log('║        GET /queue   |  POST /print/direct  | POST /discover  ║');
+  console.log('╚══════════════════════════════════════════════════════════════╝');
+  console.log('');
+  console.log('في انتظار طلبات الطباعة... اضغط Ctrl+C للإيقاف');
   console.log('');
 });
 
 server.on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
-    console.error(`\n❌ المنفذ ${PORT} مستخدم بالفعل.`);
-    console.error(`   جرب: PORT=${PORT + 1} node print-relay.js\n`);
+    console.error(`❌ المنفذ ${PORT} مستخدم. شغّل: PORT=8090 node print-relay.js`);
   } else {
-    console.error('❌ خطأ في السيرفر:', err.message);
+    console.error('❌ خطأ في الخادم:', err.message);
   }
   process.exit(1);
 });

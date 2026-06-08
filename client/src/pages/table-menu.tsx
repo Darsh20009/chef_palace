@@ -11,7 +11,7 @@ import type { CoffeeItem, IProductAddon } from "@shared/schema";
 import { AddToCartModal } from "@/components/add-to-cart-modal";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
-const chefsplaceLogo = "/logo.png";
+import qiroxLogo from "@assets/qirox-logo-customer.png";
 import SarIcon from "@/components/sar-icon";
 import type { AddonPreview } from "@/components/menu-layouts";
 import { OptionPills } from "@/components/menu-layouts";
@@ -482,7 +482,7 @@ export default function TableMenuNew() {
 
   if (!table) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <Coffee className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
           <h2 className="text-2xl font-bold mb-2">{tc("طاولة غير موجودة", "Table Not Found")}</h2>
@@ -497,11 +497,11 @@ export default function TableMenuNew() {
       <header className="fixed top-0 inset-x-0 z-[60] h-16 bg-black/60 backdrop-blur-md border-b border-white/10 flex items-center justify-between px-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-white/10 p-1.5 flex items-center justify-center">
-            <img src={chefsplaceLogo} alt="Logo" className="w-full h-full object-contain" />
+            <img src={qiroxLogo} alt="Logo" className="w-full h-full object-contain" />
           </div>
           <div className="flex flex-col">
-            <h1 className="text-base font-black text-white leading-tight">مكان الشيف البخاري</h1>
-            <span className="text-[10px] font-bold text-white/60 tracking-wider uppercase">مطعم</span>
+            <h1 className="text-base font-black text-white leading-tight">مكان الشيف</h1>
+            <span className="text-[10px] font-bold text-white/60 tracking-wider uppercase">CAFE</span>
           </div>
         </div>
 
@@ -542,7 +542,7 @@ export default function TableMenuNew() {
           </div>
 
           {table?.reservedFor?.status === 'pending' && (
-            <div className="bg-card rounded-2xl border border-border p-4 shadow-sm" dir="rtl">
+            <div className="bg-card rounded-2xl border border-border p-4 shadow-sm">
               <div className="flex justify-between items-start gap-3">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
@@ -746,7 +746,7 @@ export default function TableMenuNew() {
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                       alt={i18n.language === 'ar' ? item.nameAr : item.nameEn || item.nameAr}
                       onError={(e) => {
-                        const img = e.target as HTMLImageElement; img.src = "/images/default-coffee.png"; img.style.objectFit = "contain"; img.style.padding = "8px"; if (img.parentElement) img.parentElement.style.background = "#1a1a1a";
+                        const img = e.target as HTMLImageElement; img.src = "/images/brand-logo.png"; img.style.objectFit = "contain"; img.style.padding = "8px"; if (img.parentElement) img.parentElement.style.background = "#1a1a1a";
                       }}
                     />
                   </div>
@@ -792,7 +792,7 @@ export default function TableMenuNew() {
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                         alt={i18n.language === 'ar' ? item.nameAr : item.nameEn || item.nameAr}
                         onError={(e) => {
-                          const img = e.target as HTMLImageElement; img.src = "/images/default-coffee.png"; img.style.objectFit = "contain"; img.style.padding = "8px"; if (img.parentElement) img.parentElement.style.background = "#1a1a1a";
+                          const img = e.target as HTMLImageElement; img.src = "/images/brand-logo.png"; img.style.objectFit = "contain"; img.style.padding = "8px"; if (img.parentElement) img.parentElement.style.background = "#1a1a1a";
                         }}
                       />
                     </div>

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Html5QrcodeScanner } from "html5-qrcode";
 import { Clock, Camera, CheckCircle2, AlertTriangle, XCircle, RefreshCw, QrCode, User, MapPin } from "lucide-react";
 import { useTranslate } from "@/lib/useTranslate";
-const chefsplaceLogoStaff = "/logo.png";
+import qiroxLogoStaff from "@assets/qirox-logo-customer.png";
 
 type Stage = "idle" | "identified" | "photo" | "submitting" | "success" | "late" | "error";
 
@@ -54,7 +54,7 @@ export default function GeneralCheckin() {
   const resetRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    document.title = tc("التحضير العام - مكان الشيف البخاري", "General Check-in - Chef Bukhari's Place");
+    document.title = tc("التحضير العام - مكان الشيف — الإدارة", "General Check-in - مكان الشيف — الإدارة");
   }, [tc]);
 
   const cleanupCamera = useCallback(() => {
@@ -261,7 +261,7 @@ export default function GeneralCheckin() {
       {/* Header clock */}
       <header className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-gray-900/80 backdrop-blur">
         <div className="flex items-center gap-3">
-          <img src={chefsplaceLogoStaff} alt="Logo" className="h-10 w-auto object-contain" />
+          <img src={qiroxLogoStaff} alt="مكان الشيف" className="h-10 w-auto object-contain" />
           <div>
             <p className="text-xs text-gray-400">{tc("صفحة التحضير العامة", "General Check-in Terminal")}</p>
             <p className="text-sm font-bold text-white">{tc("امسح بطاقتك لتسجيل حضورك", "Scan your card to check in")}</p>
@@ -424,7 +424,7 @@ export default function GeneralCheckin() {
 
       {/* Footer */}
       <footer className="px-6 py-3 border-t border-white/10 flex items-center justify-between text-xs text-gray-600">
-        <span>مكان الشيف البخاري © {new Date().getFullYear()}</span>
+        <span>مكان الشيف — الإدارة © 2026</span>
         {stage !== "idle" && (
           <button onClick={resetAll} className="flex items-center gap-1 text-gray-500 hover:text-gray-300 transition-colors">
             <RefreshCw className="w-3 h-3" />
