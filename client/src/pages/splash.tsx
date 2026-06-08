@@ -1,6 +1,7 @@
 import { useLocation } from "wouter";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import bannerImage from "@assets/blackrose-banner-1.png";
 const chefsplaceLogo = "/logo.png?v=22";
 
 const GOLD = "#C06520";
@@ -46,14 +47,10 @@ export default function SplashScreen() {
         exit={{ opacity: 0 }}
         transition={{ duration: 0.6, ease: "easeInOut" }}
       >
-        {/* Background video (Chef Bukhari) */}
-        <video
-          src="/videos/splash-bg.mp4?v=1"
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload="auto"
+        {/* Background image (banner) */}
+        <img
+          src={bannerImage}
+          alt="background"
           className="absolute inset-0 w-full h-full object-cover"
         />
         {/* Dark overlay for logo readability */}
