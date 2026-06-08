@@ -177,7 +177,7 @@ export async function sendOrderNotificationEmail(
     orderStatus === "cancelled" ? "#f44336" : "#9C27B0";
 
   const message =
-    orderStatus === "completed" ? "شكراً لك! طلبك جاهز للاستلام الآن. نتمنى أن تستمتع بقهوتك!" :
+    orderStatus === "completed" ? "شكراً لك! طلبك جاهز للاستلام الآن. نتمنى أن تستمتع بوجبتك!" :
     orderStatus === "ready" ? "تمام! طلبك أصبح جاهزاً. تفضل للاستلام من الفرع." :
     orderStatus === "in_progress" || orderStatus === "preparing" ? "قيد الإعداد - فريقنا يحضر طلبك الآن بعناية." :
     orderStatus === "cancelled" ? "تم إلغاء طلبك. إذا كان لديك أي استفسار، تواصل معنا." :
@@ -354,12 +354,12 @@ export async function sendReservationExpiryWarningEmail(
 export async function sendWelcomeEmail(customerEmail: string, customerName: string) {
   return sendMail({
     to: customerEmail,
-    subject: "أهلاً بك في مكان الشيف البخاري! ☕",
+    subject: "أهلاً بك في مكان الشيف البخاري! 🍚",
     html: `
       <div style="font-family:Arial,sans-serif;direction:rtl;padding:20px;">
         <h2 style="color:#8B5A2B;">مرحباً ${customerName}</h2>
         <p>يسعدنا انضمامك إلينا في عائلة مكان الشيف البخاري.</p>
-        <p>يمكنك الآن البدء في طلب قهوتك المفضلة وجمع النقاط مع كل طلب!</p>
+        <p>يمكنك الآن البدء في طلب أشهى وجبات البخاري الأصيلة وجمع النقاط مع كل طلب!</p>
         <p>نتطلع لخدمتك قريباً!</p>
       </div>
     `,
@@ -374,7 +374,7 @@ export async function sendAbandonedCartEmail(customerEmail: string, customerName
       <div style="font-family:Arial,sans-serif;direction:rtl;padding:20px;">
         <h2 style="color:#8B5A2B;">مرحباً ${customerName}</h2>
         <p>لاحظنا أنك تركت بعض الأصناف الرائعة في عربة التسوق الخاصة بك.</p>
-        <p>لا تدع قهوتك تبرد! عد الآن وأكمل طلبك.</p>
+        <p>لا تترك وجبتك الشهية! عد الآن وأكمل طلبك.</p>
       </div>
     `,
   });

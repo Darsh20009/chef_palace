@@ -215,7 +215,7 @@ export function TableQRCard({ tableNumber, qrToken, branchName, tableUrl }: Tabl
           ctx.font      = `bold ${logoSz * 0.4}px 'Georgia', serif`;
           ctx.textAlign     = "center";
           ctx.textBaseline  = "middle";
-          ctx.fillText("BR", logoCX, logoCY);
+          ctx.fillText("MS", logoCX, logoCY);
         }
 
         const nameY = logoCY + logoSz / 2 + 44;
@@ -387,7 +387,7 @@ export function TableQRCard({ tableNumber, qrToken, branchName, tableUrl }: Tabl
             ctx.font         = "bold 18px 'Georgia', serif";
             ctx.textAlign    = "center";
             ctx.textBaseline = "middle";
-            ctx.fillText("BR", ocx, ocy);
+            ctx.fillText("MS", ocx, ocy);
           };
           logoOverlay.src = chefsplaceLogo;
 
