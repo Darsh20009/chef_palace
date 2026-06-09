@@ -19818,7 +19818,7 @@ ${businessContext}
       const response = await fetch("https://api.moonshot.ai/v1/chat/completions", {
         method: "POST",
         headers: { "Authorization": `Bearer ${kimiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "moonshot-v1-32k", messages, max_tokens: 1000, temperature: 0.7 }),
+        body: JSON.stringify({ model: "kimi-k2.5", messages, max_tokens: 5000, temperature: 1 }),
       });
 
       if (!response.ok) {
@@ -19828,8 +19828,8 @@ ${businessContext}
       }
 
       const data = await response.json() as any;
-      const reply = data.choices?.[0]?.message?.content || "";
-      res.json({ reply, model: "kimi/moonshot-v1-32k" });
+      const reply = data.choices?.[0]?.message?.content || data.choices?.[0]?.message?.reasoning_content || "";
+      res.json({ reply, model: "kimi-k2.5" });
     } catch (error: any) {
       console.error("AI chat error:", error);
       res.status(500).json({ error: error.message || "خطأ في الذكاء الاصطناعي" });
@@ -19897,13 +19897,13 @@ ${growthPct ? `- النمو مقارنة بالأسبوع الماضي: ${growth
       const response = await fetch("https://api.moonshot.ai/v1/chat/completions", {
         method: "POST",
         headers: { "Authorization": `Bearer ${kimiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "moonshot-v1-32k", messages: insightsMsgs, max_tokens: 500, temperature: 0.6 }),
+        body: JSON.stringify({ model: "kimi-k2.5", messages: insightsMsgs, max_tokens: 4000, temperature: 1 }),
       });
 
       if (!response.ok) return res.json({ insights: [], stats: { todayRevenue, todayOrders: todayOrders.length, weekRevenue, weekOrders: weekOrders.length, growthPct }, error: "فشل الاتصال بـ Kimi AI" });
 
       const data = await response.json() as any;
-      const content = (data.choices?.[0]?.message?.content || "").trim();
+      const content = (data.choices?.[0]?.message?.content || data.choices?.[0]?.message?.reasoning_content || "").trim();
 
       try {
         const jsonMatch = content.match(/\[[\s\S]*\]/);
@@ -20021,10 +20021,10 @@ ${contextData}
         method: "POST",
         headers: { "Authorization": `Bearer ${kimiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "moonshot-v1-32k",
+          model: "kimi-k2.5",
           messages: [{ role: "user", content: prompt }],
-          max_tokens: 1500,
-          temperature: 0.5,
+          max_tokens: 5000,
+          temperature: 1,
         }),
       });
 
@@ -20035,7 +20035,7 @@ ${contextData}
       }
 
       const data = await response.json() as any;
-      const content = (data.choices?.[0]?.message?.content || "").trim();
+      const content = (data.choices?.[0]?.message?.content || data.choices?.[0]?.message?.reasoning_content || "").trim();
 
       try {
         const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -20074,14 +20074,17 @@ ${contextData}
       };
       const catLabel = categoryLabels[category] || category || "منتج كافيه";
 
-      const systemPrompt = `أنت خبير تسويق إبداعي متخصص في صناعة القهوة والمقاهي العالمية من مستوى Starbucks وBlue Bottle وPeet's Coffee.
-مهمتك توليد محتوى تسويقي إبداعي، شهي، وجذاب لمنيو المقاهي.
-يجب أن يكون المحتوى:
-- شاعرياً وجذاباً يستفز حواس القارئ
-- يستخدم مصطلحات قهوة عالمية دقيقة
-- مثالي للعرض في قائمة طعام راقية
-- يذكر النكهات، الأحاسيس، الرائحة عند الاقتضاء
-- باللغتين العربية والإنجليزية حسب المطلوب`;
+      const systemPrompt = `أنت خبير تسويق إبداعي متخصص في صناعة القهوة والمطاعم الفاخرة.
+مهمتك توليد محتوى تسويقي إبداعي وشهي لمنيو المطاعم والمقاهي.
+قواعد صارمة يجب الالتزام بها:
+- اكتب فقط باللغة العربية الفصيحة عند طلب وصف عربي
+- اكتب فقط باللغة الإنجليزية عند طلب وصف إنجليزي
+- لا تخلط أبداً بين لغات مختلفة في نفس الوصف
+- الوصف يكون شاعرياً وجذاباً يستفز حواس القارئ
+- يستخدم مصطلحات طعام دقيقة وراقية
+- مثالي للعرض في قائمة طعام فاخرة
+- يذكر النكهات والأحاسيس والرائحة
+- أعطِ الوصف مباشرة بدون مقدمات أو توضيحات`;
 
       const tasks: Record<string, string> = {
         description_ar: `اكتب وصفاً إبداعياً وشهياً باللغة العربية الفصيحة للمنتج التالي:
@@ -20163,7 +20166,7 @@ ${existingIngredients ? `المكونات الحالية: ${existingIngredients}
       const menuResponse = await fetch("https://api.moonshot.ai/v1/chat/completions", {
         method: "POST",
         headers: { "Authorization": `Bearer ${kimiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "moonshot-v1-32k", messages: menuMsgs, max_tokens: 600, temperature: 0.85 }),
+        body: JSON.stringify({ model: "kimi-k2.5", messages: menuMsgs, max_tokens: 4000, temperature: 1 }),
       });
 
       if (!menuResponse.ok) {
@@ -20173,8 +20176,8 @@ ${existingIngredients ? `المكونات الحالية: ${existingIngredients}
       }
 
       const data = await menuResponse.json() as any;
-      const content = data.choices?.[0]?.message?.content || "";
-      res.json({ result: content, task, model: "kimi/moonshot-v1-32k" });
+      const content = data.choices?.[0]?.message?.content || data.choices?.[0]?.message?.reasoning_content || "";
+      res.json({ result: content, task, model: "kimi-k2.5" });
     } catch (error: any) {
       console.error("AI Menu Assist error:", error);
       res.status(500).json({ error: error.message || "حدث خطأ في الذكاء الاصطناعي" });
@@ -21253,17 +21256,17 @@ ${existingIngredients ? `المكونات الحالية: ${existingIngredients}
         method: "POST",
         headers: { "Authorization": `Bearer ${kimiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "moonshot-v1-32k",
+          model: "kimi-k2.5",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
           ],
-          temperature: 0.5,
+          temperature: 1,
           max_tokens: maxTokens,
         }),
       });
       const data = await r.json();
-      return data.choices?.[0]?.message?.content || null;
+      return data.choices?.[0]?.message?.content || data.choices?.[0]?.message?.reasoning_content || null;
     } catch (e) { return null; }
   }
 
@@ -22617,13 +22620,13 @@ ${existingIngredients ? `المكونات الحالية: ${existingIngredients}
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
         body: JSON.stringify({
-          model: "moonshot-v1-32k",
+          model: "kimi-k2.5",
           messages: [{ role: "system", content: systemPrompt }, ...history, { role: "user", content: userMessage }],
-          temperature: 0.3, max_tokens: 2000,
+          temperature: 1, max_tokens: 6000,
         }),
       });
       const data: any = await response.json();
-      res.json({ answer: data.choices?.[0]?.message?.content || "لا يوجد رد" });
+      res.json({ answer: data.choices?.[0]?.message?.content || data.choices?.[0]?.message?.reasoning_content || "لا يوجد رد" });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
@@ -22682,13 +22685,13 @@ ${existingIngredients ? `المكونات الحالية: ${existingIngredients}
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
         body: JSON.stringify({
-          model: "moonshot-v1-32k",
+          model: "kimi-k2.5",
           messages: [{ role: "system", content: systemPrompt }, ...history, { role: "user", content: fullMessage }],
-          temperature: 0.4, max_tokens: 2000,
+          temperature: 1, max_tokens: 6000,
         }),
       });
       const data: any = await response.json();
-      res.json({ answer: data.choices?.[0]?.message?.content || "لا يوجد رد" });
+      res.json({ answer: data.choices?.[0]?.message?.content || data.choices?.[0]?.message?.reasoning_content || "لا يوجد رد" });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
@@ -22940,7 +22943,7 @@ ${items.map((i: any) => `• ${i.nameAr}${i.nameEn ? ` (${i.nameEn})` : ""}: ${i
       const aiRes = await fetch("https://api.moonshot.ai/v1/chat/completions", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${kimiKey}` },
-        body: JSON.stringify({ model: "moonshot-v1-8k", messages, max_tokens: 800, temperature: 0.7 }),
+        body: JSON.stringify({ model: "kimi-k2.5", messages, max_tokens: 4000, temperature: 1 }),
       });
 
       if (!aiRes.ok) {
@@ -22950,7 +22953,7 @@ ${items.map((i: any) => `• ${i.nameAr}${i.nameEn ? ` (${i.nameEn})` : ""}: ${i
       }
 
       const aiData = await aiRes.json() as any;
-      const reply = aiData.choices?.[0]?.message?.content || "عذراً، لم أتمكن من الإجابة الآن.";
+      const reply = aiData.choices?.[0]?.message?.content || aiData.choices?.[0]?.message?.reasoning_content || "عذراً، لم أتمكن من الإجابة الآن.";
       res.json({ reply });
     } catch (e: any) {
       console.error("[Brand AI]", e.message);
@@ -23024,13 +23027,13 @@ ${revenueLines}
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${kimiKey}` },
         body: JSON.stringify({
-          model: "moonshot-v1-32k",
+          model: "kimi-k2.5",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userMsg },
           ],
-          max_tokens: 2500,
-          temperature: 0.2,
+          max_tokens: 6000,
+          temperature: 1,
         }),
       });
 
@@ -23041,7 +23044,7 @@ ${revenueLines}
       }
 
       const aiData = await aiRes.json() as any;
-      const report = aiData.choices?.[0]?.message?.content || "لم أتمكن من إنشاء التقرير.";
+      const report = aiData.choices?.[0]?.message?.content || aiData.choices?.[0]?.message?.reasoning_content || "لم أتمكن من إنشاء التقرير.";
       res.json({ report });
     } catch (e: any) {
       console.error("[Accounting AI]", e.message);
