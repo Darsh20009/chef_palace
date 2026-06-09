@@ -19801,6 +19801,7 @@ ${businessContext}
 
 قواعد الإجابة:
 - أجب دائماً بالعربية ما لم يسألك المستخدم بالإنجليزية
+- لا تكتب أبداً بالصينية أو أي لغة أخرى سوى العربية والإنجليزية
 - كن موجزاً ومفيداً وعملياً
 - استخدم الأرقام والبيانات المتاحة في إجاباتك
 - قدم توصيات قابلة للتنفيذ
@@ -19828,7 +19829,7 @@ ${businessContext}
       }
 
       const data = await response.json() as any;
-      const reply = data.choices?.[0]?.message?.content || data.choices?.[0]?.message?.reasoning_content || "";
+      const reply = data.choices?.[0]?.message?.content || "";
       res.json({ reply, model: "kimi-k2.5" });
     } catch (error: any) {
       console.error("AI chat error:", error);
@@ -19903,7 +19904,7 @@ ${growthPct ? `- النمو مقارنة بالأسبوع الماضي: ${growth
       if (!response.ok) return res.json({ insights: [], stats: { todayRevenue, todayOrders: todayOrders.length, weekRevenue, weekOrders: weekOrders.length, growthPct }, error: "فشل الاتصال بـ Kimi AI" });
 
       const data = await response.json() as any;
-      const content = (data.choices?.[0]?.message?.content || data.choices?.[0]?.message?.reasoning_content || "").trim();
+      const content = (data.choices?.[0]?.message?.content || "").trim();
 
       try {
         const jsonMatch = content.match(/\[[\s\S]*\]/);
@@ -20035,7 +20036,7 @@ ${contextData}
       }
 
       const data = await response.json() as any;
-      const content = (data.choices?.[0]?.message?.content || data.choices?.[0]?.message?.reasoning_content || "").trim();
+      const content = (data.choices?.[0]?.message?.content || "").trim();
 
       try {
         const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -20079,6 +20080,7 @@ ${contextData}
 قواعد صارمة يجب الالتزام بها:
 - اكتب فقط باللغة العربية الفصيحة عند طلب وصف عربي
 - اكتب فقط باللغة الإنجليزية عند طلب وصف إنجليزي
+- لا تكتب أبداً بالصينية أو أي لغة أخرى سوى العربية والإنجليزية
 - لا تخلط أبداً بين لغات مختلفة في نفس الوصف
 - الوصف يكون شاعرياً وجذاباً يستفز حواس القارئ
 - يستخدم مصطلحات طعام دقيقة وراقية
@@ -20176,7 +20178,7 @@ ${existingIngredients ? `المكونات الحالية: ${existingIngredients}
       }
 
       const data = await menuResponse.json() as any;
-      const content = data.choices?.[0]?.message?.content || data.choices?.[0]?.message?.reasoning_content || "";
+      const content = data.choices?.[0]?.message?.content || "";
       res.json({ result: content, task, model: "kimi-k2.5" });
     } catch (error: any) {
       console.error("AI Menu Assist error:", error);
@@ -21266,7 +21268,7 @@ ${existingIngredients ? `المكونات الحالية: ${existingIngredients}
         }),
       });
       const data = await r.json();
-      return data.choices?.[0]?.message?.content || data.choices?.[0]?.message?.reasoning_content || null;
+      return data.choices?.[0]?.message?.content || null;
     } catch (e) { return null; }
   }
 
@@ -22626,7 +22628,7 @@ ${existingIngredients ? `المكونات الحالية: ${existingIngredients}
         }),
       });
       const data: any = await response.json();
-      res.json({ answer: data.choices?.[0]?.message?.content || data.choices?.[0]?.message?.reasoning_content || "لا يوجد رد" });
+      res.json({ answer: data.choices?.[0]?.message?.content || "لا يوجد رد" });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
@@ -22672,7 +22674,8 @@ ${existingIngredients ? `المكونات الحالية: ${existingIngredients}
 - مواد منخفضة المخزون: ${lowStockItems || 'لا يوجد'}`;
 
       const systemPrompt = `أنت مستشار أعمال ذكي (CEO AI) لنظام QIROX. تحلل بيانات الكافيه وتجيب على أسئلة المدير بدقة ووضوح.
-استخدم الأرقام والبيانات المقدمة لك. كن عملياً وحاسماً في توصياتك.`;
+استخدم الأرقام والبيانات المقدمة لك. كن عملياً وحاسماً في توصياتك.
+أجب دائماً بالعربية ما لم يسألك المستخدم بالإنجليزية. لا تكتب أبداً بالصينية أو أي لغة أخرى سوى العربية والإنجليزية.`;
 
       const history = req.body.history || [];
       const question = req.body.question || "حلل وضع الأعمال الحالي";
@@ -22691,7 +22694,7 @@ ${existingIngredients ? `المكونات الحالية: ${existingIngredients}
         }),
       });
       const data: any = await response.json();
-      res.json({ answer: data.choices?.[0]?.message?.content || data.choices?.[0]?.message?.reasoning_content || "لا يوجد رد" });
+      res.json({ answer: data.choices?.[0]?.message?.content || "لا يوجد رد" });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
@@ -22932,7 +22935,7 @@ ${items.map((i: any) => `• ${i.nameAr}${i.nameEn ? ` (${i.nameEn})` : ""}: ${i
 - تقديم نصائح لخدمة العملاء
 - المساعدة في حل مشكلات الطلبات
 
-أجب دائماً بالعربية بأسلوب ودي ومهني ومختصر. للأسئلة خارج النطاق اعتذر بلطف.`;
+أجب دائماً بالعربية بأسلوب ودي ومهني ومختصر. لا تكتب أبداً بالصينية أو أي لغة أخرى سوى العربية والإنجليزية. للأسئلة خارج النطاق اعتذر بلطف.`;
 
       const messages = [
         { role: "system", content: systemPrompt },
@@ -22953,7 +22956,7 @@ ${items.map((i: any) => `• ${i.nameAr}${i.nameEn ? ` (${i.nameEn})` : ""}: ${i
       }
 
       const aiData = await aiRes.json() as any;
-      const reply = aiData.choices?.[0]?.message?.content || aiData.choices?.[0]?.message?.reasoning_content || "عذراً، لم أتمكن من الإجابة الآن.";
+      const reply = aiData.choices?.[0]?.message?.content || "عذراً، لم أتمكن من الإجابة الآن.";
       res.json({ reply });
     } catch (e: any) {
       console.error("[Brand AI]", e.message);
@@ -23044,7 +23047,7 @@ ${revenueLines}
       }
 
       const aiData = await aiRes.json() as any;
-      const report = aiData.choices?.[0]?.message?.content || aiData.choices?.[0]?.message?.reasoning_content || "لم أتمكن من إنشاء التقرير.";
+      const report = aiData.choices?.[0]?.message?.content || "لم أتمكن من إنشاء التقرير.";
       res.json({ report });
     } catch (e: any) {
       console.error("[Accounting AI]", e.message);
