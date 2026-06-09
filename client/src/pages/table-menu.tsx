@@ -501,7 +501,7 @@ export default function TableMenuNew() {
           </div>
           <div className="flex flex-col">
             <h1 className="text-base font-black text-white leading-tight">مكان الشيف</h1>
-            <span className="text-[10px] font-bold text-white/60 tracking-wider uppercase">CAFE</span>
+            <span className="text-[10px] font-bold text-white/60 tracking-wider">البخاري</span>
           </div>
         </div>
 

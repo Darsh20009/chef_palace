@@ -183,7 +183,7 @@ export default function PublicOrderTrackPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4" dir={isAr ? 'rtl' : 'ltr'}>
         <div className="text-center space-y-4">
-          <img src={qiroxLogo} alt="Black Rose Cafe" className="h-16 mx-auto object-contain" />
+          <img src={qiroxLogo} alt="مكان الشيف البخاري" className="h-16 mx-auto object-contain" />
           <p className="text-gray-500 text-lg">{t('tracking.order_number_not_found')}</p>
           <Button className="bg-black hover:bg-gray-800 text-white" onClick={() => navigate('/')}>
             {t('tracking.back_home')}
@@ -198,8 +198,8 @@ export default function PublicOrderTrackPage() {
 
       <div className="bg-black text-white py-5 px-4">
         <div className="max-w-lg mx-auto flex flex-col items-center gap-2">
-          <img src={qiroxLogo} alt="Black Rose Cafe" className="h-14 object-contain" />
-          <h1 className="text-base font-bold tracking-widest text-white/90 uppercase">Black Rose Cafe</h1>
+          <img src={qiroxLogo} alt="مكان الشيف البخاري" className="h-14 object-contain" />
+          <h1 className="text-base font-bold tracking-widest text-white/90">مكان الشيف البخاري</h1>
           <p className="text-xs text-gray-400">{t('tracking.header')} · Order Tracking</p>
         </div>
       </div>

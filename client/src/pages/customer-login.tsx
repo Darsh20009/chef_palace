@@ -55,7 +55,7 @@ export default function CustomerLogin() {
             <img src={qiroxLogo} alt="مكان الشيف البخاري" className="h-16 object-contain" />
             <h1 className="text-3xl font-bold font-playfair text-foreground">مكان الشيف البخاري</h1>
           </div>
-          <p className="text-muted-foreground text-lg font-cairo">{tc("لكل لحظة قهوة ، لحظة نجاح", "For every coffee moment, a moment of success")}</p>
+          <p className="text-muted-foreground text-lg font-cairo">{tc("أصالة البخاري بنكهة الشيف", "Authentic Bukhari, Chef's touch")}</p>
         </div>
 
         <div className="w-full max-w-md space-y-3">

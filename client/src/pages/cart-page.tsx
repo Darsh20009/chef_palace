@@ -37,8 +37,8 @@ export default function CartPage() {
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) {
       metaDesc.setAttribute('content', isAr 
-        ? 'سلة التسوق الخاصة بك في مكان الشيف البخاري - أضف المزيد من القهوة المفضلة وانتقل للدفع' 
-        : 'Your shopping cart at مكان الشيف البخاري - add more of your favorite coffee and proceed to checkout');
+        ? 'سلة التسوق الخاصة بك في مكان الشيف البخاري - أضف المزيد من وجباتك المفضلة وانتقل للدفع' 
+        : 'Your shopping cart at مكان الشيف البخاري - add more of your favorite Bukhari meals and proceed to checkout');
     }
   }, [isAr]);
 

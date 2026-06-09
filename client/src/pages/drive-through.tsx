@@ -279,12 +279,12 @@ export default function DriveThroughPage() {
       <div className="relative overflow-hidden bg-gradient-to-br from-amber-900/40 via-black to-black px-6 pt-10 pb-8">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-4 right-8 text-9xl">🚗</div>
-          <div className="absolute bottom-2 left-4 text-6xl">☕</div>
+          <div className="absolute bottom-2 left-4 text-6xl">🍚</div>
         </div>
         <div className="relative">
           <Badge className="bg-amber-500 text-black font-bold mb-3 text-xs">🚘 اطلب من سيارتك</Badge>
           <h1 className="text-3xl font-black text-white mb-2 leading-tight">
-            اطلب قهوتك<br />
+            اطلب وجبتك<br />
             <span className="text-amber-400">بدون ما تنزل!</span>
           </h1>
           <p className="text-gray-400 text-sm">اختر طلبك وسنوصله لسيارتك مباشرةً</p>

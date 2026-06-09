@@ -85,7 +85,7 @@ export default function PromoPage() {
       <div className="absolute inset-0 z-0">
         <img
           src={bannerImage1}
-          alt="Coffee Background"
+          alt="مكان الشيف البخاري"
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/55 to-black/80" />
@@ -102,7 +102,7 @@ export default function PromoPage() {
           <div className="w-32 h-32 rounded-3xl bg-white/10 backdrop-blur-md border border-white/15 shadow-2xl flex items-center justify-center p-4">
             <img
               src={qiroxLogo}
-              alt="Black Rose Cafe"
+              alt="مكان الشيف البخاري"
               className="w-full h-full object-contain"
               data-testid="img-promo-logo"
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
@@ -117,11 +117,11 @@ export default function PromoPage() {
           transition={{ duration: 0.6, delay: 0.4 }}
           className="text-center mb-6"
         >
-          <h1 className="text-2xl font-black tracking-[0.3em] text-white uppercase">
-            مكان الشيف
+          <h1 className="text-2xl font-black tracking-[0.2em] text-white">
+            مكان الشيف البخاري
           </h1>
-          <p className="text-[#BE1845] text-xs font-bold tracking-[0.45em] uppercase mt-0.5">
-            CAFE
+          <p className="text-[#C06520] text-xs font-bold tracking-[0.35em] mt-0.5">
+            أصالة البخاري بنكهة الشيف
           </p>
         </motion.div>
 

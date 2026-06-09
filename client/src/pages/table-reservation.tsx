@@ -224,7 +224,7 @@ export default function TableReservation() {
           </div>
           <h1 className="text-4xl font-bold text-foreground mb-2">{tc("حجز طاولة", "Table Reservation")}</h1>
           <p className="text-lg text-muted-foreground">
-            احجز طاولتك المفضلة في أقرب فرع واستمتع بتجربة قهوة لا تُنسى
+            احجز طاولتك المفضلة في أقرب فرع واستمتع بتجربة بخاري أصيلة لا تُنسى
           </p>
         </div>
 

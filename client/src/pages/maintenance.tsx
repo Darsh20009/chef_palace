@@ -50,7 +50,7 @@ export default function MaintenancePage({ reason = "maintenance" }: { reason?: s
 
         <div className="pt-6 border-t border-border">
           <p className="text-sm text-muted-foreground italic">
-            استمتع برائحة القهوة ريثما نعود... ☕
+            نعود قريباً بأشهى وجبات البخاري الأصيلة... 🍚
           </p>
         </div>
       </motion.div>
