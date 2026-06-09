@@ -1241,7 +1241,7 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
                 {indices.map(idx => { const addon = addEditableAddons[idx]; return (
                   <div key={idx} className="flex gap-2 items-center">
                     <button type="button" onClick={() => { setEditingAddonImageIdx(idx); setImageLibraryContext("add-addon"); setIsImageLibraryOpen(true); }} className="w-8 h-8 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center shrink-0 overflow-hidden hover:border-accent/50 transition-colors" data-testid={"button-add-addon-img-" + idx}>
-                      {addon.imageUrl ? <img src={addon.imageUrl.startsWith('/') ? addon.imageUrl : '/' + addon.imageUrl} className="w-full h-full object-cover rounded-lg" alt="" /> : <Plus className="w-3 h-3 text-gray-400" />}
+                      {addon.imageUrl ? <img src={addon.imageUrl.startsWith('/') || addon.imageUrl.startsWith('data:') || addon.imageUrl.startsWith('http') ? addon.imageUrl : '/' + addon.imageUrl} className="w-full h-full object-cover rounded-lg" alt="" /> : <Plus className="w-3 h-3 text-gray-400" />}
                     </button>
                     <Input type="text" placeholder={tc("اسم الخيار (عربي)", "Option name (AR)")} value={addon.nameAr} onChange={(e) => { const next = [...addEditableAddons]; next[idx] = { ...next[idx], nameAr: e.target.value }; setAddEditableAddons(next); }} className="bg-white border-gray-300 text-gray-900 flex-1 h-8 text-sm" data-testid={"input-add-addon-name-" + idx} />
                     <Input type="text" placeholder={tc("الاسم (إنجليزي)", "Option name (EN)")} value={addon.nameEn || ''} onChange={(e) => { const next = [...addEditableAddons]; next[idx] = { ...next[idx], nameEn: e.target.value }; setAddEditableAddons(next); }} className="bg-white border-gray-300 text-gray-900 flex-1 h-8 text-sm" dir="ltr" data-testid={"input-add-addon-name-en-" + idx} />
@@ -1258,7 +1258,7 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
           <div key={idx} className="space-y-1.5 p-2 rounded-lg bg-gray-50/50 border border-gray-200">
             <div className="flex gap-2 items-center">
               <button type="button" onClick={() => { setEditingAddonImageIdx(idx); setImageLibraryContext("add-addon"); setIsImageLibraryOpen(true); }} className="w-10 h-10 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center shrink-0 overflow-hidden hover:border-accent/50 transition-colors" data-testid={"button-add-addon-img-" + idx}>
-                {addon.imageUrl ? <img src={addon.imageUrl.startsWith('/') ? addon.imageUrl : '/' + addon.imageUrl} className="w-full h-full object-cover rounded-lg" alt="" /> : <Plus className="w-3 h-3 text-gray-500" />}
+                {addon.imageUrl ? <img src={addon.imageUrl.startsWith('/') || addon.imageUrl.startsWith('data:') || addon.imageUrl.startsWith('http') ? addon.imageUrl : '/' + addon.imageUrl} className="w-full h-full object-cover rounded-lg" alt="" /> : <Plus className="w-3 h-3 text-gray-500" />}
               </button>
               <Input type="text" placeholder={tc("اسم الإضافة (عربي)", "Addon name (AR)")} value={addon.nameAr} onChange={(e) => { const next = [...addEditableAddons]; next[idx] = { ...next[idx], nameAr: e.target.value }; setAddEditableAddons(next); }} className="bg-gray-50 border-gray-300 text-gray-900 flex-1" data-testid={"input-add-addon-name-" + idx} />
               <Input type="text" placeholder={tc("الاسم (إنجليزي)", "Addon name (EN)")} value={addon.nameEn || ''} onChange={(e) => { const next = [...addEditableAddons]; next[idx] = { ...next[idx], nameEn: e.target.value }; setAddEditableAddons(next); }} className="bg-gray-50 border-gray-300 text-gray-900 flex-1" dir="ltr" data-testid={"input-add-addon-name-en-" + idx} />
@@ -1687,7 +1687,7 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
  >
  <div className="flex items-center gap-4 flex-1">
  <img
- src={item.imageUrl ? (item.imageUrl.startsWith('/') ? item.imageUrl : `/${item.imageUrl}`) : getCoffeeImage(item.id)}
+ src={item.imageUrl ? (item.imageUrl.startsWith('/') || item.imageUrl.startsWith('data:') || item.imageUrl.startsWith('http') ? item.imageUrl : `/${item.imageUrl}`) : getCoffeeImage(item.id)}
  alt={item.nameAr}
  className="w-16 h-16 rounded-lg object-cover"
  onError={(e) => {
@@ -2087,7 +2087,7 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
                  {indices.map(idx => { const addon = editableAddons[idx]; return (
                    <div key={idx} className="flex gap-2 items-center">
                      <button type="button" onClick={() => { setEditingAddonImageIdx(idx); setImageLibraryContext("edit-addon"); setIsImageLibraryOpen(true); }} className="w-8 h-8 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center shrink-0 overflow-hidden hover:border-accent/50 transition-colors" data-testid={`button-edit-addon-img-${idx}`}>
-                       {addon.imageUrl ? <img src={addon.imageUrl.startsWith('/') ? addon.imageUrl : '/' + addon.imageUrl} className="w-full h-full object-cover rounded-lg" alt="" /> : <Plus className="w-3 h-3 text-gray-400" />}
+                       {addon.imageUrl ? <img src={addon.imageUrl.startsWith('/') || addon.imageUrl.startsWith('data:') || addon.imageUrl.startsWith('http') ? addon.imageUrl : '/' + addon.imageUrl} className="w-full h-full object-cover rounded-lg" alt="" /> : <Plus className="w-3 h-3 text-gray-400" />}
                      </button>
                      <Input type="text" placeholder={tc("اسم الخيار (عربي)", "Option name (AR)")} value={addon.nameAr} onChange={(e) => { const n = [...editableAddons]; n[idx] = { ...n[idx], nameAr: e.target.value }; setEditableAddons(n); }} className="bg-white border-gray-300 text-gray-900 flex-1 h-8 text-sm" data-testid={`input-edit-addon-name-${idx}`} />
                      <Input type="text" placeholder={tc("الاسم (إنجليزي)", "Option name (EN)")} value={addon.nameEn || ''} onChange={(e) => { const n = [...editableAddons]; n[idx] = { ...n[idx], nameEn: e.target.value }; setEditableAddons(n); }} className="bg-white border-gray-300 text-gray-900 flex-1 h-8 text-sm" dir="ltr" data-testid={`input-edit-addon-name-en-${idx}`} />
@@ -2104,7 +2104,7 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
            <div key={idx} className="space-y-1.5 p-2 rounded-lg bg-gray-50/50 border border-gray-200">
              <div className="flex gap-2 items-center">
                <button type="button" onClick={() => { setEditingAddonImageIdx(idx); setImageLibraryContext("edit-addon"); setIsImageLibraryOpen(true); }} className="w-10 h-10 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center shrink-0 overflow-hidden hover:border-accent/50 transition-colors" data-testid={`button-edit-addon-img-${idx}`}>
-                 {addon.imageUrl ? <img src={addon.imageUrl.startsWith('/') ? addon.imageUrl : '/' + addon.imageUrl} className="w-full h-full object-cover rounded-lg" alt="" /> : <Plus className="w-3 h-3 text-gray-500" />}
+                 {addon.imageUrl ? <img src={addon.imageUrl.startsWith('/') || addon.imageUrl.startsWith('data:') || addon.imageUrl.startsWith('http') ? addon.imageUrl : '/' + addon.imageUrl} className="w-full h-full object-cover rounded-lg" alt="" /> : <Plus className="w-3 h-3 text-gray-500" />}
                </button>
                <Input type="text" placeholder={tc("اسم الإضافة (عربي)", "Addon name (AR)")} value={addon.nameAr} onChange={(e) => { const n = [...editableAddons]; n[idx] = { ...n[idx], nameAr: e.target.value }; setEditableAddons(n); }} className="bg-gray-50 border-gray-300 text-gray-900 flex-1" data-testid={`input-edit-addon-name-${idx}`} />
                <Input type="text" placeholder={tc("الاسم (إنجليزي)", "Addon name (EN)")} value={addon.nameEn || ''} onChange={(e) => { const n = [...editableAddons]; n[idx] = { ...n[idx], nameEn: e.target.value }; setEditableAddons(n); }} className="bg-gray-50 border-gray-300 text-gray-900 flex-1" dir="ltr" data-testid={`input-edit-addon-name-en-${idx}`} />

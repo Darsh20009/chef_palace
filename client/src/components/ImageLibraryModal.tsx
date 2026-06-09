@@ -37,8 +37,8 @@ export function ImageLibraryModal({ open, onClose, onSelect, currentUrl }: Image
       toast({ title: "نوع الملف غير مدعوم", description: "يُرجى اختيار ملف صورة", variant: "destructive" });
       return;
     }
-    if (file.size > 15 * 1024 * 1024) {
-      toast({ title: "حجم الملف كبير جداً", description: "الحد الأقصى 15MB", variant: "destructive" });
+    if (file.size > 8 * 1024 * 1024) {
+      toast({ title: "حجم الملف كبير جداً", description: "الحد الأقصى 8MB", variant: "destructive" });
       return;
     }
     setUploading(true);
@@ -140,7 +140,7 @@ export function ImageLibraryModal({ open, onClose, onSelect, currentUrl }: Image
                 <p className="text-sm font-medium text-accent/80">
                   {isDragOver ? "أفلت الصورة هنا" : "اسحب صورة هنا أو انقر للاختيار"}
                 </p>
-                <p className="text-[10px] text-gray-500">JPG · PNG · WEBP · GIF — الحد الأقصى 15MB</p>
+                <p className="text-[10px] text-gray-500">JPG · PNG · WEBP · GIF — الحد الأقصى 8MB</p>
               </div>
             )}
           </div>

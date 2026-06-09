@@ -12624,25 +12624,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Configure multer for drink image uploads
-  const drinksUploadsDir = path.resolve(__dirname, '..', 'attached_assets', 'drinks');
-  const drinksStorage = multer.diskStorage({
-    destination: function (req, file, cb) {
-      if (!fs.existsSync(drinksUploadsDir)) {
-        fs.mkdirSync(drinksUploadsDir, { recursive: true });
-      }
-      cb(null, drinksUploadsDir);
-    },
-    filename: function (req, file, cb) {
-      const uniqueSuffix = `${Date.now()}-${nanoid(8)}`;
-      cb(null, `drink-${uniqueSuffix}${path.extname(file.originalname)}`);
-    }
-  });
-
+  // Configure multer for drink image uploads — uses memory storage, converts to base64 for MongoDB
   const drinkUpload = multer({
-    storage: drinksStorage,
+    storage: multer.memoryStorage(),
     limits: {
-      fileSize: 15 * 1024 * 1024,
+      fileSize: 8 * 1024 * 1024, // 8MB max
     },
     fileFilter: (req, file, cb) => {
       if (file.mimetype.startsWith('image/')) {
@@ -12653,68 +12639,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Upload drink image
+  // Upload drink image — stores as base64 data URL, works everywhere without external storage
   app.post("/api/upload-drink-image", requireAuth, requireManager, wrapMulter(drinkUpload.single('image')), async (req: AuthRequest, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No image file uploaded" });
       }
-
-      const { ObjectStorageService } = await import("./qirox_studio_integrations/object_storage");
-      const storageService = new ObjectStorageService();
-
-      try {
-        const uploadURL = await storageService.getObjectEntityUploadURL();
-        const objectPath = storageService.normalizeObjectEntityPath(uploadURL);
-
-        const fsModule = await import('fs');
-        const fileBuffer = fsModule.readFileSync(req.file.path);
-
-        const uploadResponse = await fetch(uploadURL, {
-          method: 'PUT',
-          body: fileBuffer,
-          headers: {
-            'Content-Type': req.file.mimetype || 'image/png',
-          },
-        });
-
-        if (!uploadResponse.ok) {
-          throw new Error('Failed to upload to object storage');
-        }
-
-        fsModule.unlinkSync(req.file.path);
-        res.json({ url: objectPath });
-      } catch (storageError) {
-        console.log('[UPLOAD] Object storage not available, falling back to local storage');
-        const fileUrl = `/attached_assets/drinks/${req.file.filename}`;
-        res.json({ url: fileUrl });
-      }
+      const mimeType = req.file.mimetype || 'image/jpeg';
+      const base64 = req.file.buffer.toString('base64');
+      const dataUrl = `data:${mimeType};base64,${base64}`;
+      res.json({ url: dataUrl });
     } catch (error) {
       console.error("Error uploading drink image:", error);
       res.status(500).json({ error: "Failed to upload image" });
     }
   });
 
-  // List all uploaded drink images
+  // List all uploaded drink images — reads from MongoDB (imageUrl field)
   app.get("/api/drink-images", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const drinksDir = path.resolve(__dirname, '..', 'attached_assets', 'drinks');
-      if (!fs.existsSync(drinksDir)) {
-        return res.json([]);
-      }
-      const files = fs.readdirSync(drinksDir)
-        .filter(f => /\.(png|jpg|jpeg|webp)$/i.test(f))
-        .sort((a, b) => {
-          const statA = fs.statSync(path.join(drinksDir, a));
-          const statB = fs.statSync(path.join(drinksDir, b));
-          return statB.mtimeMs - statA.mtimeMs;
-        })
-        .map(f => ({
-          filename: f,
-          url: `/attached_assets/drinks/${f}`,
-          uploadedAt: fs.statSync(path.join(drinksDir, f)).mtime.toISOString()
-        }));
-      res.json(files);
+      const tenantId = (req as AuthRequest).tenantId || 'demo-tenant';
+      const items = await CoffeeItemModel.find({ tenantId, imageUrl: { $exists: true, $nin: [null, ''] } })
+        .select('id nameAr imageUrl updatedAt')
+        .lean();
+      const result = items.map(item => ({
+        filename: item.nameAr,
+        url: item.imageUrl,
+        uploadedAt: item.updatedAt || new Date().toISOString()
+      }));
+      res.json(result);
     } catch (error) {
       res.status(500).json({ error: "Failed to list drink images" });
     }
