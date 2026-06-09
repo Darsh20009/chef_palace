@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import bannerImage from "@assets/blackrose-banner-1.png";
+import bannerImage from "@assets/image_1773902748715.png";
 const chefsplaceLogo = "/logo.png?v=22";
 
 const GOLD = "#C06520";
