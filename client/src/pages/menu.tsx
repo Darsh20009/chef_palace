@@ -669,7 +669,9 @@ export default function MenuPage() {
                       alt={bannerSlides[currentBannerIndex].title}
                       className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    {/* Dark overlay — matches splash screen dark atmosphere */}
+                    <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at center, rgba(20,10,0,0.60) 0%, rgba(0,0,0,0.88) 100%)" }} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-black/20" />
                     
                     {bannerSlides[currentBannerIndex].couponCode && (
                       <div className="absolute top-4 right-4 z-20">
