@@ -2,7 +2,8 @@ import { useLocation } from "wouter";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import bannerImage from "@assets/image_1773902748715.png";
-const chefsplaceLogo = "/logo.png?v=22";
+import chefsplaceLogoAsset from "@assets/chef-bukhari-logo.png";
+const chefsplaceLogo = chefsplaceLogoAsset;
 
 const GOLD = "#C06520";
 const GOLD2 = "#e8892a";
@@ -68,29 +69,25 @@ export default function SplashScreen() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.9, type: "spring", stiffness: 100, damping: 14 }}
           >
-            <motion.div
-              className="w-32 h-32 rounded-3xl flex items-center justify-center p-3 shadow-2xl relative"
+            <motion.img
+              src={chefsplaceLogo}
+              alt="مكان الشيف البخاري"
+              className="object-contain"
               style={{
-                background: `linear-gradient(135deg, rgba(192,101,32,0.25) 0%, rgba(0,0,0,0.5) 100%)`,
-                border: `1.5px solid ${GOLD}66`,
-                backdropFilter: "blur(20px)",
-                boxShadow: `0 0 60px ${GOLD}35, 0 12px 48px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.08)`,
+                width: "clamp(160px, 42vw, 220px)",
+                height: "clamp(160px, 42vw, 220px)",
+                filter: `drop-shadow(0 0 28px ${GOLD}80) drop-shadow(0 4px 20px rgba(0,0,0,0.8))`,
               }}
               animate={{
-                boxShadow: [
-                  `0 0 40px ${GOLD}28, 0 12px 48px rgba(0,0,0,0.7)`,
-                  `0 0 90px ${GOLD}50, 0 12px 48px rgba(0,0,0,0.7)`,
-                  `0 0 40px ${GOLD}28, 0 12px 48px rgba(0,0,0,0.7)`,
+                filter: [
+                  `drop-shadow(0 0 20px ${GOLD}55) drop-shadow(0 4px 20px rgba(0,0,0,0.8))`,
+                  `drop-shadow(0 0 55px ${GOLD}99) drop-shadow(0 4px 20px rgba(0,0,0,0.8))`,
+                  `drop-shadow(0 0 20px ${GOLD}55) drop-shadow(0 4px 20px rgba(0,0,0,0.8))`,
                 ],
+                scale: [1, 1.03, 1],
               }}
-              transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-            >
-              <img
-                src={chefsplaceLogo}
-                alt="مكان الشيف البخاري"
-                className="w-full h-full object-contain drop-shadow-xl"
-              />
-            </motion.div>
+              transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
+            />
           </motion.div>
 
           {/* Brand name */}

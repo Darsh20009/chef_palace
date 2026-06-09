@@ -11,7 +11,8 @@ import { useRealtimeEvent } from "@/hooks/useRealtimeEngine";
 import { useState } from "react";
 import { CustomerFooter } from "@/components/customer-footer";
 
-const restaurantLogo = "/logo.png";
+import restaurantLogoAsset from "@assets/chef-bukhari-logo.png";
+const restaurantLogo = restaurantLogoAsset;
 
 export default function WelcomePage() {
   const [, setLocation] = useLocation();
@@ -53,9 +54,7 @@ export default function WelcomePage() {
         {/* Header */}
         <header className="relative z-20 flex items-center justify-between p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-xl p-1 border border-white/30">
-              <img src={restaurantLogo} alt="Logo" className="w-full h-full object-contain rounded-xl" />
-            </div>
+            <img src={restaurantLogo} alt="Logo" className="w-14 h-14 object-contain drop-shadow-xl" style={{ filter: "drop-shadow(0 2px 12px rgba(0,0,0,0.7))" }} />
             <span className="text-white font-bold text-lg tracking-wide">مكان الشيف </span>
           </div>
 
@@ -123,14 +122,15 @@ export default function WelcomePage() {
             transition={{ duration: 0.8 }}
             className="text-center max-w-lg"
           >
-            <motion.div
+            <motion.img
+              src={restaurantLogo}
+              alt="Logo"
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.2, duration: 0.5 }}
-              className="w-28 h-28 mx-auto mb-8 rounded-2xl overflow-hidden backdrop-blur-xl p-2 border border-white/20 shadow-xl bg-black/30"
-            >
-              <img src={restaurantLogo} alt="Logo" className="w-full h-full object-contain rounded-2xl" />
-            </motion.div>
+              className="w-36 h-36 mx-auto mb-6 object-contain"
+              style={{ filter: "drop-shadow(0 0 24px rgba(192,101,32,0.7)) drop-shadow(0 4px 16px rgba(0,0,0,0.8))" }}
+            />
 
             <motion.div
               initial={{ opacity: 0, y: 20 }}
