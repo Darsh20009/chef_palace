@@ -20052,6 +20052,201 @@ ${businessContext}
     }
   });
 
+  // ─── QIROXSYSTEM 9.1 PRO — Smart Manager Search Agent ───────────────────────
+  app.post("/api/ai/smart-search", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { message, history } = req.body;
+      if (!message) return res.status(400).json({ error: "الرسالة مطلوبة" });
+
+      const todayStart = getSaudiStartOfDay();
+      const weekStart  = new Date(todayStart.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const monthStart = new Date(todayStart.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const aiTenantId = req.employee?.tenantId || 'demo-tenant';
+
+      let liveData = "";
+      try {
+        const prevWeekStart = new Date(weekStart.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const {
+          OrderModel: SmOrderModel, ExpenseModel: SmExpModel,
+          AttendanceModel: SmAttModel, RawItemModel: SmRawModel,
+          CashierShiftModel: SmShiftModel, LeaveRequestModel: SmLeaveModel,
+        } = await import("@shared/schema");
+
+        const [allOrders, weekExpenses, monthExpenses, allEmployees,
+               todayAtt, openShift, rawItems, products, leaveRequests] = await Promise.all([
+          SmOrderModel.find({ tenantId: aiTenantId }).sort({ createdAt: -1 }).limit(2000).lean(),
+          SmExpModel.find({ tenantId: aiTenantId, date: { $gte: weekStart } }).lean(),
+          SmExpModel.find({ tenantId: aiTenantId, date: { $gte: monthStart } }).lean(),
+          storage.getEmployees(),
+          SmAttModel.find({ tenantId: aiTenantId, checkIn: { $gte: todayStart } }).lean(),
+          SmShiftModel.findOne({ tenantId: aiTenantId, status: "open" }).sort({ startTime: -1 }).lean() as any,
+          SmRawModel.find({ tenantId: aiTenantId }).lean(),
+          getCachedCoffeeItems(aiTenantId),
+          SmLeaveModel.find({ tenantId: aiTenantId, status: "pending" }).lean(),
+        ]);
+
+        const todayOrders   = allOrders.filter((o: any) => new Date(o.createdAt) >= todayStart);
+        const weekOrders    = allOrders.filter((o: any) => new Date(o.createdAt) >= weekStart);
+        const monthOrders   = allOrders.filter((o: any) => new Date(o.createdAt) >= monthStart);
+        const prevWkOrders  = allOrders.filter((o: any) => new Date(o.createdAt) >= prevWeekStart && new Date(o.createdAt) < weekStart);
+
+        const todayRev  = todayOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
+        const weekRev   = weekOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
+        const monthRev  = monthOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
+        const prevWkRev = prevWkOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
+        const weekGrowth = prevWkRev > 0 ? ((weekRev - prevWkRev) / prevWkRev * 100).toFixed(1) : null;
+
+        const itemCounts: Record<string, { count: number; revenue: number }> = {};
+        weekOrders.forEach((o: any) => (o.items || []).forEach((it: any) => {
+          const n = it.nameAr || it.name || "بدون اسم";
+          if (!itemCounts[n]) itemCounts[n] = { count: 0, revenue: 0 };
+          itemCounts[n].count += it.quantity || 1;
+          itemCounts[n].revenue += (it.price || 0) * (it.quantity || 1);
+        }));
+        const topItems  = Object.entries(itemCounts).sort((a,b) => b[1].count - a[1].count).slice(0,5);
+        const deadItems = Object.entries(itemCounts).sort((a,b) => a[1].count - b[1].count).slice(0,3);
+
+        const hourCounts: Record<number,number> = {};
+        weekOrders.forEach((o: any) => { const h = new Date(o.createdAt).getHours(); hourCounts[h] = (hourCounts[h]||0)+1; });
+        const peakHour = Object.entries(hourCounts).sort((a,b)=>Number(b[1])-Number(a[1]))[0];
+
+        const dayRev: Record<string,number> = {};
+        weekOrders.forEach((o: any) => { const d = new Date(o.createdAt).toLocaleDateString("ar-SA",{weekday:"long"}); dayRev[d]=(dayRev[d]||0)+(o.totalAmount||0); });
+        const bestDay = Object.entries(dayRev).sort((a,b)=>b[1]-a[1])[0];
+
+        const payBreak: Record<string,number> = {};
+        weekOrders.forEach((o: any) => { const m=o.paymentMethod||"نقدي"; payBreak[m]=(payBreak[m]||0)+(o.totalAmount||0); });
+
+        const statusToday: Record<string,number> = {};
+        todayOrders.forEach((o: any) => { const s=o.status||"unknown"; statusToday[s]=(statusToday[s]||0)+1; });
+
+        const weekExpTotal  = weekExpenses.reduce((s: number, e: any) => s+(e.amount||0), 0);
+        const monthExpTotal = monthExpenses.reduce((s: number, e: any) => s+(e.amount||0), 0);
+        const weekProfit    = weekRev - weekExpTotal;
+        const monthProfit   = monthRev - monthExpTotal;
+        const weekMargin    = weekRev > 0 ? ((weekProfit/weekRev)*100).toFixed(1) : "0";
+        const expCat: Record<string,number> = {};
+        monthExpenses.forEach((e: any) => { const c=e.category||"أخرى"; expCat[c]=(expCat[c]||0)+(e.amount||0); });
+        const topExpCat = Object.entries(expCat).sort((a,b)=>b[1]-a[1]).slice(0,3);
+
+        const activeEmps = (allEmployees as any[]).filter(e => e.isActive===1||e.isActive===true);
+        const presentToday = todayAtt.length;
+        const absentToday  = activeEmps.length - presentToday;
+        const lateToday    = (todayAtt as any[]).filter(a=>a.isLate).length;
+        const roles: Record<string,number> = {};
+        activeEmps.forEach(e => { roles[e.role]=(roles[e.role]||0)+1; });
+
+        const lowStock  = (rawItems as any[]).filter(i=>i.currentStock<=(i.minimumStock||0));
+        const zeroStock = (rawItems as any[]).filter(i=>(i.currentStock||0)<=0);
+        const activeProds  = products.filter((p:any)=>p.isAvailable!==false);
+        const inactiveProds= products.filter((p:any)=>p.isAvailable===false);
+
+        liveData = `
+══════════════════════════════════════════════
+📊 بيانات النظام المباشرة — محدّث الآن
+══════════════════════════════════════════════
+
+💰 المبيعات:
+• اليوم: ${todayRev.toFixed(2)} ر.س (${todayOrders.length} طلب) | الحالات: ${Object.entries(statusToday).map(([s,c])=>`${s}:${c}`).join("، ")||"لا طلبات"}
+• هذا الأسبوع: ${weekRev.toFixed(2)} ر.س (${weekOrders.length} طلب) | متوسط: ${weekOrders.length?( weekRev/weekOrders.length).toFixed(2):"0"} ر.س
+• هذا الشهر: ${monthRev.toFixed(2)} ر.س (${monthOrders.length} طلب)
+• نمو أسبوعي: ${weekGrowth!==null?`${weekGrowth}%`:"لا بيانات مقارنة"}
+• أفضل يوم: ${bestDay?`${bestDay[0]} — ${bestDay[1].toFixed(2)} ر.س`:"غير متاح"}
+• ذروة الطلبات: ${peakHour?`${peakHour[0]}:00 (${peakHour[1]} طلب)`:"غير محدد"}
+• الدفع هذا الأسبوع: ${Object.entries(payBreak).map(([m,v])=>`${m}: ${v.toFixed(0)} ر.س`).join(" | ")||"لا بيانات"}
+
+📦 المنتجات (${products.length} إجمالي | ${activeProds.length} نشط | ${inactiveProds.length} موقوف):
+• أكثر مبيعاً (أسبوع): ${topItems.map((it,i)=>`${i+1}. ${it[0]}: ${it[1].count} طلب (${it[1].revenue.toFixed(0)} ر.س)`).join(" | ")||"لا بيانات"}
+• الأقل مبيعاً: ${deadItems.map(([n,d])=>`${n}(${d.count})`).join("، ")||"لا بيانات"}
+
+💸 الأرباح والمصاريف:
+• أسبوع — مصاريف: ${weekExpTotal.toFixed(2)} ر.س | صافي ربح: ${weekProfit.toFixed(2)} ر.س | هامش: ${weekMargin}%
+• شهر — مصاريف: ${monthExpTotal.toFixed(2)} ر.س | صافي ربح: ${monthProfit.toFixed(2)} ر.س
+• أعلى فئات مصاريف: ${topExpCat.map(([c,v])=>`${c}: ${v.toFixed(0)} ر.س`).join(" | ")||"لا بيانات"}
+
+👥 الموظفون (${activeEmps.length} نشط):
+• الأدوار: ${Object.entries(roles).map(([r,c])=>`${r}:${c}`).join("، ")}
+• الحضور اليوم: ${presentToday} حاضر | ${absentToday} غائب | ${lateToday} متأخر
+• طلبات إجازة معلقة: ${(leaveRequests as any[]).length}
+• الوردية: ${openShift?`مفتوحة منذ ${new Date(openShift.startTime).toLocaleTimeString("ar-SA")} (رصيد افتتاحي: ${openShift.openingBalance||0} ر.س)`:"لا توجد وردية مفتوحة"}
+
+🏬 المخزون (${rawItems.length} مادة):
+• تحذير مخزون منخفض: ${lowStock.length} مادة${lowStock.length>0?` — ${lowStock.slice(0,5).map((i:any)=>i.nameAr||i.name).join("، ")}`:""}
+• نفاد مخزون: ${zeroStock.length} مادة${zeroStock.length>0?` — ${zeroStock.slice(0,3).map((i:any)=>i.nameAr||i.name).join("، ")}`:""}
+
+══════════════════════════════════════════════`;
+      } catch (ctxErr) {
+        console.error("smart-search context:", ctxErr);
+        liveData = "⚠️ بعض بيانات النظام غير متاحة حالياً.";
+      }
+
+      const systemPrompt = `أنت QIROXSYSTEM 9.1 PRO، وكيل ذكاء اصطناعي متكامل مُضمَّن في نظام إدارة المطاعم QIROX.
+طوّرتك شركة QIROX Studio | كيروكس استديو.
+
+🎯 مهمتك الوحيدة: مساعدة مديري وأصحاب مطعم "مكان الشيف البخاري" في الرياض.
+
+📌 نطاق صلاحياتك — تجيب فقط عن:
+1. المبيعات والإيرادات والمصاريف والأرباح وتحليلها
+2. الموظفون: الحضور، الغياب، التأخير، الوردايات، الإجازات، الرواتب
+3. المخزون: المواد الخام، المستويات، التنبيهات، الوصفات
+4. المنتجات والمنيو: الأداء، الأسعار، الفئات، التوافر
+5. الطلبات: الحالة، التوصيل، الإلغاءات، المشاكل
+6. المحاسبة: قيود، ضريبة القيمة المضافة، تقارير ZATCA، نقطة التعادل
+7. التحليلات: أوقات الذروة، أفضل المنتجات، مقارنة الفترات، التنبؤ
+8. النظام: كيفية عمل كل صفحة وخاصية في QIROX
+9. التوصيات: اقتراحات عملية لتحسين الأداء مبنية على الأرقام الحقيقية
+
+🚫 خارج نطاقك تماماً: الطبخ، الوصفات الشخصية، الأسئلة العامة، أي موضوع لا علاقة له بالمطعم والنظام.
+إذا سُئلت خارج النطاق: أجب "هذا خارج نطاق مهامي — أنا متخصص في إدارة مطعمك."
+
+🤖 إذا سُئلت "من صنعك" أو "ما هويتك": 
+أجب: "أنا QIROXSYSTEM 9.1 PRO، وكيل ذكاء اصطناعي من QIROX Studio | كيروكس استديو — متخصص في إدارة مطاعم QIROX."
+
+📊 بيانات النظام الحية:
+${liveData}
+
+🗺️ دليل صفحات النظام:
+• /manager/dashboard — لوحة تحكم المدير (KPIs، مبيعات اليوم)
+• /manager/orders — إدارة الطلبات الحية
+• /manager/employees — إدارة الموظفين (أدوار، صلاحيات)
+• /manager/attendance — الحضور والانصراف
+• /manager/accounting — المحاسبة والمصاريف
+• /manager/inventory — المخزون والمواد الخام
+• /manager/analytics — التحليلات المتقدمة
+• /manager/delivery — نظام التوصيل
+• /manager/reports — التقارير الموحدة
+• /manager/shifts — وردايات الكاشير وتقرير Z
+• /manager/reservations — الحجوزات
+• /manager/loyalty — برنامج الولاء
+• /manager/payroll — الرواتب
+• /admin/settings — الإعدادات العامة
+• /admin/menu-management — إدارة المنيو
+• /owner/dashboard — لوحة تحكم المالك
+
+قواعد الإجابة:
+- أجب بالعربية دائماً ما لم يطلب الإنجليزية صراحةً
+- استخدم الأرقام الحقيقية من البيانات أعلاه دائماً
+- كن دقيقاً وعملياً ومباشراً — كمحاسب ومستشار محترف
+- نبّه على المشاكل والمخاطر بوضوح
+- اقترح دائماً خطوة عملية في كل رد
+- استخدم الإيموجي بشكل معتدل`;
+
+      const msgs = [
+        { role: "system", content: systemPrompt },
+        ...(Array.isArray(history) ? history.slice(-10) : []),
+        { role: "user", content: message },
+      ];
+
+      if (!isAIConfigured().any) return res.status(200).json({ reply: "⚠️ QIROXSYSTEM 9.1 PRO غير مفعّل — يرجى ضبط مفتاح KIMI_API_KEY أو GEMINI_API_KEY.", configured: false });
+
+      const aiResult = await callAI(msgs, { maxTokens: 5000, taskType: "chat" });
+      res.json({ reply: aiResult.content, model: aiResult.model });
+    } catch (err: any) {
+      console.error("smart-search error:", err);
+      res.status(500).json({ error: err.message || "خطأ في الوكيل" });
+    }
+  });
+
   // ─── AI Product Image Search (Kimi translation + TheMealDB + Foodish fallback) ───
   app.post("/api/ai/generate-product-image", async (req: AuthRequest, res) => {
     try {
