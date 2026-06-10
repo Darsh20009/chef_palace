@@ -12673,6 +12673,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete all images from image library (clear all imageUrls from products)
+  app.delete("/api/drink-images/all", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const tenantId = (req as AuthRequest).tenantId || 'demo-tenant';
+      await CoffeeItemModel.updateMany({ tenantId }, { $unset: { imageUrl: "", imageUrls: "" } });
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to clear image library" });
+    }
+  });
+
   // Configure multer for size image uploads
   const sizesUploadsDir = path.resolve(__dirname, '..', 'attached_assets', 'sizes');
   const sizesStorage = multer.diskStorage({

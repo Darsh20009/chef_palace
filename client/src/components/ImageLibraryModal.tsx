@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Upload, Check, Image as ImageIcon, Loader2, Trash2 } from "lucide-react";
+import { Upload, Check, Image as ImageIcon, Loader2, Trash2, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface DrinkImage {
@@ -25,6 +25,8 @@ export function ImageLibraryModal({ open, onClose, onSelect, currentUrl }: Image
   const [uploading, setUploading] = useState(false);
   const [selected, setSelected] = useState<string | null>(currentUrl || null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
 
   const { data: images = [], isLoading } = useQuery<DrinkImage[]>({
     queryKey: ["/api/drink-images"],
@@ -69,6 +71,26 @@ export function ImageLibraryModal({ open, onClose, onSelect, currentUrl }: Image
     }
   };
 
+  const handleClearAll = async () => {
+    setClearing(true);
+    try {
+      const res = await fetch("/api/drink-images/all", {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("فشل تفريغ المكتبة");
+      await queryClient.invalidateQueries({ queryKey: ["/api/drink-images"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/coffee-items"] });
+      setSelected(null);
+      setConfirmClear(false);
+      toast({ title: "✓ تم تفريغ المكتبة", description: "تم حذف جميع صور المنتجات" });
+    } catch (err: any) {
+      toast({ title: "خطأ", description: err?.message || "فشل تفريغ المكتبة", variant: "destructive" });
+    } finally {
+      setClearing(false);
+    }
+  };
+
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
@@ -96,10 +118,47 @@ export function ImageLibraryModal({ open, onClose, onSelect, currentUrl }: Image
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="bg-[#12100e] border-primary/20 max-w-2xl w-full max-h-[85vh] flex flex-col p-0">
         <DialogHeader className="p-4 pb-2 border-b border-primary/10">
-          <DialogTitle className="text-accent flex items-center gap-2">
-            <ImageIcon className="w-5 h-5" />
-            مكتبة الصور
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-accent flex items-center gap-2">
+              <ImageIcon className="w-5 h-5" />
+              مكتبة الصور
+            </DialogTitle>
+            {images.length > 0 && (
+              confirmClear ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-red-400 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" /> تأكيد الحذف الكامل؟
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleClearAll}
+                    disabled={clearing}
+                    className="text-xs bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg font-bold transition-colors disabled:opacity-60"
+                    data-testid="button-confirm-clear-library"
+                  >
+                    {clearing ? <Loader2 className="w-3 h-3 animate-spin" /> : "نعم، احذف الكل"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmClear(false)}
+                    className="text-xs border border-gray-600 text-gray-400 hover:text-white px-3 py-1 rounded-lg transition-colors"
+                  >
+                    إلغاء
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmClear(true)}
+                  className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 border border-red-800/50 hover:border-red-600/50 px-3 py-1.5 rounded-lg transition-colors"
+                  data-testid="button-clear-library"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  تفريغ المكتبة
+                </button>
+              )
+            )}
+          </div>
         </DialogHeader>
 
         {/* Upload area */}
@@ -116,7 +175,6 @@ export function ImageLibraryModal({ open, onClose, onSelect, currentUrl }: Image
             }}
           />
 
-          {/* Drag & drop zone */}
           <div
             onDrop={handleDrop}
             onDragOver={handleDragOver}
