@@ -19986,14 +19986,17 @@ ${businessContext}
     }
   });
 
-  // ─── AI Product Image Generation (Kimi prompt + Pollinations render) ────────
+  // ─── AI Product Image Search (Kimi translation + TheMealDB + Foodish fallback) ───
   app.post("/api/ai/generate-product-image", async (req: AuthRequest, res) => {
     try {
       const { productName, description } = req.body as { productName?: string; description?: string };
       if (!productName) return res.status(400).json({ error: "productName required" });
 
       const kimiKey = process.env.KIMI_API_KEY;
-      let imagePrompt = `${productName} authentic restaurant food photography, Saudi Arabian cuisine, professional plating, appetizing, high detail, warm lighting`;
+
+      // Step 1: Use Kimi to translate name to English + pick Foodish category
+      let englishSearchTerm = productName;
+      let foodishCategory = "rice"; // default for Bukhari restaurant
 
       if (kimiKey) {
         try {
@@ -20004,30 +20007,68 @@ ${businessContext}
               model: "moonshot-v1-8k",
               messages: [{
                 role: "user",
-                content: `Write a concise English food photography prompt (max 60 words) for a restaurant menu photo of: "${productName}"${description ? ` — ${description}` : ""}. 
-Focus on: plating style, lighting, colors, textures, atmosphere. 
-Add: "professional food photography, menu photo, high quality, appetizing, restaurant dish".
-Return ONLY the prompt text, no quotes or explanation.`
+                content: `You are a food expert. For this food item: "${productName}"${description ? ` (${description})` : ""}
+Return a JSON object with exactly these fields:
+{
+  "english": "short English name for searching (1-3 words, e.g. 'chicken biryani')",
+  "category": "one of: biryani, butter-chicken, dessert, pasta, pizza, rice, samosa, idly, dosa"
+}
+Return ONLY valid JSON, no markdown.`
               }],
-              temperature: 1.0,
-              max_tokens: 120
+              temperature: 0.3,
+              max_tokens: 80
             })
           });
           if (kimiRes.ok) {
             const kimiData = await kimiRes.json() as any;
-            const kPrompt = kimiData.choices?.[0]?.message?.content?.trim();
-            if (kPrompt) imagePrompt = kPrompt;
+            const raw = kimiData.choices?.[0]?.message?.content?.trim() || "";
+            try {
+              const parsed = JSON.parse(raw.replace(/```json?|```/g, '').trim());
+              if (parsed.english) englishSearchTerm = parsed.english;
+              if (parsed.category) foodishCategory = parsed.category;
+            } catch {}
           }
-        } catch (e) {
-          // fallback to default prompt
-        }
+        } catch {}
       }
 
-      const seed = Math.floor(Math.random() * 99999);
-      const encoded = encodeURIComponent(imagePrompt);
-      const imageUrl = `https://image.pollinations.ai/prompt/${encoded}?width=512&height=512&nologo=true&seed=${seed}&enhance=true`;
+      // Step 2: Try TheMealDB direct search
+      try {
+        const mealRes = await fetch(`https://www.themealdb.com/api/json/v1/1/search.php?s=${encodeURIComponent(englishSearchTerm)}`);
+        if (mealRes.ok) {
+          const mealData = await mealRes.json() as any;
+          const meals = mealData?.meals || [];
+          if (meals.length > 0) {
+            const pick = meals[Math.floor(Math.random() * Math.min(meals.length, 3))];
+            if (pick?.strMealThumb) {
+              return res.json({ imageUrl: pick.strMealThumb, source: "themealdb", prompt: englishSearchTerm });
+            }
+          }
+        }
+      } catch {}
 
-      res.json({ imageUrl, prompt: imagePrompt });
+      // Step 3: TheMealDB category filter as better fallback
+      // Map foodishCategory → TheMealDB category
+      const mealDbCategoryMap: Record<string, string> = {
+        biryani: "Lamb", rice: "Chicken", "butter-chicken": "Chicken",
+        dessert: "Dessert", pasta: "Pasta", pizza: "Miscellaneous",
+        samosa: "Starter", idly: "Miscellaneous", dosa: "Miscellaneous",
+      };
+      const mealDbCategory = mealDbCategoryMap[foodishCategory] || "Chicken";
+      try {
+        const catRes = await fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?c=${encodeURIComponent(mealDbCategory)}`);
+        if (catRes.ok) {
+          const catData = await catRes.json() as any;
+          const catMeals = catData?.meals || [];
+          if (catMeals.length > 0) {
+            const pick = catMeals[Math.floor(Math.random() * Math.min(catMeals.length, 20))];
+            if (pick?.strMealThumb) {
+              return res.json({ imageUrl: pick.strMealThumb, source: "themealdb-category", prompt: englishSearchTerm });
+            }
+          }
+        }
+      } catch {}
+
+      res.status(503).json({ error: "لم يُتمكن من إيجاد صورة مناسبة حالياً، يرجى رفع صورة يدوياً" });
     } catch (error: any) {
       res.status(500).json({ error: error.message || "فشل توليد الصورة" });
     }
