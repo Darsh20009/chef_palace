@@ -6,7 +6,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "NODE_ENV=development ./node_modules/.bin/tsx server/index.ts",
-    "build": "./node_modules/.bin/vite build && ./node_modules/.bin/esbuild server/index.ts --platform=node --bundle --format=esm --minify --external:sharp --external:@vladmandic/face-api --external:face-api.js --external:bufferutil --external:utf-8-validate --external:@babel/preset-typescript --external:lightningcss \"--banner:js=import{createRequire}from'module';const require=createRequire(import.meta.url);\" --outfile=dist/index.js",
+    "build": "./node_modules/.bin/vite build && ./node_modules/.bin/esbuild server/index.ts --platform=node --bundle --format=esm --minify --external:sharp --external:@vladmandic/face-api --external:face-api.js --external:bufferutil --external:utf-8-validate --external:@babel/preset-typescript --external:lightningcss \"--banner:js=import{createRequire}from'module';import{fileURLToPath}from'url';import{dirname as _dn}from'path';const require=createRequire(import.meta.url);const __filename=fileURLToPath(import.meta.url);const __dirname=_dn(__filename);\" --outfile=dist/index.js",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc"
   },
