@@ -43,6 +43,22 @@ function getItemName(item: CoffeeItem, lang: string) {
   return lang === "ar" ? item.nameAr : (item.nameEn || item.nameAr);
 }
 
+function getPriceDisplay(item: CoffeeItem): { label: string; isRange: boolean } {
+  const sizes = item.availableSizes;
+  if (sizes && sizes.length > 1) {
+    const prices = sizes.map(s => Number(s.price)).filter(p => !isNaN(p) && p > 0);
+    if (prices.length > 1) {
+      const min = Math.min(...prices);
+      const max = Math.max(...prices);
+      if (min !== max) {
+        return { label: `${min} - ${max}`, isRange: true };
+      }
+      return { label: String(min), isRange: false };
+    }
+  }
+  return { label: String(item.price), isRange: false };
+}
+
 // Arabic labels for addon categories
 const CATEGORY_LABEL: Record<string, string> = {
   size: "حجم", sugar: "سكر", milk: "حليب", shot: "شوت",
