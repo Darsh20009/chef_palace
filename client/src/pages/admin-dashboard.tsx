@@ -142,30 +142,26 @@ export default function AdminDashboard() {
 
   useEffect(() => { fetchInsights(); }, []);
 
-  const KpiCard = ({ label, value, sub, icon: Icon, trend, color, onClick }: any) => (
-    <Card
-      className="border border-border bg-card hover:shadow-md transition-all cursor-pointer"
+  const KpiCard = ({ label, value, sub, icon: Icon, trend, cardBg, onClick }: any) => (
+    <div
+      className={`${cardBg || 'bg-emerald-600'} rounded-2xl p-4 lg:p-5 hover:shadow-lg hover:brightness-105 transition-all cursor-pointer`}
       onClick={onClick}
     >
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between">
-          <div className="flex-1 min-w-0">
-            <p className="text-xs text-muted-foreground font-medium">{label}</p>
-            <p className="text-2xl font-bold text-foreground mt-1">{value}</p>
-            {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
-          </div>
-          <div className="p-2.5 rounded-xl flex-shrink-0 mr-3" style={{ background: `${color}18` }}>
-            <Icon className="w-5 h-5" style={{ color }} />
-          </div>
+      <div className="flex items-start justify-between mb-3">
+        <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+          <Icon className="w-5 h-5 text-white" />
         </div>
         {trend !== null && trend !== undefined && (
-          <div className={`flex items-center gap-1 mt-3 text-xs font-medium ${Number(trend) >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+          <div className={`flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-white/20 text-white`}>
             {Number(trend) >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-            <span>{Math.abs(Number(trend))}% {tc("مقارنة بالأمس", "vs yesterday")}</span>
+            <span>{Math.abs(Number(trend))}%</span>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+      <p className="text-xs text-white/70 font-medium mb-1">{label}</p>
+      <p className="text-2xl font-bold text-white mt-0.5">{value}</p>
+      {sub && <p className="text-xs text-white/60 mt-1">{sub}</p>}
+    </div>
   );
 
   return (
@@ -219,35 +215,35 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <KpiCard
               label={tc("إيرادات اليوم", "Today's Revenue")}
-              value={<span className="flex items-center gap-1">{todayRevenue.toFixed(0)} <SarIcon /></span>}
+              value={<span className="flex items-center gap-1">{todayRevenue.toLocaleString('en-US', { maximumFractionDigits: 0 })} <SarIcon /></span>}
               sub={`${todayOrders.length} ${tc("طلب", "orders")}`}
               icon={DollarSign}
               trend={revenueGrowth}
-              color="#2D9B6E"
+              cardBg="bg-emerald-600"
               onClick={() => navigate('/admin/reports')}
             />
             <KpiCard
               label={tc("إجمالي الموظفين", "Total Employees")}
-              value={employees.length}
+              value={employees.length.toLocaleString('en-US')}
               sub={`${activeEmployees} ${tc("نشط", "active")}`}
               icon={Users}
-              color="#3b82f6"
+              cardBg="bg-blue-600"
               onClick={() => navigate('/admin/employees')}
             />
             <KpiCard
               label={tc("الحضور اليوم", "Present Today")}
-              value={presentToday}
+              value={presentToday.toLocaleString('en-US')}
               sub={`${tc("من", "of")} ${activeEmployees} ${tc("نشط", "active")}`}
               icon={CheckCircle2}
-              color="#f59e0b"
+              cardBg="bg-amber-500"
               onClick={() => navigate('/manager/attendance')}
             />
             <KpiCard
               label={tc("متوسط الطلب", "Avg Order Value")}
-              value={<span className="flex items-center gap-1">{avgOrderValue.toFixed(1)} <SarIcon /></span>}
+              value={<span className="flex items-center gap-1">{avgOrderValue.toLocaleString('en-US', { maximumFractionDigits: 1 })} <SarIcon /></span>}
               sub={`${orders.length} ${tc("طلب إجمالاً", "total orders")}`}
               icon={Target}
-              color="#8b5cf6"
+              cardBg="bg-violet-600"
               onClick={() => navigate('/admin/reports')}
             />
           </div>

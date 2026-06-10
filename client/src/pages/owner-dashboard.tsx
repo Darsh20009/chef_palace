@@ -374,20 +374,18 @@ export default function OwnerDashboard() {
           <>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 lg:gap-4 mb-6">
               {[
-                { label: isToday ? tc("طلبات اليوم", "Today's Orders") : tc("طلبات اليوم المحدد", "Orders (selected day)"), value: stats?.summary.dayOrders ?? stats?.summary.todayOrders ?? 0, icon: BarChart3, iconBg: 'bg-blue-50', iconColor: 'text-blue-600' },
-                { label: isToday ? tc("إيرادات اليوم", "Today's Revenue") : tc("إيرادات اليوم المحدد", "Revenue (selected day)"), value: <>{(stats?.summary.dayRevenue || 0).toLocaleString()} <SarIcon /></>, icon: CreditCard, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600' },
-                { label: tc("إجمالي الإيرادات", "Total Revenue"), value: <>{(stats?.summary.totalRevenue || 0).toLocaleString()} <SarIcon /></>, icon: CreditCard, iconBg: 'bg-violet-50', iconColor: 'text-violet-600' },
-                { label: tc("الطلبات", "Orders"), value: stats?.collections.orders?.count || 0, icon: ShoppingCart, iconBg: 'bg-amber-50', iconColor: 'text-amber-600' },
+                { label: isToday ? tc("طلبات اليوم", "Today's Orders") : tc("طلبات اليوم المحدد", "Orders (selected day)"), value: (stats?.summary.dayOrders ?? stats?.summary.todayOrders ?? 0).toLocaleString('en-US'), icon: BarChart3, cardBg: 'bg-blue-600' },
+                { label: isToday ? tc("إيرادات اليوم", "Today's Revenue") : tc("إيرادات اليوم المحدد", "Revenue (selected day)"), value: <>{(stats?.summary.dayRevenue || 0).toLocaleString('en-US')} <SarIcon /></>, icon: CreditCard, cardBg: 'bg-emerald-600' },
+                { label: tc("إجمالي الإيرادات", "Total Revenue"), value: <>{(stats?.summary.totalRevenue || 0).toLocaleString('en-US')} <SarIcon /></>, icon: CreditCard, cardBg: 'bg-violet-600' },
+                { label: tc("الطلبات", "Orders"), value: (stats?.collections.orders?.count || 0).toLocaleString('en-US'), icon: ShoppingCart, cardBg: 'bg-amber-500' },
               ].map((k, i) => (
-                <Card key={i} className="bg-card border border-border hover:shadow-sm transition-shadow">
-                  <CardContent className="p-4">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${k.iconBg}`}>
-                      <k.icon className={`w-5 h-5 ${k.iconColor}`} />
-                    </div>
-                    <p className="text-muted-foreground text-xs mb-1">{k.label}</p>
-                    <p className="text-2xl font-bold text-foreground leading-tight">{k.value}</p>
-                  </CardContent>
-                </Card>
+                <div key={i} className={`${k.cardBg} rounded-2xl p-4 hover:shadow-lg hover:brightness-105 transition-all`}>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 bg-white/20">
+                    <k.icon className="w-5 h-5 text-white" />
+                  </div>
+                  <p className="text-white/70 text-xs mb-1">{k.label}</p>
+                  <p className="text-2xl font-bold text-white leading-tight">{k.value}</p>
+                </div>
               ))}
             </div>
 
