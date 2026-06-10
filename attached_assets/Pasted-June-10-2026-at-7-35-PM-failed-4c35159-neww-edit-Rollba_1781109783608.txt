@@ -1,0 +1,58 @@
+June 10, 2026 at 7:35 PM
+failed
+4c35159
+neww edit
+
+Rollback
+Exited with status 1 while building your code.
+Read our docs for common ways to troubleshoot your deploy.
+
+All logs
+Search
+Search
+
+Jun 10, 7:34 PM - 7:37 PM
+GMT+3
+
+
+
+==> Downloading cache...
+==> Cloning from https://github.com/Darsh20009/chef_palace
+==> Checking out commit 4c35159ee46a1824ad5127318d8b2d560de3deac in branch main
+==> Downloaded 291MB in 1s. Extraction took 6s.
+==> Requesting Node.js version 20
+==> Using Node.js version 20.20.2 via /opt/render/project/src/.nvmrc
+==> Docs on specifying a Node.js version: https://render.com/docs/node-version
+==> Installing Node.js version 20.20.2...
+==> Running build command 'npm install; npm run build'...
+npm error code ENOTEMPTY
+npm error syscall rename
+npm error path /opt/render/project/src/node_modules/aria-hidden
+npm error dest /opt/render/project/src/node_modules/.aria-hidden-7jxYyjsr
+npm error errno -39
+npm error ENOTEMPTY: directory not empty, rename '/opt/render/project/src/node_modules/aria-hidden' -> '/opt/render/project/src/node_modules/.aria-hidden-7jxYyjsr'
+npm error A complete log of this run can be found in: /opt/render/.cache/_logs/2026-06-10T16_36_14_694Z-debug-0.log
+> qirox-cafe@2.0.0 build
+> vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --minify --outfile=dist/index.js
+vite v5.4.21 building for production...
+transforming...
+✓ 2 modules transformed.
+x Build failed in 66ms
+error during build:
+[vite:css] Failed to load PostCSS config (searchPath: /opt/render/project/src/client): [Error] Loading PostCSS Plugin failed: Cannot find module 'tailwindcss'
+Require stack:
+- /opt/render/project/src/postcss.config.js
+(@/opt/render/project/src/postcss.config.js)
+Error: Loading PostCSS Plugin failed: Cannot find module 'tailwindcss'
+Require stack:
+- /opt/render/project/src/postcss.config.js
+(@/opt/render/project/src/postcss.config.js)
+    at load (file:///opt/render/project/src/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:33632:11)
+    at file:///opt/render/project/src/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:33657:16
+    at Array.map (<anonymous>)
+    at plugins (file:///opt/render/project/src/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:33656:8)
+    at processResult (file:///opt/render/project/src/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:33726:14)
+    at file:///opt/render/project/src/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:33856:14
+file: /opt/render/project/src/client/index.html?html-proxy&inline-css&index=0.css
+==> Build failed 😞
+==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
