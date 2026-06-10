@@ -36,9 +36,10 @@ export default defineConfig({
     emptyOutDir: true,
     chunkSizeWarningLimit: 1000,
     minify: process.env.NODE_ENV === 'production' ? 'esbuild' : false,
-    target: 'es2020',
+    target: 'esnext',
     cssMinify: process.env.NODE_ENV === 'production',
     rollupOptions: {
+      external: ['@vladmandic/face-api', 'face-api.js', 'sharp'],
       output: {
         manualChunks: {
           'vendor-react': ['react', 'react-dom'],
@@ -62,5 +63,9 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['react', 'react-dom', '@tanstack/react-query', 'wouter', 'lucide-react', 'i18next', 'react-i18next'],
+    exclude: ['@vladmandic/face-api', 'face-api.js', 'sharp'],
+    esbuildOptions: {
+      target: 'esnext',
+    },
   },
 });
