@@ -1063,7 +1063,20 @@ export default function MenuPage() {
                   <div className="space-y-1.5">
                     <h3 className="text-sm font-semibold truncate text-foreground">{i18n.language === 'ar' ? item.nameAr : item.nameEn || item.nameAr}</h3>
                     <div className="flex items-center justify-between">
-                      <span className="text-primary font-bold">{item.price} <small className="text-xs font-normal text-muted-foreground"><SarIcon /></small></span>
+                      <span className="text-primary font-bold">
+                        {(() => {
+                          const sizes = (item as any).availableSizes;
+                          if (sizes && sizes.length > 1) {
+                            const prices = sizes.map((s: any) => Number(s.price)).filter((p: number) => !isNaN(p) && p > 0);
+                            if (prices.length > 1) {
+                              const min = Math.min(...prices), max = Math.max(...prices);
+                              if (min !== max) return <>{min} - {max} <small className="text-xs font-normal text-muted-foreground">ر.س</small></>;
+                              return <>{min} <small className="text-xs font-normal text-muted-foreground"><SarIcon /></small></>;
+                            }
+                          }
+                          return <>{item.price} <small className="text-xs font-normal text-muted-foreground"><SarIcon /></small></>;
+                        })()}
+                      </span>
                       <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary transition-colors">
                         <Plus className="w-4 h-4 text-primary group-hover:text-white transition-colors" />
                       </div>

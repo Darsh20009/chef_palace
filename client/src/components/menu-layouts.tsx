@@ -266,6 +266,7 @@ export function ClassicMenuLayout({ items, onAddItem, lang, currency, favoriteId
         {items.map((item) => {
           const isFav = favoriteIds?.has(item.id);
           const addons = itemAddonsMap?.[item.id];
+          const priceDisplay = getPriceDisplay(item);
           return (
             <motion.div
               key={item.id}
@@ -297,7 +298,10 @@ export function ClassicMenuLayout({ items, onAddItem, lang, currency, favoriteId
                 <p className="text-xs text-muted-foreground truncate">{item.description || "مشروب مميز"}</p>
                 <OptionPills item={item} addons={addons} lang={lang} />
                 <div className="flex items-center justify-between mt-2">
-                  <span className="text-primary font-bold text-lg">{item.price} <small className="text-xs font-normal text-muted-foreground">{currency}</small></span>
+                  <span className="text-primary font-bold text-lg">
+                    {priceDisplay.label}{priceDisplay.isRange && <span className="text-[10px] font-normal text-muted-foreground mr-1">ر.س</span>}
+                    {!priceDisplay.isRange && <small className="text-xs font-normal text-muted-foreground"> {currency}</small>}
+                  </span>
                   <div className="flex items-center gap-1">
                     {onToggleFavorite && (
                       <button
@@ -329,6 +333,7 @@ export function CardsMenuLayout({ items, onAddItem, lang, currency, favoriteIds,
         {items.map((item) => {
           const isFav = favoriteIds?.has(item.id);
           const addons = itemAddonsMap?.[item.id];
+          const priceDisplay = getPriceDisplay(item);
           return (
             <motion.div
               key={item.id}
@@ -380,7 +385,10 @@ export function CardsMenuLayout({ items, onAddItem, lang, currency, favoriteIds,
                 <p className="text-[10px] text-muted-foreground line-clamp-1 mb-1">{item.description || "مشروب مميز"}</p>
                 <OptionPills item={item} addons={addons} lang={lang} />
                 <div className="flex items-center justify-between mt-auto pt-2">
-                  <span className="text-primary font-black text-sm">{item.price} <span className="text-[9px] font-normal text-muted-foreground">{currency}</span></span>
+                  <span className="text-primary font-black text-sm">
+                    {priceDisplay.label}{priceDisplay.isRange && <span className="text-[9px] font-normal text-muted-foreground mr-1"> ر.س</span>}
+                    {!priceDisplay.isRange && <span className="text-[9px] font-normal text-muted-foreground"> {currency}</span>}
+                  </span>
                   <button
                     className="w-7 h-7 rounded-xl bg-primary hover:bg-primary/90 text-white flex items-center justify-center transition-all active:scale-90"
                     onClick={(e) => { e.stopPropagation(); onAddItem(item); }}
@@ -405,6 +413,7 @@ export function ListMenuLayout({ items, onAddItem, lang, currency, favoriteIds, 
         {items.map((item) => {
           const isFav = favoriteIds?.has(item.id);
           const addons = itemAddonsMap?.[item.id];
+          const priceDisplay = getPriceDisplay(item);
           const hasOptions = (item.availableSizes && item.availableSizes.length > 0) || (addons && addons.length > 0);
           return (
             <motion.div
@@ -451,7 +460,10 @@ export function ListMenuLayout({ items, onAddItem, lang, currency, favoriteIds, 
                     <Heart className={`w-4 h-4 ${isFav ? 'fill-red-500 text-red-500' : 'text-slate-400'}`} />
                   </button>
                 )}
-                <span className="text-primary font-black text-base whitespace-nowrap">{item.price} <span className="text-[9px] font-normal text-muted-foreground">{currency}</span></span>
+                <span className="text-primary font-black text-base whitespace-nowrap">
+                  {priceDisplay.label}{priceDisplay.isRange && <span className="text-[9px] font-normal text-muted-foreground mr-1"> ر.س</span>}
+                  {!priceDisplay.isRange && <span className="text-[9px] font-normal text-muted-foreground"> {currency}</span>}
+                </span>
                 <button
                   className="w-8 h-8 rounded-xl bg-primary hover:bg-primary/90 text-white flex items-center justify-center flex-shrink-0 transition-all active:scale-90"
                   onClick={(e) => { e.stopPropagation(); onAddItem(item); }}

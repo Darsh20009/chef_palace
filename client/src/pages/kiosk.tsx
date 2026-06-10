@@ -39,6 +39,7 @@ interface KioskItem {
   isBestSeller?: boolean;
   rating?: number;
   isReservation?: boolean;
+  availableSizes?: Array<{ nameAr: string; nameEn?: string; price: number }>;
 }
 
 interface KioskCategory {
@@ -848,8 +849,18 @@ function ItemCard({ item, isAr, onAdd, highlight }: { item: KioskItem; isAr: boo
         {desc && <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{desc}</p>}
         <div className="mt-auto flex items-center justify-between pt-2">
           <div className="flex items-center gap-1 font-black text-primary">
-            <span className="text-lg">{Number(item.price).toFixed(2)}</span>
-            <SarIcon />
+            {(() => {
+              const sizes = item.availableSizes;
+              if (sizes && sizes.length > 1) {
+                const prices = sizes.map(s => Number(s.price)).filter(p => !isNaN(p) && p > 0);
+                if (prices.length > 1) {
+                  const min = Math.min(...prices), max = Math.max(...prices);
+                  if (min !== max) return <><span className="text-lg">{min} - {max}</span><SarIcon /></>;
+                  return <><span className="text-lg">{min.toFixed(2)}</span><SarIcon /></>;
+                }
+              }
+              return <><span className="text-lg">{Number(item.price).toFixed(2)}</span><SarIcon /></>;
+            })()}
           </div>
           <div className="w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
             <Plus className="w-5 h-5" />
