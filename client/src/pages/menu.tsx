@@ -389,7 +389,13 @@ export default function MenuPage() {
     .slice(0, 8);
 
 
+  const groupingEnabled = businessConfig?.menuGroupingEnabled !== false;
+  const groupingWords: 1 | 2 = (businessConfig?.menuGroupingWords as 1 | 2) || 2;
+
   const getGroupingKey = (item: CoffeeItem): string => {
+    // Grouping disabled → every item gets its own unique key
+    if (!groupingEnabled) return `${item.category}::${item.id}`;
+
     // 1. Explicit groupId has highest priority
     if ((item as any).groupId) return `${item.category}::${(item as any).groupId}`;
 
@@ -399,24 +405,19 @@ export default function MenuPage() {
     // Remove common diacritics to normalise names
     const cleaned = nameAr.trim().replace(/^[\u064B-\u0652]+/, '');
 
-    // Group items sharing the same FIRST TWO words AND same category
-    // (e.g. "قهوة عربية صغير" + "قهوة عربية كبير" → same group;
-    //  but "قهوة تركية" stays separate)
     const parts = cleaned.split(/\s+/).filter(Boolean);
-    const prefix = parts.slice(0, 2).join(' ') || parts[0] || 'unknown';
+    const prefix = parts.slice(0, groupingWords).join(' ') || parts[0] || 'unknown';
     return `${item.category}::${prefix}`;
   };
 
   const groupedItems = coffeeItems.reduce((acc: Record<string, CoffeeItem[]>, item) => {
     const groupKey = getGroupingKey(item);
-    
     if (!acc[groupKey]) acc[groupKey] = [];
     acc[groupKey].push(item);
     return acc;
   }, {});
 
   const representativeItems = Object.values(groupedItems).map(group => {
-    // Find the primary variant or just use the first one
     return group[0];
   });
 

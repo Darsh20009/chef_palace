@@ -819,6 +819,8 @@ export interface IBusinessConfig extends Document {
   offersConfig?: Record<string, any>;
   menuLayout?: 'classic' | 'cards' | 'list';
   cashierLayout?: 'classic' | 'pos' | 'split';
+  menuGroupingEnabled?: boolean;
+  menuGroupingWords?: 1 | 2;
   orderMethodsConfig?: {
     enableDineIn?: boolean;
     enableCarPickup?: boolean;
@@ -936,6 +938,8 @@ const BusinessConfigSchema = new Schema<IBusinessConfig>({
   offersConfig: { type: Schema.Types.Mixed, default: () => ({}) },
   menuLayout: { type: String, enum: ['classic', 'cards', 'list'], default: 'classic' },
   cashierLayout: { type: String, enum: ['classic', 'pos', 'split'], default: 'classic' },
+  menuGroupingEnabled: { type: Boolean, default: true },
+  menuGroupingWords: { type: Number, enum: [1, 2], default: 2 },
   orderMethodsConfig: {
     type: Schema.Types.Mixed,
     default: () => ({

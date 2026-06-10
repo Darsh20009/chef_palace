@@ -571,6 +571,8 @@ export default function AdminSettings() {
   });
   const [menuLayout, setMenuLayout] = useState<'classic' | 'cards' | 'list'>('classic');
   const [cashierLayout, setCashierLayout] = useState<'classic' | 'pos' | 'split'>('classic');
+  const [menuGroupingEnabled, setMenuGroupingEnabled] = useState(true);
+  const [menuGroupingWords, setMenuGroupingWords] = useState<1 | 2>(2);
 
   const mutation = useMutation({
     mutationFn: async (updates: any) => {
@@ -609,6 +611,8 @@ export default function AdminSettings() {
       });
       setMenuLayout(config.menuLayout || 'classic');
       setCashierLayout(config.cashierLayout || 'classic');
+      setMenuGroupingEnabled(config.menuGroupingEnabled !== false);
+      setMenuGroupingWords((config.menuGroupingWords as 1 | 2) || 2);
     }
   }, [config]);
 
@@ -1286,7 +1290,7 @@ export default function AdminSettings() {
                 </div>
               </div>
               <Button
-                onClick={() => mutation.mutate({ menuLayout, cashierLayout })}
+                onClick={() => mutation.mutate({ menuLayout, cashierLayout, menuGroupingEnabled, menuGroupingWords })}
                 disabled={mutation.isPending}
                 size="sm"
                 data-testid="button-save-layout"
@@ -1329,6 +1333,63 @@ export default function AdminSettings() {
                     <p className="text-xs text-muted-foreground">{opt.desc}</p>
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Product Grouping */}
+            <div>
+              <h3 className="font-bold text-lg flex items-center gap-2 text-primary border-b pb-2 mb-4">
+                <Layout className="w-5 h-5" />
+                {tc("تجميع المنتجات المتشابهة","Similar Product Grouping")}
+              </h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-muted/40 rounded-xl border">
+                  <div>
+                    <p className="font-semibold text-sm">{tc("تفعيل تجميع المنتجات","Enable product grouping")}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{tc("المنتجات التي تشترك في أول كلمة أو كلمتين بنفس الفئة تُعرض كبطاقة واحدة","Products sharing the same first word(s) in the same category appear as one card")}</p>
+                  </div>
+                  <button
+                    type="button"
+                    data-testid="toggle-menu-grouping"
+                    onClick={() => setMenuGroupingEnabled(!menuGroupingEnabled)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${menuGroupingEnabled ? 'bg-primary' : 'bg-gray-300'}`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${menuGroupingEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+
+                {menuGroupingEnabled && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground">{tc("عدد الكلمات المشتركة للتجميع","Number of shared words for grouping")}</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {([
+                        { value: 1 as const, label: tc('كلمة واحدة','One word'), desc: tc('"بخاري" يجمع: بخاري دجاج + بخاري لحم + بخاري خضار','"بخاري" groups: بخاري دجاج + بخاري لحم + بخاري خضار'), icon: '①' },
+                        { value: 2 as const, label: tc('كلمتان','Two words'), desc: tc('"بخاري دجاج" يجمع: بخاري دجاج صغير + بخاري دجاج كبير','"بخاري دجاج" groups: بخاري دجاج صغير + بخاري دجاج كبير'), icon: '②' },
+                      ]).map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          data-testid={`button-grouping-words-${opt.value}`}
+                          onClick={() => setMenuGroupingWords(opt.value)}
+                          className={`p-4 rounded-2xl border-2 text-right transition-all flex flex-col gap-1.5 ${
+                            menuGroupingWords === opt.value
+                              ? 'border-primary bg-primary/5 shadow-md'
+                              : 'border-border hover:border-primary/40 hover:bg-primary/5'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-xl">{opt.icon}</span>
+                            <span className="font-bold text-sm">{opt.label}</span>
+                            {menuGroupingWords === opt.value && (
+                              <CheckCircle className="w-4 h-4 text-primary mr-auto" />
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground leading-relaxed">{opt.desc}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
