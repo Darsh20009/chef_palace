@@ -1,0 +1,83 @@
+{
+  "id": "/qirox-systems-staff",
+  "name": "QIROX Systems",
+  "short_name": "QIROX",
+  "description": "نظام إدارة الموظفين والطلبات والعمليات — QIROX Systems",
+  "start_url": "/employee/home?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#0d0d0d",
+  "theme_color": "#2D9B6E",
+  "orientation": "any",
+  "lang": "ar",
+  "dir": "rtl",
+  "categories": ["productivity", "business"],
+  "prefer_related_applications": false,
+  "handle_links": "preferred",
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "icons": [
+    {
+      "src": "/employee-logo-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/employee-logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/employee-logo-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/employee-logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "نقطة البيع",
+      "short_name": "POS",
+      "url": "/employee/pos?source=shortcut",
+      "icons": [{ "src": "/employee-logo-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "الطلبات",
+      "short_name": "Orders",
+      "url": "/employee/orders?source=shortcut",
+      "icons": [{ "src": "/employee-logo-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "المطبخ",
+      "short_name": "Kitchen",
+      "url": "/employee/kitchen?source=shortcut",
+      "icons": [{ "src": "/employee-logo-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/employee-logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "QIROX Systems — بوابة الموظف"
+    },
+    {
+      "src": "/employee-logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "QIROX Systems — لوحة المدير"
+    }
+  ]
+}

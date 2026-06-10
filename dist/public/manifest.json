@@ -1,0 +1,112 @@
+{
+  "id": "/",
+  "name": "QIROX Cafe - كيروكس كافيه",
+  "short_name": "QIROX",
+  "description": "اطلب مشروبك المفضل، تتبّع طلبك، واستمتع ببرنامج الولاء — من QIROX Cafe",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone",
+    "minimal-ui"
+  ],
+  "background_color": "#0d0d0d",
+  "theme_color": "#2D9B6E",
+  "orientation": "portrait-primary",
+  "lang": "ar",
+  "dir": "rtl",
+  "categories": [
+    "food",
+    "lifestyle",
+    "shopping"
+  ],
+  "prefer_related_applications": false,
+  "handle_links": "preferred",
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "icons": [
+    {
+      "src": "/logo-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "QIROX Cafe — تطبيق الطلبات والولاء"
+    },
+    {
+      "src": "/logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "QIROX Cafe — لوحة التحكم"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "اطلب الآن",
+      "short_name": "طلب",
+      "description": "تصفح القائمة واطلب",
+      "url": "/menu?source=shortcut",
+      "icons": [{ "src": "/logo-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "بطاقتي",
+      "short_name": "الولاء",
+      "description": "بطاقة الولاء ونقاطك",
+      "url": "/my-card?source=shortcut",
+      "icons": [{ "src": "/logo-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "تتبع طلبي",
+      "short_name": "تتبع",
+      "description": "تتبع حالة طلبك",
+      "url": "/track?source=shortcut",
+      "icons": [{ "src": "/logo-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "edge_side_panel": {
+    "preferred_width": 420
+  }
+}

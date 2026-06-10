@@ -1,0 +1,1 @@
+import{a as s}from"./leaflet-src-C0c8PPPo.js";import{c as r,b as i,e as c}from"./TileLayer-McrpfJyk.js";const f=r(function({positions:t,...o},n){const e=new s.Polygon(t,o);return i(e,c(n,{overlayContainer:e}))},function(t,o,n){o.positions!==n.positions&&t.setLatLngs(o.positions)});export{f as P};

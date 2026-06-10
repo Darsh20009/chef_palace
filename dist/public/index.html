@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <!-- ═══════════════════════════════════════════════════════════
+         ONE-TIME CACHE CLEANER
+         لمسح الكاش من كل المتصفحات مرة واحدة فقط عند التحديث
+         لتشغيل تنظيف جديد: غيّر CLEAR_VERSION إلى رقم جديد
+         ═══════════════════════════════════════════════════════════ -->
+    <script>
+      (function() {
+        var CLEAR_VERSION = 'br-replit-dev-2026-04-13-v1';
+        var CLEAR_KEY = 'br_clear_version';
+        try {
+          if (localStorage.getItem(CLEAR_KEY) !== CLEAR_VERSION) {
+            // 1. مسح كل الكوكيز
+            document.cookie.split(';').forEach(function(cookie) {
+              var name = cookie.split('=')[0].trim();
+              if (name) {
+                var expiry = 'expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
+                document.cookie = name + '=;' + expiry;
+                document.cookie = name + '=;' + expiry + ';domain=' + location.hostname;
+                document.cookie = name + '=;' + expiry + ';domain=.' + location.hostname;
+              }
+            });
+            // 2. مسح كل الكاش من الـ Service Worker
+            if ('caches' in window) {
+              caches.keys().then(function(names) {
+                names.forEach(function(name) { caches.delete(name); });
+              });
+            }
+            // 3. إلغاء تسجيل الـ Service Workers القديمة
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                registrations.forEach(function(reg) { reg.unregister(); });
+              });
+            }
+            // 4. حفظ رقم الإصدار الجديد حتى لا يتكرر التنظيف
+            localStorage.setItem(CLEAR_KEY, CLEAR_VERSION);
+            // 5. إعادة تحميل الصفحة بعد التنظيف
+            setTimeout(function() { location.reload(true); }, 200);
+          }
+        } catch(e) {}
+      })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <!-- Primary Meta Tags -->
+    <title>QIROX Cafe | اطلب مشروبك المفضل</title>
+    <meta name="title" content="QIROX Cafe | اطلب مشروبك المفضل">
+    <meta name="description" content="اطلب مشروبك المفضل، تتبّع طلبك، وجمّع نقاط الولاء مع QIROX Cafe. خدمة سريعة، تجربة استثنائية.">
+    <meta name="keywords" content="QIROX, قهوة, كافيه, طلب قهوة, نقاط ولاء, مشروبات, coffee, cafe, loyalty, delivery">
+    <meta name="author" content="QIROX">
+    <meta name="robots" content="index, follow">
+    <meta name="language" content="Arabic">
+    <meta name="revisit-after" content="7 days">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://qirox.cafe/">
+    <meta property="og:title" content="QIROX Cafe | اطلب مشروبك المفضل">
+    <meta property="og:description" content="اطلب مشروبك المفضل، تتبّع طلبك، وجمّع نقاط الولاء مع QIROX Cafe.">
+    <meta property="og:image" content="https://qirox.cafe/logo-512.png">
+    <meta property="og:locale" content="ar_SA">
+    <meta property="og:site_name" content="QIROX Cafe">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://qirox.cafe/">
+    <meta property="twitter:title" content="QIROX Cafe | اطلب مشروبك المفضل">
+    <meta property="twitter:description" content="اطلب مشروبك المفضل، تتبّع طلبك، وجمّع نقاط الولاء مع QIROX Cafe.">
+    <meta property="twitter:image" content="https://qirox.cafe/logo-512.png">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="application-name" content="QIROX Cafe">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="QIROX">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#2D9B6E">
+    <meta name="msapplication-TileColor" content="#0D0D0D">
+    <meta name="msapplication-tap-highlight" content="no">
+    <meta name="format-detection" content="telephone=no">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" id="main-manifest">
+
+    <!-- Favicon (browser tab) -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=9">
+    <link rel="icon" type="image/png" sizes="16x16"  href="/icon-16.png?v=9">
+    <link rel="icon" type="image/png" sizes="32x32"  href="/icon-32.png?v=9" id="main-favicon">
+    <link rel="icon" type="image/png" sizes="96x96"  href="/icon-96.png?v=9">
+    <link rel="icon" type="image/png" sizes="192x192" href="/logo-192.png?v=9">
+    <link rel="icon" type="image/png" sizes="512x512" href="/logo-512.png?v=9">
+
+    <!-- Apple Touch Icons (Home Screen & Spotlight) -->
+    <link rel="apple-touch-icon"                      href="/apple-touch-icon.png?v=9">
+    <link rel="apple-touch-icon" sizes="57x57"        href="/icon-57.png?v=9">
+    <link rel="apple-touch-icon" sizes="60x60"        href="/icon-60.png?v=9">
+    <link rel="apple-touch-icon" sizes="72x72"        href="/icon-72.png?v=9">
+    <link rel="apple-touch-icon" sizes="76x76"        href="/icon-76.png?v=9">
+    <link rel="apple-touch-icon" sizes="114x114"      href="/icon-114.png?v=9">
+    <link rel="apple-touch-icon" sizes="120x120"      href="/icon-120.png?v=9">
+    <link rel="apple-touch-icon" sizes="144x144"      href="/icon-144.png?v=9">
+    <link rel="apple-touch-icon" sizes="152x152"      href="/icon-152.png?v=9">
+    <link rel="apple-touch-icon" sizes="167x167"      href="/icon-167.png?v=9">
+    <link rel="apple-touch-icon" sizes="180x180"      href="/icon-180.png?v=9">
+
+    <!-- Microsoft / Android -->
+    <meta name="msapplication-TileImage" content="/icon-144.png?v=9">
+    <meta name="msapplication-square70x70logo"   content="/icon-72.png?v=9">
+    <meta name="msapplication-square150x150logo" content="/icon-152.png?v=9">
+    <meta name="msapplication-square310x310logo" content="/logo-512.png?v=9">
+    
+    <!-- Meta Tags for SEO -->
+    <meta name="theme-color" content="#2D9B6E">
+    <meta name="description" content="QIROX Cafe — اطلب مشروبك المفضل، تتبّع طلبك، وجمّع نقاط الولاء.">
+    
+    <!-- Safari Pinned Tab -->
+    <link rel="mask-icon" href="/logo.png" color="#2D9B6E">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://www.blackrose.com.sa/">
+    
+    <!-- Google Fonts for Arabic -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
+    
+    <!-- Safari Splash Screens — all using QIROX logo-512 -->
+    <link rel="apple-touch-startup-image" href="/logo-512.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)">
+    <link rel="apple-touch-startup-image" href="/logo-512.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)">
+    <link rel="apple-touch-startup-image" href="/logo-512.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3)">
+    <link rel="apple-touch-startup-image" href="/logo-512.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)">
+    <link rel="apple-touch-startup-image" href="/logo-512.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)">
+    <link rel="apple-touch-startup-image" href="/logo-512.png" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3)">
+    <link rel="apple-touch-startup-image" href="/logo-512.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)">
+    <link rel="apple-touch-startup-image" href="/logo-512.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3)">
+    <link rel="apple-touch-startup-image" href="/logo-512.png" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3)">
+    <link rel="apple-touch-startup-image" href="/logo-512.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)">
+    <link rel="apple-touch-startup-image" href="/logo-512.png" media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2)">
+    <link rel="apple-touch-startup-image" href="/logo-512.png" media="(device-width: 820px) and (device-height: 1180px) and (-webkit-device-pixel-ratio: 2)">
+    <link rel="apple-touch-startup-image" href="/logo-512.png" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)">
+    
+    <!-- Structured Data / JSON-LD -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "CafeOrCoffeeShop",
+      "name": "BLACK ROSE CAFE",
+      "alternateName": "بلاك روز كافيه",
+      "description": "استمتع بأرقى تجربة قهوة فاخرة في المدينة مع تشكيلة متنوعة من أجود أنواع القهوة المحضرة بعناية استثنائية",
+      "url": "https://www.blackrose.com.sa",
+      "logo": "https://www.blackrose.com.sa/logo.png",
+      "image": "https://www.blackrose.com.sa/logo.png",
+      "identifier": [
+        {
+          "@type": "PropertyValue",
+          "name": "السجل التجاري",
+          "value": "4700114396"
+        },
+        {
+          "@type": "PropertyValue",
+          "name": "الرقم الضريبي",
+          "value": "312718675800003"
+        }
+      ],
+      "servesCuisine": ["Coffee", "Espresso", "Latte", "Cappuccino", "Specialty Coffee"],
+      "priceRange": "$$$",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Riyadh",
+        "addressCountry": "SA"
+      },
+      "openingHoursSpecification": {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+        "opens": "07:00",
+        "closes": "23:00"
+      },
+      "hasMenu": {
+        "@type": "Menu",
+        "name": "قائمة المشروبات",
+        "url": "https://www.blackrose.com.sa/menu"
+      },
+      "potentialAction": {
+        "@type": "OrderAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://www.blackrose.com.sa/menu",
+          "actionPlatform": ["http://schema.org/DesktopWebPlatform", "http://schema.org/MobileWebPlatform"]
+        },
+        "deliveryMethod": ["http://purl.org/goodrelations/v1#DeliveryModePickUp", "http://purl.org/goodrelations/v1#DeliveryModeOwnFleet"]
+      }
+    }
+    </script>
+    
+    <!-- QIROX Design System CSS -->
+    <style>
+      :root {
+        --primary: #2D9B6E;
+        --primary-dark: #1e7a55;
+        --primary-light: #4dc894;
+        --background: #0D0D0D;
+        --surface: #141414;
+        --border: #1f1f1f;
+        --text-main: #f5f5f5;
+        --text-muted: #888888;
+      }
+    </style>
+    <script type="module" crossorigin src="/assets/index-CwOLSL6J.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/vendor-query-BgwjQ_Wi.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-ui-Bcydj3qt.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-utils-UagjiSbi.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-BbFTGCRE.css">
+  </head>
+  <body>
+    <div id="root"></div>
+    
+    <!-- Dynamic Manifest Switcher for Employee Portal -->
+    <script>
+      (function() {
+        const employeePaths = ['/employee', '/manager', '/kitchen', '/pos', '/cashier', '/admin', '/owner', '/executive'];
+        const currentPath = window.location.pathname;
+        const isEmployeePath = employeePaths.some(path => currentPath === path || currentPath.startsWith(path + '/'));
+        
+        const manifestLink = document.getElementById('main-manifest');
+        const favicon = document.getElementById('main-favicon');
+        const shortcutIcon = document.getElementById('main-shortcut-icon');
+        const appleTouchIcons = document.querySelectorAll('link[rel="apple-touch-icon"]');
+
+        if (isEmployeePath) {
+          if (manifestLink) manifestLink.href = '/employee-manifest.json';
+          if (favicon) favicon.href = '/employee-logo-192.png';
+          if (shortcutIcon) shortcutIcon.href = '/employee-logo-192.png';
+          appleTouchIcons.forEach(icon => {
+            icon.href = '/employee-logo-192.png';
+          });
+          
+          const existingIcon = document.querySelector('link[rel="icon"]');
+          if (existingIcon) existingIcon.href = '/employee-logo-192.png';
+          
+          document.title = "QIROX Systems | نظام إدارة الموظفين";
+          
+          if (manifestLink) {
+             const newManifest = manifestLink.cloneNode(true);
+             newManifest.href = '/employee-manifest.json?v=' + Date.now();
+             manifestLink.parentNode.replaceChild(newManifest, manifestLink);
+          }
+        } else {
+          if (manifestLink) manifestLink.href = '/manifest.json';
+          if (favicon) favicon.href = '/logo-192.png';
+          if (shortcutIcon) shortcutIcon.href = '/logo-192.png';
+          appleTouchIcons.forEach(icon => {
+            icon.href = '/apple-touch-icon.png';
+          });
+          const existingIcon = document.querySelector('link[rel="icon"]');
+          if (existingIcon) existingIcon.href = '/logo-32.png';
+        }
+      })();
+    </script>
+    
+    <!-- Register Service Worker -->
+    <script>
+      if ('serviceWorker' in navigator && !location.hostname.endsWith('.replit.dev') && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js')
+            .then(function(registration) {
+              console.log('ServiceWorker registration successful');
+              if ("Notification" in window) {
+                Notification.requestPermission();
+              }
+            })
+            .catch(function(err) {
+              console.log('ServiceWorker registration failed: ', err);
+            });
+        });
+      }
+    </script>
+  </body>
+</html>
