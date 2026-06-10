@@ -2,15 +2,11 @@ import express, { type Express } from "express";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { createServer as createViteServer, createLogger } from "vite";
 import { type Server } from "http";
-import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-const viteLogger = createLogger();
 
 const STAFF_PATHS = ['/employee', '/manager', '/kitchen', '/pos', '/cashier', '/admin', '/owner', '/executive', '/0'];
 
@@ -55,6 +51,11 @@ export function log(message: string, source = "express") {
 }
 
 export async function setupVite(app: Express, server: Server) {
+  // Dynamic import — vite is only loaded in development, never bundled into production
+  const { createServer: createViteServer, createLogger } = await import("vite");
+  const viteConfig = (await import("../vite.config")).default;
+
+  const viteLogger = createLogger();
   const hmrHost = process.env.REPLIT_DEV_DOMAIN;
   const serverOptions = {
     middlewareMode: true,
@@ -90,7 +91,6 @@ export async function setupVite(app: Express, server: Server) {
         "index.html",
       );
 
-      // always reload the index.html file from disk incase it changes
       let template = await fs.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,
@@ -122,9 +122,6 @@ export function serveStatic(app: Express) {
     );
   }
 
-  // ✅ Fix white screen after deploy:
-  // - Never cache HTML (index.html)
-  // - Cache hashed assets for long time (Vite /assets/*)
   const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 
   app.use(
