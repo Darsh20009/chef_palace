@@ -128,7 +128,7 @@ export default function ManagerAI() {
               <h1 className="text-xl font-bold text-foreground leading-none">{tc('مركز الذكاء الاصطناعي', 'AI Center')}</h1>
               <div className="flex items-center gap-2 mt-0.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-xs text-muted-foreground">{tc('مدعوم بـ', 'Powered by')} Kimi AI (Moonshot)</span>
+                <span className="text-xs text-muted-foreground">{tc('مدعوم بـ', 'Powered by')} Kimi K2 + Gemini 2.0</span>
               </div>
             </div>
           </div>
@@ -148,7 +148,9 @@ export default function ManagerAI() {
                 <p className="text-amber-600 dark:text-amber-500 text-xs mt-1">
                   {tc('لتفعيل الذكاء الاصطناعي، تأكد من ضبط مفتاح', 'To activate AI, make sure the key')}{" "}
                   <code className="bg-amber-100 dark:bg-amber-900 px-1.5 py-0.5 rounded text-amber-700 dark:text-amber-300 font-mono text-[11px]">KIMI_API_KEY</code>{" "}
-                  {tc('في متغيرات البيئة', 'is set in environment variables')} — <a href="https://platform.moonshot.ai" target="_blank" className="text-amber-600 underline">platform.moonshot.ai</a>
+                  {tc('أو', 'or')}{" "}
+                  <code className="bg-amber-100 dark:bg-amber-900 px-1.5 py-0.5 rounded text-amber-700 dark:text-amber-300 font-mono text-[11px]">GEMINI_API_KEY</code>{" "}
+                  {tc('في متغيرات البيئة', 'in environment variables')}
                 </p>
               </div>
             </CardContent>

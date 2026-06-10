@@ -395,7 +395,7 @@ export function AIMenuAssistant({
                   <Sparkles className="w-6 h-6 text-purple-600" />
                 </div>
                 <p className="text-sm">{tc("اختر نوع المحتوى لتوليده بالذكاء الاصطناعي", "Choose content type to generate with AI")}</p>
-                <p className="text-xs mt-1 text-gray-700">{tc("يعمل بـ Gemini Flash — سريع وإبداعي", "Powered by Gemini Flash — fast and creative")}</p>
+                <p className="text-xs mt-1 text-gray-700">{tc("يعمل بـ Kimi K2 + Gemini Flash — ذكاء هجين", "Powered by Kimi K2 + Gemini Flash — hybrid AI")}</p>
               </div>
             )}
           </div>

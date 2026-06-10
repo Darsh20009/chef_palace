@@ -1,0 +1,2 @@
+- [Kimi K2.5 model quirks](kimi-quirks.md) — temperature must be exactly 1; model id is `kimi-k2.5`; small max_tokens returns empty content field
+- [Hybrid AI engine](hybrid-ai-engine.md) — `server/ai-engine.ts` wraps Kimi K2.5 + Gemini cascade; Kimi primary for all tasks, Gemini fallback; Gemini quota exhausts frequently on free tier

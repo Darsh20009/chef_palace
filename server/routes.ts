@@ -2,6 +2,7 @@ import crypto from "crypto";
 import mongoose from "mongoose";
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { callAI, isAIConfigured } from "./ai-engine";
 import { storage } from "./storage";
 import { cache, cacheKey, CACHE_TTL } from "./cache";
 import { 
@@ -19962,24 +19963,10 @@ ${businessContext}
         { role: "user", content: message },
       ];
 
-      const kimiKey = process.env.KIMI_API_KEY;
-      if (!kimiKey) return res.status(200).json({ response: "مساعد الذكاء الاصطناعي غير مفعّل — يرجى ضبط مفتاح KIMI_API_KEY.", configured: false });
+      if (!isAIConfigured().any) return res.status(200).json({ response: "مساعد الذكاء الاصطناعي غير مفعّل — يرجى ضبط مفتاح KIMI_API_KEY أو GEMINI_API_KEY.", configured: false });
 
-      const response = await fetch("https://api.moonshot.ai/v1/chat/completions", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${kimiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "kimi-k2.5", messages, max_tokens: 5000, temperature: 1 }),
-      });
-
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error("Kimi AI chat error:", errText);
-        return res.status(500).json({ error: "فشل الاتصال بـ Kimi AI" });
-      }
-
-      const data = await response.json() as any;
-      const reply = data.choices?.[0]?.message?.content || "";
-      res.json({ reply, model: "kimi-k2.5" });
+      const aiResult = await callAI(messages, { maxTokens: 5000, taskType: "chat" });
+      res.json({ reply: aiResult.content, model: aiResult.model, provider: aiResult.provider });
     } catch (error: any) {
       console.error("AI chat error:", error);
       res.status(500).json({ error: error.message || "خطأ في الذكاء الاصطناعي" });
@@ -19992,42 +19979,27 @@ ${businessContext}
       const { productName, description } = req.body as { productName?: string; description?: string };
       if (!productName) return res.status(400).json({ error: "productName required" });
 
-      const kimiKey = process.env.KIMI_API_KEY;
-
-      // Step 1: Use Kimi to translate name to English + pick Foodish category
+      // Step 1: Use hybrid AI to translate name to English + pick category
       let englishSearchTerm = productName;
       let foodishCategory = "rice"; // default for Bukhari restaurant
 
-      if (kimiKey) {
+      if (isAIConfigured().any) {
         try {
-          const kimiRes = await fetch("https://api.moonshot.ai/v1/chat/completions", {
-            method: "POST",
-            headers: { "Authorization": `Bearer ${kimiKey}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              model: "moonshot-v1-8k",
-              messages: [{
-                role: "user",
-                content: `You are a food expert. For this food item: "${productName}"${description ? ` (${description})` : ""}
+          const imgAiResult = await callAI([{
+            role: "user",
+            content: `You are a food expert. For this food item: "${productName}"${description ? ` (${description})` : ""}
 Return a JSON object with exactly these fields:
 {
   "english": "short English name for searching (1-3 words, e.g. 'chicken biryani')",
   "category": "one of: biryani, butter-chicken, dessert, pasta, pizza, rice, samosa, idly, dosa"
 }
 Return ONLY valid JSON, no markdown.`
-              }],
-              temperature: 0.3,
-              max_tokens: 80
-            })
-          });
-          if (kimiRes.ok) {
-            const kimiData = await kimiRes.json() as any;
-            const raw = kimiData.choices?.[0]?.message?.content?.trim() || "";
-            try {
-              const parsed = JSON.parse(raw.replace(/```json?|```/g, '').trim());
-              if (parsed.english) englishSearchTerm = parsed.english;
-              if (parsed.category) foodishCategory = parsed.category;
-            } catch {}
-          }
+          }], { maxTokens: 80, temperature: 0.3, taskType: "fast" });
+          try {
+            const parsed = JSON.parse(imgAiResult.content.replace(/```json?|```/g, '').trim());
+            if (parsed.english) englishSearchTerm = parsed.english;
+            if (parsed.category) foodishCategory = parsed.category;
+          } catch {}
         } catch {}
       }
 
@@ -20126,27 +20098,17 @@ ${growthPct ? `- النمو مقارنة بالأسبوع الماضي: ${growth
 ]
 لا تضف أي نص خارج الـ JSON.`;
 
-      const insightsMsgs = [{ role: "user", content: prompt }];
-      const kimiKey = process.env.KIMI_API_KEY;
-      if (!kimiKey) {
+      const insightsMsgs: { role: "user"; content: string }[] = [{ role: "user", content: prompt }];
+      if (!isAIConfigured().any) {
         return res.json({ insights: [], stats: { todayRevenue, todayOrders: todayOrders.length, weekRevenue, weekOrders: weekOrders.length, growthPct }, configured: false });
       }
 
-      const response = await fetch("https://api.moonshot.ai/v1/chat/completions", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${kimiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "kimi-k2.5", messages: insightsMsgs, max_tokens: 4000, temperature: 1 }),
-      });
-
-      if (!response.ok) return res.json({ insights: [], stats: { todayRevenue, todayOrders: todayOrders.length, weekRevenue, weekOrders: weekOrders.length, growthPct }, error: "فشل الاتصال بـ Kimi AI" });
-
-      const data = await response.json() as any;
-      const content = (data.choices?.[0]?.message?.content || "").trim();
-
       try {
+        const aiResult = await callAI(insightsMsgs, { maxTokens: 4000, taskType: "analysis" });
+        const content = aiResult.content.trim();
         const jsonMatch = content.match(/\[[\s\S]*\]/);
         const insights = jsonMatch ? JSON.parse(jsonMatch[0]) : [];
-        res.json({ insights, stats: { todayRevenue, todayOrders: todayOrders.length, weekRevenue, weekOrders: weekOrders.length, growthPct } });
+        res.json({ insights, stats: { todayRevenue, todayOrders: todayOrders.length, weekRevenue, weekOrders: weekOrders.length, growthPct }, model: aiResult.model });
       } catch {
         res.json({ insights: [], stats: { todayRevenue, todayOrders: todayOrders.length, weekRevenue, weekOrders: weekOrders.length, growthPct } });
       }
@@ -20252,38 +20214,15 @@ ${contextData}
 - 3-4 مؤشرات KPI
 - JSON صحيح فقط`;
 
-      const kimiKey = process.env.KIMI_API_KEY;
-      if (!kimiKey) return res.status(200).json({ report: null, configured: false, error: "مفتاح Kimi AI غير مضبوط" });
+      if (!isAIConfigured().any) return res.status(200).json({ report: null, configured: false, error: "لم يتم ضبط مفاتيح AI" });
 
-      const response = await fetch("https://api.moonshot.ai/v1/chat/completions", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${kimiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "kimi-k2.5",
-          messages: [{ role: "user", content: prompt }],
-          max_tokens: 5000,
-          temperature: 1,
-        }),
-      });
-
-      if (!response.ok) {
-        const errText = await response.text();
-        console.error("Kimi AI smart-report error:", errText);
-        return res.status(500).json({ error: "فشل الاتصال بـ Kimi AI" });
-      }
-
-      const data = await response.json() as any;
-      const content = (data.choices?.[0]?.message?.content || "").trim();
+      const aiResult = await callAI([{ role: "user", content: prompt }], { maxTokens: 5000, taskType: "analysis" });
+      const content = aiResult.content.trim();
 
       try {
         const jsonMatch = content.match(/\{[\s\S]*\}/);
         const report = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
-        res.json({
-          ...report,
-          type,
-          period,
-          generatedAt: new Date().toISOString(),
-        });
+        res.json({ ...report, type, period, generatedAt: new Date().toISOString(), model: aiResult.model });
       } catch (parseErr) {
         res.status(500).json({ error: "فشل تحليل رد AI" });
       }
@@ -20399,24 +20338,10 @@ ${existingIngredients ? `المكونات الحالية: ${existingIngredients}
         { role: "user", content: userPrompt },
       ];
 
-      const kimiKey = process.env.KIMI_API_KEY;
-      if (!kimiKey) return res.status(200).json({ message: "المساعد غير مفعّل حالياً. يرجى ضبط KIMI_API_KEY.", configured: false });
+      if (!isAIConfigured().any) return res.status(200).json({ message: "المساعد غير مفعّل حالياً. يرجى ضبط KIMI_API_KEY أو GEMINI_API_KEY.", configured: false });
 
-      const menuResponse = await fetch("https://api.moonshot.ai/v1/chat/completions", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${kimiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: "kimi-k2.5", messages: menuMsgs, max_tokens: 4000, temperature: 1 }),
-      });
-
-      if (!menuResponse.ok) {
-        const errText = await menuResponse.text();
-        console.error("Groq menu error:", errText);
-        return res.status(500).json({ error: "فشل في الاتصال بـ Groq" });
-      }
-
-      const data = await menuResponse.json() as any;
-      const content = data.choices?.[0]?.message?.content || "";
-      res.json({ result: content, task, model: "kimi-k2.5" });
+      const menuAiResult = await callAI(menuMsgs, { maxTokens: 4000, taskType: "creative" });
+      res.json({ result: menuAiResult.content, task, model: menuAiResult.model, provider: menuAiResult.provider });
     } catch (error: any) {
       console.error("AI Menu Assist error:", error);
       res.status(500).json({ error: error.message || "حدث خطأ في الذكاء الاصطناعي" });
@@ -21486,26 +21411,15 @@ ${existingIngredients ? `المكونات الحالية: ${existingIngredients}
   //  Smart Suggestions · AI Reports · Inventory Forecasting
   // ════════════════════════════════════════════════════════════════════════
 
-  // Helper: call Groq for natural-language generation
+  // Helper: hybrid AI call (Kimi K2 primary, Gemini fallback)
   async function callGroq(systemPrompt: string, userPrompt: string, maxTokens = 600): Promise<string | null> {
-    const kimiKey = process.env.KIMI_API_KEY;
-    if (!kimiKey) return null;
+    if (!isAIConfigured().any) return null;
     try {
-      const r = await fetch("https://api.moonshot.ai/v1/chat/completions", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${kimiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "kimi-k2.5",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          temperature: 1,
-          max_tokens: maxTokens,
-        }),
-      });
-      const data = await r.json();
-      return data.choices?.[0]?.message?.content || null;
+      const result = await callAI(
+        [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
+        { maxTokens, taskType: "analysis" }
+      );
+      return result.content || null;
     } catch (e) { return null; }
   }
 
@@ -22918,20 +22832,13 @@ ${existingIngredients ? `المكونات الحالية: ${existingIngredients}
       const question = req.body.question || "حلل وضع الأعمال الحالي";
       const fullMessage = `${contextData}\n\n❓ السؤال: ${question}`;
 
-      const apiKey = process.env.KIMI_API_KEY;
-      if (!apiKey) return res.status(500).json({ error: "KIMI_API_KEY not configured" });
+      if (!isAIConfigured().any) return res.status(500).json({ error: "AI not configured" });
 
-      const response = await fetch("https://api.moonshot.ai/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model: "kimi-k2.5",
-          messages: [{ role: "system", content: systemPrompt }, ...history, { role: "user", content: fullMessage }],
-          temperature: 1, max_tokens: 6000,
-        }),
-      });
-      const data: any = await response.json();
-      res.json({ answer: data.choices?.[0]?.message?.content || "لا يوجد رد" });
+      const ceoResult = await callAI(
+        [{ role: "system", content: systemPrompt }, ...history, { role: "user", content: fullMessage }],
+        { maxTokens: 6000, taskType: "chat" }
+      );
+      res.json({ answer: ceoResult.content || "لا يوجد رد", model: ceoResult.model });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
   });
 
@@ -23139,11 +23046,10 @@ ${existingIngredients ? `المكونات الحالية: ${existingIngredients}
 
   // ─── BRAND AI ENDPOINTS ────────────────────────────────────────────────────
 
-  // POST /api/ai/brand-chat — employee brand AI assistant (Kimi AI)
+  // POST /api/ai/brand-chat — employee brand AI assistant (Kimi K2 + Gemini)
   app.post("/api/ai/brand-chat", requireAuth, async (req: AuthRequest, res) => {
     try {
-      const kimiKey = process.env.KIMI_API_KEY;
-      if (!kimiKey) return res.status(503).json({ error: "AI not configured" });
+      if (!isAIConfigured().any) return res.status(503).json({ error: "AI not configured" });
 
       const { message, history = [] } = req.body;
       if (!message) return res.status(400).json({ error: "message required" });
@@ -23174,38 +23080,24 @@ ${items.map((i: any) => `• ${i.nameAr}${i.nameEn ? ` (${i.nameEn})` : ""}: ${i
 
 أجب دائماً بالعربية بأسلوب ودي ومهني ومختصر. لا تكتب أبداً بالصينية أو أي لغة أخرى سوى العربية والإنجليزية. للأسئلة خارج النطاق اعتذر بلطف.`;
 
-      const messages = [
-        { role: "system", content: systemPrompt },
+      const brandMessages = [
+        { role: "system" as const, content: systemPrompt },
         ...history.slice(-12),
-        { role: "user", content: message },
+        { role: "user" as const, content: message },
       ];
 
-      const aiRes = await fetch("https://api.moonshot.ai/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${kimiKey}` },
-        body: JSON.stringify({ model: "kimi-k2.5", messages, max_tokens: 4000, temperature: 1 }),
-      });
-
-      if (!aiRes.ok) {
-        const errText = await aiRes.text();
-        console.error("[Kimi AI brand-chat error]", errText);
-        return res.status(502).json({ error: "AI service unavailable" });
-      }
-
-      const aiData = await aiRes.json() as any;
-      const reply = aiData.choices?.[0]?.message?.content || "عذراً، لم أتمكن من الإجابة الآن.";
-      res.json({ reply });
+      const brandAiResult = await callAI(brandMessages, { maxTokens: 4000, taskType: "chat" });
+      res.json({ reply: brandAiResult.content || "عذراً، لم أتمكن من الإجابة الآن.", model: brandAiResult.model });
     } catch (e: any) {
       console.error("[Brand AI]", e.message);
       res.status(500).json({ error: e.message });
     }
   });
 
-  // POST /api/ai/accounting-audit — manager accounting AI (Kimi AI)
+  // POST /api/ai/accounting-audit — manager accounting AI (Kimi K2 + Gemini)
   app.post("/api/ai/accounting-audit", requireAuth, requireManager, async (req: AuthRequest, res) => {
     try {
-      const kimiKey = process.env.KIMI_API_KEY;
-      if (!kimiKey) return res.status(503).json({ error: "AI not configured" });
+      if (!isAIConfigured().any) return res.status(503).json({ error: "AI not configured" });
 
       const { question, period = "month" } = req.body;
       const tenantId = (req as any).tenantId || "demo-tenant";
@@ -23263,29 +23155,11 @@ ${revenueLines}
 
       const userMsg = question || "راجع حساباتي وأعطني تقرير تدقيق شامل مع كشف أي تلاعب أو أخطاء أو مصروفات شاذة";
 
-      const aiRes = await fetch("https://api.moonshot.ai/v1/chat/completions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${kimiKey}` },
-        body: JSON.stringify({
-          model: "kimi-k2.5",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userMsg },
-          ],
-          max_tokens: 6000,
-          temperature: 1,
-        }),
-      });
-
-      if (!aiRes.ok) {
-        const errText = await aiRes.text();
-        console.error("[Kimi AI accounting-audit error]", errText);
-        return res.status(502).json({ error: "AI service unavailable" });
-      }
-
-      const aiData = await aiRes.json() as any;
-      const report = aiData.choices?.[0]?.message?.content || "لم أتمكن من إنشاء التقرير.";
-      res.json({ report });
+      const auditResult = await callAI(
+        [{ role: "system", content: systemPrompt }, { role: "user", content: userMsg }],
+        { maxTokens: 6000, taskType: "analysis" }
+      );
+      res.json({ report: auditResult.content || "لم أتمكن من إنشاء التقرير.", model: auditResult.model });
     } catch (e: any) {
       console.error("[Accounting AI]", e.message);
       res.status(500).json({ error: e.message });
