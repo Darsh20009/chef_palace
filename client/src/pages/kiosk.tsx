@@ -18,8 +18,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { brand } from "@/lib/brand";
 import i18n from "@/lib/i18n";
 import { useTranslation } from "react-i18next";
-import bannerImage1 from "@assets/image_1773902748715.png";
-import bannerImage2 from "@assets/image_1773902748715.png";
+import bannerImage1 from "@assets/Screenshot_2026-06-10_at_2.11.54_PM_1781089962059.png";
+import bannerImage2 from "@assets/Screenshot_2026-06-10_at_2.11.54_PM_1781089962059.png";
 import SarIcon from "@/components/sar-icon";
 
 type Step = "splash" | "language" | "location" | "menu" | "cart" | "payment" | "processing" | "success";

@@ -3,7 +3,7 @@ import { useLocation, useRoute } from "wouter";
 import { motion } from "framer-motion";
 import { Ticket, LogIn, ShoppingBag, BadgePercent } from "lucide-react";
 import qiroxLogo from "@assets/qirox-logo-customer.png";
-import bannerImage1 from "@assets/image_1773902748715.png";
+import bannerImage1 from "@assets/Screenshot_2026-06-10_at_2.11.54_PM_1781089962059.png";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";

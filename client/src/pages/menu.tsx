@@ -33,8 +33,8 @@ import {
   CheckCircle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import banner1 from "@assets/image_1773902748715.png";
-import banner2 from "@assets/image_1773902748715.png";
+import banner1 from "@assets/Screenshot_2026-06-10_at_2.11.54_PM_1781089962059.png";
+import banner2 from "@assets/Screenshot_2026-06-10_at_2.11.54_PM_1781089962059.png";
 import qiroxLogo from "@assets/qirox-logo-customer.png";
 import type { CoffeeItem, IProductAddon, IPromoOffer } from "@shared/schema";
 import { AddToCartModal } from "@/components/add-to-cart-modal";

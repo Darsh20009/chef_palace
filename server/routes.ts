@@ -19742,15 +19742,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const aiTenantId = req.employee?.tenantId || 'demo-tenant';
       let businessContext = "";
       try {
-        const { OrderModel: AiOrderModel } = await import("@shared/schema");
-        const allOrders = await AiOrderModel.find({ tenantId: aiTenantId }).sort({ createdAt: -1 }).limit(500).lean();
+        const monthStart = new Date(todayStart.getTime() - 30 * 24 * 60 * 60 * 1000);
+        const prevWeekStart = new Date(weekStart.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+        const {
+          OrderModel: AiOrderModel,
+          ExpenseModel,
+          AttendanceModel,
+          RawItemModel,
+          CashierShiftModel,
+        } = await import("@shared/schema");
+
+        // ── Orders ──────────────────────────────────────────────────────────
+        const allOrders = await AiOrderModel.find({ tenantId: aiTenantId }).sort({ createdAt: -1 }).limit(1000).lean();
         const todayOrders = allOrders.filter((o: any) => new Date(o.createdAt) >= todayStart);
-        const weekOrders = allOrders.filter((o: any) => new Date(o.createdAt) >= weekStart);
+        const weekOrders  = allOrders.filter((o: any) => new Date(o.createdAt) >= weekStart);
+        const monthOrders = allOrders.filter((o: any) => new Date(o.createdAt) >= monthStart);
+        const prevWeekOrders = allOrders.filter((o: any) => new Date(o.createdAt) >= prevWeekStart && new Date(o.createdAt) < weekStart);
 
-        const todayRevenue = todayOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
-        const weekRevenue = weekOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
+        const todayRevenue    = todayOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
+        const weekRevenue     = weekOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
+        const monthRevenue    = monthOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
+        const prevWeekRevenue = prevWeekOrders.reduce((s: number, o: any) => s + (o.totalAmount || 0), 0);
+        const weekGrowth      = prevWeekRevenue > 0 ? ((weekRevenue - prevWeekRevenue) / prevWeekRevenue * 100).toFixed(1) : null;
+        const avgOrderWeek    = weekOrders.length > 0 ? (weekRevenue / weekOrders.length).toFixed(2) : "0";
 
-        // Top selling items
+        // Payment breakdown
+        const paymentBreakdown: Record<string, number> = {};
+        weekOrders.forEach((o: any) => {
+          const m = o.paymentMethod || "نقدي";
+          paymentBreakdown[m] = (paymentBreakdown[m] || 0) + (o.totalAmount || 0);
+        });
+
+        // Top items
         const itemCounts: Record<string, { count: number; revenue: number }> = {};
         weekOrders.forEach((o: any) => {
           (o.items || []).forEach((item: any) => {
@@ -19761,8 +19785,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         });
         const topItems = Object.entries(itemCounts).sort((a, b) => b[1].count - a[1].count).slice(0, 5);
+        const lowItems = Object.entries(itemCounts).sort((a, b) => a[1].count - b[1].count).slice(0, 3);
 
-        // Day performance
+        // Peak hours
+        const hourCounts: Record<number, number> = {};
+        weekOrders.forEach((o: any) => {
+          const h = new Date(o.createdAt).getHours();
+          hourCounts[h] = (hourCounts[h] || 0) + 1;
+        });
+        const peakHour = Object.entries(hourCounts).sort((a, b) => Number(b[1]) - Number(a[1]))[0];
+        const deadHour = Object.entries(hourCounts).sort((a, b) => Number(a[1]) - Number(b[1]))[0];
+
+        // Best day
         const dayRevenue: Record<string, number> = {};
         weekOrders.forEach((o: any) => {
           const day = new Date(o.createdAt).toLocaleDateString("ar-SA", { weekday: "long" });
@@ -19770,42 +19804,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         const bestDay = Object.entries(dayRevenue).sort((a, b) => b[1] - a[1])[0];
 
+        // Order status breakdown today
+        const statusCounts: Record<string, number> = {};
+        todayOrders.forEach((o: any) => {
+          const s = o.status || "unknown";
+          statusCounts[s] = (statusCounts[s] || 0) + 1;
+        });
+
+        // ── Expenses ────────────────────────────────────────────────────────
+        const weekExpenses  = await ExpenseModel.find({ tenantId: aiTenantId, date: { $gte: weekStart } }).lean();
+        const monthExpenses = await ExpenseModel.find({ tenantId: aiTenantId, date: { $gte: monthStart } }).lean();
+        const weekExpTotal  = weekExpenses.reduce((s: number, e: any) => s + (e.amount || 0), 0);
+        const monthExpTotal = monthExpenses.reduce((s: number, e: any) => s + (e.amount || 0), 0);
+        const weekProfit    = weekRevenue - weekExpTotal;
+        const monthProfit   = monthRevenue - monthExpTotal;
+        const weekMargin    = weekRevenue > 0 ? ((weekProfit / weekRevenue) * 100).toFixed(1) : "0";
+
+        // Expense by category
+        const expCat: Record<string, number> = {};
+        monthExpenses.forEach((e: any) => {
+          const c = e.category || "أخرى";
+          expCat[c] = (expCat[c] || 0) + (e.amount || 0);
+        });
+        const topExpCat = Object.entries(expCat).sort((a, b) => b[1] - a[1]).slice(0, 3);
+
+        // ── Employees & Attendance ──────────────────────────────────────────
         const allEmployees = await storage.getEmployees();
+        const activeEmps   = allEmployees.filter((e: any) => e.isActive === 1 || e.isActive === true);
+        const todayAtt     = await AttendanceModel.find({ tenantId: aiTenantId, checkIn: { $gte: todayStart } }).lean();
+        const presentToday = todayAtt.length;
+        const absentToday  = activeEmps.length - presentToday;
+        const lateToday    = todayAtt.filter((a: any) => a.isLate).length;
+
+        // Roles breakdown
+        const roles: Record<string, number> = {};
+        activeEmps.forEach((e: any) => { roles[e.role] = (roles[e.role] || 0) + 1; });
+
+        // ── Shifts / Cashier ────────────────────────────────────────────────
+        const openShift = await CashierShiftModel.findOne({ tenantId: aiTenantId, status: "open" }).sort({ startTime: -1 }).lean() as any;
+
+        // ── Inventory ───────────────────────────────────────────────────────
+        const rawItems    = await RawItemModel.find({ tenantId: aiTenantId }).lean();
+        const lowStockItems = rawItems.filter((i: any) => i.currentStock <= (i.minimumStock || 0));
+        const outOfStock    = rawItems.filter((i: any) => (i.currentStock || 0) <= 0);
+
+        // ── Products ────────────────────────────────────────────────────────
         const products = await getCachedCoffeeItems(aiTenantId);
+        const activeProducts   = products.filter((p: any) => p.isAvailable !== false);
+        const inactiveProducts = products.filter((p: any) => p.isAvailable === false);
 
         businessContext = `
-معلومات الكافيه (محدثة الآن):
-- إجمالي مبيعات اليوم: ${todayRevenue.toFixed(2)} ريال (${todayOrders.length} طلب)
-- إجمالي مبيعات الأسبوع: ${weekRevenue.toFixed(2)} ريال (${weekOrders.length} طلب)
-- عدد الموظفين: ${allEmployees.length}
-- عدد المنتجات في المنيو: ${products.length}
-- متوسط قيمة الطلب (هذا الأسبوع): ${weekOrders.length > 0 ? (weekRevenue / weekOrders.length).toFixed(2) : 0} ريال
-- أفضل يوم هذا الأسبوع: ${bestDay ? `${bestDay[0]} (${bestDay[1].toFixed(2)} ريال)` : "غير متاح"}
-- أكثر 5 منتجات مبيعاً هذا الأسبوع:
-${topItems.map((item, i) => `  ${i + 1}. ${item[0]}: ${item[1].count} طلب (${item[1].revenue.toFixed(2)} ريال)`).join("\n") || "  لا بيانات"}
-`;
-      } catch {
-        businessContext = "لم تتوفر بيانات المبيعات الآن.";
+═══════════════════════════════════════════════════
+📊 بيانات مكان الشيف البخاري — الرياض (محدثة الآن)
+═══════════════════════════════════════════════════
+
+💰 المبيعات والإيرادات:
+- اليوم: ${todayRevenue.toFixed(2)} ريال (${todayOrders.length} طلب) | حالة الطلبات: ${Object.entries(statusCounts).map(([s,c])=>`${s}:${c}`).join("، ") || "لا طلبات"}
+- هذا الأسبوع: ${weekRevenue.toFixed(2)} ريال (${weekOrders.length} طلب) | متوسط الطلب: ${avgOrderWeek} ريال
+- هذا الشهر: ${monthRevenue.toFixed(2)} ريال (${monthOrders.length} طلب)
+- النمو أسبوع/أسبوع: ${weekGrowth !== null ? `${weekGrowth}%` : "لا بيانات مقارنة"}
+- أفضل يوم: ${bestDay ? `${bestDay[0]} (${bestDay[1].toFixed(2)} ريال)` : "غير متاح"}
+- وسائل الدفع هذا الأسبوع: ${Object.entries(paymentBreakdown).map(([m,v])=>`${m}: ${v.toFixed(0)} ريال`).join(" | ") || "لا بيانات"}
+
+📦 المنتجات والمنيو:
+- إجمالي المنتجات: ${products.length} (نشط: ${activeProducts.length} | موقوف: ${inactiveProducts.length})
+- أكثر 5 منتجات مبيعاً (أسبوع):
+${topItems.map((item, i) => `  ${i+1}. ${item[0]}: ${item[1].count} طلب (${item[1].revenue.toFixed(2)} ريال)`).join("\n") || "  لا بيانات"}
+- أقل المنتجات مبيعاً (أسبوع): ${lowItems.map(([n,d])=>`${n}(${d.count})`).join("، ") || "لا بيانات"}
+
+⏰ أوقات الذروة (هذا الأسبوع):
+- أعلى ساعة: ${peakHour ? `${peakHour[0]}:00 (${peakHour[1]} طلب)` : "غير محدد"}
+- أهدأ ساعة: ${deadHour ? `${deadHour[0]}:00 (${deadHour[1]} طلب)` : "غير محدد"}
+
+💸 المصاريف والربحية:
+- مصاريف الأسبوع: ${weekExpTotal.toFixed(2)} ريال | صافي ربح الأسبوع: ${weekProfit.toFixed(2)} ريال (هامش: ${weekMargin}%)
+- مصاريف الشهر: ${monthExpTotal.toFixed(2)} ريال | صافي ربح الشهر: ${monthProfit.toFixed(2)} ريال
+- أعلى فئات مصاريف (شهر): ${topExpCat.map(([c,v])=>`${c}: ${v.toFixed(0)} ريال`).join(" | ") || "لا بيانات"}
+
+👥 الموظفون والحضور:
+- إجمالي الموظفين النشطين: ${activeEmps.length}
+- توزيع الأدوار: ${Object.entries(roles).map(([r,c])=>`${r}:${c}`).join("، ")}
+- حضور اليوم: ${presentToday} حاضر | ${absentToday} غائب | ${lateToday} متأخر
+${openShift ? `- وردية صندوق مفتوحة منذ: ${new Date(openShift.startTime).toLocaleTimeString("ar-SA")} (رصيد افتتاحي: ${openShift.openingBalance || 0} ريال)` : "- لا توجد وردية مفتوحة الآن"}
+
+🏬 المخزون:
+- إجمالي المواد الخام: ${rawItems.length}
+- تنبيهات مخزون منخفض: ${lowStockItems.length} مادة${lowStockItems.length > 0 ? ` (${lowStockItems.slice(0,3).map((i:any)=>i.nameAr||i.name).join("، ")})` : ""}
+- نفاد المخزون: ${outOfStock.length} مادة${outOfStock.length > 0 ? ` (${outOfStock.slice(0,3).map((i:any)=>i.nameAr||i.name).join("، ")})` : ""}
+
+═══════════════════════════════════════════════════`;
+      } catch (ctxErr) {
+        console.error("AI context error:", ctxErr);
+        businessContext = "⚠️ لم تتوفر بعض بيانات النظام الآن، لكن يمكنني مساعدتك بناءً على المعلومات المتاحة.";
       }
 
-      const systemPrompt = `أنت مساعد ذكاء اصطناعي متخصص لإدارة المقاهي والمطاعم، تعمل لصالح مطعم مكان الشيف البخاري الأصيل في الرياض.
-أنت خبير في:
-- تحليل المبيعات والأرباح
-- تحسين قائمة الطعام والتسعير
-- إدارة الموظفين وجدولة الوردايات
-- استراتيجيات التسويق والعروض الترويجية
-- تحسين تجربة العملاء
-- إدارة المخزون والتكاليف
+      const systemPrompt = `أنت مستشار أعمال ذكي ومحاسب متخصص يعمل لصالح مطعم "مكان الشيف البخاري" في الرياض، المتخصص في أرز البخاري.
+
+أنت لديك صلاحية الوصول الكامل لجميع بيانات المطعم الحية: المبيعات، المصاريف، الأرباح، الموظفين، الحضور، المخزون، والمنيو.
+
+خبراتك تشمل:
+• المحاسبة: تحليل الإيرادات والمصاريف والأرباح وهوامش الربح ونقطة التعادل
+• متابعة الأداء: مقارنة الأسابيع والأشهر، كشف الانخفاضات، وتنبيه المشاكل
+• إدارة الموظفين: متابعة الحضور والغياب والتأخير، تقييم الأداء، جدولة الوردايات
+• المخزون والتكاليف: كشف نقص المواد، تقدير تكلفة الوصفات، تحسين المشتريات
+• تحليل المبيعات: أكثر المنتجات ربحية، أوقات الذروة، فرص التحسين
+• التسويق: اقتراح عروض مبنية على البيانات الفعلية
+• القرارات الاستراتيجية: توصيات ملموسة ومنطقية مبنية على الأرقام
 
 ${businessContext}
 
 قواعد الإجابة:
-- أجب دائماً بالعربية ما لم يسألك المستخدم بالإنجليزية
-- لا تكتب أبداً بالصينية أو أي لغة أخرى سوى العربية والإنجليزية
-- كن موجزاً ومفيداً وعملياً
-- استخدم الأرقام والبيانات المتاحة في إجاباتك
-- قدم توصيات قابلة للتنفيذ
-- استخدم الإيموجي لتحسين القراءة`;
+- أجب بالعربية ما لم يكتب المستخدم بالإنجليزية أو يطلب الإنجليزية صراحةً
+- لا تكتب أبداً بالصينية أو أي لغة أخرى
+- استخدم الأرقام الحقيقية من البيانات أعلاه دائماً في إجاباتك
+- كن مثل محاسب ومدير مطعم محترف: دقيق، عملي، ومباشر
+- عند تحليل الأرباح اذكر الإيراد والمصاريف وصافي الربح والهامش
+- نبّه على المشاكل والمخاطر بوضوح (مخزون ناقص، غياب موظفين، تراجع مبيعات)
+- استخدم الإيموجي بشكل معتدل لتحسين القراءة
+- اقترح دائماً خطوة عملية واحدة على الأقل في كل رد`;
 
       const messages = [
         { role: "system", content: systemPrompt },

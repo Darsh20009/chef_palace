@@ -382,6 +382,6 @@ export const FILE_MAP = {
   // ── Assets ───────────────────────────────────────────────────────────────────
   "Logo (customer)":          "attached_assets/qirox-logo-customer.png",
   "Logo (staff/manager)":     "attached_assets/qirox-logo-staff.png",
-  "Brand Banner 1":           "attached_assets/image_1773902463502.png",
-  "Brand Banner 2":           "attached_assets/image_1773902748715.png",
+  "Brand Banner 1":           "attached_assets/Screenshot_2026-06-10_at_2.11.54_PM_1781089962059.png",
+  "Brand Banner 2":           "attached_assets/Screenshot_2026-06-10_at_2.11.54_PM_1781089962059.png",
 } as const;
