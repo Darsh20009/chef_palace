@@ -13545,6 +13545,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Today's attendance — used by manager notification center to detect late employees
+  app.get("/api/attendance/today", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { AttendanceModel, EmployeeModel } = await import("@shared/schema");
+      const tenantId = req.tenantId || 'demo-tenant';
+      const todayStart = getSaudiStartOfDay();
+      const todayEnd = getSaudiEndOfDay();
+
+      const query: any = { tenantId, shiftDate: { $gte: todayStart, $lte: todayEnd } };
+      if (req.employee?.role === 'manager' && req.employee?.branchId) {
+        const branchEmployees = await EmployeeModel.find({ tenantId, branchId: req.employee.branchId }).select('id').lean();
+        const ids = branchEmployees.map((e: any) => e.id);
+        query.employeeId = { $in: ids };
+      }
+
+      const records = await AttendanceModel.find(query).lean();
+      res.json(records);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch today's attendance" });
+    }
+  });
+
   app.get("/api/attendance/daily-summary", requireAuth, requireManager, async (req: AuthRequest, res) => {
     try {
       const { AttendanceModel, EmployeeModel } = await import("@shared/schema");
