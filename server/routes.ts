@@ -19954,7 +19954,7 @@ ${businessContext}
   });
 
   // ─── AI Product Image Generation (Kimi prompt + Pollinations render) ────────
-  app.post("/api/ai/generate-product-image", requireAuth, async (req: AuthRequest, res) => {
+  app.post("/api/ai/generate-product-image", async (req: AuthRequest, res) => {
     try {
       const { productName, description } = req.body as { productName?: string; description?: string };
       if (!productName) return res.status(400).json({ error: "productName required" });

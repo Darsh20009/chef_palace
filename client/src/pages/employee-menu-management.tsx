@@ -1137,7 +1137,7 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
        if (!name) { toast({ title: "اكتب اسم المنتج أولاً", variant: "destructive" }); return; }
        setIsAiGeneratingAddImage(true);
        try {
-         const res = await fetch("/api/ai/generate-product-image", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productName: name, description: step1Data?.description || aiAddDescription }) });
+         const res = await fetch("/api/ai/generate-product-image", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productName: name, description: step1Data?.description || aiAddDescription }) });
          const data = await res.json();
          if (data.imageUrl) { setAddImageUrls(prev => [...prev, data.imageUrl]); toast({ title: "✨ تم توليد الصورة بالذكاء الاصطناعي" }); }
        } catch { toast({ title: "فشل توليد الصورة", variant: "destructive" }); }
@@ -2019,7 +2019,7 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
       if (!name) { toast({ title: "اسم المنتج غير متوفر", variant: "destructive" }); return; }
       setIsAiGeneratingEditImage(true);
       try {
-        const res = await fetch("/api/ai/generate-product-image", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productName: name, description: editingItem?.description }) });
+        const res = await fetch("/api/ai/generate-product-image", { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productName: name, description: editingItem?.description }) });
         const data = await res.json();
         if (data.imageUrl) { setEditImageUrls(prev => [...prev, data.imageUrl]); toast({ title: "✨ تم توليد الصورة بالذكاء الاصطناعي" }); }
       } catch { toast({ title: "فشل توليد الصورة", variant: "destructive" }); }
