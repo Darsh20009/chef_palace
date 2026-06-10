@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslate } from "@/lib/useTranslate";
 import SarIcon from "@/components/sar-icon";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -19,6 +19,7 @@ import {
   Coffee, UtensilsCrossed, TableProperties, Activity, Wifi
 } from "lucide-react";
 import { useLocation } from "wouter";
+import { useRealtimeEvent } from "@/hooks/useRealtimeEngine";
 
 const STATUS_LABELS: Record<string, { labelAr: string; labelEn: string; color: string }> = {
   pending:    { labelAr: 'بانتظار',        labelEn: 'Pending',      color: 'bg-yellow-500' },
@@ -88,7 +89,7 @@ function LiveDriverTracking() {
   );
 
   const getDriverOrder = (driverId: string) =>
-    activeOrders.find((o: any) => o.driverId === driverId || o.driverName);
+    activeOrders.find((o: any) => o.driverId === driverId);
 
   const online  = drivers.filter((d: any) => d.status === "online");
   const busy    = drivers.filter((d: any) => d.status === "busy");
@@ -746,12 +747,58 @@ function DispatchCenter() {
   );
 }
 
+function useOrderWaitTime(createdAt: string) {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    const update = () => setElapsed(Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000));
+    update();
+    const t = setInterval(update, 1000);
+    return () => clearInterval(t);
+  }, [createdAt]);
+  return elapsed;
+}
+
+function WaitTimer({ createdAt, warnAfterSec = 300 }: { createdAt: string; warnAfterSec?: number }) {
+  const elapsed = useOrderWaitTime(createdAt);
+  const mins = Math.floor(elapsed / 60);
+  const secs = elapsed % 60;
+  const isUrgent = elapsed >= warnAfterSec;
+  return (
+    <span className={`font-mono text-xs font-bold ${isUrgent ? "text-red-600 animate-pulse" : "text-orange-600"}`}>
+      {String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}
+    </span>
+  );
+}
+
 export default function ManagerDelivery() {
   const tc = useTranslate();
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [period, setPeriod] = useState("today");
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [newOrderAlert, setNewOrderAlert] = useState<any | null>(null);
+  const alertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Real-time WebSocket: new delivery order arrived
+  useRealtimeEvent("new_delivery_order", useCallback((data: any) => {
+    const order = data?.order || data;
+    if (!order) return;
+    setNewOrderAlert(order);
+    queryClient.invalidateQueries({ queryKey: ["/api/delivery/orders"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/delivery/stats"] });
+    toast({
+      title: `🚨 ${tc("طلب توصيل جديد!", "New Delivery Order!")}`,
+      description: `${order.customerName || tc("عميل","Customer")} — ${PROVIDER_LABELS[order.externalProvider] || tc("داخلي","Internal")}`,
+      className: "bg-orange-600 text-white border-orange-700",
+    });
+    if (alertTimerRef.current) clearTimeout(alertTimerRef.current);
+    alertTimerRef.current = setTimeout(() => setNewOrderAlert(null), 30000);
+  }, [tc, toast]));
+
+  // Real-time: delivery order status updated
+  useRealtimeEvent("delivery_order_updated", useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["/api/delivery/orders"] });
+  }, []));
 
   const { data: statsData, isLoading: statsLoading } = useQuery({
     queryKey: ["/api/delivery/stats", period],
@@ -776,38 +823,44 @@ export default function ManagerDelivery() {
 
   const autoAssignMutation = useMutation({
     mutationFn: async (orderId: string) => {
-      const res = await apiRequest("POST", `/api/delivery/orders/${orderId}/auto-assign`);
+      const res = await apiRequest("POST", `/api/delivery/orders/${orderId}/auto-assign`, {});
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/delivery/orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/delivery/stats"] });
-      toast({ title: tc("تم تعيين سائق بنجاح", "Driver assigned successfully"), className: "bg-green-600 text-white" });
+      toast({ title: tc("تم تعيين سائق بنجاح ✅", "Driver assigned successfully ✅"), className: "bg-green-600 text-white" });
     },
     onError: (err: any) => {
-      toast({ title: err.message || tc("فشل التعيين", "Assignment failed"), variant: "destructive" });
+      toast({ title: err.message || tc("لا يوجد سائق متاح", "No available driver"), variant: "destructive" });
     },
   });
 
-  const orderStatusMutation = useMutation({
-    mutationFn: async ({ orderId, status }: { orderId: string; status: string }) => {
-      const res = await apiRequest("PATCH", `/api/orders/${orderId}/status`, { status });
+  const deliveryStatusMutation = useMutation({
+    mutationFn: async ({ orderId, status, reason }: { orderId: string; status: string; reason?: string }) => {
+      const res = await apiRequest("PATCH", `/api/delivery/orders/${orderId}/status`, { status, cancellationReason: reason });
       return res.json();
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ["/api/delivery/orders"] });
       queryClient.invalidateQueries({ queryKey: ["/api/delivery/stats"] });
       const labels: Record<string, string> = {
-        in_progress: tc("طلبك قيد التحضير", "Order is being prepared"),
-        out_for_delivery: tc("الطلب في الطريق", "Order is on the way"),
-        completed: tc("تم تسليم الطلب", "Order delivered"),
+        accepted:    tc("✅ تم قبول الطلب", "✅ Order accepted"),
+        assigned:    tc("✅ تم تعيين السائق", "✅ Driver assigned"),
+        picking_up:  tc("🏃 السائق في المطعم", "🏃 Driver at restaurant"),
+        on_the_way:  tc("🚗 الطلب في الطريق", "🚗 Order on the way"),
+        arrived:     tc("📍 وصل للعميل", "📍 Arrived at customer"),
+        delivered:   tc("✅ تم التسليم", "✅ Delivered"),
+        cancelled:   tc("❌ تم الإلغاء", "❌ Cancelled"),
       };
-      toast({ title: labels[vars.status] || tc("تم تحديث الحالة", "Status updated"), className: "bg-green-600 text-white" });
+      toast({ title: labels[vars.status] || tc("تم تحديث الحالة", "Status updated"), className: vars.status === "cancelled" ? undefined : "bg-green-600 text-white" });
     },
     onError: (err: any) => {
       toast({ title: err.message || tc("فشل تحديث الحالة", "Status update failed"), variant: "destructive" });
     },
   });
+
+  const orderStatusMutation = deliveryStatusMutation;
 
   const stats = statsData?.stats;
   const activeOrders = ordersData.filter((o: any) =>
@@ -856,6 +909,25 @@ export default function ManagerDelivery() {
         </TabsList>
 
         <TabsContent value="dashboard" className="space-y-6">
+
+          {/* New delivery order alert banner */}
+          {newOrderAlert && (
+            <div className="flex items-center gap-3 bg-orange-600 text-white rounded-xl p-4 shadow-lg animate-pulse">
+              <span className="text-2xl">🚨</span>
+              <div className="flex-1">
+                <p className="font-bold text-sm">{tc("طلب توصيل جديد!", "New Delivery Order!")}</p>
+                <p className="text-xs opacity-90">{newOrderAlert.customerName} — {PROVIDER_LABELS[newOrderAlert.externalProvider] || tc("داخلي","Internal")} • <WaitTimer createdAt={newOrderAlert.createdAt} warnAfterSec={60} /></p>
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" className="bg-white/10 border-white/30 text-white hover:bg-white/20 text-xs h-8"
+                  onClick={() => { setActiveTab("orders"); setNewOrderAlert(null); }}>
+                  {tc("عرض الطلب","View Order")}
+                </Button>
+                <button onClick={() => setNewOrderAlert(null)} className="opacity-70 hover:opacity-100">✕</button>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card>
               <CardContent className="p-4 text-center">
@@ -975,7 +1047,10 @@ export default function ManagerDelivery() {
                 {pendingOrders.slice(0, 5).map((order: any) => (
                   <div key={order.id} className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-900/10 rounded-lg">
                     <div>
-                      <p className="font-bold text-sm">{order.customerName || tc('عميل', 'Customer')}</p>
+                      <p className="font-bold text-sm flex items-center gap-2">
+                        {order.customerName || tc('عميل', 'Customer')}
+                        {order.createdAt && <WaitTimer createdAt={order.createdAt} warnAfterSec={300} />}
+                      </p>
                       <p className="text-xs text-muted-foreground flex items-center gap-1">
                         <MapPin className="w-3 h-3" />
                         {order.customerAddress || tc('عنوان غير محدد', 'Address not specified')}
@@ -1080,45 +1155,100 @@ export default function ManagerDelivery() {
                           <>
                             <Button
                               size="sm"
-                              onClick={() => autoAssignMutation.mutate(order.id)}
-                              disabled={autoAssignMutation.isPending}
+                              onClick={() => deliveryStatusMutation.mutate({ orderId: order.id, status: 'accepted' })}
+                              disabled={deliveryStatusMutation.isPending}
                               className="bg-[#2D9B6E] hover:bg-[#258a5e] text-white"
                             >
+                              <CheckCircle className="w-3 h-3 ml-1" />
+                              {tc("قبول الطلب", "Accept Order")}
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => autoAssignMutation.mutate(order.id)}
+                              disabled={autoAssignMutation.isPending}
+                              variant="outline"
+                              className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                            >
                               <Zap className="w-3 h-3 ml-1" />
-                              {tc("تعيين سائق", "Assign Driver")}
+                              {tc("تعيين تلقائي", "Auto Assign")}
                             </Button>
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => orderStatusMutation.mutate({ orderId: order.id, status: 'in_progress' })}
-                              disabled={orderStatusMutation.isPending}
-                              className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                              onClick={() => deliveryStatusMutation.mutate({ orderId: order.id, status: 'cancelled', reason: tc("ملغي من المطعم", "Cancelled by restaurant") })}
+                              disabled={deliveryStatusMutation.isPending}
+                              className="border-red-300 text-red-600 hover:bg-red-50"
                             >
-                              <Package className="w-3 h-3 ml-1" />
-                              {tc("بدء التحضير", "Start Preparing")}
+                              <XCircle className="w-3 h-3 ml-1" />
+                              {tc("رفض", "Reject")}
                             </Button>
                           </>
                         )}
-                        {order.status === 'in_progress' && (
+                        {order.status === 'accepted' && (
                           <Button
                             size="sm"
-                            onClick={() => orderStatusMutation.mutate({ orderId: order.id, status: 'out_for_delivery' })}
-                            disabled={orderStatusMutation.isPending}
+                            onClick={() => autoAssignMutation.mutate(order.id)}
+                            disabled={autoAssignMutation.isPending}
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                          >
+                            <Zap className="w-3 h-3 ml-1" />
+                            {tc("تعيين سائق", "Assign Driver")}
+                          </Button>
+                        )}
+                        {order.status === 'assigned' && (
+                          <Button
+                            size="sm"
+                            onClick={() => deliveryStatusMutation.mutate({ orderId: order.id, status: 'picking_up' })}
+                            disabled={deliveryStatusMutation.isPending}
+                            className="bg-purple-600 hover:bg-purple-700 text-white"
+                          >
+                            <Package className="w-3 h-3 ml-1" />
+                            {tc("السائق في المطعم", "Driver at Branch")}
+                          </Button>
+                        )}
+                        {order.status === 'picking_up' && (
+                          <Button
+                            size="sm"
+                            onClick={() => deliveryStatusMutation.mutate({ orderId: order.id, status: 'on_the_way' })}
+                            disabled={deliveryStatusMutation.isPending}
                             className="bg-orange-500 hover:bg-orange-600 text-white"
                           >
                             <Truck className="w-3 h-3 ml-1" />
-                            {tc("في الطريق", "Out for Delivery")}
+                            {tc("في الطريق", "On The Way")}
                           </Button>
                         )}
-                        {order.status === 'out_for_delivery' && (
+                        {order.status === 'on_the_way' && (
                           <Button
                             size="sm"
-                            onClick={() => orderStatusMutation.mutate({ orderId: order.id, status: 'completed' })}
-                            disabled={orderStatusMutation.isPending}
+                            onClick={() => deliveryStatusMutation.mutate({ orderId: order.id, status: 'arrived' })}
+                            disabled={deliveryStatusMutation.isPending}
+                            className="bg-teal-600 hover:bg-teal-700 text-white"
+                          >
+                            <MapPin className="w-3 h-3 ml-1" />
+                            {tc("وصل للعميل", "Arrived")}
+                          </Button>
+                        )}
+                        {order.status === 'arrived' && (
+                          <Button
+                            size="sm"
+                            onClick={() => deliveryStatusMutation.mutate({ orderId: order.id, status: 'delivered' })}
+                            disabled={deliveryStatusMutation.isPending}
                             className="bg-green-600 hover:bg-green-700 text-white"
                           >
                             <CheckCircle className="w-3 h-3 ml-1" />
-                            {tc("تم التوصيل", "Delivered")}
+                            {tc("تم التسليم", "Delivered")}
+                          </Button>
+                        )}
+                        {!['delivered','cancelled','returned'].includes(order.status) && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => deliveryStatusMutation.mutate({ orderId: order.id, status: 'cancelled', reason: tc("ملغي من المطعم","Cancelled by restaurant") })}
+                            disabled={deliveryStatusMutation.isPending}
+                            className="text-red-500 hover:text-red-700 hover:bg-red-50 text-xs"
+                          >
+                            <XCircle className="w-3 h-3 ml-1" />
+                            {tc("إلغاء", "Cancel")}
                           </Button>
                         )}
                       </div>

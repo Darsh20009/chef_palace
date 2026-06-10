@@ -2253,8 +2253,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Webhook Placeholder for Delivery Apps
   app.post("/api/webhooks/delivery/:provider", async (req, res) => {
     const { provider } = req.params;
-    // Log incoming delivery order (Placeholder logic)
-    res.status(200).json({ received: true, provider });
+    try {
+      // Respond immediately — delivery apps have strict timeout windows (HungerStation: 5s)
+      res.status(202).json({ received: true, provider, timestamp: new Date().toISOString() });
+
+      // Determine tenant from host header (fallback to demo-tenant for testing)
+      const host = req.headers.host || '';
+      const tenantId = (req as any).tenantId || getTenantIdFromRequest(req) || 'demo-tenant';
+
+      // Validate webhook secret if provided
+      const integration = await (async () => {
+        try {
+          const { DeliveryIntegrationModel } = await import("@shared/schema");
+          return await DeliveryIntegrationModel.findOne({ tenantId, provider, isActive: 1 });
+        } catch { return null; }
+      })();
+
+      if (integration?.webhookSecret) {
+        const sig = req.headers['x-webhook-signature'] || req.headers['x-hub-signature'] || req.headers['x-hungerstation-signature'] || '';
+        // Basic HMAC check — skip if sig not present (some providers don't send)
+        if (sig) {
+          const crypto = await import('crypto');
+          const expected = crypto.createHmac('sha256', integration.webhookSecret)
+            .update(JSON.stringify(req.body))
+            .digest('hex');
+          if (sig !== `sha256=${expected}` && sig !== expected) {
+            console.warn(`[Delivery Webhook] Invalid signature from ${provider}`);
+            return;
+          }
+        }
+      }
+
+      const payload = req.body;
+      if (!payload || Object.keys(payload).length === 0) {
+        console.warn(`[Delivery Webhook] Empty payload from ${provider}`);
+        return;
+      }
+
+      // Normalize provider name
+      const normalizedProvider = provider.toLowerCase().replace(/[-\s]/g, '_');
+
+      // Process the webhook order
+      const deliveryOrder = await deliveryService.processWebhookOrder(normalizedProvider, payload, tenantId);
+
+      console.log(`[Delivery Webhook] New order from ${provider}: ${deliveryOrder.id} (${deliveryOrder.externalOrderId})`);
+
+      // Broadcast to all staff via WebSocket
+      wsManager.broadcastToBranch(deliveryOrder.branchId || 'all', {
+        type: 'new_delivery_order',
+        order: {
+          id: deliveryOrder.id,
+          externalOrderId: deliveryOrder.externalOrderId,
+          externalProvider: normalizedProvider,
+          customerName: deliveryOrder.customerName,
+          customerAddress: deliveryOrder.customerAddress,
+          totalAmount: deliveryOrder.totalAmount,
+          status: deliveryOrder.status,
+          createdAt: deliveryOrder.createdAt,
+        }
+      });
+
+      // Auto-assign if integration has autoAssignDriver enabled
+      if (integration?.autoAssignDriver) {
+        try {
+          const assigned = await deliveryService.autoAssignDriver(deliveryOrder.id, tenantId, deliveryOrder.branchId);
+          if (assigned) {
+            console.log(`[Delivery Webhook] Auto-assigned driver to order ${deliveryOrder.id}`);
+            wsManager.broadcastToBranch(deliveryOrder.branchId || 'all', {
+              type: 'delivery_order_updated',
+              orderId: deliveryOrder.id,
+              status: 'assigned',
+              driverName: assigned.driverName,
+            });
+          }
+        } catch (autoErr) {
+          console.warn(`[Delivery Webhook] Auto-assign failed for ${deliveryOrder.id}:`, autoErr);
+        }
+      }
+
+    } catch (err: any) {
+      console.error(`[Delivery Webhook] Error processing ${provider} webhook:`, err.message);
+    }
   });
 
   // Helper to ensure single branch operation for managers

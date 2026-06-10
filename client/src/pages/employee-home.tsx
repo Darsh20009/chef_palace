@@ -5,18 +5,20 @@ import { Badge } from "@/components/ui/badge";
 import {
   Coffee, LogOut, ShoppingCart, ClipboardList, User, ChefHat,
   Warehouse, Eye, Calendar, FileText, BarChart3, Lock, Utensils,
-  ChevronLeft, Car, Copy, Sparkles
+  ChevronLeft, Car, Copy, Sparkles, PlayCircle
 } from "lucide-react";
 import type { Employee } from "@shared/schema";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { useTranslate } from "@/lib/useTranslate";
 import qiroxLogo from "@assets/qirox-logo-customer.png";
+import { EmployeeTour, useEmployeeTour } from "@/components/employee-tour";
 
 export default function EmployeeHome() {
   const [, setLocation] = useLocation();
   const [employee, setEmployee] = useState<Employee | null>(null);
   const tc = useTranslate();
   const { toast } = useToast();
+  const { resetTour, isTourCompleted } = useEmployeeTour();
 
   useEffect(() => {
     const storedEmployee = localStorage.getItem("currentEmployee");
@@ -51,6 +53,7 @@ export default function EmployeeHome() {
   if (!employee) return null;
 
   const isManager = employee.role === "manager" || employee.role === "admin";
+  const tourDone = isTourCompleted();
 
   const employeeQuickAccess = [
     { title: tc("المساعد الذكي", "AI Assistant"), icon: Sparkles, path: "/employee/ai", testId: "button-brand-ai", highlight: true },
@@ -85,6 +88,16 @@ export default function EmployeeHome() {
             <div>
               <p className="text-xs text-muted-foreground leading-none mb-0.5">مكان الشيف البخاري</p>
               <h1 className="text-sm font-bold text-foreground leading-none">{tc("بوابة الموظفين", "Employee Portal")}</h1>
+              {tourDone && (
+                <button
+                  onClick={resetTour}
+                  className="flex items-center gap-1 text-[10px] text-primary hover:underline mt-0.5"
+                  data-testid="button-restart-tour"
+                >
+                  <PlayCircle className="w-3 h-3" />
+                  {tc("إعادة الجولة", "Restart Tour")}
+                </button>
+              )}
             </div>
           </div>
           <button
@@ -214,6 +227,7 @@ export default function EmployeeHome() {
       </div>
 
       <MobileBottomNav employeeRole={employee?.role} onLogout={handleLogout} />
+      <EmployeeTour />
     </div>
   );
 }

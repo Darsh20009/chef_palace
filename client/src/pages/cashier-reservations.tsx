@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useTranslate } from "@/lib/useTranslate";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, getErrorMessage } from "@/lib/queryClient";
@@ -31,7 +31,7 @@ export default function CashierReservations() {
   const tc = useTranslate();
   const { toast } = useToast();
   const [searchPhone, setSearchPhone] = useState("");
-  const [filteredReservations, setFilteredReservations] = useState<Reservation[]>([]);
+  const [filteredFromSearch, setFilteredFromSearch] = useState<Reservation[] | null>(null);
   const [sortBy, setSortBy] = useState<'time' | 'guests' | 'status'>('time');
 
   // Fetch all reservations for current branch
@@ -59,7 +59,7 @@ export default function CashierReservations() {
   // Search for reservation by phone
   const searchReservation = async () => {
     if (!searchPhone.trim()) {
-      setFilteredReservations(allReservations);
+      setFilteredFromSearch(null);
       return;
     }
 
@@ -67,7 +67,7 @@ export default function CashierReservations() {
       const response = await fetch(`/api/tables/reservations/customer/${searchPhone}`, { credentials: 'include' });
       if (response.ok) {
         const data = await response.json();
-        setFilteredReservations(data);
+        setFilteredFromSearch(data);
       }
     } catch (error) {
       toast({
@@ -132,27 +132,25 @@ export default function CashierReservations() {
     }
   });
 
-  useEffect(() => {
-    let sorted = [...allReservations];
-    
+  const filteredReservations = useMemo(() => {
+    const base = filteredFromSearch ?? allReservations;
+    const sorted = [...base];
     if (sortBy === 'time') {
-      sorted.sort((a, b) => {
-        const timeA = new Date(a.reservation.reservationDate).getTime();
-        const timeB = new Date(b.reservation.reservationDate).getTime();
-        return timeA - timeB;
-      });
+      sorted.sort((a, b) =>
+        new Date(a.reservation.reservationDate).getTime() -
+        new Date(b.reservation.reservationDate).getTime()
+      );
     } else if (sortBy === 'guests') {
       sorted.sort((a, b) => b.reservation.numberOfGuests - a.reservation.numberOfGuests);
     } else if (sortBy === 'status') {
       const statusOrder = { pending: 0, confirmed: 1, cancelled: 2, expired: 3, completed: 4 };
-      sorted.sort((a, b) => {
-        return (statusOrder[a.reservation.status as keyof typeof statusOrder] || 5) -
-               (statusOrder[b.reservation.status as keyof typeof statusOrder] || 5);
-      });
+      sorted.sort((a, b) =>
+        (statusOrder[a.reservation.status as keyof typeof statusOrder] || 5) -
+        (statusOrder[b.reservation.status as keyof typeof statusOrder] || 5)
+      );
     }
-    
-    setFilteredReservations(sorted);
-  }, [allReservations, sortBy]);
+    return sorted;
+  }, [filteredFromSearch, allReservations, sortBy]);
 
   const getStatusDisplay = (status: string) => {
     switch (status) {
