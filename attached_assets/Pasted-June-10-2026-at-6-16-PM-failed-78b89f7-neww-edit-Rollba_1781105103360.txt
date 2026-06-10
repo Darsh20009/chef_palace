@@ -1,0 +1,51 @@
+June 10, 2026 at 6:16 PM
+failed
+78b89f7
+neww edit
+
+Rollback
+Exited with status 1 while building your code.
+Read our docs for common ways to troubleshoot your deploy.
+
+All logs
+Search
+Search
+
+Jun 10, 6:15 PM - 6:18 PM
+GMT+3
+
+
+
+==> Downloading cache...
+==> Cloning from https://github.com/Darsh20009/chef_palace
+==> Checking out commit 78b89f7dc4a0f11e963082f26f735e77bf9da9f0 in branch main
+==> Downloaded 283MB in 3s. Extraction took 5s.
+==> Using Node.js version 24.14.1 (default)
+==> Docs on specifying a Node.js version: https://render.com/docs/node-version
+==> Running build command 'npm install; npm run build'...
+npm error Exit handler never called!
+npm error This is an error with npm itself. Please report this error at:
+npm error   <https://github.com/npm/cli/issues>
+npm error A complete log of this run can be found in: /opt/render/.cache/_logs/2026-06-10T15_16_38_431Z-debug-0.log
+> qirox-cafe@2.0.0 build
+> vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --minify --outfile=dist/index.js
+node:internal/modules/esm/resolve:275
+    throw new ERR_MODULE_NOT_FOUND(
+          ^
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/opt/render/project/src/node_modules/rollup/parseAst' imported from /opt/render/project/src/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js
+    at finalizeResolution (node:internal/modules/esm/resolve:275:11)
+    at moduleResolve (node:internal/modules/esm/resolve:865:10)
+    at defaultResolve (node:internal/modules/esm/resolve:991:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:719:20)
+    at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:736:38)
+    at ModuleLoader.resolveSync (node:internal/modules/esm/loader:765:52)
+    at #resolve (node:internal/modules/esm/loader:701:17)
+    at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:621:35)
+    at ModuleJob.syncLink (node:internal/modules/esm/module_job:160:33)
+    at ModuleJob.link (node:internal/modules/esm/module_job:245:17) {
+  code: 'ERR_MODULE_NOT_FOUND',
+  url: 'file:///opt/render/project/src/node_modules/rollup/parseAst'
+}
+Node.js v24.14.1
+==> Build failed 😞
+==> Common ways 
