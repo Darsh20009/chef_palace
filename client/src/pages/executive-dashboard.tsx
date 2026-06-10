@@ -318,52 +318,52 @@ export default function ExecutiveDashboard() {
       <main className="flex-1 overflow-y-auto pb-20 lg:pb-6">
       <div className="p-4 lg:p-6 space-y-6 max-w-[1400px] mx-auto">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-          <div className="bg-card border border-border rounded-2xl p-4 lg:p-5 hover:shadow-sm transition-shadow">
+          <div className="bg-emerald-600 rounded-2xl p-4 lg:p-5 hover:shadow-lg hover:brightness-105 transition-all">
             <div className="flex items-start justify-between mb-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-primary" />
+              <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
+                <DollarSign className="w-5 h-5 text-white" />
               </div>
-              <Badge className="bg-amber-500/15 text-amber-600 border-amber-500/30 text-[10px]">
+              <Badge className="bg-white/20 text-white border-white/30 text-[10px]">
                 <TrendingUp className="w-3 h-3" />
                 +12.5%
               </Badge>
             </div>
-            <p className="text-sm text-muted-foreground mb-1">{tc("إجمالي الإيرادات", "Total Revenue")}</p>
-            <p className="text-2xl font-bold text-foreground">{totalRevenue.toLocaleString('ar-SA')} <span className="text-sm font-normal"><SarIcon /></span></p>
+            <p className="text-sm text-white/70 mb-1">{tc("إجمالي الإيرادات", "Total Revenue")}</p>
+            <p className="text-2xl font-bold text-white">{totalRevenue.toLocaleString('en-US')} <span className="text-sm font-normal"><SarIcon /></span></p>
           </div>
 
-          <div className="bg-card border border-border rounded-2xl p-4 lg:p-5 hover:shadow-sm transition-shadow">
+          <div className="bg-blue-600 rounded-2xl p-4 lg:p-5 hover:shadow-lg hover:brightness-105 transition-all">
             <div className="flex items-start justify-between mb-3">
-              <div className="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
-                <Wallet className="w-5 h-5 text-emerald-600" />
+              <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
+                <Wallet className="w-5 h-5 text-white" />
               </div>
-              <Badge className="bg-[#2D9B6E]/15 text-[#2D9B6E] border-[#2D9B6E]/30 text-[10px]">
+              <Badge className="bg-white/20 text-white border-white/30 text-[10px]">
                 <Activity className="w-3 h-3" />
                 مكتمل
               </Badge>
             </div>
-            <p className="text-sm text-muted-foreground mb-1">الإيرادات المحصلة</p>
-            <p className="text-2xl font-bold text-foreground">{completedRevenue.toLocaleString('ar-SA')} <span className="text-sm font-normal"><SarIcon /></span></p>
+            <p className="text-sm text-white/70 mb-1">الإيرادات المحصلة</p>
+            <p className="text-2xl font-bold text-white">{completedRevenue.toLocaleString('en-US')} <span className="text-sm font-normal"><SarIcon /></span></p>
           </div>
 
-          <div className="bg-card border border-border rounded-2xl p-4 lg:p-5 hover:shadow-sm transition-shadow">
+          <div className="bg-violet-600 rounded-2xl p-4 lg:p-5 hover:shadow-lg hover:brightness-105 transition-all">
             <div className="flex items-start justify-between mb-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-                <ShoppingBag className="w-5 h-5 text-blue-600" />
+              <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
+                <ShoppingBag className="w-5 h-5 text-white" />
               </div>
             </div>
-            <p className="text-sm text-muted-foreground mb-1">عدد الطلبات</p>
-            <p className="text-2xl font-bold text-foreground">{filteredOrders.length.toLocaleString('ar-SA')}</p>
+            <p className="text-sm text-white/70 mb-1">عدد الطلبات</p>
+            <p className="text-2xl font-bold text-white">{filteredOrders.length.toLocaleString('en-US')}</p>
           </div>
 
-          <div className="bg-card border border-border rounded-2xl p-4 lg:p-5 hover:shadow-sm transition-shadow">
+          <div className="bg-amber-500 rounded-2xl p-4 lg:p-5 hover:shadow-lg hover:brightness-105 transition-all">
             <div className="flex items-start justify-between mb-3">
-              <div className="w-10 h-10 rounded-lg bg-violet-50 dark:bg-violet-900/20 flex items-center justify-center">
-                <Target className="w-5 h-5 text-violet-600" />
+              <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
+                <Target className="w-5 h-5 text-white" />
               </div>
             </div>
-            <p className="text-sm text-muted-foreground mb-1">متوسط قيمة الطلب</p>
-            <p className="text-2xl font-bold text-foreground">{avgOrderValue.toFixed(0)} <span className="text-sm font-normal"><SarIcon /></span></p>
+            <p className="text-sm text-white/70 mb-1">متوسط قيمة الطلب</p>
+            <p className="text-2xl font-bold text-white">{avgOrderValue.toFixed(0)} <span className="text-sm font-normal"><SarIcon /></span></p>
           </div>
         </div>
 
@@ -426,14 +426,14 @@ export default function ExecutiveDashboard() {
               </div>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={220}>
+              <ResponsiveContainer width="100%" height={260}>
                 <RechartsPie>
                   <Pie
                     data={paymentData}
                     cx="50%"
-                    cy="50%"
+                    cy="42%"
                     innerRadius={50}
-                    outerRadius={80}
+                    outerRadius={75}
                     paddingAngle={3}
                     dataKey="value"
                   >
@@ -447,9 +447,16 @@ export default function ExecutiveDashboard() {
                       border: '1px solid hsl(var(--border))',
                       borderRadius: '8px'
                     }}
-                    formatter={(value: number) => [`${value.toLocaleString('ar-SA')} ر.س`, '']}
+                    formatter={(value: number) => [`${value.toLocaleString('en-US')} ر.س`, '']}
                   />
-                  <Legend />
+                  <Legend
+                    layout="vertical"
+                    align="center"
+                    verticalAlign="bottom"
+                    iconType="circle"
+                    iconSize={8}
+                    wrapperStyle={{ fontSize: 11, color: '#666', paddingTop: 10, lineHeight: '22px' }}
+                  />
                 </RechartsPie>
               </ResponsiveContainer>
             </CardContent>

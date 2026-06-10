@@ -905,58 +905,58 @@ export default function ManagerDashboard() {
            {[
              {
                label: 'إجمالي المبيعات',
-               value: totalRevenue.toLocaleString('ar-SA', { maximumFractionDigits: 0 }),
+               value: totalRevenue.toLocaleString('en-US', { maximumFractionDigits: 0 }),
                sub: <><SarIcon /> <span>ريال سعودي</span>{growthRate !== 0 && (
-                 <span className={`mr-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium ${growthRate > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                 <span className={`mr-1 text-[10px] px-1.5 py-0.5 rounded-full font-medium ${growthRate > 0 ? 'bg-white/20 text-white' : 'bg-white/20 text-white'}`}>
                    {growthRate > 0 ? '↑' : '↓'} {Math.abs(growthRate)}%
                  </span>
                )}{cancelledOrders.length > 0 && (
-                 <span className="mr-1 text-[10px] text-rose-500/70" title="لا تشمل الملغية والمرفوضة">
+                 <span className="mr-1 text-[10px] text-white/60" title="لا تشمل الملغية والمرفوضة">
                    ({cancelledOrders.length} ملغي)
                  </span>
                )}</>,
                icon: DollarSign,
-               iconBg: 'bg-emerald-50',
-               iconColor: 'text-emerald-600',
-               valueColor: 'text-emerald-700',
+               cardBg: 'bg-emerald-600',
+               iconBg: 'bg-white/20',
+               iconColor: 'text-white',
              },
              {
                label: 'الطلبات',
-               value: filteredOrders.length.toLocaleString('ar-SA'),
-               sub: <><span className="text-emerald-600">{completedOrders.length} مكتمل</span><span className="text-muted-foreground mx-1">·</span><span className="text-amber-600">{filteredOrders.filter(o => !["completed","cancelled","rejected","refunded"].includes(o.status||"")).length} جاري</span>{cancelledOrders.length > 0 && <><span className="text-muted-foreground mx-1">·</span><span className="text-rose-500">{cancelledOrders.length} ملغي</span></>}</>,
+               value: filteredOrders.length.toLocaleString('en-US'),
+               sub: <><span className="text-white/80">{completedOrders.length} مكتمل</span><span className="text-white/50 mx-1">·</span><span className="text-white/80">{filteredOrders.filter(o => !["completed","cancelled","rejected","refunded"].includes(o.status||"")).length} جاري</span>{cancelledOrders.length > 0 && <><span className="text-white/50 mx-1">·</span><span className="text-white/70">{cancelledOrders.length} ملغي</span></>}</>,
                icon: ShoppingBag,
-               iconBg: 'bg-blue-50',
-               iconColor: 'text-blue-600',
-               valueColor: 'text-foreground',
+               cardBg: 'bg-blue-600',
+               iconBg: 'bg-white/20',
+               iconColor: 'text-white',
              },
              {
                label: 'العملاء',
-               value: customers.length.toLocaleString('ar-SA'),
-               sub: <span className="text-muted-foreground">عميل مسجل</span>,
+               value: customers.length.toLocaleString('en-US'),
+               sub: <span className="text-white/70">عميل مسجل</span>,
                icon: Users,
-               iconBg: 'bg-violet-50',
-               iconColor: 'text-violet-600',
-               valueColor: 'text-foreground',
+               cardBg: 'bg-violet-600',
+               iconBg: 'bg-white/20',
+               iconColor: 'text-white',
              },
              {
                label: 'متوسط الطلب',
                value: filteredOrders.length > 0 ? (totalRevenue / filteredOrders.length).toFixed(1) : '0',
                sub: <><SarIcon /> <span>ريال / طلب</span></>,
                icon: Target,
-               iconBg: 'bg-amber-50',
-               iconColor: 'text-amber-600',
-               valueColor: 'text-foreground',
+               cardBg: 'bg-amber-500',
+               iconBg: 'bg-white/20',
+               iconColor: 'text-white',
              },
            ].map(k => (
-             <div key={k.label} className="bg-card border border-border rounded-2xl p-4 lg:p-5 hover:shadow-sm transition-shadow" data-testid={`kpi-${k.label}`}>
+             <div key={k.label} className={`${k.cardBg} rounded-2xl p-4 lg:p-5 hover:shadow-lg hover:brightness-105 transition-all`} data-testid={`kpi-${k.label}`}>
                <div className="flex items-start justify-between mb-3">
                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${k.iconBg}`}>
                    <k.icon className={`w-5 h-5 ${k.iconColor}`} />
                  </div>
                </div>
-               <div className="text-muted-foreground text-xs mb-1">{k.label}</div>
-               <div className={`text-2xl lg:text-3xl font-bold leading-tight ${k.valueColor}`}>{k.value}</div>
-               <div className="text-xs mt-2 flex items-center gap-1 text-muted-foreground flex-wrap">{k.sub}</div>
+               <div className="text-white/70 text-xs mb-1">{k.label}</div>
+               <div className="text-2xl lg:text-3xl font-bold leading-tight text-white">{k.value}</div>
+               <div className="text-xs mt-2 flex items-center gap-1 text-white/70 flex-wrap">{k.sub}</div>
              </div>
            ))}
          </div>
@@ -1067,16 +1067,23 @@ export default function ManagerDashboard() {
                  <div className="text-muted-foreground text-xs">توزيع المعاملات</div>
                </div>
              </div>
-             <div className="h-[180px]">
+             <div className="h-[240px]">
                <ResponsiveContainer width="100%" height="100%">
                  <PieChart>
-                   <Pie data={paymentMethodsData} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={4} dataKey="value">
+                   <Pie data={paymentMethodsData} cx="50%" cy="45%" innerRadius={45} outerRadius={65} paddingAngle={4} dataKey="value">
                      {paymentMethodsData.map((_, i) => (
                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
                      ))}
                    </Pie>
                    <Tooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', fontSize: 11 }} />
-                   <Legend wrapperStyle={{ fontSize: 10, color: '#888' }} />
+                   <Legend
+                     layout="vertical"
+                     align="center"
+                     verticalAlign="bottom"
+                     iconType="circle"
+                     iconSize={8}
+                     wrapperStyle={{ fontSize: 11, color: '#666', paddingTop: 12, lineHeight: '22px' }}
+                   />
                  </PieChart>
                </ResponsiveContainer>
              </div>
