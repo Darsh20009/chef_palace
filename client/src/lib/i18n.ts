@@ -956,7 +956,7 @@ const resources = {
       "menu.banner.default2.title": "وجبات بخارية طازجة يومياً",
       "menu.banner.default2.subtitle": "نختار لك أفضل المكونات لنقدم لك تجربة لا تنسى",
       "menu.banner.smart.cheapest_title": "جرب {{name}}",
-      "menu.banner.smart.cheapest_subtitle": "أفضل الأطباق بأسعار مميزة",
+      "menu.banner.smart.cheapest_subtitle": "أفضل الأطباق بأسعار",
       "menu.banner.smart.cheapest_badge": "سعر مميز",
       "menu.banner.smart.newest_title": "جديدنا اليوم",
       "menu.banner.smart.newest_subtitle": "تذوق {{name}} الآن",
