@@ -1,0 +1,60 @@
+chefsplace.online
+
+Your free instance will spin down with inactivity, which can delay requests by 50 seconds or more.
+Upgrade now
+June 10, 2026 at 7:53 PM
+failed
+e0c7d80
+neww edit
+
+Rollback
+Exited with status 1 while building your code.
+Read our docs for common ways to troubleshoot your deploy.
+
+All logs
+Search
+Search
+
+Live tail
+
+
+
+==> Downloading cache...
+==> Cloning from https://github.com/Darsh20009/chef_palace
+==> Checking out commit e0c7d8096b8ca564db19756c52473c3dacba45f1 in branch main
+==> Downloaded 291MB in 2s. Extraction took 7s.
+==> Requesting Node.js version 20
+==> Using Node.js version 20.20.2 via /opt/render/project/src/.nvmrc
+==> Docs on specifying a Node.js version: https://render.com/docs/node-version
+==> Installing Node.js version 20.20.2...
+==> Running build command 'npm install; npm run build'...
+npm error code ENOTEMPTY
+npm error syscall rename
+npm error path /opt/render/project/src/node_modules/foreground-child
+npm error dest /opt/render/project/src/node_modules/.foreground-child-OjfNOMQh
+npm error errno -39
+npm error ENOTEMPTY: directory not empty, rename '/opt/render/project/src/node_modules/foreground-child' -> '/opt/render/project/src/node_modules/.foreground-child-OjfNOMQh'
+npm error A complete log of this run can be found in: /opt/render/.cache/_logs/2026-06-10T16_54_26_328Z-debug-0.log
+> qirox-cafe@2.0.0 build
+> vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --minify --outfile=dist/index.js
+vite v5.4.21 building for production...
+node:internal/process/promises:391
+    triggerUncaughtException(err, true /* fromPromise */);
+    ^
+[Failed to load PostCSS config: Failed to load PostCSS config (searchPath: /opt/render/project/src/client): [Error] Loading PostCSS Plugin failed: Cannot find module 'tailwindcss'
+Require stack:
+- /opt/render/project/src/postcss.config.js
+(@/opt/render/project/src/postcss.config.js)
+Error: Loading PostCSS Plugin failed: Cannot find module 'tailwindcss'
+Require stack:
+- /opt/render/project/src/postcss.config.js
+(@/opt/render/project/src/postcss.config.js)
+    at load (file:///opt/render/project/src/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:33632:11)
+    at file:///opt/render/project/src/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:33657:16
+    at Array.map (<anonymous>)
+    at plugins (file:///opt/render/project/src/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:33656:8)
+    at processResult (file:///opt/render/project/src/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:33726:14)
+    at file:///opt/render/project/src/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js:33856:14]
+Node.js v20.20.2
+==> Build failed 😞
+==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
