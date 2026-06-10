@@ -1,7 +1,7 @@
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import { Coffee, Star, MapPin, ChevronLeft, ChevronRight, LogOut, Sparkles, User, KeyRound, X as XIcon } from "lucide-react";
+import { UtensilsCrossed, Star, MapPin, ChevronLeft, ChevronRight, LogOut, Sparkles, User, KeyRound, X as XIcon } from "lucide-react";
 import bannerImage1 from "@assets/Screenshot_2026-06-10_at_2.11.54_PM_1781089962059.png";
 import bannerImage2 from "@assets/Screenshot_2026-06-10_at_2.11.54_PM_1781089962059.png";
 import { useCustomer } from "@/contexts/CustomerContext";
@@ -26,9 +26,9 @@ export default function WelcomePage() {
   });
 
   const features = [
-    { icon: Coffee, title: t("welcome.specialty"), desc: t("welcome.specialty_desc"), color: "from-primary to-primary/70" },
-    { icon: Star, title: t("welcome.luxury"), desc: t("welcome.luxury_desc"), color: "from-accent to-accent/70" },
-    { icon: MapPin, title: t("welcome.locations"), desc: t("welcome.locations_desc"), color: "from-primary to-accent" },
+    { icon: UtensilsCrossed, title: t("welcome.specialty") || "أطباق بخارية أصيلة", desc: t("welcome.specialty_desc") || "أشهى وجبات البخاري محضرة بأيدي الشيف", color: "from-primary to-primary/70" },
+    { icon: Star, title: t("welcome.luxury") || "جودة لا تُضاهى", desc: t("welcome.luxury_desc") || "مكونات طازجة وتوابل فاخرة في كل طبق", color: "from-accent to-accent/70" },
+    { icon: MapPin, title: t("welcome.locations") || "توصيل سريع", desc: t("welcome.locations_desc") || "نوصل إليك في الرياض بأسرع وقت", color: "from-primary to-accent" },
   ];
 
   return (
@@ -39,7 +39,7 @@ export default function WelcomePage() {
         <div className="absolute inset-0 z-0">
           <img
             src={bannerImage1}
-            alt="Coffee Background"
+            alt="مكان الشيف البخاري"
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70" />

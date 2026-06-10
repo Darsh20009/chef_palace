@@ -79,7 +79,7 @@ export function CustomerFooter() {
           <div className="flex flex-col items-center justify-center gap-2 text-center">
             <div className="text-xl font-bold text-primary tracking-tighter">{brand.nameEn}</div>
             <div className="text-xs text-muted-foreground/60 font-ibm-arabic max-w-[200px]">
-              {t("footer.tagline") || "نقدم لك تجربة قهوة لا تُنسى في ينبع"}
+              {t("footer.tagline") || "أصالة البخاري بنكهة الشيف"}
             </div>
           </div>
 

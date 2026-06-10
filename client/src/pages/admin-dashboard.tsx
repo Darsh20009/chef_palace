@@ -199,7 +199,7 @@ export default function AdminDashboard() {
                   {manager?.role === 'admin' ? tc('مدير عام', 'Admin') : manager?.role === 'owner' ? tc('مالك', 'Owner') : tc('مدير', 'Manager')}
                 </span>
               </div>
-              <p className="text-xs text-muted-foreground">{tc("نظرة شاملة على أداء الكافيه", "Complete cafe overview")}</p>
+              <p className="text-xs text-muted-foreground">{tc("نظرة شاملة على أداء المطعم", "Complete restaurant overview")}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">

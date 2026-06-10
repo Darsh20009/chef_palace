@@ -221,7 +221,7 @@ export default function AdminReports() {
 
     const payLabels: Record<string, string> = {
       cash: 'نقدي', pos: 'نقاط البيع', stc: 'STC', geidea: 'جهاز', delivery: 'توصيل',
-      alinma: 'الإنماء', ur: 'يور باي', barq: 'برق', rajhi: 'الراجحي', 'qahwa-card': 'بطاقة قهوة',
+      alinma: 'الإنماء', ur: 'يور باي', barq: 'برق', rajhi: 'الراجحي', 'qahwa-card': 'بطاقة مكان الشيف',
     };
 
     const rowsHtml = todayOrders.map((o: any, i: number) => {

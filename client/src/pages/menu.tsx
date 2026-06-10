@@ -8,7 +8,6 @@ import { PWAInstallButton } from "@/components/pwa-install";
 import { useCustomer } from "@/contexts/CustomerContext";
 import { useLocation } from "wouter";
 import { 
-  Coffee, 
   ShoppingCart, 
   Flame, 
   Snowflake, 
@@ -150,7 +149,7 @@ export default function MenuPage() {
 
   const getStatusMessage = () => {
     if (!businessConfig) return null;
-    if (businessConfig.isEmergencyClosed) return tc("نعتذر، الكافيه مغلق حالياً لظروف طارئة", "Sorry, the cafe is temporarily closed due to an emergency");
+    if (businessConfig.isEmergencyClosed) return tc("نعتذر، المطعم مغلق حالياً لظروف طارئة", "Sorry, the restaurant is temporarily closed due to an emergency");
     
     const isOpen = isStoreOpen();
     if (isOpen) return null;
@@ -161,10 +160,10 @@ export default function MenuPage() {
       let timeStr = "";
       if (hours > 0) timeStr += `${hours} ساعة `;
       if (minutes > 0) timeStr += `${minutes} دقيقة`;
-      return `الكافيه مغلق حالياً، يفتح بعد ${timeStr}`;
+      return `المطعم مغلق حالياً، يفتح بعد ${timeStr}`;
     }
 
-    return tc("الكافيه مغلق حالياً", "The cafe is currently closed");
+    return tc("المطعم مغلق حالياً", "The restaurant is currently closed");
   };
 
   const { data: coffeeItems = [], isLoading } = useQuery<CoffeeItem[]>({
@@ -363,17 +362,17 @@ export default function MenuPage() {
   }, [bannerSlides.length]);
 
   const iconMap: Record<string, any> = {
-    Coffee, Flame, Snowflake, Star, Cake, Utensils, Sparkles
+    Coffee: Utensils, Flame, Snowflake, Star, Cake, Utensils, Sparkles, UtensilsCrossed: Utensils
   };
 
-  const allTab = { id: "all", name: tc("الكل", "All"), icon: Coffee };
+  const allTab = { id: "all", name: tc("الكل", "All"), icon: Utensils };
 
   const categories = [
     allTab,
     ...dynamicCategories.map(c => ({
       id: c.id,
       name: i18n.language === 'ar' ? c.nameAr : (c.nameEn || c.nameAr),
-      icon: iconMap[c.icon || 'Coffee'] || Coffee,
+      icon: iconMap[c.icon || 'Coffee'] || Utensils,
     })),
   ];
 
@@ -561,7 +560,7 @@ export default function MenuPage() {
           animate={{ rotate: 360 }}
           transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
         >
-          <Coffee className="w-10 h-10 text-primary" />
+          <Utensils className="w-10 h-10 text-primary" />
         </motion.div>
       </div>
     );

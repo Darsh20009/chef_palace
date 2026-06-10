@@ -1439,9 +1439,9 @@ export default function AdminSettings() {
                   <SelectValue placeholder={tc("اختر نوع النشاط","Select business type")} />
                 </SelectTrigger>
                 <SelectContent className="font-ibm-arabic">
-                  <SelectItem value="cafe">{tc("نظام كافيه فقط","Café System Only")}</SelectItem>
+                  <SelectItem value="cafe">{tc("نظام مشروبات فقط","Beverages System Only")}</SelectItem>
                   <SelectItem value="restaurant">{tc("نظام مطعم فقط","Restaurant System Only")}</SelectItem>
-                  <SelectItem value="both">{tc("نظام مطعم وكافيه معاً","Restaurant & Café System")}</SelectItem>
+                  <SelectItem value="both">{tc("نظام مطعم شامل","Full Restaurant System")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -2778,7 +2778,7 @@ export default function AdminSettings() {
               <Input
                 value={config?.tradeNameAr || ""}
                 onChange={(e) => mutation.mutate({ tradeNameAr: e.target.value })}
-                placeholder="مثال: كلاوني كافيه"
+                placeholder="مثال: مكان الشيف البخاري"
                 className="font-ibm-arabic"
               />
             </div>

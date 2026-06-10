@@ -109,6 +109,8 @@ const [editReservationPackages, setEditReservationPackages] = useState<Reservati
  const [skipRecipeConfirmOpen, setSkipRecipeConfirmOpen] = useState(false);
  const [isCategoryReorderOpen, setIsCategoryReorderOpen] = useState(false);
  const [localCategories, setLocalCategories] = useState<MenuCategory[]>([]);
+ const [isAiGeneratingAddImage, setIsAiGeneratingAddImage] = useState(false);
+ const [isAiGeneratingEditImage, setIsAiGeneratingEditImage] = useState(false);
  const [step1Data, setStep1Data] = useState<{
    nameAr: string;
    nameEn: string;
@@ -1107,12 +1109,12 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
  />
  </div>
 <div>
- <Label className="text-gray-300">{tc("صور المشروب (حتى 5 صور)", "Item Photos (up to 5)")}</Label>
+ <Label className="text-gray-300">{tc("صور المنتج (حتى 5 صور)", "Item Photos (up to 5)")}</Label>
  <div className="mt-2 space-y-2">
    <div className="flex flex-wrap gap-2">
      {addImageUrls.map((url, idx) => (
        <div key={idx} className="relative w-20 h-20">
-         <img src={url.startsWith('/') ? url : ("/" + url)} alt={"صورة " + (idx+1)} className="w-full h-full object-cover rounded-lg border border-gray-300" />
+         <img src={url.startsWith('/') ? url : (url.startsWith('http') ? url : "/" + url)} alt={"صورة " + (idx+1)} className="w-full h-full object-cover rounded-lg border border-gray-300" />
          <button type="button" onClick={() => setAddImageUrls(addImageUrls.filter((_, i) => i !== idx))} className="absolute -top-1 -right-1 bg-red-600 rounded-full w-5 h-5 flex items-center justify-center">
            <X className="w-3 h-3 text-white" />
          </button>
@@ -1127,21 +1129,41 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
      )}
    </div>
    {addImageUrls.length === 0 && <p className="text-gray-500 text-xs">اختر صوراً من المكتبة. الصورة الأولى ستكون الرئيسية</p>}
+   <button
+     type="button"
+     disabled={isAiGeneratingAddImage}
+     onClick={async () => {
+       const name = step1Data?.nameAr || aiAddNameAr;
+       if (!name) { toast({ title: "اكتب اسم المنتج أولاً", variant: "destructive" }); return; }
+       setIsAiGeneratingAddImage(true);
+       try {
+         const res = await fetch("/api/ai/generate-product-image", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productName: name, description: step1Data?.description || aiAddDescription }) });
+         const data = await res.json();
+         if (data.imageUrl) { setAddImageUrls(prev => [...prev, data.imageUrl]); toast({ title: "✨ تم توليد الصورة بالذكاء الاصطناعي" }); }
+       } catch { toast({ title: "فشل توليد الصورة", variant: "destructive" }); }
+       finally { setIsAiGeneratingAddImage(false); }
+     }}
+     className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/30 text-primary text-xs font-bold hover:bg-primary/20 transition-colors disabled:opacity-60"
+     data-testid="button-ai-generate-add-image"
+   >
+     <Sparkles className="w-4 h-4" />
+     {isAiGeneratingAddImage ? "جاري التوليد..." : "توليد صورة بالذكاء الاصطناعي ✨"}
+   </button>
  </div>
 </div>
  </div>
 
  <div>
- <Label htmlFor="coffeeStrength" className="text-gray-300">قوة القهوة</Label>
+ <Label htmlFor="coffeeStrength" className="text-gray-300">مستوى التحضير</Label>
  <Select value={selectedCoffeeStrength} onValueChange={setSelectedCoffeeStrength}>
  <SelectTrigger className="bg-gray-50 border-gray-300 text-gray-900" data-testid="select-coffee-strength">
- <SelectValue placeholder="اختر قوة القهوة" />
+ <SelectValue placeholder="اختر مستوى التحضير" />
  </SelectTrigger>
  <SelectContent className="bg-white border-gray-200 text-gray-900">
- <SelectItem value="mild">خفيفة (1-4)</SelectItem>
- <SelectItem value="classic">كلاسيكية/العادي</SelectItem>
- <SelectItem value="medium">متوسطة (4-8)</SelectItem>
- <SelectItem value="strong">قوية (8-12)</SelectItem>
+ <SelectItem value="mild">خفيف</SelectItem>
+ <SelectItem value="classic">عادي / كلاسيك</SelectItem>
+ <SelectItem value="medium">متوسط</SelectItem>
+ <SelectItem value="strong">قوي</SelectItem>
  </SelectContent>
  </Select>
  </div>
@@ -1969,12 +1991,12 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
  </div>
  </div>
 <div>
-<Label className="text-gray-300">{tc("صور المشروب (حتى 5 صور)", "Item Photos (up to 5)")}</Label>
+<Label className="text-gray-300">{tc("صور المنتج (حتى 5 صور)", "Item Photos (up to 5)")}</Label>
 <div className="mt-2 space-y-2">
   <div className="flex flex-wrap gap-2">
     {editImageUrls.map((url, idx) => (
       <div key={idx} className="relative w-16 h-16">
-        <img src={url.startsWith('/') ? url : ("/" + url)} alt={"صورة " + (idx+1)} className="w-full h-full object-cover rounded-lg border border-gray-300" />
+        <img src={url.startsWith('/') ? url : (url.startsWith('http') ? url : "/" + url)} alt={"صورة " + (idx+1)} className="w-full h-full object-cover rounded-lg border border-gray-300" />
         <button type="button" onClick={() => setEditImageUrls(editImageUrls.filter((_, i) => i !== idx))} className="absolute -top-1 -right-1 bg-red-600 rounded-full w-4 h-4 flex items-center justify-center">
           <X className="w-3 h-3 text-white" />
         </button>
@@ -1989,6 +2011,26 @@ setEditImageUrls((item as any).imageUrls || (item.imageUrl ? [item.imageUrl] : [
     )}
   </div>
   {editImageUrls.length === 0 && <p className="text-gray-500 text-xs">اختر صوراً من المكتبة. الصورة الأولى ستكون الرئيسية</p>}
+  <button
+    type="button"
+    disabled={isAiGeneratingEditImage}
+    onClick={async () => {
+      const name = editingItem?.nameAr;
+      if (!name) { toast({ title: "اسم المنتج غير متوفر", variant: "destructive" }); return; }
+      setIsAiGeneratingEditImage(true);
+      try {
+        const res = await fetch("/api/ai/generate-product-image", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ productName: name, description: editingItem?.description }) });
+        const data = await res.json();
+        if (data.imageUrl) { setEditImageUrls(prev => [...prev, data.imageUrl]); toast({ title: "✨ تم توليد الصورة بالذكاء الاصطناعي" }); }
+      } catch { toast({ title: "فشل توليد الصورة", variant: "destructive" }); }
+      finally { setIsAiGeneratingEditImage(false); }
+    }}
+    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/30 text-primary text-xs font-bold hover:bg-primary/20 transition-colors disabled:opacity-60"
+    data-testid="button-ai-generate-edit-image"
+  >
+    <Sparkles className="w-4 h-4" />
+    {isAiGeneratingEditImage ? "جاري التوليد..." : "توليد صورة بالذكاء الاصطناعي ✨"}
+  </button>
 </div>
 </div>
 

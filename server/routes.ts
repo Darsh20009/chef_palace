@@ -19953,6 +19953,53 @@ ${businessContext}
     }
   });
 
+  // ─── AI Product Image Generation (Kimi prompt + Pollinations render) ────────
+  app.post("/api/ai/generate-product-image", requireAuth, async (req: AuthRequest, res) => {
+    try {
+      const { productName, description } = req.body as { productName?: string; description?: string };
+      if (!productName) return res.status(400).json({ error: "productName required" });
+
+      const kimiKey = process.env.KIMI_API_KEY;
+      let imagePrompt = `${productName} authentic restaurant food photography, Saudi Arabian cuisine, professional plating, appetizing, high detail, warm lighting`;
+
+      if (kimiKey) {
+        try {
+          const kimiRes = await fetch("https://api.moonshot.ai/v1/chat/completions", {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${kimiKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              model: "moonshot-v1-8k",
+              messages: [{
+                role: "user",
+                content: `Write a concise English food photography prompt (max 60 words) for a restaurant menu photo of: "${productName}"${description ? ` — ${description}` : ""}. 
+Focus on: plating style, lighting, colors, textures, atmosphere. 
+Add: "professional food photography, menu photo, high quality, appetizing, restaurant dish".
+Return ONLY the prompt text, no quotes or explanation.`
+              }],
+              temperature: 1.0,
+              max_tokens: 120
+            })
+          });
+          if (kimiRes.ok) {
+            const kimiData = await kimiRes.json() as any;
+            const kPrompt = kimiData.choices?.[0]?.message?.content?.trim();
+            if (kPrompt) imagePrompt = kPrompt;
+          }
+        } catch (e) {
+          // fallback to default prompt
+        }
+      }
+
+      const seed = Math.floor(Math.random() * 99999);
+      const encoded = encodeURIComponent(imagePrompt);
+      const imageUrl = `https://image.pollinations.ai/prompt/${encoded}?width=512&height=512&nologo=true&seed=${seed}&enhance=true`;
+
+      res.json({ imageUrl, prompt: imagePrompt });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "فشل توليد الصورة" });
+    }
+  });
+
   // ─── AI Quick Insights (auto-generated) ──────────────────────────────────
   app.get("/api/ai/insights", requireAuth, requireManager, async (req: AuthRequest, res) => {
     try {
