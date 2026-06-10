@@ -2,7 +2,7 @@ services:
   - type: web
     name: qahwacup
     runtime: node
-    buildCommand: npm ci --only=production && NODE_OPTIONS=--max-old-space-size=3072 npm run build
+    buildCommand: npm ci && NODE_OPTIONS=--max-old-space-size=3072 npm run build
     startCommand: npm run start
     envVars:
       - key: NODE_ENV
