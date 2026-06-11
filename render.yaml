@@ -2,7 +2,7 @@ services:
   - type: web
     name: qahwacup
     runtime: node
-    buildCommand: rm -rf node_modules && npm install && npm run build
+    buildCommand: rm -rf node_modules && npm install --ignore-scripts && node scripts/patch-esbuild.cjs && npm run build
     startCommand: node dist/index.js
     envVars:
       - key: NODE_ENV
