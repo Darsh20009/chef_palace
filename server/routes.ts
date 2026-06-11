@@ -12704,60 +12704,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Configure multer for drink image uploads — uses memory storage, converts to base64 for MongoDB
+  // Configure multer for drink image uploads — saves to disk in attached_assets/drink-images/
+  const drinkImagesDir = path.resolve(__dirname, '..', 'attached_assets', 'drink-images');
+  if (!fs.existsSync(drinkImagesDir)) fs.mkdirSync(drinkImagesDir, { recursive: true });
+
   const drinkUpload = multer({
-    storage: multer.memoryStorage(),
-    limits: {
-      fileSize: 8 * 1024 * 1024, // 8MB max
+    storage: multer.diskStorage({
+      destination: (_req, _file, cb) => cb(null, drinkImagesDir),
+      filename: (_req, file, cb) => {
+        const ext = path.extname(file.originalname) || '.jpg';
+        cb(null, `${Date.now()}-${nanoid(8)}${ext}`);
+      },
+    }),
+    limits: { fileSize: 8 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+      if (file.mimetype.startsWith('image/')) cb(null, true);
+      else cb(new Error('نوع الملف غير مسموح. يجب أن يكون الملف صورة'));
     },
-    fileFilter: (req, file, cb) => {
-      if (file.mimetype.startsWith('image/')) {
-        cb(null, true);
-      } else {
-        cb(new Error('نوع الملف غير مسموح. يجب أن يكون الملف صورة'));
-      }
-    }
   });
 
-  // Upload drink image — stores as base64 data URL, works everywhere without external storage
+  // Upload drink image — saves file to disk, returns persistent URL
   app.post("/api/upload-drink-image", requireAuth, requireManager, wrapMulter(drinkUpload.single('image')), async (req: AuthRequest, res) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({ error: "No image file uploaded" });
-      }
-      const mimeType = req.file.mimetype || 'image/jpeg';
-      const base64 = req.file.buffer.toString('base64');
-      const dataUrl = `data:${mimeType};base64,${base64}`;
-      res.json({ url: dataUrl });
+      if (!req.file) return res.status(400).json({ error: "No image file uploaded" });
+      const url = `/attached_assets/drink-images/${req.file.filename}`;
+      res.json({ url });
     } catch (error) {
       console.error("Error uploading drink image:", error);
       res.status(500).json({ error: "Failed to upload image" });
     }
   });
 
-  // List all uploaded drink images — reads from MongoDB (imageUrl field)
-  app.get("/api/drink-images", requireAuth, async (req: AuthRequest, res) => {
+  // List all uploaded drink images — reads from drink-images directory on disk
+  app.get("/api/drink-images", requireAuth, async (_req: AuthRequest, res) => {
     try {
-      const tenantId = (req as AuthRequest).tenantId || 'demo-tenant';
-      const items = await CoffeeItemModel.find({ tenantId, imageUrl: { $exists: true, $nin: [null, ''] } })
-        .select('id nameAr imageUrl updatedAt')
-        .lean();
-      const result = items.map(item => ({
-        filename: item.nameAr,
-        url: item.imageUrl,
-        uploadedAt: item.updatedAt || new Date().toISOString()
-      }));
-      res.json(result);
+      if (!fs.existsSync(drinkImagesDir)) return res.json([]);
+      const files = fs.readdirSync(drinkImagesDir)
+        .filter(f => /\.(jpg|jpeg|png|webp|gif|avif)$/i.test(f))
+        .map(filename => {
+          const stat = fs.statSync(path.join(drinkImagesDir, filename));
+          return {
+            filename,
+            url: `/attached_assets/drink-images/${filename}`,
+            uploadedAt: stat.mtime.toISOString(),
+          };
+        })
+        .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime());
+      res.json(files);
     } catch (error) {
       res.status(500).json({ error: "Failed to list drink images" });
     }
   });
 
-  // Delete all images from image library (clear all imageUrls from products)
-  app.delete("/api/drink-images/all", requireAuth, requireManager, async (req: AuthRequest, res) => {
+  // Delete all images from image library (removes files from disk)
+  app.delete("/api/drink-images/all", requireAuth, requireManager, async (_req: AuthRequest, res) => {
     try {
-      const tenantId = (req as AuthRequest).tenantId || 'demo-tenant';
-      await CoffeeItemModel.updateMany({ tenantId }, { $unset: { imageUrl: "", imageUrls: "" } });
+      if (fs.existsSync(drinkImagesDir)) {
+        const files = fs.readdirSync(drinkImagesDir);
+        for (const f of files) fs.unlinkSync(path.join(drinkImagesDir, f));
+      }
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to clear image library" });
