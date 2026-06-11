@@ -38,7 +38,7 @@ interface TaxInvoiceProps {
   branchAddress?: string;
 }
 
-const VAT_NUMBER = "312718675800003";
+const VAT_NUMBER = "310894802100003";
 const COMPANY_NAME = brand.shortNameAr;
 const COMPANY_NAME_EN = brand.nameEn;
 const COMPANY_CR = "1163184110";

@@ -54,7 +54,7 @@ export async function renderReceiptPreviewToPng(input: PreviewOrderInput): Promi
     (async () => {
       try {
         const ts = input.createdAt ? new Date(input.createdAt).toISOString() : new Date().toISOString();
-        const payload = btoa(`\x01\x10مكان الشيف البخاري\x02\x0F312718675800003\x03\x14${ts}\x04\x08${totalAmount.toFixed(2)}\x05\x08${vat.toFixed(2)}`);
+        const payload = btoa(`\x01\x10مكان الشيف البخاري\x02\x0F310894802100003\x03\x14${ts}\x04\x08${totalAmount.toFixed(2)}\x05\x08${vat.toFixed(2)}`);
         return await QRCode.toDataURL(payload, { width: 180, margin: 1, errorCorrectionLevel: 'M' });
       } catch { return ''; }
     })(),

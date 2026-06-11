@@ -61,7 +61,7 @@ export function ReceiptInvoice({ order, variant = "button", precomputedTrackingQ
         setTrackingQrUrl(await QRCode.toDataURL(url, { width: 200, margin: 1, errorCorrectionLevel: "M" }));
       } catch {}
       try {
-        const payload = btoa(`\x01\x10مكان الشيف البخاري\x02\x0F312718675800003\x03\x14${new Date(order.createdAt).toISOString()}\x04\x08${totalAmount.toFixed(2)}\x05\x08${vat.toFixed(2)}`);
+        const payload = btoa(`\x01\x10مكان الشيف البخاري\x02\x0F310894802100003\x03\x14${new Date(order.createdAt).toISOString()}\x04\x08${totalAmount.toFixed(2)}\x05\x08${vat.toFixed(2)}`);
         setZatcaQrUrl(await QRCode.toDataURL(payload, { width: 180, margin: 1, errorCorrectionLevel: "M" }));
       } catch {}
     })();
@@ -274,7 +274,7 @@ export function ReceiptInvoice({ order, variant = "button", precomputedTrackingQ
         <div style={{ textAlign: "center", fontSize: "12px", lineHeight: "1.9", marginBottom: "8px" }}>
           <div style={{ fontWeight: 900, fontSize: "15px" }}>Black Rose Cafe</div>
           <div style={{ fontSize: "11px", color: "#444" }}>حي المروج، طريق الأمير مقرن</div>
-          <div style={{ direction: "ltr", fontSize: "11px", color: "#444" }}>الرقم الضريبي: 312718675800003</div>
+          <div style={{ direction: "ltr", fontSize: "11px", color: "#444" }}>الرقم الضريبي: 310894802100003</div>
           <div style={{ fontSize: "11px", color: "#444" }}>101000004295 :رقم الفاتورة</div>
           <div style={{ direction: "ltr", fontSize: "11px", color: "#444" }}>{timeStr} · {dateStr}</div>
           <div style={{ fontWeight: 700, fontSize: "13px", marginTop: "3px", background: "#f0f0f0", padding: "2px 8px", display: "inline-block", borderRadius: "4px" }}>
@@ -403,7 +403,7 @@ export function ReceiptInvoice({ order, variant = "button", precomputedTrackingQ
             </div>
             <img src={zatcaQrUrl} alt="ZATCA QR" style={{ width: "120px", height: "120px", display: "inline-block" }} />
             <div style={{ fontSize: "10px", color: "#555", marginTop: "4px", fontFamily: "Arial, sans-serif" }}>
-              فاتورة ضريبية — الرقم الضريبي: 312718675800003
+              فاتورة ضريبية — الرقم الضريبي: 310894802100003
             </div>
           </div>
         )}

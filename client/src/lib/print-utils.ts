@@ -587,7 +587,7 @@ export async function printKitchenOrder(data: KitchenOrderData): Promise<void> {
   openPrintWindow(html, `طلب المطبخ - ${data.orderNumber}`, { paperWidth: '80mm', autoPrint: true, autoClose: true, showPrintButton: false });
 }
 
-const VAT_NUMBER = "312718675800003";
+const VAT_NUMBER = "310894802100003";
 const COMPANY_NAME = "مكان الشيف البخاري";
 const COMPANY_NAME_EN = "مكان الشيف البخاري";
 const COMPANY_CR = "7025559423";
