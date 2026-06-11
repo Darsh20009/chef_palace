@@ -103,9 +103,9 @@ export function CustomerFooter() {
             href="https://qiroxstudio.online"
             target="_blank"
             rel="noreferrer"
-            className="text-[11px] text-muted-foreground/40 hover:text-primary/60 transition-colors font-ibm-arabic tracking-wide mt-1"
+            className="text-sm text-muted-foreground/70 hover:text-primary transition-colors font-ibm-arabic tracking-wide mt-1 flex items-center gap-1.5"
           >
-            صنع عبر كيروكس استديو
+            صنع عبر <span className="font-bold text-primary text-base tracking-tight">QIROX Studio</span>
           </a>
         </div>
       </div>
