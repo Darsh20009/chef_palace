@@ -22,7 +22,7 @@ export function CustomerFooter() {
   };
 
   return (
-    <footer className="bg-muted/30 py-12 border-t mb-16 relative overflow-hidden">
+    <footer className="bg-muted/30 py-12 border-t relative overflow-hidden">
       {/* Decorative background element */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
       
