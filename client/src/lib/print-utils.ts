@@ -592,8 +592,8 @@ const COMPANY_NAME = "مكان الشيف البخاري";
 const COMPANY_NAME_EN = "مكان الشيف البخاري";
 const COMPANY_CR = "7025559423";
 const COMPANY_WEBSITE = "chefsplace.online";
-const DEFAULT_BRANCH = "فرع المروج، ينبع";
-const DEFAULT_ADDRESS = "ينبع، المملكة العربية السعودية";
+const DEFAULT_BRANCH = "فرع المروج، الرياض";
+const DEFAULT_ADDRESS = "الرياض، المملكة العربية السعودية";
 
 function generateZATCAQRCode(data: {
   sellerName: string;
@@ -1112,7 +1112,7 @@ body{font-family:Tahoma,Arial,'Segoe UI',sans-serif;direction:rtl;background:#e0
   <!-- ③ اسم المنشأة + بيانات -->
   <div style="text-align:center;font-size:12px;line-height:1.9;padding:4px 10px 6px;">
     <div style="font-weight:900;font-size:16px;letter-spacing:1px;">${COMPANY_NAME}</div>
-    <div style="font-size:11px;color:#555;">ينبع، المملكة العربية السعودية</div>
+    <div style="font-size:11px;color:#555;">الرياض، المملكة العربية السعودية</div>
     <div style="direction:ltr;font-size:11px;color:#555;">${data.vatNumber || VAT_NUMBER}</div>
     <div style="direction:ltr;font-size:11px;">${fmtDate} · ${fmtTime}</div>
   </div>

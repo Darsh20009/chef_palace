@@ -306,7 +306,7 @@ const resources = {
         "qr_title": "Card QR Code",
         "qr_desc": "Show this code to the cashier to earn points"
       },
-      "location.riyadh": "Yanbu",
+      "location.riyadh": "Riyadh",
       "status.open": "Open Now",
       "banner.1.title": "Authentic Bukhari Rice",
       "banner.1.subtitle": "Discover the finest flavors of traditional Saudi cuisine",
@@ -1356,7 +1356,7 @@ const resources = {
       "status.cancelled": "ملغي",
       "status.refunded": "مسترد",
       "status.suspended": "معلق",
-      "location.riyadh": "ينبع",
+      "location.riyadh": "الرياض",
       "status.open": "مفتوح الآن",
       "banner.1.title": "بخاري استثنائي",
       "banner.1.subtitle": "اكتشف نكهات البخاري الأصيل بأيدي الشيف",
