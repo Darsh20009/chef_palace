@@ -172,58 +172,27 @@ function CarSVG({ color, className = '' }: { color: string; className?: string }
 
 type OrderMethod = 'takeaway' | 'car-pickup' | 'dine-in' | 'delivery';
 
+const RIYADH_NEIGHBORHOODS = [
+  'حي النخيل', 'حي الملقا', 'حي الياسمين', 'حي العليا', 'حي الورود',
+  'حي السليمانية', 'حي الروضة', 'حي الربوة', 'حي الحمراء', 'حي الصحافة',
+  'حي الغدير', 'حي القيروان', 'حي الازدهار', 'حي الوادي', 'حي المصيف',
+  'حي النزهة', 'حي المروج', 'حي الرحمانية', 'حي الخليج', 'حي السفارات',
+  'حي الربيع', 'حي الواحة', 'حي النرجس', 'حي المهدية', 'حي العقيق',
+  'حي حطين', 'حي الشفا', 'حي الشرفية', 'حي أم الحمام الشرقي',
+  'حي أم الحمام الغربي', 'حي الشميسي', 'حي المنار', 'حي العزيزية',
+  'حي الدرعية', 'حي الدريهمية', 'حي بدر', 'حي الدار البيضاء',
+  'حي المعذر', 'حي الجزيرة', 'حي السعادة', 'حي الفلاح', 'حي الندوة',
+  'حي الأندلس', 'حي طويق', 'حي لبن', 'حي المصانع', 'حي الريان',
+  'حي المنصورة', 'حي العريجاء', 'حي الحزم', 'حي الرمال', 'حي النسيم',
+  'حي قرطبة', 'حي الإسكان', 'حي الجنادرية', 'حي الخزامى', 'حي الفيصلية',
+  'حي سلطانة', 'حي الديرة', 'حي منفوحة', 'حي الزهراء', 'حي الوزارات',
+];
+
 const DELIVERY_COUNTRIES: { value: string; label: string; governorates: string[] }[] = [
   {
     value: 'SA',
     label: 'المملكة العربية السعودية',
-    governorates: [
-      'منطقة الرياض',
-      'منطقة مكة المكرمة',
-      'منطقة المدينة المنورة',
-      'منطقة القصيم',
-      'المنطقة الشرقية',
-      'منطقة عسير',
-      'منطقة تبوك',
-      'منطقة حائل',
-      'منطقة الحدود الشمالية',
-      'منطقة جازان',
-      'منطقة نجران',
-      'منطقة الباحة',
-      'منطقة الجوف',
-    ],
-  },
-  {
-    value: 'EG',
-    label: 'جمهورية مصر العربية',
-    governorates: [
-      'القاهرة',
-      'الجيزة',
-      'الإسكندرية',
-      'الدقهلية',
-      'البحيرة',
-      'الشرقية',
-      'الغربية',
-      'المنوفية',
-      'القليوبية',
-      'كفر الشيخ',
-      'دمياط',
-      'بورسعيد',
-      'الإسماعيلية',
-      'السويس',
-      'الفيوم',
-      'بني سويف',
-      'المنيا',
-      'أسيوط',
-      'سوهاج',
-      'قنا',
-      'الأقصر',
-      'أسوان',
-      'البحر الأحمر',
-      'مطروح',
-      'شمال سيناء',
-      'جنوب سيناء',
-      'الوادي الجديد',
-    ],
+    governorates: RIYADH_NEIGHBORHOODS,
   },
 ];
 
@@ -1106,47 +1075,37 @@ export default function DeliverySelectionPage() {
                   <p className="text-green-100 text-xs">أدخل عنوانك وسنوصل طلبك إليك</p>
                 </div>
                 <CardContent className="p-4 space-y-3">
-                  {/* Country */}
+                  {/* City - fixed to Riyadh */}
+                  <div className="flex items-center gap-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-xl px-4 py-3">
+                    <MapPin className="w-4 h-4 text-green-600 shrink-0" />
+                    <div>
+                      <p className="text-xs text-green-700 dark:text-green-300 font-medium">المدينة</p>
+                      <p className="text-sm font-bold text-green-900 dark:text-green-100">الرياض — المملكة العربية السعودية</p>
+                    </div>
+                    <span className="mr-auto text-xs bg-green-600 text-white px-2 py-0.5 rounded-full">متاح</span>
+                  </div>
+
+                  {/* Neighborhood picker */}
                   <div>
-                    <Label className="text-sm font-medium mb-2 block">الدولة</Label>
+                    <Label className="text-sm font-bold mb-2 flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-primary" />
+                      الحي / المنطقة
+                    </Label>
                     <Select
-                      value={selectedCountry}
-                      onValueChange={(v) => { setSelectedCountry(v); setSelectedGovernorate(''); }}
-                      data-testid="select-country"
+                      value={selectedGovernorate}
+                      onValueChange={(v) => { setSelectedCountry('SA'); setSelectedGovernorate(v); }}
+                      data-testid="select-governorate"
                     >
-                      <SelectTrigger className="text-sm" data-testid="trigger-country">
-                        <SelectValue placeholder="اختر الدولة" />
+                      <SelectTrigger className="text-sm h-12" data-testid="trigger-governorate">
+                        <SelectValue placeholder="اختر حيّك في الرياض" />
                       </SelectTrigger>
-                      <SelectContent>
-                        {DELIVERY_COUNTRIES.map((c) => (
-                          <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                      <SelectContent className="max-h-64">
+                        {RIYADH_NEIGHBORHOODS.map((g) => (
+                          <SelectItem key={g} value={g}>{g}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-
-                  {/* Governorate / Region */}
-                  {selectedCountry && (
-                    <div>
-                      <Label className="text-sm font-medium mb-2 block">
-                        {selectedCountry === 'SA' ? 'المنطقة الإدارية' : 'المحافظة'}
-                      </Label>
-                      <Select
-                        value={selectedGovernorate}
-                        onValueChange={setSelectedGovernorate}
-                        data-testid="select-governorate"
-                      >
-                        <SelectTrigger className="text-sm" data-testid="trigger-governorate">
-                          <SelectValue placeholder={selectedCountry === 'SA' ? 'اختر المنطقة' : 'اختر المحافظة'} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {DELIVERY_COUNTRIES.find(c => c.value === selectedCountry)?.governorates.map((g) => (
-                            <SelectItem key={g} value={g}>{g}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
 
                   {/* Detailed address */}
                   {selectedGovernorate && (

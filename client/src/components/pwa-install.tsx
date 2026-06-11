@@ -143,8 +143,8 @@ function AppHeader({ onClose, subtitle }: { onClose: () => void; subtitle: strin
     <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "0 20px 14px" }}>
       <AppIcon size={58} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ color: "#fff", fontWeight: 800, fontSize: 17, margin: 0, lineHeight: 1.2 }}>QIROX Cafe</p>
-        <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, margin: "2px 0 5px" }}>qirox.cafe</p>
+        <p style={{ color: "#fff", fontWeight: 800, fontSize: 17, margin: 0, lineHeight: 1.2 }}>مكان الشيف البخاري</p>
+        <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, margin: "2px 0 5px" }}>chefsplace.online</p>
         <Stars />
       </div>
       <CloseBtn onClose={onClose} />
@@ -212,7 +212,7 @@ function SafariBrowserBar() {
         display: "flex", alignItems: "center", gap: 6,
       }}>
         <div style={{ width: 6, height: 6, borderRadius: "50%", background: G, flexShrink: 0 }} />
-        <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>qirox.cafe</span>
+        <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>chefsplace.online</span>
       </div>
       <div style={{
         width: 32, height: 32, borderRadius: 8,
@@ -297,7 +297,7 @@ function IOSGuide({ onClose }: { onClose: () => void }) {
             }}>
               <AppIcon size={32} />
               <div>
-                <p style={{ color: "rgba(255,255,255,0.8)", fontSize: 13, fontWeight: 600, margin: 0 }}>QIROX Cafe</p>
+                <p style={{ color: "rgba(255,255,255,0.8)", fontSize: 13, fontWeight: 600, margin: 0 }}>مكان الشيف البخاري</p>
                 <p style={{ color: G, fontSize: 11, margin: "2px 0 0", fontWeight: 500 }}>
                   ستظهر الأيقونة على شاشتك فوراً ✨
                 </p>

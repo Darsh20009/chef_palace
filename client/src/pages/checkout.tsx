@@ -655,6 +655,18 @@ export default function CheckoutPage() {
       clearCart();
       customerStorage.clearActiveOffer();
       setShowSuccessPage(true);
+      // Auto-show customer invoice after payment
+      setTimeout(async () => {
+        try {
+          const mappedItems = (data.items || []).map((i: any) => ({
+            coffeeItem: { nameAr: i.nameAr || i.coffeeItem?.nameAr || "منتج", nameEn: i.nameEn || i.coffeeItem?.nameEn || "", price: String(i.price ?? i.coffeeItem?.price ?? 0) },
+            quantity: i.quantity, customization: i.customization,
+          }));
+          const total = data.totalAmount ?? 0;
+          const { openReceiptPreviewWindow } = await import("@/lib/print-utils");
+          await openReceiptPreviewWindow({ orderNumber: data.orderNumber || data.dailyNumber || "", items: mappedItems, subtotal: total.toFixed(2), total: total.toFixed(2), customerName: data.customerName || "عميل", customerPhone: data.customerPhone || "", paymentMethod: data.paymentMethod || "نقدي", employeeName: "طلب إلكتروني", notes: data.notes || "", date: data.createdAt || new Date().toISOString(), orderType: data.orderType === 'delivery' ? 'delivery' : data.orderType === 'dine-in' ? 'dine_in' : 'takeaway' } as any);
+        } catch {}
+      }, 800);
       setPointsToRedeem(0);
       setAppliedGiftCard(null);
       setGiftCardCode("");
