@@ -74,6 +74,9 @@ export function CustomerFooter() {
             >
               {t("legal.cr")}
             </a>
+            <div className="text-[10px] text-muted-foreground/60 font-ibm-arabic">
+              رقم السجل: 1009092745
+            </div>
           </div>
 
           <div className="flex flex-col items-center justify-center gap-2 text-center">
