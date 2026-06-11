@@ -26,7 +26,7 @@ export function CustomerFooter() {
       {/* Decorative background element */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
       
-      <div className="container px-4 flex flex-col items-center gap-10">
+      <div className="container px-4 flex flex-col items-center gap-10 text-center">
         {/* Social Section */}
         <div className="flex flex-col items-center gap-4 w-full">
           <h4 className="text-sm font-bold text-primary/60 uppercase tracking-widest">{t("footer.connect_with_us")}</h4>
