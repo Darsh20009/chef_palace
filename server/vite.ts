@@ -53,7 +53,6 @@ export function log(message: string, source = "express") {
 export async function setupVite(app: Express, server: Server) {
   // Dynamic import — vite is only loaded in development, never bundled into production
   const { createServer: createViteServer, createLogger } = await import("vite");
-  const viteConfig = (await import("../vite.config")).default;
 
   const viteLogger = createLogger();
   const hmrHost = process.env.REPLIT_DEV_DOMAIN;
@@ -65,9 +64,9 @@ export async function setupVite(app: Express, server: Server) {
     allowedHosts: true as const,
   };
 
+  // Let Vite auto-discover vite.config.ts — do NOT import it here
+  // (importing vite.config would cause esbuild to bundle vite plugins as static imports)
   const vite = await createViteServer({
-    ...viteConfig,
-    configFile: false,
     customLogger: {
       ...viteLogger,
       error: (msg, options) => {

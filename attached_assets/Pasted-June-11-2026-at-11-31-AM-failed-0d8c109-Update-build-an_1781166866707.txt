@@ -1,0 +1,71 @@
+June 11, 2026 at 11:31 AM
+failed
+0d8c109
+Update build and start commands for deployment Modify render.yaml to change the build command to ignore scripts and update the start command to use the pre-built dist/index.js. Replit-Commit-Author: Agent Replit-Commit-Session-Id: 44ea3964-9278-4915-88bf-886890fbb909 Replit-Commit-Checkpoint-Type: full_checkpoint Replit-Commit-Event-Id: 05e58547-3692-4221-b216-f70e7f928f2f Replit-Commit-Screenshot-Url: https://storage.googleapis.com/screenshot-production-us-central1/d874162f-a52f-4508-9b3b-a9b16274e9ef/44ea3964-9278-4915-88bf-886890fbb909/ljmrQ9N Replit-Helium-Checkpoint-Created: true
+
+Rollback
+Exited with status 1 while running your code.
+Read our docs for common ways to troubleshoot your deploy.
+
+All logs
+Search
+Search
+
+Live tail
+
+
+
+==> Downloading cache...
+==> Cloning from https://github.com/Darsh20009/chef_palace
+==> Checking out commit 0d8c109c8fa43653483942e53f2b91ad5a90b594 in branch main
+==> Downloaded 147KB in 0s. Extraction took 0s.
+==> Requesting Node.js version 20
+==> Using Node.js version 20.20.2 via /opt/render/project/src/.nvmrc
+==> Docs on specifying a Node.js version: https://render.com/docs/node-version
+==> Installing Node.js version 20.20.2...
+==> Running build command 'npm install --omit=optional --ignore-scripts'...
+npm error Exit handler never called!
+npm error This is an error with npm itself. Please report this error at:
+npm error   <https://github.com/npm/cli/issues>
+npm error A complete log of this run can be found in: /opt/render/.cache/_logs/2026-06-11T08_31_28_435Z-debug-0.log
+==> Uploading build...
+==> Uploaded in 6.4s. Compression took 2.2s
+==> Build successful 🎉
+==> Deploying...
+==> Setting WEB_CONCURRENCY=1 by default, based on available CPUs in the instance
+==> Running 'node dist/index.js'
+node:internal/modules/esm/resolve:215
+  const resolvedOption = FSLegacyMainResolve(packageJsonUrlString, packageConfig.main, baseStringified);
+                         ^
+Error: Cannot find package '/opt/render/project/src/node_modules/vite/index.js' imported from /opt/render/project/src/dist/index.js
+    at legacyMainResolve (node:internal/modules/esm/resolve:215:26)
+    at packageResolve (node:internal/modules/esm/resolve:860:14)
+    at moduleResolve (node:internal/modules/esm/resolve:946:18)
+    at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:168:49) {
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+Node.js v20.20.2
+==> Exited with status 1
+==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
+==> Running 'node dist/index.js'
+node:internal/modules/esm/resolve:215
+  const resolvedOption = FSLegacyMainResolve(packageJsonUrlString, packageConfig.main, baseStringified);
+                         ^
+Error: Cannot find package '/opt/render/project/src/node_modules/vite/index.js' imported from /opt/render/project/src/dist/index.js
+    at legacyMainResolve (node:internal/modules/esm/resolve:215:26)
+    at packageResolve (node:internal/modules/esm/resolve:860:14)
+    at moduleResolve (node:internal/modules/esm/resolve:946:18)
+    at defaultResolve (node:internal/modules/esm/resolve:1188:11)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:708:12)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:657:25)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:640:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:264:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:168:49) {
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+Node.js v20.20.2
