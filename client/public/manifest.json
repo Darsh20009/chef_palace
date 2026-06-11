@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "QIROX Cafe - كيروكس كافيه",
-  "short_name": "QIROX",
-  "description": "اطلب مشروبك المفضل، تتبّع طلبك، واستمتع ببرنامج الولاء — من QIROX Cafe",
+  "name": "مكان الشيف البخاري",
+  "short_name": "مكان الشيف",
+  "description": "اطلب وجبتك المفضلة من أرز بخاري ودجاج وزربيان — توصيل داخل الرياض",
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
@@ -73,14 +73,14 @@
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "QIROX Cafe — تطبيق الطلبات والولاء"
+      "label": "مكان الشيف البخاري — اطلب وجبتك"
     },
     {
       "src": "/logo-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "QIROX Cafe — لوحة التحكم"
+      "label": "مكان الشيف البخاري — لوحة التحكم"
     }
   ],
   "shortcuts": [
