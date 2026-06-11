@@ -41,7 +41,7 @@ export default function WelcomePage() {
             src={bannerImage1}
             alt="مكان الشيف البخاري"
             className="w-full h-full object-cover scale-105"
-            style={{ filter: "blur(8px)" }}
+            style={{ filter: "blur(14px)" }}
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70" />
         </div>
