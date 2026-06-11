@@ -41,7 +41,7 @@ interface TaxInvoiceProps {
 const VAT_NUMBER = "310894802100003";
 const COMPANY_NAME = brand.shortNameAr;
 const COMPANY_NAME_EN = brand.nameEn;
-const COMPANY_CR = "1163184110";
+const COMPANY_CR = "1009092745";
 const COMPANY_VAT_NAME = "شركة مكان الشيف البخاري للخدمات الغذائية"; // Added for ZATCA compliance
 const DEFAULT_BRANCH = "الفرع الرئيسي - ينبع"; // Default branch
 const DEFAULT_ADDRESS = "ينبع، المملكة العربية السعودية"; // Default address

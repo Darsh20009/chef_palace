@@ -193,9 +193,9 @@ export const brand = {
   //  BUSINESS INFO
   // ───────────────────────────────────────────────────────────────────────
 
-  commercialRegister: "1163184110",
+  commercialRegister: "1009092745",
   taxNumber: "310894802100003",
-  registrationNumber: "1163184110",
+  registrationNumber: "1009092745",
   saudiBusinessUrl: "https://qr.saudibusiness.gov.sa/viewcr?nCrNumber=opQsRLgqEFrL8PpAgImEew==",
 
 
