@@ -255,25 +255,15 @@ export default function WelcomePage() {
       </section>
       {/* Gallery Section */}
       <section className="py-16 px-6 bg-slate-50">
-        <div className="max-w-4xl mx-auto">
-          <div className="grid grid-cols-2 gap-4">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              className="rounded-2xl overflow-hidden shadow-lg"
-            >
-              <img src={bannerImage1} alt="Coffee" className="w-full h-48 object-cover" />
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              className="rounded-2xl overflow-hidden shadow-lg"
-            >
-              <img src={bannerImage2} alt="Coffee" className="w-full h-48 object-cover" />
-            </motion.div>
-          </div>
+        <div className="max-w-2xl mx-auto flex justify-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="rounded-2xl overflow-hidden shadow-lg w-full"
+          >
+            <img src={bannerImage1} alt="مكان الشيف البخاري" className="w-full h-64 object-cover" />
+          </motion.div>
         </div>
       </section>
       {/* Footer */}

@@ -99,6 +99,14 @@ export function CustomerFooter() {
             {brand.copyrightEn.toUpperCase()}
           </div>
           <div className="h-1 w-8 bg-primary/20 rounded-full" />
+          <a
+            href="https://qiroxstudio.online"
+            target="_blank"
+            rel="noreferrer"
+            className="text-[11px] text-muted-foreground/40 hover:text-primary/60 transition-colors font-ibm-arabic tracking-wide mt-1"
+          >
+            صنع عبر كيروكس استديو
+          </a>
         </div>
       </div>
     </footer>
