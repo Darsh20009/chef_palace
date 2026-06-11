@@ -2,7 +2,7 @@ import { useLocation } from "wouter";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import bannerImage from "@assets/Screenshot_2026-06-10_at_2.11.54_PM_1781089962059.png";
-import chefsplaceLogoAsset from "@assets/chef-bukhari-logo.png";
+import chefsplaceLogoAsset from "@assets/chef-bukhari-logo-nobg.png";
 const chefsplaceLogo = chefsplaceLogoAsset;
 
 const GOLD = "#C06520";

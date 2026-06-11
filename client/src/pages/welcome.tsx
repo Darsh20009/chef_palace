@@ -11,7 +11,7 @@ import { useRealtimeEvent } from "@/hooks/useRealtimeEngine";
 import { useState } from "react";
 import { CustomerFooter } from "@/components/customer-footer";
 
-import restaurantLogoAsset from "@assets/chef-bukhari-logo.png";
+import restaurantLogoAsset from "@assets/chef-bukhari-logo-nobg.png";
 const restaurantLogo = restaurantLogoAsset;
 
 export default function WelcomePage() {
@@ -40,7 +40,8 @@ export default function WelcomePage() {
           <img
             src={bannerImage1}
             alt="مكان الشيف البخاري"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover scale-105"
+            style={{ filter: "blur(4px)" }}
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70" />
         </div>
@@ -128,8 +129,8 @@ export default function WelcomePage() {
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.2, duration: 0.5 }}
-              className="w-36 h-36 mx-auto mb-6 object-contain"
-              style={{ filter: "drop-shadow(0 0 24px rgba(192,101,32,0.7)) drop-shadow(0 4px 16px rgba(0,0,0,0.8))" }}
+              className="w-52 h-52 mx-auto mb-4 object-contain"
+              style={{ filter: "drop-shadow(0 0 32px rgba(192,101,32,0.8)) drop-shadow(0 4px 20px rgba(0,0,0,0.9))" }}
             />
 
             <motion.div
