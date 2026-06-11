@@ -856,16 +856,20 @@ export async function printReceiptSection(
  * each with its own "Print" button. No auto-print — purely for review.
  */
 export async function openReceiptPreviewWindow(data: TaxInvoiceData): Promise<void> {
-  const customerHtml = await buildReceiptPreviewHtml(data);
-  const kitchenHtml = buildEmployeeReceiptPreviewHtml(data);
   const orderNumDisplay = fmtOrderNum(data.orderNumber);
 
+  // Open window SYNCHRONOUSLY first (before any await) so mobile browsers
+  // don't treat it as a popup — the user gesture chain must not be broken.
   const win = window.open('', '_blank', 'width=900,height=900,scrollbars=yes,resizable=yes');
   if (!win) {
-    // Popup blocked — fall back to printing both
+    // Popup blocked — fall back to inline print dialog
     await printReceiptSection(data, 'both');
     return;
   }
+
+  // Now we can safely await async work
+  const customerHtml = await buildReceiptPreviewHtml(data);
+  const kitchenHtml = buildEmployeeReceiptPreviewHtml(data);
   // HTML-escape the order number for safe interpolation in the static shell.
   const safeOrderNum = String(orderNumDisplay).replace(/[&<>"']/g, c => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string
@@ -1425,6 +1429,13 @@ export async function printTaxInvoice(data: TaxInvoiceData, config: PrintConfig 
 
   const displayInvoiceNumber = fmtOrderNum(data.orderNumber);
 
+  // Open preview window SYNCHRONOUSLY before any await so mobile browsers
+  // honour the user-gesture chain and don't block the popup.
+  let previewWin: Window | null = null;
+  if (!shouldAutoPrint) {
+    previewWin = window.open('', '_blank', 'width=820,height=860,scrollbars=yes,resizable=yes');
+  }
+
   // ── Build HTML receipts (fast, no image conversion) ───────────────────────
   const customerHtml = await buildReceiptPreviewHtml(data);
   const employeeHtml = buildEmployeeReceiptPreviewHtml(data);
@@ -1449,8 +1460,8 @@ export async function printTaxInvoice(data: TaxInvoiceData, config: PrintConfig 
       await printOneHtml(employeeHtml);
     }
   } else {
-    // Manual preview window — shows both receipts side by side
-    const win = window.open('', '_blank', 'width=820,height=860,scrollbars=yes,resizable=yes');
+    // Manual preview window — use the window already opened synchronously above
+    const win = previewWin;
     if (win) {
       win.document.open();
       win.document.write(`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">
