@@ -225,7 +225,7 @@ export const brand = {
   //  COPYRIGHT
   // ───────────────────────────────────────────────────────────────────────
 
-  copyrightEn: `© ${new Date().getFullYear()} مكان الشيف البخاري — جميع الحقوق محفوظة`,
+  copyrightEn: `© ${new Date().getFullYear()} مكان الشيف البخاري —   جميع الحقوق محفوظة`,
   copyrightAr: `© ${new Date().getFullYear()} مكان الشيف البخاري — جميع الحقوق محفوظة`,
 
 } as const;
