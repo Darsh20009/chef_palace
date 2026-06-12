@@ -240,7 +240,7 @@ export function AddToCartModal({
         <div className="relative h-28 flex-shrink-0 bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center">
           {activeItem.imageUrl && (
             <img 
-              src={activeItem.imageUrl.startsWith('/') ? activeItem.imageUrl : `/${activeItem.imageUrl}`} 
+              src={activeItem.imageUrl.startsWith('/') || activeItem.imageUrl.startsWith('data:') || activeItem.imageUrl.startsWith('http') ? activeItem.imageUrl : `/${activeItem.imageUrl}`} 
               alt={isAr ? activeItem.nameAr : activeItem.nameEn || activeItem.nameAr} 
               className="w-20 h-20 rounded-xl object-cover border-4 border-background shadow-lg"
             />
@@ -365,7 +365,7 @@ export function AddToCartModal({
                           >
                             {imgSrc && (
                               <img
-                                src={imgSrc.startsWith('/') ? imgSrc : '/' + imgSrc}
+                                src={imgSrc.startsWith('/') || imgSrc.startsWith('data:') || imgSrc.startsWith('http') ? imgSrc : '/' + imgSrc}
                                 alt={addon.nameAr}
                                 className="w-6 h-6 rounded object-cover"
                               />
@@ -479,7 +479,7 @@ export function AddToCartModal({
                     >
                       {linkedDrink?.imageUrl && (
                         <img 
-                          src={linkedDrink.imageUrl.startsWith('/') ? linkedDrink.imageUrl : `/${linkedDrink.imageUrl}`}
+                          src={linkedDrink.imageUrl.startsWith('/') || linkedDrink.imageUrl.startsWith('data:') || linkedDrink.imageUrl.startsWith('http') ? linkedDrink.imageUrl : `/${linkedDrink.imageUrl}`}
                           alt={isAr ? addon.nameAr : addon.nameEn || addon.nameAr}
                           className="w-6 h-6 rounded object-cover"
                         />
@@ -575,7 +575,7 @@ export function AddToCartModal({
                           data-testid={`btn-bundle-item-${secIdx}-${bItem.productId}`}
                         >
                           {bItem.imageUrl && (
-                            <img src={bItem.imageUrl.startsWith('/') ? bItem.imageUrl : '/' + bItem.imageUrl} alt={bItem.nameAr} className="w-7 h-7 rounded object-cover" />
+                            <img src={bItem.imageUrl.startsWith('/') || bItem.imageUrl.startsWith('data:') || bItem.imageUrl.startsWith('http') ? bItem.imageUrl : '/' + bItem.imageUrl} alt={bItem.nameAr} className="w-7 h-7 rounded object-cover" />
                           )}
                           <div className="text-right">
                             <div>{isAr ? bItem.nameAr : (bItem.nameEn || bItem.nameAr)}</div>

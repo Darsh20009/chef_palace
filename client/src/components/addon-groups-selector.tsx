@@ -151,7 +151,7 @@ export function AddonGroupsSelector({ groups, value, onChange }: Props) {
                   >
                     {option.imageUrl && (
                       <img
-                        src={option.imageUrl.startsWith('/') ? option.imageUrl : '/' + option.imageUrl}
+                        src={option.imageUrl.startsWith('/') || option.imageUrl.startsWith('data:') || option.imageUrl.startsWith('http') ? option.imageUrl : '/' + option.imageUrl}
                         alt={option.nameAr}
                         className="w-6 h-6 rounded object-cover"
                       />

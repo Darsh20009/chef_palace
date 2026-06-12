@@ -111,7 +111,7 @@ function CoffeeCard({ item, variants = [] }: CoffeeCardProps) {
           {getStatusOverlay()}
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10"></div>
           <img 
-            src={selectedVariant.imageUrl ? (selectedVariant.imageUrl.startsWith('/') ? selectedVariant.imageUrl : `/${selectedVariant.imageUrl}`) : getCoffeeImage(selectedVariant.id)}
+            src={selectedVariant.imageUrl ? (selectedVariant.imageUrl.startsWith('/') || selectedVariant.imageUrl.startsWith('data:') || selectedVariant.imageUrl.startsWith('http') ? selectedVariant.imageUrl : `/${selectedVariant.imageUrl}`) : getCoffeeImage(selectedVariant.id)}
             alt={selectedVariant.nameAr}
             className="w-full h-40 sm:h-48 md:h-52 object-cover transition-all duration-700 group-hover:scale-110 brightness-95 group-hover:brightness-105"
             loading="lazy"
