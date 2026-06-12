@@ -1,0 +1,37 @@
+failed
+9e1012e
+Fix image display issues by improving URL handling across components Update image rendering logic to correctly handle various URL formats in AddToCartModal, AddonGroupsSelector, and CoffeeCard components. Replit-Commit-Author: Agent Replit-Commit-Session-Id: 110dcdf8-d161-4c6a-a49f-a146b80ee1c6 Replit-Commit-Checkpoint-Type: full_checkpoint Replit-Commit-Event-Id: 5aaae295-76c5-4af2-b91f-7e19badb7d2b Replit-Commit-Screenshot-Url: https://storage.googleapis.com/screenshot-production-us-central1/c2d3313b-322a-408a-bfa8-cc1eb14e9b89/110dcdf8-d161-4c6a-a49f-a146b80ee1c6/O2f2V4c Replit-Helium-Checkpoint-Created: true
+
+Rollback
+Exited with status 127 while building your code.
+Read our docs for common ways to troubleshoot your deploy.
+
+All logs
+Search
+Search logs
+
+Jun 12, 6:38 PM - 6:42 PM
+GMT+3
+
+
+
+==> Cloning from https://github.com/Darsh20009/chef_palace
+==> Checking out commit 9e1012e6b7f317bd0117fd4c35236e38d4f13981 in branch main
+==> Requesting Node.js version 20
+==> Using Node.js version 20.20.2 via /opt/render/project/src/.nvmrc
+==> Docs on specifying a Node.js version: https://render.com/docs/node-version
+==> Installing Node.js version 20.20.2...
+==> Running build command 'npm install --include=dev --ignore-scripts --omit=optional && node scripts/patch-esbuild.cjs && npm run build'...
+npm error Exit handler never called!
+npm error This is an error with npm itself. Please report this error at:
+npm error   <https://github.com/npm/cli/issues>
+npm error A complete log of this run can be found in: /opt/render/.cache/_logs/2026-06-12T15_39_49_795Z-debug-0.log
+[patch-esbuild] Fixed: /opt/render/project/src/node_modules/vite/node_modules/esbuild/bin/esbuild
+[patch-esbuild] Fixed: /opt/render/project/src/node_modules/vite/node_modules/@esbuild/linux-x64/bin/esbuild
+[patch-esbuild] Done.
+> qirox-cafe@2.0.0 build
+> node scripts/patch-esbuild.cjs && ./node_modules/.bin/vite build && ./node_modules/.bin/esbuild server/index.ts --platform=node --bundle --format=esm --minify --external:vite --external:sharp --external:@vladmandic/face-api --external:face-api.js --external:bufferutil --external:utf-8-validate --external:@babel/preset-typescript --external:lightningcss "--banner:js=import{createRequire}from'module';import{fileURLToPath}from'url';import{dirname as _dn}from'path';const require=createRequire(import.meta.url);const __filename=fileURLToPath(import.meta.url);const __dirname=_dn(__filename);" --outfile=dist/index.js
+[patch-esbuild] All esbuild binaries are correct (0.21.5). Done.
+sh: 1: ./node_modules/.bin/vite: not found
+==> Build failed 😞
+==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
