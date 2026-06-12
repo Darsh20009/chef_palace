@@ -1,0 +1,38 @@
+June 12, 2026 at 10:45 AM
+failed
+67d6f81
+Saved progress at the end of the loop Replit-Commit-Author: Agent Replit-Commit-Session-Id: ad8a9d1a-ea07-4b76-b797-f9e4e388d62c Replit-Commit-Checkpoint-Type: full_checkpoint Replit-Commit-Event-Id: cfd64008-2d20-47e4-aa6f-0e79e8d7c49e Replit-Commit-Screenshot-Url: https://storage.googleapis.com/screenshot-production-us-central1/00a39e99-2d9f-4f61-9b9d-c99867df1008/ad8a9d1a-ea07-4b76-b797-f9e4e388d62c/4VraLd5 Replit-Helium-Checkpoint-Created: true
+
+Rollback
+Exited with status 127 while building your code.
+Read our docs for common ways to troubleshoot your deploy.
+
+All logs
+Search
+Search
+
+Jun 12, 10:44 AM - 10:48 AM
+GMT+3
+
+
+
+==> Cloning from https://github.com/Darsh20009/chef_palace
+==> Checking out commit 67d6f814310381cffb01c20d0b8109185a2be1b9 in branch main
+==> Requesting Node.js version 20
+==> Using Node.js version 20.20.2 via /opt/render/project/src/.nvmrc
+==> Docs on specifying a Node.js version: https://render.com/docs/node-version
+==> Installing Node.js version 20.20.2...
+==> Running build command 'npm ci --ignore-scripts && node scripts/patch-esbuild.cjs && npm run build'...
+npm error Exit handler never called!
+npm error This is an error with npm itself. Please report this error at:
+npm error   <https://github.com/npm/cli/issues>
+npm error A complete log of this run can be found in: /opt/render/.cache/_logs/2026-06-12T07_45_50_039Z-debug-0.log
+[patch-esbuild] Fixed: /opt/render/project/src/node_modules/vite/node_modules/esbuild/bin/esbuild
+[patch-esbuild] Fixed: /opt/render/project/src/node_modules/vite/node_modules/@esbuild/linux-x64/bin/esbuild
+[patch-esbuild] Done.
+> qirox-cafe@2.0.0 build
+> ./node_modules/.bin/vite build && ./node_modules/.bin/esbuild server/index.ts --platform=node --bundle --format=esm --minify --external:vite --external:sharp --external:@vladmandic/face-api --external:face-api.js --external:bufferutil --external:utf-8-validate --external:@babel/preset-typescript --external:lightningcss "--banner:js=import{createRequire}from'module';import{fileURLToPath}from'url';import{dirname as _dn}from'path';const require=createRequire(import.meta.url);const __filename=fileURLToPath(import.meta.url);const __dirname=_dn(__filename);" --outfile=dist/index.js
+sh: 1: ./node_modules/.bin/vite: not found
+==> Build failed 😞
+==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
+Need better ways to work with logs? Try theRender CLI, Render MCP Server, or set up a log stream integration 
