@@ -1,0 +1,42 @@
+Exited with status 1 while building your code.
+Read our docs for common ways to troubleshoot your deploy.
+
+All logs
+Search
+Search logs
+
+Live tail
+
+
+
+==> Cloning from https://github.com/Darsh20009/chef_palace
+==> Checking out commit 6b05f9107f8682c2a4e9dfd3083dac63c1ae0eeb in branch main
+==> Requesting Node.js version 20
+==> Using Node.js version 20.20.2 via /opt/render/project/src/.nvmrc
+==> Docs on specifying a Node.js version: https://render.com/docs/node-version
+==> Installing Node.js version 20.20.2...
+==> Running build command 'npm install --include=dev --ignore-scripts --omit=optional && node scripts/patch-esbuild.cjs && npm run build'...
+npm error Exit handler never called!
+npm error This is an error with npm itself. Please report this error at:
+npm error   <https://github.com/npm/cli/issues>
+npm error A complete log of this run can be found in: /opt/render/.cache/_logs/2026-06-12T15_48_37_964Z-debug-0.log
+[patch-esbuild] Fixed: /opt/render/project/src/node_modules/vite/node_modules/esbuild/bin/esbuild
+[patch-esbuild] Fixed: /opt/render/project/src/node_modules/vite/node_modules/@esbuild/linux-x64/bin/esbuild
+[patch-esbuild] Done.
+> qirox-cafe@2.0.0 build
+> node scripts/patch-esbuild.cjs && node node_modules/vite/bin/vite.js build && node node_modules/esbuild/bin/esbuild server/index.ts --platform=node --bundle --format=esm --minify --external:vite --external:sharp --external:@vladmandic/face-api --external:face-api.js --external:bufferutil --external:utf-8-validate --external:@babel/preset-typescript --external:lightningcss "--banner:js=import{createRequire}from'module';import{fileURLToPath}from'url';import{dirname as _dn}from'path';const require=createRequire(import.meta.url);const __filename=fileURLToPath(import.meta.url);const __dirname=_dn(__filename);" --outfile=dist/index.js
+[patch-esbuild] All esbuild binaries are correct (0.21.5). Done.
+node:internal/modules/cjs/loader:1210
+  throw err;
+  ^
+Error: Cannot find module '/opt/render/project/src/node_modules/vite/bin/vite.js'
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
+    at Module._load (node:internal/modules/cjs/loader:1038:27)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)
+    at node:internal/main/run_main_module:28:49 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+Node.js v20.20.2
+==> Build failed 😞
+==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
