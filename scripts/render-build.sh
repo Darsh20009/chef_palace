@@ -1,26 +1,19 @@
 #!/bin/bash
-echo "=== Step 1: Install packages (may report errors - that is OK) ==="
-npm install --ignore-scripts --omit=optional 2>&1 || true
+set -e
 
-echo "=== Step 2: Ensure vite is installed ==="
-if [ ! -f "node_modules/vite/bin/vite.js" ]; then
-  echo "Vite missing — installing separately..."
-  npm install vite --no-save --ignore-scripts 2>&1 || true
-fi
+echo "=== Switching to npm v9 (fixes Exit handler bug) ==="
+npm install -g npm@9 --quiet 2>&1 | tail -3
 
-echo "=== Step 3: Ensure esbuild is installed ==="
-if [ ! -f "node_modules/esbuild/bin/esbuild" ]; then
-  echo "esbuild missing — installing separately..."
-  npm install esbuild --no-save --ignore-scripts 2>&1 || true
-fi
+echo "=== Installing all dependencies ==="
+npm install --ignore-scripts --omit=optional
 
-echo "=== Step 4: Patch esbuild ==="
+echo "=== Patching esbuild ==="
 node scripts/patch-esbuild.cjs
 
-echo "=== Step 5: Build frontend ==="
+echo "=== Building frontend ==="
 node node_modules/vite/bin/vite.js build
 
-echo "=== Step 6: Build server ==="
+echo "=== Building server ==="
 node node_modules/esbuild/bin/esbuild server/index.ts \
   --platform=node --bundle --format=esm --minify \
   --external:vite --external:sharp --external:@vladmandic/face-api \
@@ -29,4 +22,4 @@ node node_modules/esbuild/bin/esbuild server/index.ts \
   "--banner:js=import{createRequire}from'module';import{fileURLToPath}from'url';import{dirname as _dn}from'path';const require=createRequire(import.meta.url);const __filename=fileURLToPath(import.meta.url);const __dirname=_dn(__filename);" \
   --outfile=dist/index.js
 
-echo "=== Build complete! ==="
+echo "=== SUCCESS ==="
