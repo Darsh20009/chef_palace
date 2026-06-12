@@ -2,7 +2,7 @@ services:
   - type: web
     name: chef-palace
     runtime: node
-    buildCommand: npm install --include=dev --ignore-scripts --omit=optional && node scripts/patch-esbuild.cjs && npm run build
+    buildCommand: bash scripts/render-build.sh
     startCommand: node dist/index.js
     envVars:
       - key: NODE_ENV
