@@ -44,10 +44,10 @@ const paymentDetails: Record<string, string> = {
   'pos-network': 'جهاز نقاط البيع',
   card: 'جهاز نقاط البيع',
   delivery: 'ادفع عند استلام الطلب',
-  stc: '+966566507666',
-  alinma: '+966566507666',
-  ur: '+966566507666',
-  barq: '+966566507666',
+  stc: '+966536558528',
+  alinma: '+966536558528',
+  ur: '+966536558528',
+  barq: '+966536558528',
   rajhi: 'SA78 8000 0539 6080 1942 4738',
   mada: 'تحويل بنكي',
   bank_transfer: 'تحويل بنكي',
@@ -150,7 +150,7 @@ export const generatePDF = async (
 
       <div class="info-box">
         <h3>معلومات التواصل</h3>
-        <p style="text-align:center;"><strong>الهاتف:</strong> +966566507666</p>
+        <p style="text-align:center;"><strong>الهاتف:</strong> +966536558528</p>
         <p style="text-align:center;"><strong>الموقع الإلكتروني:</strong> www.chefsplace.online</p>
       </div>
 

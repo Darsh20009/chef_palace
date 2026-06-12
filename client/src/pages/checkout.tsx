@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { brand } from "@/lib/brand";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -1103,7 +1104,7 @@ export default function CheckoutPage() {
     };
 
     const handleNavigateToBranch = () => {
-      window.open("https://maps.app.goo.gl/zhHFfQVjWRxVKEBn6?g_st=ic", "_blank");
+      window.open(brand.locationUrl, "_blank");
     };
 
     const handleWhatsAppReservation = () => {
@@ -1124,7 +1125,7 @@ export default function CheckoutPage() {
       const msg = encodeURIComponent(
         `🗓️ طلب تأكيد حجز\n\nرقم الطلب: ${orderNum}\n\n${itemsText}${resLine}\n\nالإجمالي: ${orderTotal.toFixed(2)} ر.س\n\nالاسم: ${customerName || orderDetails?.customerName || '—'}\nالجوال: ${customerPhone || orderDetails?.customerPhone || '—'}\n\nأرجو التأكيد على هذا الحجز`
       );
-      window.open(`https://wa.me/${phone || '966566507666'}?text=${msg}`, '_blank');
+      window.open(`https://wa.me/${phone || brand.phoneWhatsapp}?text=${msg}`, '_blank');
     };
 
     return (
@@ -1264,7 +1265,7 @@ export default function CheckoutPage() {
           <div className="bg-white dark:bg-card rounded-2xl shadow-sm border border-border overflow-hidden">
             <div className="flex items-center divide-x divide-x-reverse divide-border">
               <a
-                href="tel:+966566507666"
+                href={`tel:${brand.phoneIntl}`}
                 className="flex-1 flex flex-col items-center gap-1.5 py-4 px-2 hover:bg-muted/50 transition-colors"
                 data-testid="link-call-cafe"
               >
@@ -1272,10 +1273,10 @@ export default function CheckoutPage() {
                   <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.63 3.45 2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9a16 16 0 0 0 6 6l1.06-1.06a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 21.73 16z"/></svg>
                 </div>
                 <span className="text-[11px] font-semibold text-center">اتصل بنا</span>
-                <span className="text-[10px] text-muted-foreground ltr:direction-ltr" dir="ltr">+966 56 650 7666</span>
+                <span className="text-[10px] text-muted-foreground ltr:direction-ltr" dir="ltr">{brand.phoneDisplay}</span>
               </a>
               <a
-                href="https://maps.app.goo.gl/zhHFfQVjWRxVKEBn6?g_st=ic"
+                href={brand.locationUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex-1 flex flex-col items-center gap-1.5 py-4 px-2 hover:bg-muted/50 transition-colors"

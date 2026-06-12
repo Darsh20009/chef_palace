@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { brand } from "@/lib/brand";
 import { useTranslate } from "@/lib/useTranslate";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCartStore } from "@/lib/cart-store";
@@ -1204,16 +1205,16 @@ export default function MenuPage() {
       <footer className="text-center py-5 space-y-2">
         <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground/70">
           <a
-            href="tel:+966566507666"
+            href={`tel:${brand.phoneIntl}`}
             className="flex items-center gap-1 hover:text-primary transition-colors"
             data-testid="link-footer-call"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.63 3.45 2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9a16 16 0 0 0 6 6l1.06-1.06a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 21.73 16z"/></svg>
-            <span dir="ltr">+966 56 650 7666</span>
+            <span dir="ltr">{brand.phoneDisplay}</span>
           </a>
           <span className="text-muted-foreground/30">•</span>
           <a
-            href="https://maps.app.goo.gl/zhHFfQVjWRxVKEBn6?g_st=ic"
+            href={brand.locationUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1 hover:text-primary transition-colors"

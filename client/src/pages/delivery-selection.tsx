@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { tc } from '@/lib/useTranslate';
 import SarIcon from "@/components/sar-icon";
 import { useQuery } from '@tanstack/react-query';
@@ -12,9 +12,38 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { useCartStore } from '@/lib/cart-store';
 import { useToast } from '@/hooks/use-toast';
-import { Store, MapPin, ArrowRight, Phone, Map, Coffee, AlertCircle, Loader2, Navigation, Clock, Check, Car, Bookmark, ShoppingBag, ChevronLeft, Utensils, Truck, Star } from 'lucide-react';
+import { Store, MapPin, ArrowRight, Phone, Map, Coffee, AlertCircle, Loader2, Navigation, Clock, Check, Car, Bookmark, ShoppingBag, ChevronLeft, Utensils, Truck, Star, List } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useTranslation } from 'react-i18next';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
+// Fix Leaflet default marker icons in Vite/bundler environments
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+});
+
+const redIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+function MapClickHandler({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) {
+  useMapEvents({
+    click(e) {
+      onMapClick(e.latlng.lat, e.latlng.lng);
+    },
+  });
+  return null;
+}
 
 interface Branch {
   id: string;
@@ -257,6 +286,10 @@ export default function DeliverySelectionPage() {
   const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [selectedGovernorate, setSelectedGovernorate] = useState<string>('');
   const [detailedAddress, setDetailedAddress] = useState<string>('');
+  const [deliveryAddressMode, setDeliveryAddressMode] = useState<'list' | 'map'>('map');
+  const [deliveryPin, setDeliveryPin] = useState<{ lat: number; lng: number } | null>(null);
+  const [isReverseGeocoding, setIsReverseGeocoding] = useState(false);
+  const [pinAddress, setPinAddress] = useState<string>('');
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -458,17 +491,28 @@ export default function DeliverySelectionPage() {
     }
 
     if (selectedMethod === 'delivery') {
-      if (!selectedCountry) {
-        toast({ title: t("product.error"), description: "يرجى اختيار الدولة", variant: 'destructive' });
-        return;
-      }
-      if (!selectedGovernorate) {
-        toast({ title: t("product.error"), description: "يرجى اختيار المحافظة / المنطقة", variant: 'destructive' });
-        return;
-      }
-      if (!detailedAddress.trim()) {
-        toast({ title: t("product.error"), description: "يرجى إدخال تفاصيل العنوان (الحي، الشارع، المبنى)", variant: 'destructive' });
-        return;
+      if (deliveryAddressMode === 'map') {
+        if (!deliveryPin) {
+          toast({ title: t("product.error"), description: "يرجى تحديد موقعك على الخريطة", variant: 'destructive' });
+          return;
+        }
+        if (!detailedAddress.trim()) {
+          toast({ title: t("product.error"), description: "يرجى إدخال تفاصيل إضافية للعنوان (مبنى، شقة...)", variant: 'destructive' });
+          return;
+        }
+      } else {
+        if (!selectedCountry) {
+          toast({ title: t("product.error"), description: "يرجى اختيار الدولة", variant: 'destructive' });
+          return;
+        }
+        if (!selectedGovernorate) {
+          toast({ title: t("product.error"), description: "يرجى اختيار المحافظة / المنطقة", variant: 'destructive' });
+          return;
+        }
+        if (!detailedAddress.trim()) {
+          toast({ title: t("product.error"), description: "يرجى إدخال تفاصيل العنوان (الحي، الشارع، المبنى)", variant: 'destructive' });
+          return;
+        }
       }
     }
 
@@ -492,7 +536,9 @@ export default function DeliverySelectionPage() {
       tableNumber: bookedTable?.tableNumber || undefined,
       arrivalTime: arrivalTime || undefined,
       deliveryAddress: selectedMethod === 'delivery'
-        ? [DELIVERY_COUNTRIES.find(c => c.value === selectedCountry)?.label, selectedGovernorate, detailedAddress.trim()].filter(Boolean).join(' - ')
+        ? deliveryAddressMode === 'map' && deliveryPin
+          ? [pinAddress || 'الرياض، المملكة العربية السعودية', detailedAddress.trim(), `(${deliveryPin.lat.toFixed(5)}, ${deliveryPin.lng.toFixed(5)})`].filter(Boolean).join(' - ')
+          : [DELIVERY_COUNTRIES.find(c => c.value === selectedCountry)?.label, selectedGovernorate, detailedAddress.trim()].filter(Boolean).join(' - ')
         : undefined,
       deliveryFee: selectedMethod === 'delivery' ? deliveryFeeAmount : 0,
       productReservationDate: isReservationCart ? reservationDate : undefined,
@@ -1072,54 +1118,150 @@ export default function DeliverySelectionPage() {
               <Card className="border-green-200 dark:border-green-800">
                 <div className="bg-gradient-to-r from-green-500 to-green-600 p-4">
                   <p className="text-white font-bold text-sm mb-1">توصيل للمنزل</p>
-                  <p className="text-green-100 text-xs">أدخل عنوانك وسنوصل طلبك إليك</p>
+                  <p className="text-green-100 text-xs">حدد موقعك وسنوصل طلبك إليك</p>
                 </div>
                 <CardContent className="p-4 space-y-3">
-                  {/* City - fixed to Riyadh */}
-                  <div className="flex items-center gap-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-xl px-4 py-3">
-                    <MapPin className="w-4 h-4 text-green-600 shrink-0" />
-                    <div>
-                      <p className="text-xs text-green-700 dark:text-green-300 font-medium">المدينة</p>
-                      <p className="text-sm font-bold text-green-900 dark:text-green-100">الرياض — المملكة العربية السعودية</p>
-                    </div>
-                    <span className="mr-auto text-xs bg-green-600 text-white px-2 py-0.5 rounded-full">متاح</span>
-                  </div>
 
-                  {/* Neighborhood picker */}
-                  <div>
-                    <Label className="text-sm font-bold mb-2 flex items-center gap-1.5">
-                      <MapPin className="w-3.5 h-3.5 text-primary" />
-                      الحي / المنطقة
-                    </Label>
-                    <Select
-                      value={selectedGovernorate}
-                      onValueChange={(v) => { setSelectedCountry('SA'); setSelectedGovernorate(v); }}
-                      data-testid="select-governorate"
+                  {/* Mode toggle */}
+                  <div className="flex rounded-xl overflow-hidden border border-border">
+                    <button
+                      type="button"
+                      onClick={() => setDeliveryAddressMode('map')}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold transition-colors ${deliveryAddressMode === 'map' ? 'bg-primary text-white' : 'bg-muted/40 text-muted-foreground'}`}
+                      data-testid="btn-address-map-mode"
                     >
-                      <SelectTrigger className="text-sm h-12" data-testid="trigger-governorate">
-                        <SelectValue placeholder="اختر حيّك في الرياض" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-64">
-                        {RIYADH_NEIGHBORHOODS.map((g) => (
-                          <SelectItem key={g} value={g}>{g}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      <Map className="w-3.5 h-3.5" />
+                      تحديد على الخريطة
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeliveryAddressMode('list')}
+                      className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold transition-colors ${deliveryAddressMode === 'list' ? 'bg-primary text-white' : 'bg-muted/40 text-muted-foreground'}`}
+                      data-testid="btn-address-list-mode"
+                    >
+                      <List className="w-3.5 h-3.5" />
+                      اختر من القائمة
+                    </button>
                   </div>
 
-                  {/* Detailed address */}
-                  {selectedGovernorate && (
-                    <div>
-                      <Label className="text-sm font-medium mb-2 block">تفاصيل العنوان</Label>
-                      <Input
-                        placeholder="الحي، الشارع، رقم المبنى / الشقة..."
-                        value={detailedAddress}
-                        onChange={(e) => setDetailedAddress(e.target.value)}
-                        className="text-sm"
-                        data-testid="input-delivery-address"
-                      />
-                    </div>
+                  {/* MAP MODE */}
+                  {deliveryAddressMode === 'map' && (
+                    <>
+                      <p className="text-xs text-muted-foreground text-center">
+                        انقر على الخريطة لتحديد موقع التوصيل
+                      </p>
+                      <div className="rounded-xl overflow-hidden border border-border" style={{ height: 260 }}>
+                        <MapContainer
+                          center={[24.7136, 46.6753]}
+                          zoom={12}
+                          style={{ height: '100%', width: '100%' }}
+                          scrollWheelZoom={true}
+                        >
+                          <TileLayer
+                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                          />
+                          <MapClickHandler onMapClick={async (lat, lng) => {
+                            setDeliveryPin({ lat, lng });
+                            setPinAddress('');
+                            setIsReverseGeocoding(true);
+                            try {
+                              const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ar`, { headers: { 'Accept-Language': 'ar' } });
+                              const data = await res.json();
+                              const a = data.address || {};
+                              const parts = [a.neighbourhood || a.suburb || a.quarter || a.city_district || '', a.road || a.street || '', a.city || a.town || 'الرياض', 'المملكة العربية السعودية'].filter(Boolean);
+                              setPinAddress(parts.join('، '));
+                            } catch {
+                              setPinAddress('الرياض، المملكة العربية السعودية');
+                            } finally {
+                              setIsReverseGeocoding(false);
+                            }
+                          }} />
+                          {deliveryPin && (
+                            <Marker position={[deliveryPin.lat, deliveryPin.lng]} icon={redIcon} />
+                          )}
+                        </MapContainer>
+                      </div>
+
+                      {deliveryPin && (
+                        <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-xl">
+                          {isReverseGeocoding ? (
+                            <Loader2 className="w-4 h-4 text-green-600 animate-spin shrink-0 mt-0.5" />
+                          ) : (
+                            <Check className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
+                          )}
+                          <div>
+                            <p className="text-xs font-bold text-green-800 dark:text-green-200">
+                              {isReverseGeocoding ? 'جاري تحديد العنوان...' : 'تم تحديد الموقع'}
+                            </p>
+                            {pinAddress && (
+                              <p className="text-xs text-green-700 dark:text-green-300 mt-0.5">{pinAddress}</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      <div>
+                        <Label className="text-sm font-medium mb-2 block">تفاصيل إضافية (مبنى، شقة، ملاحظات)</Label>
+                        <Input
+                          placeholder="مثال: برج النخيل، الطابق 3، شقة 12..."
+                          value={detailedAddress}
+                          onChange={(e) => setDetailedAddress(e.target.value)}
+                          className="text-sm"
+                          data-testid="input-delivery-address"
+                        />
+                      </div>
+                    </>
                   )}
+
+                  {/* LIST MODE */}
+                  {deliveryAddressMode === 'list' && (
+                    <>
+                      <div className="flex items-center gap-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-xl px-4 py-3">
+                        <MapPin className="w-4 h-4 text-green-600 shrink-0" />
+                        <div>
+                          <p className="text-xs text-green-700 dark:text-green-300 font-medium">المدينة</p>
+                          <p className="text-sm font-bold text-green-900 dark:text-green-100">الرياض — المملكة العربية السعودية</p>
+                        </div>
+                        <span className="mr-auto text-xs bg-green-600 text-white px-2 py-0.5 rounded-full">متاح</span>
+                      </div>
+
+                      <div>
+                        <Label className="text-sm font-bold mb-2 flex items-center gap-1.5">
+                          <MapPin className="w-3.5 h-3.5 text-primary" />
+                          الحي / المنطقة
+                        </Label>
+                        <Select
+                          value={selectedGovernorate}
+                          onValueChange={(v) => { setSelectedCountry('SA'); setSelectedGovernorate(v); }}
+                          data-testid="select-governorate"
+                        >
+                          <SelectTrigger className="text-sm h-12" data-testid="trigger-governorate">
+                            <SelectValue placeholder="اختر حيّك في الرياض" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-64">
+                            {RIYADH_NEIGHBORHOODS.map((g) => (
+                              <SelectItem key={g} value={g}>{g}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {selectedGovernorate && (
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">تفاصيل العنوان</Label>
+                          <Input
+                            placeholder="الحي، الشارع، رقم المبنى / الشقة..."
+                            value={detailedAddress}
+                            onChange={(e) => setDetailedAddress(e.target.value)}
+                            className="text-sm"
+                            data-testid="input-delivery-address"
+                          />
+                        </div>
+                      )}
+                    </>
+                  )}
+
                   <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
                     <div className="flex items-center gap-2">
                       <Truck className="w-4 h-4 text-green-600 flex-shrink-0" />
