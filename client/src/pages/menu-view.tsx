@@ -139,7 +139,7 @@ export default function MenuView() {
         {/* ── Top Bar ── */}
         <div className="relative z-20 flex items-center justify-between px-6 pt-6 pb-2">
           <div className="flex items-center gap-3">
-            <img src={qiroxLogo} alt="Black Rose" className="w-10 h-10 rounded-xl" />
+            <img src={qiroxLogo} alt="مكان الشيف البخاري" className="w-10 h-10 rounded-xl" />
             <div>
               <p className="text-white font-black text-base leading-tight tracking-wide">مكان الشيف البخاري</p>
               <p className="text-amber-400 text-xs font-medium tracking-widest uppercase">قائمة المشروبات</p>
@@ -325,7 +325,7 @@ export default function MenuView() {
         {/* Header */}
         <div className="sticky top-0 z-30 bg-black/90 backdrop-blur border-b border-white/5 px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src={qiroxLogo} alt="Black Rose" className="w-8 h-8 rounded-lg" />
+            <img src={qiroxLogo} alt="مكان الشيف البخاري" className="w-8 h-8 rounded-lg" />
             <span className="text-white font-black text-sm">مكان الشيف البخاري</span>
           </div>
           <div className="flex items-center gap-2">
@@ -386,7 +386,7 @@ export default function MenuView() {
     <div className="min-h-screen bg-black">
       <div className="sticky top-0 z-30 bg-black/90 backdrop-blur border-b border-white/5 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <img src={qiroxLogo} alt="Black Rose" className="w-8 h-8 rounded-lg" />
+          <img src={qiroxLogo} alt="مكان الشيف البخاري" className="w-8 h-8 rounded-lg" />
           <span className="text-white font-black text-sm">مكان الشيف البخاري</span>
         </div>
         <div className="flex items-center gap-2">

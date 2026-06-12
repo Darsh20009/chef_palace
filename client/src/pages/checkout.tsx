@@ -64,7 +64,7 @@ function LoyaltyCheckoutCard({
 
   return (
     <div className="space-y-3" data-testid="loyalty-checkout-section">
-      {/* Main card — Black Rose Design */}
+      {/* Main card */}
       <BlackRoseCard
         phone={loyaltyCard?.phoneNumber || loyaltyCard?.customerPhone}
         points={loyaltyPoints}
@@ -656,18 +656,7 @@ export default function CheckoutPage() {
       clearCart();
       customerStorage.clearActiveOffer();
       setShowSuccessPage(true);
-      // Auto-show customer invoice after payment
-      setTimeout(async () => {
-        try {
-          const mappedItems = (data.items || []).map((i: any) => ({
-            coffeeItem: { nameAr: i.nameAr || i.coffeeItem?.nameAr || "منتج", nameEn: i.nameEn || i.coffeeItem?.nameEn || "", price: String(i.price ?? i.coffeeItem?.price ?? 0) },
-            quantity: i.quantity, customization: i.customization,
-          }));
-          const total = data.totalAmount ?? 0;
-          const { openReceiptPreviewWindow } = await import("@/lib/print-utils");
-          await openReceiptPreviewWindow({ orderNumber: data.orderNumber || data.dailyNumber || "", items: mappedItems, subtotal: total.toFixed(2), total: total.toFixed(2), customerName: data.customerName || "عميل", customerPhone: data.customerPhone || "", paymentMethod: data.paymentMethod || "نقدي", employeeName: "طلب إلكتروني", notes: data.notes || "", date: data.createdAt || new Date().toISOString(), orderType: data.orderType === 'delivery' ? 'delivery' : data.orderType === 'dine-in' ? 'dine_in' : 'takeaway' } as any);
-        } catch {}
-      }, 800);
+      // Invoice is shown inline on the success page — no auto-popup needed
       setPointsToRedeem(0);
       setAppliedGiftCard(null);
       setGiftCardCode("");
@@ -1152,7 +1141,11 @@ export default function CheckoutPage() {
             {/* Action buttons */}
             <div className="grid grid-cols-3 divide-x divide-x-reverse border-b">
               <button
-                onClick={() => setLocation("/tracking")}
+                onClick={() => {
+                  const num = orderDetails?.orderNumber || orderDetails?.dailyNumber;
+                  if (num) setLocation(`/track/${encodeURIComponent(String(num))}`);
+                  else setLocation("/tracking");
+                }}
                 className="flex flex-col items-center gap-1.5 py-4 px-2 hover:bg-muted/50 transition-colors"
                 data-testid="button-track-order"
               >

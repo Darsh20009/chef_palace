@@ -180,7 +180,7 @@ export default function MyCardPage() {
           <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, fontWeight: 600, letterSpacing: "0.08em" }}>
             {tc("بطاقة الولاء", "Loyalty Card")}
           </p>
-          <img src={qiroxLogo} alt="Black Rose" style={{ width: 36, height: 36, borderRadius: 10, objectFit: "cover" }} />
+          <img src={qiroxLogo} alt="مكان الشيف البخاري" style={{ width: 36, height: 36, borderRadius: 10, objectFit: "cover" }} />
         </div>
 
         {/* ── Hero: greeting + points ── */}

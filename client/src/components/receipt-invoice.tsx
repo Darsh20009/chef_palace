@@ -264,7 +264,7 @@ export function ReceiptInvoice({ order, variant = "button", precomputedTrackingQ
         <div style={{ padding: "6px 0 10px", marginBottom: "4px" }}>
           <img
             src="/logo.png"
-            alt="Black Rose Cafe"
+            alt={brand.nameAr}
             crossOrigin="anonymous"
             style={{ width: "200px", height: "auto", display: "block", margin: "0 auto" }}
           />
@@ -272,10 +272,9 @@ export function ReceiptInvoice({ order, variant = "button", precomputedTrackingQ
 
         {/* ── 3. Business info ── */}
         <div style={{ textAlign: "center", fontSize: "12px", lineHeight: "1.9", marginBottom: "8px" }}>
-          <div style={{ fontWeight: 900, fontSize: "15px" }}>Black Rose Cafe</div>
-          <div style={{ fontSize: "11px", color: "#444" }}>حي المروج، طريق الأمير مقرن</div>
-          <div style={{ direction: "ltr", fontSize: "11px", color: "#444" }}>الرقم الضريبي: 310894802100003</div>
-          <div style={{ fontSize: "11px", color: "#444" }}>101000004295 :رقم الفاتورة</div>
+          <div style={{ fontWeight: 900, fontSize: "15px" }}>{brand.nameAr}</div>
+          <div style={{ fontSize: "11px", color: "#444" }}>{brand.locationDisplay}</div>
+          <div style={{ direction: "ltr", fontSize: "11px", color: "#444" }}>الرقم الضريبي: {brand.taxNumber}</div>
           <div style={{ direction: "ltr", fontSize: "11px", color: "#444" }}>{timeStr} · {dateStr}</div>
           <div style={{ fontWeight: 700, fontSize: "13px", marginTop: "3px", background: "#f0f0f0", padding: "2px 8px", display: "inline-block", borderRadius: "4px" }}>
             {orderTypeLabel}
@@ -377,9 +376,9 @@ export function ReceiptInvoice({ order, variant = "button", precomputedTrackingQ
 
         {/* ── 9. Tagline ── */}
         <div style={{ textAlign: "center", fontSize: "13px", fontWeight: 700, padding: "2px 0 4px" }}>
-          "قهوة تُقال .. وورد يُهدى"
+          "{brand.taglineAr}"
         </div>
-        <div style={{ textAlign: "center", fontSize: "11px", color: "#555", paddingBottom: "8px" }}>Black Rose Cafe</div>
+        <div style={{ textAlign: "center", fontSize: "11px", color: "#555", paddingBottom: "8px" }}>{brand.nameAr}</div>
 
         {/* ── 10. Tracking QR barcode — small on right with text beside it ── */}
         {trackingQrUrl && (
@@ -403,14 +402,14 @@ export function ReceiptInvoice({ order, variant = "button", precomputedTrackingQ
             </div>
             <img src={zatcaQrUrl} alt="ZATCA QR" style={{ width: "120px", height: "120px", display: "inline-block" }} />
             <div style={{ fontSize: "10px", color: "#555", marginTop: "4px", fontFamily: "Arial, sans-serif" }}>
-              فاتورة ضريبية — الرقم الضريبي: 310894802100003
+              فاتورة ضريبية — الرقم الضريبي: {brand.taxNumber}
             </div>
           </div>
         )}
 
-        {/* ── 12. Powered by ── */}
+        {/* ── 12. Footer ── */}
         <div style={{ borderTop: "1px dashed #ccc", textAlign: "center", padding: "10px 0", marginTop: "4px", fontFamily: "Arial, sans-serif", fontSize: "11px", color: "#555", letterSpacing: "0.3px" }}>
-          Powered by QIROX STUDIO
+          {brand.nameAr} · {brand.website}
         </div>
 
         <div style={{ height: "16px" }} />

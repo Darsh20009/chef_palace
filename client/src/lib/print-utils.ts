@@ -592,7 +592,7 @@ const COMPANY_NAME = "مكان الشيف البخاري";
 const COMPANY_NAME_EN = "مكان الشيف البخاري";
 const COMPANY_CR = "7025559423";
 const COMPANY_WEBSITE = "chefsplace.online";
-const DEFAULT_BRANCH = "فرع المروج، الرياض";
+const DEFAULT_BRANCH = "الرياض، المملكة العربية السعودية";
 const DEFAULT_ADDRESS = "الرياض، المملكة العربية السعودية";
 
 function generateZATCAQRCode(data: {
@@ -1198,14 +1198,13 @@ body{font-family:Tahoma,Arial,'Segoe UI',sans-serif;direction:rtl;background:#e0
   <!-- الكاشير + شعار -->
   <div style="padding:8px 10px 4px;text-align:center;">
     ${data.employeeName ? `<div style="font-size:12px;color:#555;">تمت خدمتك من قبل: <strong>${data.employeeName}</strong></div>` : ''}
-    <div style="font-size:12px;font-weight:800;padding:4px 0;">"قهوة تُقال .. وورد يُهدى"</div>
+    <div style="font-size:12px;font-weight:800;padding:4px 0;">مكان الشيف البخاري · chefsplace.online</div>
   </div>
 
   ${dashLine}
 
-  <!-- Powered by -->
   <div style="text-align:center;font-size:11px;color:#aaa;padding:4px 0 6px;">
-    Powered by <strong style="color:#2D9B6E;">QIROX STUDIO</strong>
+    chefsplace.online
   </div>
 
 

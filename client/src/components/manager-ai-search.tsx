@@ -156,8 +156,8 @@ export function ManagerAISearch() {
               <Bot className="w-4 h-4 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-sm text-gray-900 dark:text-white">QIROXSYSTEM 9.1 PRO</p>
-              <p className="text-xs text-primary font-medium">QIROX Studio | كيروكس استديو</p>
+              <p className="font-bold text-sm text-gray-900 dark:text-white">مساعد مكان الشيف</p>
+              <p className="text-xs text-primary font-medium">chefsplace.online</p>
             </div>
             <div className="flex items-center gap-1">
               {messages.length > 0 && (
@@ -234,7 +234,7 @@ export function ManagerAISearch() {
               </button>
             </div>
             <p className="text-[10px] text-center text-gray-300 dark:text-gray-600 mt-1.5">
-              QIROXSYSTEM 9.1 PRO · QIROX Studio | كيروكس استديو
+              مساعد مكان الشيف البخاري · chefsplace.online
             </p>
           </div>
         </div>

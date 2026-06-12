@@ -408,7 +408,7 @@ export default function PublicOrderTrackPage() {
 
             <div className="bg-gradient-to-br from-gray-900 to-black rounded-2xl p-5 text-white">
               <div className="flex items-center gap-3 mb-4">
-                <img src={qiroxLogo} alt="Black Rose" className="h-10 object-contain flex-shrink-0" />
+                <img src={qiroxLogo} alt="مكان الشيف البخاري" className="h-10 object-contain flex-shrink-0" />
                 <div>
                   <h3 className="font-bold text-base">{t('tracking.join_world')}</h3>
                   <p className="text-xs text-gray-300 mt-0.5">{t('tracking.loyalty_desc')}</p>

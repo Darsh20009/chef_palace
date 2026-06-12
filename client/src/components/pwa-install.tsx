@@ -73,7 +73,7 @@ function AppIcon({ size = 60 }: { size?: number }) {
   return (
     <img
       src={qiroxLogo}
-      alt="QIROX"
+      alt="مكان الشيف البخاري"
       style={{
         width: size,
         height: size,

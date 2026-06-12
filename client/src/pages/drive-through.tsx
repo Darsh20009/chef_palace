@@ -252,7 +252,7 @@ export default function DriveThroughPage() {
       {/* Header */}
       <div className="sticky top-0 z-40 bg-black/90 backdrop-blur border-b border-white/10 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <img src={qiroxLogo} alt="Black Rose" className="w-8 h-8 rounded-lg" />
+          <img src={qiroxLogo} alt="مكان الشيف البخاري" className="w-8 h-8 rounded-lg" />
           <div>
             <p className="text-white font-bold text-sm leading-tight">مكان الشيف البخاري</p>
             <div className="flex items-center gap-1">

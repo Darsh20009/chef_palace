@@ -1262,7 +1262,7 @@ export async function buildShiftReportCanvas(opts: ShiftReportOpts): Promise<HTM
 
   // ── FOOTER ────────────────────────────────────────────────────────────────
   drawDash();
-  drawCenter(`QIROX Systems — ${new Date().toLocaleString('ar-SA')}`, Math.round(FS * 0.8), false, '#666');
+  drawCenter(`مكان الشيف البخاري — chefsplace.online`, Math.round(FS * 0.8), false, '#666');
 
   y += 40; // feed before cut
 

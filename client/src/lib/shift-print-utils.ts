@@ -42,7 +42,7 @@ export function buildShiftPrintFragment(p: any, bizName = 'مكان الشيف �
   </div>
   ${_receiptProducts(p.productsByCategory || [])}
   <div style="text-align:center;margin-top:8px;border-top:1px dashed #aaa;padding-top:6px;font-size:10px;color:#666;">
-    QIROX Systems — ${new Date().toLocaleString('ar-SA')}
+    مكان الشيف البخاري — chefsplace.online
   </div>
 </div>`;
 }
@@ -96,7 +96,7 @@ export function buildMergedPrintFragment(periods: any[], dateLabel: string, bizN
   </div>
   ${_receiptProducts(mergedProducts)}
   <div style="text-align:center;margin-top:8px;border-top:1px dashed #aaa;padding-top:6px;font-size:10px;color:#666;">
-    QIROX Systems — ${new Date().toLocaleString('ar-SA')}
+    مكان الشيف البخاري — chefsplace.online
   </div>
 </div>`;
 }

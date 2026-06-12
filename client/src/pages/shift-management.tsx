@@ -822,7 +822,7 @@ export default function ShiftManagement() {
   )}
   ${shift.closingNotes ? sec('ملاحظات', `<p style="margin:0;font-size:11px;">${shift.closingNotes}</p>`) : ''}
   <div style="text-align:center;margin-top:8px;border-top:1px dashed #aaa;padding-top:6px;font-size:10px;color:#666;">
-    QIROX Systems — ${new Date().toLocaleString('ar-SA')}
+    مكان الشيف البخاري — chefsplace.online
   </div>
 </div>`;
     const win = window.open('', '_blank', 'width=400,height=700');
