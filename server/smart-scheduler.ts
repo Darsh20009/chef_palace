@@ -195,12 +195,29 @@ async function buildPersonalizedMessage(
 }
 
 // ───────────────────────────────────────────────
+// Subscription cache — refreshed every 10 minutes
+// to avoid hitting MongoDB on every scheduler tick
+// ───────────────────────────────────────────────
+
+let _cachedSubs: any[] | null = null;
+let _cacheExpiry = 0;
+
+async function getCachedCustomerSubs() {
+  if (_cachedSubs && Date.now() < _cacheExpiry) return _cachedSubs;
+  _cachedSubs = await PushSubscriptionModel.find({ userType: "customer" })
+    .select("endpoint keys userId userType")
+    .lean();
+  _cacheExpiry = Date.now() + 10 * 60_000; // 10 minutes
+  return _cachedSubs;
+}
+
+// ───────────────────────────────────────────────
 // Broadcast to all customer subscribers
 // ───────────────────────────────────────────────
 
 async function broadcastToCustomers(payload: PushPayload, personalizeForCustomer = false) {
   try {
-    const subs = await PushSubscriptionModel.find({ userType: "customer" }).lean();
+    const subs = await getCachedCustomerSubs();
     if (subs.length === 0) return;
 
     if (personalizeForCustomer) {
@@ -362,8 +379,14 @@ export async function sendAdminDailySummaryNow() {
 }
 
 export function startSmartScheduler() {
-  console.log("[SCHEDULER] 🚀 Smart Notification Scheduler started");
+  console.log("[SCHEDULER] 🚀 Smart Notification Scheduler started (5-min interval)");
 
+  // Car order prep alerts run every 2 minutes (need near-real-time accuracy)
+  setInterval(async () => {
+    try { await checkCarOrderPreparationAlerts(); } catch {}
+  }, 2 * 60_000);
+
+  // All time-based notifications run every 5 minutes (±5 min accuracy is fine)
   setInterval(async () => {
     try {
       const { hour, minute, dayOfWeek, dateKey } = getSaudiTime();
@@ -466,13 +489,10 @@ export function startSmartScheduler() {
         await checkAndAlertLowStock();
       }
 
-      // ─── CAR ORDER PREPARATION ALERT (every minute) ───────────────────────
-      await checkCarOrderPreparationAlerts();
-
     } catch (err) {
       console.error("[SCHEDULER] Tick error:", err);
     }
-  }, 60_000); // every minute
+  }, 5 * 60_000); // every 5 minutes (reduces MongoDB queries by 80%)
 }
 
 // ── Car Order 10-Minute Preparation Alert ────────────────────────────────────

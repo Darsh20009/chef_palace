@@ -1,3 +1,3 @@
 - [Kimi K2.5 model quirks](kimi-quirks.md) — temperature must be exactly 1; model id is `kimi-k2.5`; small max_tokens returns empty content field
 - [Hybrid AI engine](hybrid-ai-engine.md) — `server/ai-engine.ts` wraps Kimi K2.5 + Gemini cascade; Kimi primary for all tasks, Gemini fallback; Gemini quota exhausts frequently on free tier
-- [esbuild-vite-replit-fix](esbuild-vite-replit-fix.md) — Replit env has esbuild 0.28.0 globally; Vite 5 needs 0.21.5 — requires `scripts/patch-esbuild.cjs` to run before dev server; cached binary at `scripts/esbuild-0.21.5`.
+- [esbuild-vite-replit-fix](esbuild-vite-replit-fix.md) — Replit env: Vite needs esbuild 0.21.5, tsx needs 0.28.0; patch script fixes both; binaries cached at `scripts/esbuild-0.21.5` and `scripts/esbuild-0.28.0`.

@@ -21,5 +21,9 @@ A pre-start patch script `scripts/patch-esbuild.cjs` that:
 
 ## Key paths
 - Patch script: `scripts/patch-esbuild.cjs`
-- Cached binary: `scripts/esbuild-0.21.5`
-- Download URL: `http://package-firewall.replit.local/npm/@esbuild/linux-x64/-/linux-x64-0.21.5.tgz`
+- Cached binary (Vite): `scripts/esbuild-0.21.5`
+- Cached binary (tsx): `scripts/esbuild-0.28.0`
+- Download URLs: `http://package-firewall.replit.local/npm/@esbuild/linux-x64/-/linux-x64-{VERSION}.tgz`
+
+## Two-binary problem (June 2026)
+tsx uses `node_modules/esbuild@0.28.0` which requires `@esbuild/linux-x64` as an optional native package. This package is skipped during `--ignore-scripts` or `--no-optional` install. After any workflow restart, if `node_modules/@esbuild/linux-x64/bin/esbuild` is missing, tsx fails with "The package @esbuild/linux-x64 could not be found". The updated patch script downloads and installs both binaries. The `scripts/esbuild-0.28.0` binary is now git-committed to avoid re-downloading.

@@ -44,4 +44,4 @@ build = ["npm", "run", "build"]
 [userenv]
 
 [userenv.shared]
-GITHUB_TOKEN = "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"
+GITHUB_TOKEN = "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"

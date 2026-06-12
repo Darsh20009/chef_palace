@@ -398,7 +398,7 @@ setInterval(async () => {
   } finally {
     isMaintenanceRunning = false;
   }
-}, 60000); // Run every 60 seconds (1 minute)
+}, 5 * 60_000); // Run every 5 minutes (table reservations don't need per-second precision)
 
 const app = express();
 
