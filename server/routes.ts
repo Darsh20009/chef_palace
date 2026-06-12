@@ -6030,6 +6030,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Username already exists" });
       }
 
+      // Normalize phone number before saving
+      const normalizePhone = (raw: string): string => {
+        if (!raw) return raw;
+        const arabicDigits = '٠١٢٣٤٥٦٧٨٩';
+        let s = raw.split('').map(c => { const i = arabicDigits.indexOf(c); return i >= 0 ? String(i) : c; }).join('');
+        s = s.replace(/\s|-/g, '');
+        if (s.startsWith('+9665')) return '05' + s.slice(5);
+        if (s.startsWith('9665'))  return '05' + s.slice(4);
+        if (s.startsWith('+966'))  return '0' + s.slice(4);
+        if (s.startsWith('966'))   return '0' + s.slice(3);
+        return s;
+      };
+      if (bodyData.phone) bodyData.phone = normalizePhone(bodyData.phone);
+
       // Directly create using Model for robustness
       const newEmployee = await EmployeeModel.create({
         ...bodyData,
@@ -6037,7 +6051,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         allowedPages: bodyData.allowedPages || [],
         tenantId: tenantId as any,
         id: nanoid(),
-        isActivated: bodyData.password ? 1 : 0,
+        isActivated: 0,
         createdAt: new Date(),
         updatedAt: new Date()
       });
@@ -6219,6 +6233,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error activating employee:", error);
       res.status(500).json({ error: "Failed to activate employee" });
+    }
+  });
+
+  // Toggle employee activation (admin/owner only)
+  app.patch("/api/employees/:id/toggle-activation", requireAuth, requireManager, async (req: AuthRequest, res) => {
+    try {
+      const { EmployeeModel } = await import("@shared/schema");
+      const { id } = req.params;
+      const employee = await EmployeeModel.findOne({ id });
+      if (!employee) return res.status(404).json({ error: "Employee not found" });
+      const newStatus = employee.isActivated === 1 ? 0 : 1;
+      await EmployeeModel.findOneAndUpdate({ id }, { isActivated: newStatus, updatedAt: new Date() });
+      res.json({ success: true, isActivated: newStatus });
+    } catch (error) {
+      console.error("Error toggling employee activation:", error);
+      res.status(500).json({ error: "Failed to toggle activation" });
     }
   });
 

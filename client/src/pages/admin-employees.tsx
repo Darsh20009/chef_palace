@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { Plus, Search, Edit2, Trash2, ChevronDown, X, Download, Trash, Clock, Shield, QrCode } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, ChevronDown, X, Download, Trash, Clock, Shield, QrCode, ToggleLeft, ToggleRight } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -41,6 +41,18 @@ const WORK_DAYS = [
   { id: 'الجمعة', name: 'الجمعة' },
   { id: 'السبت', name: 'السبت' },
 ];
+
+function normalizePhone(raw: string): string {
+  if (!raw) return raw;
+  const arabicDigits = '٠١٢٣٤٥٦٧٨٩';
+  let s = raw.split('').map(c => { const i = arabicDigits.indexOf(c); return i >= 0 ? String(i) : c; }).join('');
+  s = s.replace(/[\s\-]/g, '');
+  if (s.startsWith('+9665')) return '05' + s.slice(5);
+  if (s.startsWith('9665'))  return '05' + s.slice(4);
+  if (s.startsWith('+966'))  return '0' + s.slice(4);
+  if (s.startsWith('966'))   return '0' + s.slice(3);
+  return s;
+}
 
 export default function AdminEmployees() {
   const tc = useTranslate();
@@ -160,13 +172,28 @@ export default function AdminEmployees() {
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
       const res = await apiRequest('POST', '/api/employees', data);
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'فشل إضافة الموظف'); }
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/employees'] });
       setShowAddForm(false);
       setFormData(resetForm());
-      toast({ title: tc('تم إضافة الموظف بنجاح', 'Employee added successfully') });
+      toast({ title: tc('تم إضافة الموظف بنجاح', 'Employee added successfully'), description: tc('الموظف غير مفعّل — فعّله من الجدول عندما يكون جاهزاً', 'Employee inactive — activate from table when ready') });
+    },
+    onError: (err: any) => {
+      toast({ title: tc('خطأ', 'Error'), description: err.message, variant: 'destructive' });
+    },
+  });
+
+  const activateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest('PATCH', `/api/employees/${id}/toggle-activation`, {});
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'فشل تغيير الحالة'); }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/employees'] });
     },
     onError: (err: any) => {
       toast({ title: tc('خطأ', 'Error'), description: err.message, variant: 'destructive' });
@@ -205,8 +232,26 @@ export default function AdminEmployees() {
 
   const handleSubmit = (e: any) => {
     e.preventDefault();
+    if (!formData.fullName.trim()) {
+      toast({ title: tc('خطأ', 'Error'), description: tc('الاسم الكامل مطلوب', 'Full name is required'), variant: 'destructive' });
+      return;
+    }
+    if (!formData.username.trim()) {
+      toast({ title: tc('خطأ', 'Error'), description: tc('اسم المستخدم مطلوب', 'Username is required'), variant: 'destructive' });
+      return;
+    }
+    const normalizedPhone = normalizePhone(formData.phone.trim());
+    if (!normalizedPhone) {
+      toast({ title: tc('خطأ', 'Error'), description: tc('رقم الهاتف مطلوب', 'Phone number is required'), variant: 'destructive' });
+      return;
+    }
+    if (!/^05\d{8}$/.test(normalizedPhone)) {
+      toast({ title: tc('تنسيق الهاتف غير صحيح', 'Invalid phone format'), description: tc('الرجاء إدخال رقم سعودي صحيح مثل: 0501234567 أو +966501234567', 'Enter a valid Saudi number: 0501234567 or +966501234567'), variant: 'destructive' });
+      return;
+    }
     const payload = {
       ...formData,
+      phone: normalizedPhone,
       shiftTime: formData.shiftStartTime && formData.shiftEndTime
         ? `${formData.shiftStartTime}-${formData.shiftEndTime}`
         : undefined,
@@ -338,11 +383,19 @@ export default function AdminEmployees() {
                 <div>
                   <label className="block text-sm font-medium mb-1">{tc("رقم الهاتف", "Phone Number")}</label>
                   <Input
-                    placeholder="0501234567"
+                    placeholder="0501234567 / +966501234567"
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      const arabicDigits = '٠١٢٣٤٥٦٧٨٩';
+                      const westernized = raw.split('').map(c => { const i = arabicDigits.indexOf(c); return i >= 0 ? String(i) : c; }).join('');
+                      setFormData({ ...formData, phone: westernized });
+                    }}
+                    dir="ltr"
+                    inputMode="tel"
                     data-testid="input-phone"
                   />
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{tc("يقبل: 05xxxxxxxx أو +9665xxxxxxxx", "Accepts: 05xxxxxxxx or +9665xxxxxxxx")}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">{tc("المسمى الوظيفي", "Job Title")}</label>
@@ -648,13 +701,22 @@ export default function AdminEmployees() {
                         )}
                       </td>
                       <td className="p-4">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          emp.isActivated === 1
-                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
-                            : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                        }`}>
-                          {emp.isActivated === 1 ? tc('نشط','Active') : tc('معطل','Inactive')}
-                        </span>
+                        <button
+                          onClick={() => activateMutation.mutate(emp.id)}
+                          disabled={activateMutation.isPending}
+                          title={emp.isActivated === 1 ? tc('انقر لتعطيل الموظف','Click to deactivate') : tc('انقر لتفعيل الموظف','Click to activate')}
+                          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all cursor-pointer border ${
+                            emp.isActivated === 1
+                              ? 'bg-emerald-100 text-emerald-800 border-emerald-200 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800'
+                              : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800'
+                          }`}
+                          data-testid={`button-toggle-activation-${emp.id}`}
+                        >
+                          {emp.isActivated === 1
+                            ? <><ToggleRight className="w-3.5 h-3.5" />{tc('نشط','Active')}</>
+                            : <><ToggleLeft className="w-3.5 h-3.5" />{tc('معطل','Inactive')}</>
+                          }
+                        </button>
                       </td>
                       <td className="p-4">
                         <div className="flex gap-2">
