@@ -611,20 +611,41 @@ async function sendInvoiceEmail(to: string, invoiceNumber: string, invoiceData: 
   }
 }
 
-// Configure multer for file uploads
-const uploadsDir = path.join(__dirname, '..', 'attached_assets', 'receipts');
-const storage_multer = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadsDir);
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = `${Date.now()}-${nanoid(8)}`;
-    cb(null, `receipt-${uniqueSuffix}${path.extname(file.originalname)}`);
-  }
-});
+// ── Upload directories (persistent on Replit filesystem) ──────────────────────
+const UPLOAD_BASE = path.resolve(__dirname, '..', 'attached_assets');
+const UPLOAD_DIRS: Record<string, string> = {
+  receipts: path.join(UPLOAD_BASE, 'receipts'),
+  'drink-images': path.join(UPLOAD_BASE, 'drink-images'),
+  'employee-images': path.join(UPLOAD_BASE, 'employees'),
+  'size-images': path.join(UPLOAD_BASE, 'sizes'),
+  'addon-images': path.join(UPLOAD_BASE, 'addons'),
+  attendance: path.join(UPLOAD_BASE, 'attendance'),
+};
+Object.values(UPLOAD_DIRS).forEach(dir => { if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true }); });
 
+// Helper: multer disk storage factory
+function makeDiskStorage(folder: keyof typeof UPLOAD_DIRS, prefix: string) {
+  return multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, UPLOAD_DIRS[folder]),
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname) || '.jpg';
+      cb(null, `${prefix}-${Date.now()}-${nanoid(8)}${ext}`);
+    },
+  });
+}
+
+// Helper: return /attached_assets/... URL from saved file
+function assetUrl(folder: string, filename: string): string {
+  const urlFolder = folder === 'employee-images' ? 'employees'
+    : folder === 'size-images' ? 'sizes'
+    : folder === 'addon-images' ? 'addons'
+    : folder;
+  return `/attached_assets/${urlFolder}/${filename}`;
+}
+
+// Configure multer for file uploads (receipts)
 const upload = multer({
-  storage: storage_multer,
+  storage: makeDiskStorage('receipts', 'receipt'),
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB limit
   },
@@ -5394,40 +5415,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Upload payment receipt
   app.post("/api/upload-receipt", upload.single('file'), async (req, res) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({ error: "No file uploaded" });
-      }
-
-      const { ObjectStorageService } = await import("./qirox_studio_integrations/object_storage");
-      const storageService = new ObjectStorageService();
-
-      try {
-        const uploadURL = await storageService.getObjectEntityUploadURL();
-        const objectPath = storageService.normalizeObjectEntityPath(uploadURL);
-
-        const fsModule = await import('fs');
-        const fileBuffer = fsModule.readFileSync(req.file.path);
-
-        const uploadResponse = await fetch(uploadURL, {
-          method: 'PUT',
-          body: fileBuffer,
-          headers: {
-            'Content-Type': req.file.mimetype || 'application/octet-stream',
-          },
-        });
-
-        if (!uploadResponse.ok) {
-          throw new Error('Failed to upload to object storage');
-        }
-
-        fsModule.unlinkSync(req.file.path);
-        res.json({ url: objectPath, filename: req.file.filename });
-      } catch (storageError) {
-        console.log('[UPLOAD] Object storage not available, falling back to local storage');
-        const fileUrl = `/attached_assets/receipts/${req.file.filename}`;
-        res.json({ url: fileUrl, filename: req.file.filename });
-      }
+      if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+      res.json({ url: assetUrl('receipts', req.file.filename), filename: req.file.filename });
     } catch (error) {
+      console.error("Error uploading receipt:", error);
       res.status(500).json({ error: "Failed to upload file" });
     }
   });
@@ -12636,86 +12627,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     };
 
-  // Configure multer for employee image uploads
-  const employeeUploadsDir = path.join(import.meta.dirname, '..', 'attached_assets', 'employees');
-  const employeeStorage = multer.diskStorage({
-    destination: function (req, file, cb) {
-      cb(null, employeeUploadsDir);
-    },
-    filename: function (req, file, cb) {
-      const uniqueSuffix = `${Date.now()}-${nanoid(8)}`;
-      cb(null, `employee-${uniqueSuffix}${path.extname(file.originalname)}`);
-    }
-  });
-
+  // Configure multer for employee image uploads (disk storage → persistent)
   const employeeUpload = multer({
-    storage: employeeStorage,
-    limits: {
-      fileSize: 15 * 1024 * 1024,
-    },
+    storage: makeDiskStorage('employee-images', 'employee'),
+    limits: { fileSize: 15 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
-      if (file.mimetype.startsWith('image/')) {
-        cb(null, true);
-      } else {
-        cb(new Error('نوع الملف غير مسموح. يجب أن يكون الملف صورة'));
-      }
+      if (file.mimetype.startsWith('image/')) cb(null, true);
+      else cb(new Error('نوع الملف غير مسموح. يجب أن يكون الملف صورة'));
     }
   });
 
   // Upload employee image
   app.post("/api/upload-employee-image", requireAuth, requireManager, wrapMulter(employeeUpload.single('image')), async (req: AuthRequest, res) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({ error: "No image file uploaded" });
-      }
-
-      const { ObjectStorageService } = await import("./qirox_studio_integrations/object_storage");
-      const storageService = new ObjectStorageService();
-
-      try {
-        const uploadURL = await storageService.getObjectEntityUploadURL();
-        const objectPath = storageService.normalizeObjectEntityPath(uploadURL);
-
-        const fsModule = await import('fs');
-        const fileBuffer = fsModule.readFileSync(req.file.path);
-
-        const uploadResponse = await fetch(uploadURL, {
-          method: 'PUT',
-          body: fileBuffer,
-          headers: {
-            'Content-Type': req.file.mimetype || 'image/png',
-          },
-        });
-
-        if (!uploadResponse.ok) {
-          throw new Error('Failed to upload to object storage');
-        }
-
-        fsModule.unlinkSync(req.file.path);
-        res.json({ url: objectPath });
-      } catch (storageError) {
-        console.log('[UPLOAD] Object storage not available, falling back to local storage');
-        const fileUrl = `/attached_assets/employees/${req.file.filename}`;
-        res.json({ url: fileUrl });
-      }
+      if (!req.file) return res.status(400).json({ error: "No image file uploaded" });
+      res.json({ url: assetUrl('employee-images', req.file.filename) });
     } catch (error) {
       console.error("Error uploading employee image:", error);
       res.status(500).json({ error: "Failed to upload image" });
     }
   });
 
-  // Configure multer for drink image uploads — saves to disk in attached_assets/drink-images/
-  const drinkImagesDir = path.resolve(__dirname, '..', 'attached_assets', 'drink-images');
-  if (!fs.existsSync(drinkImagesDir)) fs.mkdirSync(drinkImagesDir, { recursive: true });
-
+  // Configure multer for drink image uploads (disk storage → persistent)
   const drinkUpload = multer({
-    storage: multer.diskStorage({
-      destination: (_req, _file, cb) => cb(null, drinkImagesDir),
-      filename: (_req, file, cb) => {
-        const ext = path.extname(file.originalname) || '.jpg';
-        cb(null, `${Date.now()}-${nanoid(8)}${ext}`);
-      },
-    }),
+    storage: makeDiskStorage('drink-images', 'drink'),
     limits: { fileSize: 8 * 1024 * 1024 },
     fileFilter: (_req, file, cb) => {
       if (file.mimetype.startsWith('image/')) cb(null, true);
@@ -12723,45 +12658,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   });
 
-  // Upload drink image — saves file to disk, returns persistent URL
+  // Upload drink image — stores on persistent Replit disk
   app.post("/api/upload-drink-image", requireAuth, requireManager, wrapMulter(drinkUpload.single('image')), async (req: AuthRequest, res) => {
     try {
       if (!req.file) return res.status(400).json({ error: "No image file uploaded" });
-      const url = `/attached_assets/drink-images/${req.file.filename}`;
-      res.json({ url });
+      res.json({ url: assetUrl('drink-images', req.file.filename) });
     } catch (error) {
       console.error("Error uploading drink image:", error);
       res.status(500).json({ error: "Failed to upload image" });
     }
   });
 
-  // List all uploaded drink images — reads from drink-images directory on disk
+  // List all uploaded drink images — reads from disk
   app.get("/api/drink-images", requireAuth, async (_req: AuthRequest, res) => {
     try {
-      if (!fs.existsSync(drinkImagesDir)) return res.json([]);
-      const files = fs.readdirSync(drinkImagesDir)
-        .filter(f => /\.(jpg|jpeg|png|webp|gif|avif)$/i.test(f))
-        .map(filename => {
-          const stat = fs.statSync(path.join(drinkImagesDir, filename));
-          return {
-            filename,
-            url: `/attached_assets/drink-images/${filename}`,
-            uploadedAt: stat.mtime.toISOString(),
-          };
-        })
-        .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime());
+      const dir = UPLOAD_DIRS['drink-images'];
+      const files = fs.existsSync(dir)
+        ? fs.readdirSync(dir)
+            .filter(f => /\.(jpg|jpeg|png|webp|gif)$/i.test(f))
+            .map(f => {
+              const stat = fs.statSync(path.join(dir, f));
+              return { filename: f, url: `/attached_assets/drink-images/${f}`, uploadedAt: stat.mtime.toISOString() };
+            })
+            .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())
+        : [];
       res.json(files);
     } catch (error) {
       res.status(500).json({ error: "Failed to list drink images" });
     }
   });
 
-  // Delete all images from image library (removes files from disk)
+  // Delete all images from image library (removes from disk)
   app.delete("/api/drink-images/all", requireAuth, requireManager, async (_req: AuthRequest, res) => {
     try {
-      if (fs.existsSync(drinkImagesDir)) {
-        const files = fs.readdirSync(drinkImagesDir);
-        for (const f of files) fs.unlinkSync(path.join(drinkImagesDir, f));
+      const dir = UPLOAD_DIRS['drink-images'];
+      if (fs.existsSync(dir)) {
+        fs.readdirSync(dir).forEach(f => fs.unlinkSync(path.join(dir, f)));
       }
       res.json({ success: true });
     } catch (error) {
@@ -12769,141 +12701,75 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Configure multer for size image uploads
-  const sizesUploadsDir = path.resolve(__dirname, '..', 'attached_assets', 'sizes');
-  const sizesStorage = multer.diskStorage({
-    destination: function (req, file, cb) {
-      if (!fs.existsSync(sizesUploadsDir)) {
-        fs.mkdirSync(sizesUploadsDir, { recursive: true });
-      }
-      cb(null, sizesUploadsDir);
-    },
-    filename: function (req, file, cb) {
-      const uniqueSuffix = `${Date.now()}-${nanoid(8)}`;
-      cb(null, `size-${uniqueSuffix}${path.extname(file.originalname)}`);
-    }
-  });
-
+  // Configure multer for size image uploads (disk storage → persistent)
   const sizeUpload = multer({
-    storage: sizesStorage,
+    storage: makeDiskStorage('size-images', 'size'),
     limits: { fileSize: 15 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
-      if (file.mimetype.startsWith('image/')) {
-        cb(null, true);
-      } else {
-        cb(new Error('نوع الملف غير مسموح. يجب أن يكون الملف صورة'));
-      }
+      if (file.mimetype.startsWith('image/')) cb(null, true);
+      else cb(new Error('نوع الملف غير مسموح. يجب أن يكون الملف صورة'));
     }
   });
 
   // Upload size image
-  app.post("/api/upload-size-image", requireAuth, requireManager, wrapMulter(sizeUpload.single('image')), (req, res) => {
+  app.post("/api/upload-size-image", requireAuth, requireManager, wrapMulter(sizeUpload.single('image')), async (req, res) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({ error: "لم يتم رفع صورة" });
-      }
-      const fileUrl = `/attached_assets/sizes/${req.file.filename}`;
-      console.log(`[UPLOAD] Size image uploaded successfully: ${fileUrl}`);
-      res.json({ url: fileUrl, filename: req.file.filename });
+      if (!req.file) return res.status(400).json({ error: "لم يتم رفع صورة" });
+      res.json({ url: assetUrl('size-images', req.file.filename), filename: req.file.filename });
     } catch (error) {
       console.error('Upload error:', error);
       res.status(500).json({ error: "فشل رفع الصورة" });
     }
   });
 
-  // Configure multer for addon image uploads
-  const addonsUploadsDir = path.resolve(__dirname, '..', 'attached_assets', 'addons');
-  const addonsStorage = multer.diskStorage({
-    destination: function (req, file, cb) {
-      if (!fs.existsSync(addonsUploadsDir)) {
-        fs.mkdirSync(addonsUploadsDir, { recursive: true });
-      }
-      cb(null, addonsUploadsDir);
-    },
-    filename: function (req, file, cb) {
-      const uniqueSuffix = `${Date.now()}-${nanoid(8)}`;
-      cb(null, `addon-${uniqueSuffix}${path.extname(file.originalname)}`);
-    }
-  });
-
+  // Configure multer for addon image uploads (disk storage → persistent)
   const addonUpload = multer({
-    storage: addonsStorage,
+    storage: makeDiskStorage('addon-images', 'addon'),
     limits: { fileSize: 15 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
-      if (file.mimetype.startsWith('image/')) {
-        cb(null, true);
-      } else {
-        cb(new Error('نوع الملف غير مسموح. يجب أن يكون الملف صورة'));
-      }
+      if (file.mimetype.startsWith('image/')) cb(null, true);
+      else cb(new Error('نوع الملف غير مسموح. يجب أن يكون الملف صورة'));
     }
   });
 
   // Upload addon image
-  app.post("/api/upload-addon-image", requireAuth, requireManager, wrapMulter(addonUpload.single('image')), (req, res) => {
+  app.post("/api/upload-addon-image", requireAuth, requireManager, wrapMulter(addonUpload.single('image')), async (req, res) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({ error: "لم يتم رفع صورة" });
-      }
-      const fileUrl = `/attached_assets/addons/${req.file.filename}`;
-      console.log(`[UPLOAD] Addon image uploaded successfully: ${fileUrl}`);
-      res.json({ url: fileUrl, filename: req.file.filename });
+      if (!req.file) return res.status(400).json({ error: "لم يتم رفع صورة" });
+      res.json({ url: assetUrl('addon-images', req.file.filename), filename: req.file.filename });
     } catch (error) {
       console.error('Upload error:', error);
       res.status(500).json({ error: "فشل رفع الصورة" });
     }
   });
 
-  app.post("/old-upload-addon-image", requireAuth, requireManager, addonUpload.single('image'), (req, res) => {
+  app.post("/old-upload-addon-image", requireAuth, requireManager, wrapMulter(addonUpload.single('image')), async (req, res) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({ error: "لم يتم رفع صورة" });
-      }
-      const fileUrl = `/attached_assets/addons/${req.file.filename}`;
-      res.json({ url: fileUrl, filename: req.file.filename });
+      if (!req.file) return res.status(400).json({ error: "لم يتم رفع صورة" });
+      res.json({ url: assetUrl('addon-images', req.file.filename), filename: req.file.filename });
     } catch (error) {
       res.status(500).json({ error: "فشل رفع الصورة" });
     }
   });
 
-  // Configure multer for attendance photo uploads
-  const attendanceUploadsDir = path.join(import.meta.dirname, '..', 'attached_assets', 'attendance');
-  const attendanceStorage = multer.diskStorage({
-    destination: function (req, file, cb) {
-      cb(null, attendanceUploadsDir);
-    },
-    filename: function (req, file, cb) {
-      const uniqueSuffix = `${Date.now()}-${nanoid(8)}`;
-      cb(null, `attendance-${uniqueSuffix}${path.extname(file.originalname)}`);
-    }
-  });
-
+  // Configure multer for attendance photo uploads (disk storage → persistent)
   const attendanceUpload = multer({
-    storage: attendanceStorage,
-    limits: {
-      fileSize: 5 * 1024 * 1024, // 5MB limit
-    },
+    storage: makeDiskStorage('attendance', 'attendance'),
+    limits: { fileSize: 5 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
       const allowedTypes = /jpeg|jpg|png|webp/;
       const ext = allowedTypes.test(path.extname(file.originalname).toLowerCase());
       const mimeType = allowedTypes.test(file.mimetype);
-
-      if (ext && mimeType) {
-        cb(null, true);
-      } else {
-        cb(new Error('نوع الملف غير مسموح. فقط صور (JPG, PNG, WEBP)'));
-      }
+      if (ext && mimeType) cb(null, true);
+      else cb(new Error('نوع الملف غير مسموح. فقط صور (JPG, PNG, WEBP)'));
     }
   });
 
   // Upload attendance photo
-  app.post("/api/upload-attendance-photo", attendanceUpload.single('photo'), (req, res) => {
+  app.post("/api/upload-attendance-photo", attendanceUpload.single('photo'), async (req, res) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({ error: "لم يتم رفع صورة" });
-      }
-
-      const fileUrl = `/attached_assets/attendance/${req.file.filename}`;
-      res.json({ url: fileUrl, filename: req.file.filename });
+      if (!req.file) return res.status(400).json({ error: "لم يتم رفع صورة" });
+      res.json({ url: assetUrl('attendance', req.file.filename), filename: req.file.filename });
     } catch (error) {
       res.status(500).json({ error: "فشل رفع الصورة" });
     }
