@@ -1097,8 +1097,7 @@ export default function CheckoutPage() {
     };
 
     const handleWhatsAppReservation = () => {
-      const rawPhone = businessConfig?.contactPhone || businessConfig?.socialLinks?.whatsapp?.replace(/\D/g, '') || '';
-      const phone = rawPhone.replace(/\D/g, '').replace(/^0/, '966');
+      const phone = brand.phoneWhatsapp;
       const reservationItems = orderDetails?.items || [];
       const itemsText = reservationItems.map((i: any) => {
         const pkg = i.customization?.selectedReservationPackage;
@@ -1114,7 +1113,7 @@ export default function CheckoutPage() {
       const msg = encodeURIComponent(
         `🗓️ طلب تأكيد حجز\n\nرقم الطلب: ${orderNum}\n\n${itemsText}${resLine}\n\nالإجمالي: ${orderTotal.toFixed(2)} ر.س\n\nالاسم: ${customerName || orderDetails?.customerName || '—'}\nالجوال: ${customerPhone || orderDetails?.customerPhone || '—'}\n\nأرجو التأكيد على هذا الحجز`
       );
-      window.open(`https://wa.me/${phone || brand.phoneWhatsapp}?text=${msg}`, '_blank');
+      window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
     };
 
     return (

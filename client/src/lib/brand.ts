@@ -175,7 +175,7 @@ export const brand = {
   phoneWhatsapp: "966536558528",
 
   /** Google Maps link to branch location */
-  locationUrl: "https://www.google.com/maps?q=مكان+الشيف+البخاري&ftid=0x3e2f1b007c22e55d:0xea9d1f7c79daf2b4",
+  locationUrl: "https://maps.app.goo.gl/XMZVc2cYWBkmgJZW6",
   /** Human-readable address */
   locationDisplay: "الرياض، المملكة العربية السعودية",
 

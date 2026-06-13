@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslate, tc } from "@/lib/useTranslate";
+import { brand } from "@/lib/brand";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -548,7 +549,7 @@ export default function SupportSystemPage() {
                   </div>
                   <h3 className="text-white font-bold text-lg mb-2">{tc("اتصل بنا", "Contact Us")}</h3>
                   <p className="text-white/60 text-sm mb-4">متاحون على مدار الساعة</p>
-                  <p className="text-white font-mono text-lg">{businessConfig?.contactPhone || businessConfig?.socialLinks?.whatsapp?.replace(/\D/g, '').slice(-10) || '920-000-0000'}</p>
+                  <p className="text-white font-mono text-lg" dir="ltr">{brand.phoneDisplay}</p>
                 </CardContent>
               </Card>
 
