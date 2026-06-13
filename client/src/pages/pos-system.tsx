@@ -776,12 +776,11 @@ export default function PosSystem() {
   const getGroupingKey = useCallback((item: CoffeeItem): string => {
     if ((item as any).groupId) return `${item.category || ''}::${(item as any).groupId}`;
     const nameAr = item.nameAr || "";
-    if (!nameAr || typeof nameAr !== 'string') return `${item.category || 'unknown'}::unknown`;
+    if (!nameAr || typeof nameAr !== 'string') return `${item.category || 'unknown'}::${item.id || 'unknown'}`;
     const cleaned = nameAr.trim()
       .replace(/^[\u064B-\u0652]+/, '')
       .replace(/^(بارد|حار)\s+/i, '');
-    const words = cleaned.split(/\s+/);
-    const nameBase = words.length >= 2 ? `${words[0]} ${words[1]}` : (words[0] || 'unknown');
+    const nameBase = cleaned.trim() || item.id || 'unknown';
     return `${item.category || 'none'}::${nameBase}`;
   }, []);
 

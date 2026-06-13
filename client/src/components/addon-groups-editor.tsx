@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { nanoid } from "nanoid";
 import { Button } from "@/components/ui/button";
@@ -68,11 +68,37 @@ function newChoice(): AddonChoice {
 }
 
 export function AddonGroupsEditor({ value, onChange }: Props) {
+  // Internal local state — edits stay local; parent only updated after 400ms idle
+  const [localGroups, setLocalGroups] = useState<AddonGroup[]>(value);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [expandedOptions, setExpandedOptions] = useState<Set<string>>(new Set());
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [selectedGroupIds, setSelectedGroupIds] = useState<Set<string>>(new Set());
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
+  // Sync incoming value from parent (e.g. when opening edit dialog for a different item)
+  useEffect(() => {
+    setLocalGroups(value);
+  }, [value]);
+
+  // Notify parent with debounce so keystrokes don't re-render the whole page
+  const notify = (next: AddonGroup[]) => {
+    setLocalGroups(next);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      onChangeRef.current(next);
+    }, 400);
+  };
+
+  // Structural changes (add/remove) propagate immediately
+  const notifyNow = (next: AddonGroup[]) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    setLocalGroups(next);
+    onChangeRef.current(next);
+  };
 
   const { data: allProducts = [] } = useQuery<CoffeeItem[]>({
     queryKey: ["/api/coffee-items"],
@@ -91,31 +117,31 @@ export function AddonGroupsEditor({ value, onChange }: Props) {
   };
 
   const updateGroup = (gIdx: number, patch: Partial<AddonGroup>) => {
-    const next = [...value];
+    const next = [...localGroups];
     next[gIdx] = { ...next[gIdx], ...patch };
-    onChange(next);
+    notify(next);
   };
 
   const updateOption = (gIdx: number, oIdx: number, patch: Partial<AddonOption>) => {
-    const next = [...value];
+    const next = [...localGroups];
     const opts = [...next[gIdx].options];
     opts[oIdx] = { ...opts[oIdx], ...patch };
     next[gIdx] = { ...next[gIdx], options: opts };
-    onChange(next);
+    notify(next);
   };
 
   const updateSubGroup = (gIdx: number, oIdx: number, sgIdx: number, patch: Partial<AddonSubGroup>) => {
-    const next = [...value];
+    const next = [...localGroups];
     const opts = [...next[gIdx].options];
     const sgs = [...(opts[oIdx].subGroups || [])];
     sgs[sgIdx] = { ...sgs[sgIdx], ...patch };
     opts[oIdx] = { ...opts[oIdx], subGroups: sgs };
     next[gIdx] = { ...next[gIdx], options: opts };
-    onChange(next);
+    notify(next);
   };
 
   const updateChoice = (gIdx: number, oIdx: number, sgIdx: number, cIdx: number, patch: Partial<AddonChoice>) => {
-    const next = [...value];
+    const next = [...localGroups];
     const opts = [...next[gIdx].options];
     const sgs = [...(opts[oIdx].subGroups || [])];
     const choices = [...sgs[sgIdx].choices];
@@ -123,76 +149,77 @@ export function AddonGroupsEditor({ value, onChange }: Props) {
     sgs[sgIdx] = { ...sgs[sgIdx], choices };
     opts[oIdx] = { ...opts[oIdx], subGroups: sgs };
     next[gIdx] = { ...next[gIdx], options: opts };
-    onChange(next);
+    notify(next);
   };
 
   const addGroup = () => {
     const g = newGroup();
-    onChange([...value, g]);
+    const next = [...localGroups, g];
+    notifyNow(next);
     setExpandedGroups(prev => new Set([...prev, g.id]));
   };
 
   const removeGroup = (gIdx: number) => {
-    onChange(value.filter((_, i) => i !== gIdx));
+    notifyNow(localGroups.filter((_, i) => i !== gIdx));
   };
 
   const addOption = (gIdx: number) => {
     const o = newOption();
-    const next = [...value];
+    const next = [...localGroups];
     next[gIdx] = { ...next[gIdx], options: [...next[gIdx].options, o] };
-    onChange(next);
+    notifyNow(next);
   };
 
   const removeOption = (gIdx: number, oIdx: number) => {
-    const next = [...value];
+    const next = [...localGroups];
     next[gIdx] = { ...next[gIdx], options: next[gIdx].options.filter((_, i) => i !== oIdx) };
-    onChange(next);
+    notifyNow(next);
   };
 
   const addSubGroup = (gIdx: number, oIdx: number) => {
     const sg = newSubGroup();
-    const next = [...value];
+    const next = [...localGroups];
     const opts = [...next[gIdx].options];
     opts[oIdx] = { ...opts[oIdx], subGroups: [...(opts[oIdx].subGroups || []), sg] };
     next[gIdx] = { ...next[gIdx], options: opts };
-    onChange(next);
+    notifyNow(next);
     setExpandedOptions(prev => new Set([...prev, opts[oIdx].id]));
   };
 
   const removeSubGroup = (gIdx: number, oIdx: number, sgIdx: number) => {
-    const next = [...value];
+    const next = [...localGroups];
     const opts = [...next[gIdx].options];
     opts[oIdx] = { ...opts[oIdx], subGroups: (opts[oIdx].subGroups || []).filter((_, i) => i !== sgIdx) };
     next[gIdx] = { ...next[gIdx], options: opts };
-    onChange(next);
+    notifyNow(next);
   };
 
   const addChoice = (gIdx: number, oIdx: number, sgIdx: number) => {
     const c = newChoice();
-    const next = [...value];
+    const next = [...localGroups];
     const opts = [...next[gIdx].options];
     const sgs = [...(opts[oIdx].subGroups || [])];
     sgs[sgIdx] = { ...sgs[sgIdx], choices: [...sgs[sgIdx].choices, c] };
     opts[oIdx] = { ...opts[oIdx], subGroups: sgs };
     next[gIdx] = { ...next[gIdx], options: opts };
-    onChange(next);
+    notifyNow(next);
   };
 
   const removeChoice = (gIdx: number, oIdx: number, sgIdx: number, cIdx: number) => {
-    const next = [...value];
+    const next = [...localGroups];
     const opts = [...next[gIdx].options];
     const sgs = [...(opts[oIdx].subGroups || [])];
     sgs[sgIdx] = { ...sgs[sgIdx], choices: sgs[sgIdx].choices.filter((_, i) => i !== cIdx) };
     opts[oIdx] = { ...opts[oIdx], subGroups: sgs };
     next[gIdx] = { ...next[gIdx], options: opts };
-    onChange(next);
+    notifyNow(next);
   };
 
   const handleImport = () => {
     const groupsToImport = selectedProductGroups
       .filter(g => selectedGroupIds.has(g.id))
       .map(g => ({ ...g, id: nanoid(8), options: g.options.map(o => ({ ...o, id: nanoid(8), subGroups: (o.subGroups || []).map(sg => ({ ...sg, id: nanoid(8), choices: sg.choices.map(c => ({ ...c, id: nanoid(8) })) })) })) }));
-    onChange([...value, ...groupsToImport]);
+    notifyNow([...localGroups, ...groupsToImport]);
     setImportDialogOpen(false);
     setSelectedProductId(null);
     setSelectedGroupIds(new Set());
@@ -226,13 +253,13 @@ export function AddonGroupsEditor({ value, onChange }: Props) {
         </div>
       </div>
 
-      {value.length === 0 && (
+      {localGroups.length === 0 && (
         <p className="text-xs text-gray-400 text-center py-3 border border-dashed border-gray-200 rounded-lg">
           لا توجد مجموعات إضافات — اضغط "إضافة مجموعة" لإنشاء واحدة
         </p>
       )}
 
-      {value.map((group, gIdx) => (
+      {localGroups.map((group, gIdx) => (
         <div key={group.id} className="border border-primary/30 rounded-xl bg-white shadow-sm overflow-hidden">
           <div className="flex items-center gap-2 px-3 py-2 bg-primary/5 cursor-pointer select-none" onClick={() => toggleGroup(group.id)}>
             <span className="text-primary text-sm">📂</span>
