@@ -525,11 +525,12 @@ export default function MenuPage() {
     const hasSizes = item.availableSizes && item.availableSizes.length > 0;
     const hasAddons = itemsWithAddonsSet.has((item as any).id);
     const hasBundledItems = (item as any).bundledItems?.some((s: any) => s.items?.length > 0);
+    const hasAddonGroups = ((item as any).addonGroups?.length ?? 0) > 0;
     const isReservation = !!(item as any).isReservation;
 
     if (!checkReservationIsolation(isReservation)) return;
 
-    if (isReservation || hasMultipleVariants || hasSizes || hasAddons || hasBundledItems) {
+    if (isReservation || hasMultipleVariants || hasSizes || hasAddons || hasBundledItems || hasAddonGroups) {
       setSelectedItem(item);
       setIsModalOpen(true);
     } else {

@@ -301,13 +301,14 @@ export default function DrinkCustomizationDialog({
 
   const isLoading = loadingAddons || loadingCoffeeAddons;
 
-  // Auto-confirm if product has no sizes and no add-ons after loading
+  // Auto-confirm if product has no sizes, no add-ons, and no advanced addon groups after loading
   useEffect(() => {
     if (!open || isLoading || !activeItem) return;
     const hasSizes = activeItem.availableSizes && activeItem.availableSizes.length > 0;
     const hasVariants = variants && variants.length > 1;
     const hasAddons = availableAddons.length > 0;
-    if (!hasSizes && !hasVariants && !hasAddons) {
+    const hasAddonGroups = ((activeItem as any).addonGroups?.length ?? 0) > 0;
+    if (!hasSizes && !hasVariants && !hasAddons && !hasAddonGroups) {
       const customization: DrinkCustomization = {
         selectedAddons: [],
         totalAddonsPrice: 0,

@@ -2135,7 +2135,8 @@ export default function PosSystem() {
                       const hasVariants = group.length > 1;
                       const hasSizes = item.availableSizes && item.availableSizes.length > 0;
                       const hasAddons = itemsWithAddonsSet.has(item.id);
-                      if (!hasVariants && !hasSizes && !hasAddons) {
+                      const hasAddonGroups = ((item as any).addonGroups?.length ?? 0) > 0;
+                      if (!hasVariants && !hasSizes && !hasAddons && !hasAddonGroups) {
                         addToOrder(item);
                       } else {
                         const existingCartItem = orderItems.find((oi: any) => oi.coffeeItem.id === item.id);
