@@ -378,88 +378,68 @@ export default function DrinkCustomizationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose} modal={modal}>
-      <DialogContent className="max-w-lg max-h-[92vh] overflow-hidden flex flex-col" data-testid="dialog-customization">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-right">
-            <Coffee className="w-5 h-5" />
+      <DialogContent className="max-w-md max-h-[75vh] overflow-hidden flex flex-col" data-testid="dialog-customization">
+        <DialogHeader className="pb-1">
+          <DialogTitle className="flex items-center gap-2 text-right text-base">
+            <Coffee className="w-4 h-4" />
             {isAr ? `تخصيص ${activeItem.nameAr}` : `Customize ${activeItem.nameEn || activeItem.nameAr}`}
           </DialogTitle>
         </DialogHeader>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin" />
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="w-5 h-5 animate-spin" />
           </div>
         ) : (
-          <ScrollArea className="h-[60vh] max-h-[60vh] pr-2">
-            <div className="space-y-4 p-1">
+          <ScrollArea className="flex-1 min-h-0 pr-1">
+            <div className="space-y-3 p-1">
               {variants.length > 1 && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                    <Star className="w-4 h-4" />
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                    <Star className="w-3.5 h-3.5" />
                     <span>{isAr ? "النوع" : "Type"}</span>
-                    <Badge variant="outline" className="text-xs">{isAr ? "اختر واحد" : "Select one"}</Badge>
+                    <Badge variant="outline" className="text-[10px] px-1 py-0">{isAr ? "اختر واحد" : "Select one"}</Badge>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-1.5">
                     {variants.map(v => (
                       <div
                         key={v.id}
-                        className={`relative rounded-md border p-3 cursor-pointer transition-all ${
-                          activeItem.id === v.id
-                            ? 'border-primary bg-primary/10' 
-                            : 'border-border hover-elevate'
-                        }`}
+                        className={`rounded-md border p-2 cursor-pointer transition-all ${activeItem.id === v.id ? 'border-primary bg-primary/10' : 'border-border hover-elevate'}`}
                         onClick={() => setSelectedVariant(v)}
                         data-testid={`variant-${v.id}`}
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium">{isAr ? v.nameAr : v.nameEn || v.nameAr}</p>
-                            <p className="text-xs text-primary">{v.price} <SarIcon /></p>
-                          </div>
-                          {activeItem.id === v.id && (
-                            <Check className="w-4 h-4 text-primary" />
-                          )}
-                        </div>
+                        <p className="text-xs font-medium truncate">{isAr ? v.nameAr : v.nameEn || v.nameAr}</p>
+                        <p className="text-[10px] text-primary">{v.price} <SarIcon /></p>
+                        {activeItem.id === v.id && <Check className="w-3 h-3 text-primary mt-0.5" />}
                       </div>
                     ))}
                   </div>
-                  <Separator className="mt-3" />
+                  <Separator />
                 </div>
               )}
 
               {activeItem.availableSizes && activeItem.availableSizes.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                    <Coffee className="w-4 h-4" />
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                    <Coffee className="w-3.5 h-3.5" />
                     <span>{isAr ? "الحجم" : "Size"}</span>
-                    <Badge variant="outline" className="text-xs">{isAr ? "اختر واحد" : "Select one"}</Badge>
+                    <Badge variant="outline" className="text-[10px] px-1 py-0">{isAr ? "اختر واحد" : "Select one"}</Badge>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-3 gap-1.5">
                     {activeItem.availableSizes.map(size => (
                       <div
                         key={size.nameAr}
-                        className={`relative rounded-md border p-3 cursor-pointer transition-all ${
-                          selectedSize === size.nameAr
-                            ? 'border-primary bg-primary/10' 
-                            : 'border-border hover-elevate'
-                        }`}
+                        className={`rounded-md border p-2 cursor-pointer transition-all ${selectedSize === size.nameAr ? 'border-primary bg-primary/10' : 'border-border hover-elevate'}`}
                         onClick={() => setSelectedSize(size.nameAr)}
                         data-testid={`size-${size.nameAr}`}
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium">{isAr ? size.nameAr : (size as any).nameEn || size.nameAr}</p>
-                            <p className="text-xs text-primary">{size.price} <SarIcon /></p>
-                          </div>
-                          {selectedSize === size.nameAr && (
-                            <Check className="w-4 h-4 text-primary" />
-                          )}
-                        </div>
+                        <p className="text-xs font-medium truncate">{isAr ? size.nameAr : (size as any).nameEn || size.nameAr}</p>
+                        <p className="text-[10px] text-primary">{size.price} <SarIcon /></p>
+                        {selectedSize === size.nameAr && <Check className="w-3 h-3 text-primary mt-0.5" />}
                       </div>
                     ))}
                   </div>
-                  <Separator className="mt-3" />
+                  <Separator />
                 </div>
               )}
 
@@ -467,91 +447,41 @@ export default function DrinkCustomizationDialog({
                 const categoryInfo = CATEGORY_INFO[category] || CATEGORY_INFO.other;
                 const isSingleSelect = addons.some((a: any) => a.selectionType === 'single') || category === 'sugar' || category === 'milk' || category === 'size' || category.toLowerCase() === 'size';
                 const CategoryIcon = categoryInfo.icon;
-
                 return (
-                  <div key={category} className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                      <CategoryIcon className="w-4 h-4" />
+                  <div key={category} className="space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                      <CategoryIcon className="w-3.5 h-3.5" />
                       <span>{isAr ? categoryInfo.nameAr : categoryInfo.nameEn}</span>
-                      {isSingleSelect && (
-                        <Badge variant="outline" className="text-xs">{isAr ? "اختر واحد" : "Select one"}</Badge>
-                      )}
+                      {isSingleSelect && <Badge variant="outline" className="text-[10px] px-1 py-0">{isAr ? "اختر واحد" : "Select one"}</Badge>}
                     </div>
-                    
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-3 gap-1.5">
                       {addons.map(addon => {
                         const isSelected = selectedAddons.has(addon.id);
                         const selectedAddon = selectedAddons.get(addon.id);
                         const link = getAddonLink(addon.id);
                         const canHaveMultiple = link && link.maxQuantity > 1 && !isSingleSelect;
-
                         return (
                           <div
                             key={addon.id}
-                            className={`relative rounded-md border p-3 cursor-pointer transition-all ${
-                              isSelected 
-                                ? 'border-primary bg-primary/10' 
-                                : 'border-border hover-elevate'
-                            }`}
+                            className={`rounded-md border p-2 cursor-pointer transition-all ${isSelected ? 'border-primary bg-primary/10' : 'border-border hover-elevate'}`}
                             onClick={() => !canHaveMultiple && toggleAddon(addon, isSingleSelect)}
                             data-testid={`addon-${addon.id}`}
                           >
-                            <div className="flex items-center justify-between">
-                              <div className="flex-1">
-                                <p className="text-sm font-medium">{isAr ? addon.nameAr : addon.nameEn || addon.nameAr}</p>
-                                {addon.price > 0 && (
-                                  <p className="text-xs text-primary">+{addon.price} <SarIcon /></p>
-                                )}
+                            <p className="text-xs font-medium truncate">{isAr ? addon.nameAr : addon.nameEn || addon.nameAr}</p>
+                            {addon.price > 0 && <p className="text-[10px] text-primary">+{addon.price} <SarIcon /></p>}
+                            {isSelected && !canHaveMultiple && <Check className="w-3 h-3 text-primary mt-0.5" />}
+                            {canHaveMultiple && (
+                              <div className="flex items-center gap-0.5 mt-1">
+                                <Button size="icon" variant="ghost" className="h-5 w-5" onClick={(e) => { e.stopPropagation(); if (isSelected) updateAddonQuantity(addon.id, -1); }} data-testid={`button-decrease-${addon.id}`}><Minus className="w-2.5 h-2.5" /></Button>
+                                <span className="w-4 text-center text-xs font-medium">{selectedAddon?.quantity || 0}</span>
+                                <Button size="icon" variant="ghost" className="h-5 w-5" onClick={(e) => { e.stopPropagation(); if (isSelected) updateAddonQuantity(addon.id, 1); else toggleAddon(addon, false); }} data-testid={`button-increase-${addon.id}`}><Plus className="w-2.5 h-2.5" /></Button>
                               </div>
-                              
-                              {isSelected && !canHaveMultiple && (
-                                <Check className="w-4 h-4 text-primary" />
-                              )}
-                              
-                              {canHaveMultiple && (
-                                <div className="flex items-center gap-1">
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-6 w-6"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (isSelected) {
-                                        updateAddonQuantity(addon.id, -1);
-                                      }
-                                    }}
-                                    data-testid={`button-decrease-${addon.id}`}
-                                  >
-                                    <Minus className="w-3 h-3" />
-                                  </Button>
-                                  <span className="w-6 text-center text-sm font-medium">
-                                    {selectedAddon?.quantity || 0}
-                                  </span>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-6 w-6"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (isSelected) {
-                                        updateAddonQuantity(addon.id, 1);
-                                      } else {
-                                        toggleAddon(addon, false);
-                                      }
-                                    }}
-                                    data-testid={`button-increase-${addon.id}`}
-                                  >
-                                    <Plus className="w-3 h-3" />
-                                  </Button>
-                                </div>
-                              )}
-                            </div>
+                            )}
                           </div>
                         );
                       })}
                     </div>
-                    
-                    <Separator className="mt-3" />
+                    <Separator />
                   </div>
                 );
               })}
@@ -561,43 +491,33 @@ export default function DrinkCustomizationDialog({
                 const selected = selectedGroupOptions.get(group.id) || new Set<string>();
                 const isSingle = group.selectionType === 'single';
                 return (
-                  <div key={group.id} className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground flex-wrap">
-                      <Plus className="w-4 h-4" />
+                  <div key={group.id} className="space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground flex-wrap">
+                      <Plus className="w-3.5 h-3.5" />
                       <span>{isAr ? group.nameAr : group.nameEn || group.nameAr}</span>
-                      {group.required && (
-                        <Badge variant="destructive" className="text-xs">{isAr ? "مطلوب" : "Required"}</Badge>
-                      )}
-                      {isSingle ? (
-                        <Badge variant="outline" className="text-xs">{isAr ? "اختر واحداً" : "Select one"}</Badge>
-                      ) : group.maxSelect > 0 ? (
-                        <Badge variant="outline" className="text-xs">{isAr ? `حتى ${group.maxSelect}` : `Up to ${group.maxSelect}`}</Badge>
-                      ) : null}
+                      {group.required && <Badge variant="destructive" className="text-[10px] px-1 py-0">{isAr ? "مطلوب" : "Required"}</Badge>}
+                      {isSingle
+                        ? <Badge variant="outline" className="text-[10px] px-1 py-0">{isAr ? "اختر واحداً" : "Select one"}</Badge>
+                        : group.maxSelect > 0 ? <Badge variant="outline" className="text-[10px] px-1 py-0">{isAr ? `حتى ${group.maxSelect}` : `Up to ${group.maxSelect}`}</Badge> : null}
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-3 gap-1.5">
                       {(group.options || []).map((opt: any) => {
                         const isSelected = selected.has(opt.id);
                         return (
                           <div
                             key={opt.id}
-                            className={`relative rounded-md border p-3 cursor-pointer transition-all ${isSelected ? 'border-primary bg-primary/10' : 'border-border hover-elevate'}`}
+                            className={`rounded-md border p-2 cursor-pointer transition-all ${isSelected ? 'border-primary bg-primary/10' : 'border-border hover-elevate'}`}
                             onClick={() => toggleGroupOption(group, opt.id)}
                             data-testid={`group-option-${opt.id}`}
                           >
-                            <div className="flex items-center justify-between gap-1">
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium truncate">{isAr ? opt.nameAr : opt.nameEn || opt.nameAr}</p>
-                                {(opt.price || 0) > 0 && (
-                                  <p className="text-xs text-primary">+{opt.price} <SarIcon /></p>
-                                )}
-                              </div>
-                              {isSelected && <Check className="w-4 h-4 text-primary flex-shrink-0" />}
-                            </div>
+                            <p className="text-xs font-medium truncate">{isAr ? opt.nameAr : opt.nameEn || opt.nameAr}</p>
+                            {(opt.price || 0) > 0 && <p className="text-[10px] text-primary">+{opt.price} <SarIcon /></p>}
+                            {isSelected && <Check className="w-3 h-3 text-primary mt-0.5" />}
                           </div>
                         );
                       })}
                     </div>
-                    <Separator className="mt-3" />
+                    <Separator />
                   </div>
                 );
               })}
