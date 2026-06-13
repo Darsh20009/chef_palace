@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Coffee, LogOut, ShoppingBag, Gift, Loader2, User, Mail, Phone, Pencil, Save, X } from "lucide-react";
+import { Coffee, LogOut, ShoppingBag, Gift, Loader2, User, Mail, Phone, Pencil, Save, X, Trash2 } from "lucide-react";
 import { useCustomer } from "@/contexts/CustomerContext";
 import { customerStorage, type CustomerProfile } from "@/lib/customer-storage";
 import { useToast } from "@/hooks/use-toast";
@@ -49,6 +49,28 @@ export default function CustomerProfilePage() {
     logout();
     toast({ title: t("profile.logged_out"), description: t("profile.see_you_soon") });
     setLocation("/auth");
+  };
+
+  const handleClearCache = async () => {
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+      document.cookie.split(";").forEach((c) => {
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      });
+      if ("serviceWorker" in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        for (const reg of regs) await reg.unregister();
+      }
+      if ("caches" in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+      toast({ title: "تم المسح ✓", description: "تم مسح الكوكيز والكاش بنجاح، سيتم تحديث الصفحة" });
+      setTimeout(() => window.location.replace("/menu"), 1500);
+    } catch {
+      toast({ variant: "destructive", title: "خطأ", description: "فشل مسح البيانات، حاول مرة أخرى" });
+    }
   };
 
   const startEditing = () => {
@@ -264,6 +286,16 @@ export default function CustomerProfilePage() {
 
         <Button onClick={() => setLocation("/menu")} variant="outline" className="w-full border-primary text-primary hover:bg-primary/10" data-testid="button-back-menu">
           {t("profile.back_to_menu")}
+        </Button>
+
+        <Button
+          onClick={handleClearCache}
+          variant="ghost"
+          className="w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 text-sm mt-1"
+          data-testid="button-clear-cache"
+        >
+          <Trash2 className="w-3.5 h-3.5 ml-2" />
+          مسح الكوكيز والكاش
         </Button>
       </div>
     </div>

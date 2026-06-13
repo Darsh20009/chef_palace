@@ -1202,40 +1202,9 @@ export default function MenuPage() {
         </motion.div>
       )}
 
-      <footer className="text-center py-5 space-y-2">
-        <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground/70">
-          <a
-            href={`tel:${brand.phoneIntl}`}
-            className="flex items-center gap-1 hover:text-primary transition-colors"
-            data-testid="link-footer-call"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.63 3.45 2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9a16 16 0 0 0 6 6l1.06-1.06a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 21.73 16z"/></svg>
-            <span dir="ltr">{brand.phoneDisplay}</span>
-          </a>
-          <span className="text-muted-foreground/30">•</span>
-          <a
-            href={brand.locationUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 hover:text-primary transition-colors"
-            data-testid="link-footer-maps"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-            <span>موقعنا</span>
-          </a>
-        </div>
+      <footer className="text-center py-5">
         <div className="text-xs text-muted-foreground/40">
-          made by{" "}
-          <a
-            href="https://www.chefsplace.online"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-muted-foreground/70 transition-colors underline underline-offset-2"
-            data-testid="link-qirox-studio"
-          >
-            Qirox Studio
-          </a>{" "}
-          group
+          {brand.copyrightAr}
         </div>
       </footer>
 
