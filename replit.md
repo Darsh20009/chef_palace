@@ -240,7 +240,7 @@ Fully dynamic plan management UI in the QIROX super admin panel:
 - **Banner 1**: attached_assets/image_1773902463502.png
 - **Banner 2**: attached_assets/image_1773902748715.png
 - **Email Logo**: https://raw.githubusercontent.com/Darsh20009/QIROXsystem/main/client/public/logo.png
-- **Service Worker Cache**: `qirox-cache-v9`
+- **Service Worker Cache**: `blackrose-cache-v18`
 
 ## Environment Variables
 
