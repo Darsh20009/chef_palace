@@ -44,11 +44,20 @@ export interface SelectedAddon {
   unit?: string;
 }
 
+export interface SelectedAddonGroupOption {
+  groupId: string;
+  groupNameAr: string;
+  optionId: string;
+  optionNameAr: string;
+  price: number;
+}
+
 export interface DrinkCustomization {
   selectedSize?: string;
   selectedAddons: SelectedAddon[];
   totalAddonsPrice: number;
   notes?: string;
+  selectedAddonGroupOptions?: SelectedAddonGroupOption[];
 }
 
 interface DrinkCustomizationDialogProps {
@@ -91,6 +100,7 @@ export default function DrinkCustomizationDialog({
   const isAr = i18n.language === 'ar';
 
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [selectedGroupOptions, setSelectedGroupOptions] = useState<Map<string, Set<string>>>(new Map());
 
   // Reset all internal state whenever the product changes (user clicks a different product)
   useEffect(() => {
@@ -99,6 +109,7 @@ export default function DrinkCustomizationDialog({
     setNotes("");
     setQuantity(initialQuantity);
     setSelectedSize(null);
+    setSelectedGroupOptions(new Map());
   }, [coffeeItem?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -239,6 +250,37 @@ export default function DrinkCustomizationDialog({
     }
   };
 
+  const toggleGroupOption = (group: any, optionId: string) => {
+    const newMap = new Map(selectedGroupOptions);
+    const current = new Set(newMap.get(group.id) || []);
+    if (group.selectionType === 'single') {
+      if (current.has(optionId)) {
+        if (!group.required) current.clear();
+      } else {
+        current.clear();
+        current.add(optionId);
+      }
+    } else {
+      if (current.has(optionId)) {
+        if (!group.required || current.size > (group.minSelect || 1)) current.delete(optionId);
+      } else {
+        if (!group.maxSelect || current.size < group.maxSelect) current.add(optionId);
+      }
+    }
+    newMap.set(group.id, current);
+    setSelectedGroupOptions(newMap);
+  };
+
+  const calculateGroupOptionsPrice = () => {
+    let total = 0;
+    const groups: any[] = (activeItem as any)?.addonGroups || [];
+    groups.forEach((group: any) => {
+      const selected = selectedGroupOptions.get(group.id);
+      if (selected) group.options.forEach((opt: any) => { if (selected.has(opt.id)) total += (opt.price || 0); });
+    });
+    return total;
+  };
+
   const calculateAddonsPrice = () => {
     let total = 0;
     selectedAddons.forEach(addon => {
@@ -252,11 +294,25 @@ export default function DrinkCustomizationDialog({
   };
 
   const handleConfirm = () => {
+    const groups: any[] = (activeItem as any)?.addonGroups || [];
+    const selectedAddonGroupOptions: SelectedAddonGroupOption[] = [];
+    groups.forEach((group: any) => {
+      const selected = selectedGroupOptions.get(group.id);
+      if (selected) {
+        group.options.forEach((opt: any) => {
+          if (selected.has(opt.id)) {
+            selectedAddonGroupOptions.push({ groupId: group.id, groupNameAr: group.nameAr, optionId: opt.id, optionNameAr: opt.nameAr, price: opt.price || 0 });
+          }
+        });
+      }
+    });
+
     const customization: DrinkCustomization = {
       selectedSize: selectedSize || undefined,
       selectedAddons: Array.from(selectedAddons.values()),
-      totalAddonsPrice: calculateAddonsPrice(),
+      totalAddonsPrice: calculateAddonsPrice() + calculateGroupOptionsPrice(),
       notes: notes.trim() || undefined,
+      selectedAddonGroupOptions,
     };
     if (selectedSize) {
       const sizeInfo = activeItem?.availableSizes?.find(s => s.nameAr === selectedSize);
@@ -296,7 +352,7 @@ export default function DrinkCustomizationDialog({
   const basePrice = selectedSize 
     ? Number(activeItem?.availableSizes?.find(s => s.nameAr === selectedSize)?.price || activeItem?.price || 0)
     : Number(activeItem?.price || 0);
-  const addonsPrice = calculateAddonsPrice();
+  const addonsPrice = calculateAddonsPrice() + calculateGroupOptionsPrice();
   const totalItemPrice = (basePrice + addonsPrice) * quantity;
 
   const isLoading = loadingAddons || loadingCoffeeAddons;
@@ -500,7 +556,53 @@ export default function DrinkCustomizationDialog({
                 );
               })}
 
-              {Object.keys(groupedAddons).length === 0 && (
+              {/* Advanced Addon Groups */}
+              {((activeItem as any)?.addonGroups || []).map((group: any) => {
+                const selected = selectedGroupOptions.get(group.id) || new Set<string>();
+                const isSingle = group.selectionType === 'single';
+                return (
+                  <div key={group.id} className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground flex-wrap">
+                      <Plus className="w-4 h-4" />
+                      <span>{isAr ? group.nameAr : group.nameEn || group.nameAr}</span>
+                      {group.required && (
+                        <Badge variant="destructive" className="text-xs">{isAr ? "مطلوب" : "Required"}</Badge>
+                      )}
+                      {isSingle ? (
+                        <Badge variant="outline" className="text-xs">{isAr ? "اختر واحداً" : "Select one"}</Badge>
+                      ) : group.maxSelect > 0 ? (
+                        <Badge variant="outline" className="text-xs">{isAr ? `حتى ${group.maxSelect}` : `Up to ${group.maxSelect}`}</Badge>
+                      ) : null}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(group.options || []).map((opt: any) => {
+                        const isSelected = selected.has(opt.id);
+                        return (
+                          <div
+                            key={opt.id}
+                            className={`relative rounded-md border p-3 cursor-pointer transition-all ${isSelected ? 'border-primary bg-primary/10' : 'border-border hover-elevate'}`}
+                            onClick={() => toggleGroupOption(group, opt.id)}
+                            data-testid={`group-option-${opt.id}`}
+                          >
+                            <div className="flex items-center justify-between gap-1">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{isAr ? opt.nameAr : opt.nameEn || opt.nameAr}</p>
+                                {(opt.price || 0) > 0 && (
+                                  <p className="text-xs text-primary">+{opt.price} <SarIcon /></p>
+                                )}
+                              </div>
+                              {isSelected && <Check className="w-4 h-4 text-primary flex-shrink-0" />}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <Separator className="mt-3" />
+                  </div>
+                );
+              })}
+
+              {Object.keys(groupedAddons).length === 0 && ((activeItem as any)?.addonGroups?.length ?? 0) === 0 && (
                 <div className="text-center py-4 text-muted-foreground">
                   <CandyOff className="w-8 h-8 mx-auto mb-2 opacity-50" />
                   <p>{isAr ? "لا توجد خيارات تخصيص متاحة لهذا المشروب" : "No customization options available for this drink"}</p>
