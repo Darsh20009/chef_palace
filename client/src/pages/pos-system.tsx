@@ -127,6 +127,7 @@ export default function PosSystem() {
   const [usePoints, setUsePoints] = useState(false);
   const [splitViewMode, setSplitViewMode] = useState(false);
   const [mobilePanelView, setMobilePanelView] = useState<'products' | 'cart'>('products');
+  const [cartCollapsed, setCartCollapsed] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(() => getSoundEnabled('pos'));
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [syncing, setSyncing] = useState(false);
@@ -2216,7 +2217,28 @@ export default function PosSystem() {
           </ScrollArea>
         </section>
 
-        <aside className={`${mobilePanelView === 'cart' ? 'flex' : 'hidden'} md:flex w-full md:w-80 lg:w-[420px] border-r flex flex-col bg-card shrink-0`}>
+        {/* Collapsed cart bar — desktop only */}
+        {cartCollapsed && (
+          <div className="hidden md:flex flex-col items-center py-3 gap-3 w-10 border-r bg-card shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-primary"
+              onClick={() => setCartCollapsed(false)}
+              title={tc('فتح السلة','Expand cart')}
+              data-testid="button-expand-cart"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            {orderItems.length > 0 && (
+              <span className="bg-primary text-primary-foreground rounded-full w-5 h-5 text-[9px] font-black flex items-center justify-center">
+                {orderItems.length}
+              </span>
+            )}
+          </div>
+        )}
+
+        <aside className={`${mobilePanelView === 'cart' ? 'flex' : 'hidden'} ${cartCollapsed ? 'md:hidden' : 'md:flex'} w-full md:w-80 lg:w-96 border-r flex flex-col bg-card shrink-0`}>
           <div className="p-2 sm:p-3 border-b flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Button
@@ -2239,6 +2261,17 @@ export default function PosSystem() {
               </div>
             </div>
             <div className="flex gap-1">
+              {/* Collapse cart panel — desktop only */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="hidden md:flex h-8 w-8 text-muted-foreground hover:text-foreground"
+                onClick={() => setCartCollapsed(true)}
+                title={tc('تصغير السلة','Collapse cart')}
+                data-testid="button-collapse-cart"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
               {/* Hold current cart */}
               {orderItems.length > 0 && (
                 <Button variant="ghost" size="icon" title={tc('احجز الطلب (F5)','Hold Order (F5)')} onClick={holdCurrentCart} className="h-8 w-8 text-amber-600 hover:text-amber-700" data-testid="button-hold-order">
